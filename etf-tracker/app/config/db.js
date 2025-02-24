@@ -2,7 +2,7 @@ const mongoose = require('mongoose');
 
 const connectDB = async () => {
   try {
-    await mongoose.connect('mongodb://tongweizj:tw273634@192.168.2.110:27017/express-api-demo', {
+    await mongoose.connect('mongodb://etfdata:etfdata123@192.168.2.110:27017/etf-data?authSource=admin', {
       useNewUrlParser: true,
       useUnifiedTopology: true,
     });

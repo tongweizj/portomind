@@ -1,7 +1,9 @@
 const mongoose = require('mongoose');
 const etfService = require('./app/services/etfService');
 // 连接 MongoDB
-mongoose.connect('mongodb://tongweizj:tw273634@192.168.2.110:27017/express-api-demo', {
+var username = "etfdata";
+var password = "etfdata123";
+mongoose.connect('mongodb://etfdata:etfdata123@192.168.2.110:27017/etf-data?authSource=admin', {
   useNewUrlParser: true,
   useUnifiedTopology: true,
 });

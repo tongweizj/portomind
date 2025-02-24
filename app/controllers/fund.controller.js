@@ -2,6 +2,7 @@
 const { getFundDailyInfo } = require("../services/yahoofinance.service");
 const db = require("../models");
 const Fund = db.fund;
+
 // Create and Save a new fund
 exports.create = (req, res) => {
   // Validate request
