@@ -1,25 +1,27 @@
 const yahooFinance = require("yahoo-finance2").default;
-// const Fund = require("../models/fund.model"); 
-const FundDailyData = require("../models/fundDailyData.model");
+const db = require("../models");
+const etfDaily = db.etfDaily;
 
 const getFundDailyInfo = async (fundCode) => {
   try {
     const result = await yahooFinance.quote(fundCode);
+    console.log(result);
     const fundData = {
-      fundCode,
+      code: result.symbol,
+      name: result.shortName,
       price: result.regularMarketPrice,
       change: result.regularMarketChangePercent || 0,
       timestamp: new Date().toISOString(),
     };
 
-    const existingFund = await FundDailyData.findOne({
+    const existingFund = await etfDaily.findOne({
       fundCode,
       timestamp: { $gte: new Date().setHours(0, 0, 0, 0) }, // 当天零点
     });
     
     if (!existingFund) {
       // 保存数据到 MongoDB
-      const fund = new FundDailyData(fundData);
+      const fund = new etfDaily(fundData);
       await fund.save();// 保存到数据库
     }
     

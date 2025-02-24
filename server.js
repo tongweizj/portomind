@@ -39,8 +39,8 @@ app.get("/", (req, res) => {
   res.json({ message: "Welcome to bezkoder application." });
 });
 
-require("./app/routes/turorial.routes")(app); // 一个模块,使用单一路径 + router 文件 
-require("./app/routes/fund.routes")(app);
+//require("./doc/turorial.routes")(app); // 一个模块,使用单一路径 + router 文件 
+require("./app/routes/etf.routes")(app);
 
 // set port, listen for requests
 const PORT = process.env.PORT || 8080;

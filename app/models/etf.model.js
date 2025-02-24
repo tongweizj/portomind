@@ -18,7 +18,7 @@ module.exports = mongoose => {
     },
   });
 
-  const Fund = mongoose.model("fund", FundSchema);
+  const Fund = mongoose.model("etf", FundSchema);
   return Fund;
 }
 

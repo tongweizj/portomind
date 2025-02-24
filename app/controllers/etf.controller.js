@@ -1,27 +1,26 @@
-// const { getFundDailyInfo } = require("../services/fund.service");
-const { getFundDailyInfo } = require("../services/yahoofinance.service");
+// const ETF = require('../models/ETF');
 const db = require("../models");
-const Fund = db.fund;
+const Etf = db.etf;
+const etfDaily = db.etfDaily;
+// const EtfDaily = require("../models/etf-daily.model");
+const { getFundDailyInfo } = require("../services/yahoo.service");
 
 // Create and Save a new fund
-exports.create = (req, res) => {
-  // Validate request
-  console.log('req.body')
-  console.log(req.body)
+const create = (req, res) => {
   if (!req.body.code) {
     res.status(400).send({ message: "Content can not be empty!" });
     return;
   }
 
   // Create a fund
-  const fund = new Fund({
+  const etf = new Etf({
     code: req.body.code,
     name: req.body.name
   });
-  console.log(fund);
+  console.log(etf);
   // Save Tutorial in the database
-  fund
-    .save(fund)
+  etf
+    .save(etf)
     .then(data => {
       res.send(data);
     })
@@ -33,16 +32,26 @@ exports.create = (req, res) => {
     });
 };
 
-
-
-exports.getDailyInfo = async (req, res) => {
+// 获取所有 ETF 数据
+const getETFPrices = async (req, res) => {
   try {
-    const fundCode = req.params.fundCode;
+    const prices = await etfDaily.find();
+    res.json(prices);
+  } catch (error) {
+    console.error(error);
+    res.status(500).send('Error fetching ETF prices from database');
+  }
+};
+
+// 获得单个etf的所有价格
+const getDailyInfo = async (req, res) => {
+  try {
+    const etfCode = req.params.fundCode;
     // if (!fundCode) {
     //   return res.status(400).send({ message: "Fund code is required" });
     // }
-
-    const info = await getFundDailyInfo(fundCode);
+    console.log(etfCode);
+    const info = await getFundDailyInfo(etfCode);
     console.log(info);
     // getFundDailyInfo("XQQ.TO").then(console.log);
     res.json(info);
@@ -53,6 +62,8 @@ exports.getDailyInfo = async (req, res) => {
     });
   }
 };
-
-
-
+module.exports = {
+  getETFPrices,
+  getDailyInfo,
+  create
+};

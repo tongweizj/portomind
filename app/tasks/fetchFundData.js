@@ -1,5 +1,5 @@
 const cron = require("node-cron");
-const { getFundDailyInfo } = require("../services/fund.service");
+const { getFundDailyInfo } = require("../services/yahoo.service");
 
 // 基金代码列表
 const fundCodes = [

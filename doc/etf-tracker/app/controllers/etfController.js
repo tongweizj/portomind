@@ -1,11 +1,9 @@
-// const ETF = require('../models/ETF');
-const db = require("../models");
-const Fund = db.fund;
-const FundDailyData = require("../models/fundDailyData.model");
+const ETF = require('../models/ETF');
+
 // 获取所有 ETF 数据
 const getETFPrices = async (req, res) => {
   try {
-    const prices = await FundDailyData.find();
+    const prices = await ETF.find();
     res.json(prices);
   } catch (error) {
     console.error(error);

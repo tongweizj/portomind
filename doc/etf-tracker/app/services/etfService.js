@@ -1,6 +1,6 @@
 const axios = require('axios');
 const cheerio = require('cheerio');
-const ETF = require("../models/fundDailyData.model");
+const ETF = require('../models/ETF');
 
 // 抓取单个 ETF 的数据
 async function fetchETFData(code) {
@@ -8,27 +8,26 @@ async function fetchETFData(code) {
   try {
     const response = await axios.get(url);
     const $ = cheerio.load(response.data);
-    console.log(`Response status for ${code}:`); // Log status
-    //console.log(`Response data for ${code}:`, response.data); // Log raw HTML (optional)
+    console.log(`Response status for ${code}:`, response.status); // Log status
+    console.log(`Response data for ${code}:`, response.data); // Log raw HTML (optional)
 
     const name = $('h1.fund_name').text().trim();
     const price = parseFloat($('span.fund_data').text().trim());
     // const change = $('.change').text().trim();
     // const volume = parseFloat($('.volume').text().trim());
-    const change = 0;
+    const change = 'change';
     const volume = 20;
-    // console.log('ETF data fetched...');
-    // console.log(name);
-    // console.log(price);
-    // console.log(change);
-    // console.log(volume);
-    let timestamp =  new Date().toISOString();
-    let fundCode =  code.toString();
+    console.log('ETF data fetched...');
+    console.log(name);
+    console.log(price);
+    console.log(change);
+    console.log(volume);
     return {
-      fundCode,
+      code,
+      name,
       price,
       change,
-      timestamp,
+      volume,
     };
   } catch (error) {
     console.error(`Error fetching data for ETF ${code}:`, error);
@@ -37,10 +36,9 @@ async function fetchETFData(code) {
 }
 
 // 抓取多个 ETF 的数据并保存到数据库
-async function fetchAndSaveChineseETFData(codes) {
+async function fetchAndSaveETFData(codes) {
   for (const code of codes) {
     const etfData = await fetchETFData(code);
-    console.log(`etfData: ${etfData.fundCode}`);
     if (etfData) {
       const etf = new ETF(etfData);
       await etf.save();
@@ -50,5 +48,5 @@ async function fetchAndSaveChineseETFData(codes) {
 }
 
 module.exports = {
-  fetchAndSaveChineseETFData,
+  fetchAndSaveETFData,
 };
