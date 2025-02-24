@@ -1,0 +1,24 @@
+{
+  "name": "project_nodejs_family-portfolio_api",
+  "version": "1.0.0",
+  "description": "",
+  "homepage": "https://github.com/tongweizj/project_nodejs_family-portfolio_api#readme",
+  "bugs": {
+    "url": "https://github.com/tongweizj/project_nodejs_family-portfolio_api/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/tongweizj/project_nodejs_family-portfolio_api.git"
+  },
+  "license": "ISC",
+  "author": "",
+  "type": "commonjs",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "dependencies": {
+    "express": "^4.21.2",
+    "mongoose": "^8.9.2"
+  }
+}
