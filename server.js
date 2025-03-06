@@ -6,7 +6,7 @@ const scheduleJobs = require("./cron-jobs"); // 引入定时任务模块
 const app = express();
 
 var corsOptions = {
-  origin: "http://localhost:8081"
+  origin: "http://localhost:5173"
 };
 
 app.use(cors(corsOptions));
