@@ -1,0 +1,55 @@
+/* 基础重置 */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+/* 全局字体 */
+body {
+  font-family: 'Segoe UI', system-ui, sans-serif;
+  line-height: 1.6;
+}
+
+/* 响应式图片 */
+img {
+  max-width: 100%;
+  height: auto;
+}
+
+/* 自定义变量 */
+:root {
+  --primary-color: #2196f3;
+  --gap-base: 1rem;
+}
+/* ETF卡片不同市场的样式 */
+.etf-card {
+    border-left: 4px solid transparent;
+    &.TO { border-color: #3f51b5; } /* 加拿大市场蓝色 */
+    &.CN { border-color: #e91e63; } /* 中国市场粉色 */
+  }
+  
+  .price-info {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    
+    .price {
+      font-size: 1.8rem;
+      font-weight: bold;
+    }
+  
+    .change {
+      text-align: right;
+      &.up { color: #4CAF50; }
+      &.down { color: #F44336; }
+      &.neutral { color: #9E9E9E; }
+    }
+  }
+  
+  .timestamp {
+    font-size: 0.8rem;
+    color: #666;
+    margin-top: 0.5rem;
+  }
+  
