@@ -2,27 +2,37 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router';
 import { getTransactionById, updateTransaction } from '../services/transactionService';
+import { getAllPortfolios } from '../services/portfolioService';
 
 export default function EditTransaction() {
   const { id } = useParams();
   const navigate = useNavigate();
   const [form, setForm] = useState(null);
+  const [portfolios, setPortfolios] = useState([]);
 
   useEffect(() => {
-    getTransactionById(id).then((data) => {
-      console.log("🚀 加载到的交易数据：", data);  // ✅ 请打开浏览器控制台检查
-      data.date = data.date?.slice(0, 10); // 日期格式化为 yyyy-mm-dd
-      setForm(data);
-    });
+    async function fetchData() {
+      const txData = await getTransactionById(id);
+      const pfData = await getAllPortfolios();
+      txData.date = txData.date?.slice(0, 10);
+      // 👇 如果交易中 portfolioId 缺失，设置为第一个组合的 ID
+      if (!txData.portfolioId && pfData.length > 0) {
+        txData.portfolioId = pfData[0]._id;
+      }
+      setForm(txData);
+      setPortfolios(pfData);
+    }
+    fetchData();
   }, [id]);
 
   const handleChange = e => {
     const { name, value } = e.target;
-    setForm({ ...form, [name]: value });
+    setForm(prev => ({ ...prev, [name]: value }));
   };
 
   const handleSubmit = async e => {
     e.preventDefault();
+    const submitData = { ...form, portfolioId: String(form.portfolioId) };
     await updateTransaction(id, form);
     navigate('/');
   };
@@ -33,6 +43,15 @@ export default function EditTransaction() {
     <div>
       <h2>编辑交易记录</h2>
       <form onSubmit={handleSubmit}>
+        <label>投资组合：</label>
+        <select name="portfolioId" value={form.portfolioId} onChange={handleChange}>
+          {portfolios.map(p => (
+            <option key={p._id} value={p._id}>
+              {p.name}（{p.type} / {p.currency}）
+            </option>
+          ))}
+        </select><br/>
+
         <label>资产类型：</label>
         <select name="assetType" value={form.assetType} onChange={handleChange}>
           <option value="stock">股票</option>
@@ -48,21 +67,11 @@ export default function EditTransaction() {
           <option value="sell">卖出</option>
         </select><br/>
 
-        <label>代码：</label>
         <input name="symbol" value={form.symbol || ''} onChange={handleChange} /><br/>
-
-        <label>净值：</label>
         <input name="quantity" type="number" value={form.quantity || ''} onChange={handleChange} /><br/>
-
-        <label>买入价：</label>
         <input name="price" type="number" value={form.price || ''} onChange={handleChange} /><br/>
-
-        <label>日期：</label>
         <input name="date" type="date" value={form.date || ''} onChange={handleChange} /><br/>
-
-        <label>备注：</label>
         <textarea name="notes" value={form.notes || ''} onChange={handleChange}></textarea><br/>
-
 
         <button type="submit">保存</button>
       </form>

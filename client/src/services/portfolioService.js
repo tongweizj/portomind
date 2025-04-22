@@ -9,10 +9,14 @@ export const createPortfolio = async (data) => {
   return await api.post('/', data);
 };
 
+// export const getAllPortfolios = async (data) => {
+//   return await api.get('/', data);
+// };
 export const getAllPortfolios = async () => {
-  return await api.get('/');
+  const res = await api.get('/');
+  console.log("📦 返回的组合数据", res.data);
+  return res.data; // ✅ 确保是返回 .data，而不是整个 res
 };
-
 export const getPortfolioById = async (id) => {
     return await api.get(`/${id}`);
   };

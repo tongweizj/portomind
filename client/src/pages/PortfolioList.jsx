@@ -6,7 +6,7 @@ export default function PortfolioList() {
   const [portfolios, setPortfolios] = useState([]);
 
   useEffect(() => {
-    getAllPortfolios().then(res => setPortfolios(res.data));
+    getAllPortfolios().then(data => setPortfolios(data));
   }, []);
 
   return (

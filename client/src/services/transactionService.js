@@ -20,6 +20,7 @@ export const addTransaction = async (tx) => {
 };
 
 export const updateTransaction = async (id, tx) => {
+  console.log("🚀 更新交易", id, tx);
   return await api.put(`/transactions/${id}`, tx);
 };
 

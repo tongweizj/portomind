@@ -47,13 +47,32 @@ exports.getTransactionById = async (req, res) => {
 // 添加交易
 exports.createTransaction = async (req, res) => {
   try {
-    const newTx = new Transaction(req.body);
+    const { portfolioId, assetType, symbol, action, quantity, price, date, notes } = req.body;
+
+    // ✅ 1. 校验 portfolioId 是否存在且格式合法
+    if (!portfolioId || !mongoose.Types.ObjectId.isValid(portfolioId)) {
+      return res.status(400).json({ message: '无效或缺失的 portfolioId' });
+    }
+
+    // ✅ 2. 创建交易对象
+    const newTx = new Transaction({
+      portfolioId,
+      assetType,
+      symbol,
+      action,
+      quantity,
+      price,
+      date,
+      notes
+    });
+
     const saved = await newTx.save();
     res.status(201).json(saved);
   } catch (err) {
-    res.status(400).json({ message: 'Failed to save transaction', error: err });
+    res.status(400).json({ message: '保存交易失败', error: err.message || err });
   }
 };
+
 
 // 更新交易记录
 exports.updateTransaction = async (req, res) => {
