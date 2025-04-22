@@ -1,4 +1,4 @@
-const db = require("../app/models");
+const db = require("../models");
 const Tutorial = db.tutorials;
 
 // Create and Save a new Tutorial

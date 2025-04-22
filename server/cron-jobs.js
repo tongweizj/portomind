@@ -1,4 +1,4 @@
-const fetchFundData = require("./app/tasks/fetchFundData");
+const fetchFundData = require("./tasks/fetchFundData");
 // const cleanupDatabase = require("./tasks/cleanupDatabase"); // 示例任务
 
 function scheduleJobs() {

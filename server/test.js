@@ -1,5 +1,5 @@
 const mongoose = require('mongoose');
-const etfService = require('./app/services/sina.service');
+const etfService = require('./services/sina.service');
 // 连接 MongoDB
 mongoose.connect('mongodb://etfdata:etfdata123@192.168.2.110:27017/etf-data?authSource=admin', {
   useNewUrlParser: true,

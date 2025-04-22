@@ -1,5 +1,5 @@
 const mongoose = require('mongoose');
-const etfService = require('./app/services/etfService');
+const etfService = require('./services/etfService');
 // 连接 MongoDB
 var username = "etfdata";
 var password = "etfdata123";

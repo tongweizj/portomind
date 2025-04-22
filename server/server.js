@@ -16,7 +16,7 @@ app.use(bodyParser.json());
 // parse requests of content-type - application/x-www-form-urlencoded
 app.use(bodyParser.urlencoded({ extended: true }));
 
-const db = require("./app/models");
+const db = require("./models");
 db.mongoose
   .connect(db.url, {
     useNewUrlParser: true,
@@ -39,8 +39,9 @@ app.get("/", (req, res) => {
 });
 
 //require("./doc/turorial.routes")(app); // 一个模块,使用单一路径 + router 文件 
-require("./app/routes/etf.routes")(app);
-
+require("./routes/etf.routes")(app);
+const transactionRoutes = require('./routes/transaction');
+app.use('/api/transactions', transactionRoutes);
 // set port, listen for requests
 const PORT = process.env.PORT || 8080;
 app.listen(PORT, () => {
