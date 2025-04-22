@@ -4,7 +4,7 @@ const axios = require('axios');
  * 获取中国场外基金净值（来源：天天基金网）
  * 示例 symbol: 005827
  */
-async function getFundPrice(symbol) {
+module.exports = async function getTiantianPrice(symbol) {
   try {
     const url = `https://fundgz.1234567.com.cn/js/${symbol}.js`;
     const res = await axios.get(url, {
@@ -32,5 +32,3 @@ async function getFundPrice(symbol) {
     return null;
   }
 }
-
-module.exports = { getFundPrice };

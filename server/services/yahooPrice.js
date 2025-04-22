@@ -6,7 +6,7 @@ function getMarketBySymbol(symbol) {
   return 'US';
 }
 
-async function getYahooPrice(symbol) {
+module.exports = async function getYahooPrice(symbol) {
   try {
     const quote = await yahooFinance.quote(symbol);
     return {
@@ -23,4 +23,3 @@ async function getYahooPrice(symbol) {
   }
 }
 
-module.exports = { getYahooPrice };
