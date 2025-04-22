@@ -23,6 +23,7 @@ export default function Sidebar() {
         <Link to="/portfolios" style={linkStyle('/portfolios')}>📋 投资组合列表</Link>
         <Link to="/" style={linkStyle('/')}>📋 交易记录清单</Link>
         <Link to="/add" style={linkStyle('/add')}>➕ 添加交易记录</Link>
+        <li><Link to="/assets">资产管理</Link></li>
   
         <div style={{ marginTop: '30px', color: '#888' }}>📌 占位导航</div>
         <Link to="/portfolio" style={linkStyle('/portfolio')}>📊 投资组合概览（占位）</Link>

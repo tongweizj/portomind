@@ -14,6 +14,8 @@ import CreatePortfolio from './pages/CreatePortfolio';
 import PortfolioList from './pages/PortfolioList';
 import PortfolioDetail from './pages/PortfolioDetail';
 import EditPortfolio from './pages/EditPortfolio';
+import AssetList from './pages/AssetList';
+import AssetForm from './pages/AssetForm';
 import './styles/base.css' 
 export default function App() {
   return (
@@ -29,6 +31,9 @@ export default function App() {
             <Route path="/portfolios" element={<PortfolioList />} />
             <Route path="/portfolios/:id" element={<PortfolioDetail />} />
             <Route path="/portfolios/:id/edit" element={<EditPortfolio />} />
+            <Route path="/assets" element={<AssetList />} />
+            <Route path="/assets/new" element={<AssetForm />} />
+            <Route path="/assets/edit/:id" element={<AssetForm />} />
           </Routes>
         </div>
       </div>

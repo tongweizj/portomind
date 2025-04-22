@@ -45,7 +45,9 @@ app.use('/api/transactions', transactionRoutes);
 // 挂载投资组合
 const portfolioRoutes = require('./routes/portfolio');
 app.use('/api/portfolios', portfolioRoutes);
-
+// 中挂载 asset 路由
+const assetRoutes = require('./routes/asset');
+app.use('/api/assets', assetRoutes);
 // set port, listen for requests
 const PORT = process.env.PORT || 8080;
 app.listen(PORT, () => {

@@ -3,10 +3,13 @@ import { useNavigate } from 'react-router';
 import { addTransaction } from '../services/transactionService';
 import { getAllPortfolios } from '../services/portfolioService';
 import { inferMarketCurrency } from '../utils/symbolUtils';
+import { getAllAssets } from '../services/assetService';
 
 export default function AddTransaction() {
   const navigate = useNavigate();
   const [portfolios, setPortfolios] = useState([]);
+  const [allAssets, setAllAssets] = useState([]);
+  const [filteredAssets, setFilteredAssets] = useState([]);
   const [form, setForm] = useState({
     portfolioId: '',
     assetType: 'stock',
@@ -21,15 +24,25 @@ export default function AddTransaction() {
   });
 
   useEffect(() => {
-    async function fetchPortfolios() {
-      const res = await getAllPortfolios();
-      setPortfolios(res);
+    async function fetchData() {
+      const portfoliosData = await getAllPortfolios();
+      const assetData = await getAllAssets();
+      setPortfolios(portfoliosData);
+      setAllAssets(assetData);
+      setFilteredAssets(assetData);
+      const initialAsset = assetData[0];
         // ✅ 默认设置为第一个组合的 ID（如果用户没有选择）
-      if (res.length > 0 && !form.portfolioId) {
-        setForm(prev => ({ ...prev, portfolioId: res[0]._id }));
+      if (portfoliosData.length > 0 && !form.portfolioId) {
+        setForm(prev => ({ ...prev, 
+          portfolioId: portfoliosData[0]._id|| '',
+          symbol: initialAsset?.symbol || '',
+          market: initialAsset?.market || 'US',
+          currency: initialAsset?.currency || 'USD',
+          assetType: initialAsset?.type || 'stock'
+         }));
       }
     }
-    fetchPortfolios();
+    fetchData();
   }, []);
 
   const handleChange = (e) => {
@@ -43,31 +56,18 @@ export default function AddTransaction() {
   
     // ✅ 用户选择市场时，根据当前 symbol 自动改后缀
     if (name === 'market') {
+      const filtered = allAssets.filter(a => a.market === value);
+      setFilteredAssets(filtered);
       const newMarket = value;
-      const baseSymbol = form.symbol.split('.')[0];  // 去掉后缀
-  
-      let suffix = '';
-      if (newMarket === 'CA') suffix = '.TO';
-      else if (newMarket === 'CN-SH') suffix = '.SS';
-      else if (newMarket === 'CN-SZ') suffix = '.SZ';
-      else if (newMarket === 'CN-FUND') suffix = '.cn';
-  
-      const newSymbol = baseSymbol + suffix;
-  
-      // 自动更新 currency
-      const currencyMap = {
-        'CA': 'CAD',
-        'CN-SH': 'CNY',
-        'CN-SZ': 'CNY',
-        'CN-FUND': 'CNY',
-        'US': 'USD'
-      };
+      const defaultAsset = filtered[0];
+      console.log("filtered:" + defaultAsset)
   
       setForm({
         ...form,
         market: newMarket,
-        currency: currencyMap[newMarket] || 'USD',
-        symbol: newSymbol
+        symbol: defaultAsset.symbol,
+        currency: defaultAsset.currency,
+        assetType: defaultAsset.type
       });
       return;
     }
@@ -97,19 +97,6 @@ export default function AddTransaction() {
             <option key={p._id} value={p._id}>{p.name}</option>
           ))}
         </select><br/>
-
-        <label>资产类型：</label>
-        <select name="assetType" value={form.assetType} onChange={handleChange}>
-          <option value="stock">股票</option>
-          <option value="etf">ETF</option>
-          <option value="crypto">加密货币</option>
-          <option value="cash">现金</option>
-          <option value="bond">债券</option>
-        </select><br/>
-
-        <label>代码：</label>
-        <input name="symbol" value={form.symbol} onChange={handleChange} /><br/>
-
         <label>市场：</label>
         <select name="market" value={form.market} onChange={handleChange}>
           <option value="US">美股</option>
@@ -118,13 +105,13 @@ export default function AddTransaction() {
           <option value="CN-SZ">深圳</option>
           <option value="CN-FUND">中国基金</option>
         </select><br/>
-
-        <label>币种：</label>
-        <select name="currency" value={form.currency} onChange={handleChange}>
-          <option value="USD">美元</option>
-          <option value="CAD">加元</option>
-          <option value="CNY">人民币</option>
+        <label>选择资产：</label>
+        <select name="symbol" value={form.symbol} onChange={handleChange}>
+          {filteredAssets.map(a => (
+            <option key={a._id} value={a.symbol}>{a.symbol} - {a.name}</option>
+          ))}
         </select><br/>
+        
 
         <label>交易类型：</label>
         <select name="action" value={form.action} onChange={handleChange}>
