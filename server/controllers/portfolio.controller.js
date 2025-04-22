@@ -92,10 +92,20 @@ exports.getPortfolioStats = async (req, res) => {
     }
 
     // 计算平均持仓成本
-    const result = Object.values(stats).map(item => ({
-      ...item,
-      avgCost: item.quantity !== 0 ? (item.totalCost / item.quantity).toFixed(2) : 0
-    }));
+    const result = Object.values(stats).map(item => {
+      const avgCost =
+        item.quantity !== 0
+          ? parseFloat((item.totalCost / item.quantity).toFixed(2))
+          : 0;
+
+      return {
+        symbol: item.symbol,
+        assetType: item.assetType,
+        quantity: item.quantity,
+        totalCost: parseFloat(item.totalCost.toFixed(2)),
+        avgCost: avgCost
+      };
+    });
 
     res.json(result);
   } catch (err) {

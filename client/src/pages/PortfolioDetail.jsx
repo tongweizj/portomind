@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useParams, Link, useNavigate } from 'react-router';
 import { getPortfolioById, deletePortfolio } from '../services/portfolioService';
+import PortfolioStats from './PortfolioStats';
 
 export default function PortfolioDetail() {
   const { id } = useParams();
@@ -21,15 +22,16 @@ export default function PortfolioDetail() {
   if (!portfolio) return <div>加载中...</div>;
 
   return (
-    <div>
-      <h2>{portfolio.name}</h2>
-      <p>类型：{portfolio.type}</p>
-      <p>币种：{portfolio.currency}</p>
-      <p>备注：{portfolio.description}</p>
-      <p>创建时间：{new Date(portfolio.createdAt).toLocaleDateString()}</p>
+    <PortfolioStats />
+    // <div>
+    //   <h2>{portfolio.name}</h2>
+    //   <p>类型：{portfolio.type}</p>
+    //   <p>币种：{portfolio.currency}</p>
+    //   <p>备注：{portfolio.description}</p>
+    //   <p>创建时间：{new Date(portfolio.createdAt).toLocaleDateString()}</p>
 
-      <Link to={`/portfolios/${id}/edit`}>编辑</Link> |{' '}
-      <button onClick={handleDelete}>删除</button>
-    </div>
+    //   <Link to={`/portfolios/${id}/edit`}>编辑</Link> |{' '}
+    //   <button onClick={handleDelete}>删除</button>
+    // </div>
   );
 }
