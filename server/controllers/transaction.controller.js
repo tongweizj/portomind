@@ -47,7 +47,7 @@ exports.getTransactionById = async (req, res) => {
 // 添加交易
 exports.createTransaction = async (req, res) => {
   try {
-    const { portfolioId, assetType, symbol, action, quantity, price, date, notes } = req.body;
+    const { portfolioId, assetType, symbol, market, currency, action, quantity, price, date, notes } = req.body;
 
     // ✅ 1. 校验 portfolioId 是否存在且格式合法
     if (!portfolioId || !mongoose.Types.ObjectId.isValid(portfolioId)) {
@@ -59,6 +59,8 @@ exports.createTransaction = async (req, res) => {
       portfolioId,
       assetType,
       symbol,
+      market,
+      currency,
       action,
       quantity,
       price,
