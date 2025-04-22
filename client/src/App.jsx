@@ -10,6 +10,10 @@ import Sidebar from './components/Sidebar';
 import TransactionList from './pages/TransactionList';
 import AddTransaction from './pages/AddTransaction';
 import EditTransaction from './pages/EditTransaction';
+import CreatePortfolio from './pages/CreatePortfolio';
+import PortfolioList from './pages/PortfolioList';
+import PortfolioDetail from './pages/PortfolioDetail';
+import EditPortfolio from './pages/EditPortfolio';
 import './styles/base.css' 
 export default function App() {
   return (
@@ -21,6 +25,10 @@ export default function App() {
             <Route path="/" element={<TransactionList />} />
             <Route path="/add" element={<AddTransaction />} />
             <Route path="/edit/:id" element={<EditTransaction />} />
+            <Route path="/create-portfolio" element={<CreatePortfolio />} />
+            <Route path="/portfolios" element={<PortfolioList />} />
+            <Route path="/portfolios/:id" element={<PortfolioDetail />} />
+            <Route path="/portfolios/:id/edit" element={<EditPortfolio />} />
           </Routes>
         </div>
       </div>

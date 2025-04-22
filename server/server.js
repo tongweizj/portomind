@@ -42,6 +42,10 @@ app.get("/", (req, res) => {
 require("./routes/etf.routes")(app);
 const transactionRoutes = require('./routes/transaction');
 app.use('/api/transactions', transactionRoutes);
+// 挂载投资组合
+const portfolioRoutes = require('./routes/portfolio');
+app.use('/api/portfolios', portfolioRoutes);
+
 // set port, listen for requests
 const PORT = process.env.PORT || 8080;
 app.listen(PORT, () => {

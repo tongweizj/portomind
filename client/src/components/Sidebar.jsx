@@ -19,7 +19,8 @@ export default function Sidebar() {
     return (
       <div style={{ width: '200px', borderRight: '1px solid #ccc', padding: '20px' }}>
         <div style={{ fontWeight: 'bold', marginBottom: '30px' }}>💼 我的基金</div>
-  
+        <Link to="/create-portfolio" style={linkStyle('/create-portfolio')}>➕ 创建投资组合</Link>
+        <Link to="/portfolios" style={linkStyle('/portfolios')}>📋 投资组合列表</Link>
         <Link to="/" style={linkStyle('/')}>📋 交易记录清单</Link>
         <Link to="/add" style={linkStyle('/add')}>➕ 添加交易记录</Link>
   
