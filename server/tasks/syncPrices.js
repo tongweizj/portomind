@@ -1,11 +1,19 @@
 // ✅ 文件：server/tasks/syncPrices.js（正式修复版本）
 const mongoose = require('mongoose');
+const cron = require('node-cron');
+const fs = require('fs');
 const Asset = require('../models/asset');
 const Price = require('../models/price');
 const getYahooPrice = require('../services/yahooPrice');
 const getFundDailyInfo = require('../services/tiantianPrice');
 require('dotenv').config();
+const logFile = fs.createWriteStream('/workspace/sync.log', { flags: 'a' });
 
+function log(msg) {
+  const line = `[${new Date().toLocaleString()}] ${msg}\n`;
+  console.log(line.trim());
+  logFile.write(line);
+}
 function getPriceFetcher(market) {
     if (market === 'CN-FUND') return getFundDailyInfo;
     if (['US', 'CA', 'CN-SH', 'CN-SZ'].includes(market)) return getYahooPrice;
@@ -18,10 +26,10 @@ function getPriceFetcher(market) {
         useNewUrlParser: true,
         useUnifiedTopology: true
       });
-      console.log('✅ MongoDB 已连接');
+      log('✅ MongoDB 已连接');
   
       const assets = await Asset.find({ active: true });
-      console.log(`📊 准备抓取 ${assets.length} 个资产价格...`);
+      log(`📊 准备抓取 ${assets.length} 个资产价格...`);
   
       for (const asset of assets) {
         let { symbol, market } = asset;
@@ -31,6 +39,7 @@ function getPriceFetcher(market) {
           fetcher = getPriceFetcher(market);
         } catch (fetcherErr) {
           console.warn(fetcherErr.message);
+          log(`❌ ${asset.symbol}: ${fetcherErr.message}`);
           continue;
         }
   
@@ -55,7 +64,7 @@ function getPriceFetcher(market) {
           });
   
           if (alreadyExists) {
-            console.log(`✅ 跳过已存在价格: ${resolvedSymbol}`);
+            log(`✅ 跳过已存在价格: ${resolvedSymbol}`);
             continue;
           }
   
@@ -68,22 +77,22 @@ function getPriceFetcher(market) {
             source: market
           });
   
-          console.log(`📦 成功保存：${resolvedSymbol} @ ${price}`);
+          log(`📦 成功保存：${resolvedSymbol} @ ${price}`);
         } catch (err) {
-          console.error(`❌ 抓取失败 ${asset.symbol}:`, err.message);
+          log(`❌ 抓取失败 ${asset.symbol}:`, err.message);
         }
       }
     } catch (err) {
-      console.error('❌ 数据库连接失败：', err);
+      log('❌ 数据库连接失败：', err);
     } finally {
       await mongoose.disconnect();
-      console.log('✅ 断开 MongoDB 连接');
+      log('✅ 断开 MongoDB 连接');
     }
   }
   
   // ✅ 每天早上 8:00 自动执行
   cron.schedule('0 8 * * *', () => {
-    console.log('🕗 启动定时任务：每日价格同步');
+    log('🕗 启动定时任务：每日价格同步');
     syncPrices();
   });
   
