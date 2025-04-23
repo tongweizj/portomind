@@ -2,7 +2,7 @@
 import axios from 'axios';
 
 const api = axios.create({
-  baseURL: 'http://localhost:8080/api/portfolios' // ✅ 你可以改为环境变量
+  baseURL : import.meta.env.VITE_API_URL + `/portfolios` || `http://localhost:8080/api/portfolios`
 });
 
 export const createPortfolio = async (data) => {
@@ -14,7 +14,8 @@ export const createPortfolio = async (data) => {
 // };
 export const getAllPortfolios = async () => {
   const res = await api.get('/');
-  console.log("📦 返回的组合数据", res.data);
+
+  // console.log("📦 返回的组合数据", res.data);
   return res.data; // ✅ 确保是返回 .data，而不是整个 res
 };
 export const getPortfolioById = async (id) => {

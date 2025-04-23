@@ -1,5 +1,6 @@
+
 export const fetchETFData = async () => {
-    const response = await axios.get('http://localhost:8080/api/etfs/daily');
+    const response = await axios.get(import.meta.env.VITE_API_URL  || 'http://localhost:8080/api');
     return processETFData(response.data); // 使用之前的格式化方法
   };
   

@@ -2,14 +2,16 @@ import { useEffect, useState } from 'react';
 import { useParams } from 'react-router';
 import axios from 'axios';
 
+
 export default function PortfolioStats() {
   const { id } = useParams();
   const [stats, setStats] = useState([]);
 
+  const apiURL = import.meta.env.VITE_API_URL + `/portfolios/${id}/stats` || `http://localhost:8080/api/portfolios/${id}/stats`;
   useEffect(() => {
     async function fetchStats() {
       try {
-        const res = await axios.get(`http://localhost:8080/api/portfolios/${id}/stats`);
+        const res = await axios.get(apiURL);
         console.log("获取统计数据：", res.data);
 
         // 模拟当前价格

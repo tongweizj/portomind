@@ -1,6 +1,7 @@
 import axios from 'axios';
 
-const API_BASE = 'http://localhost:8080/api/assets';
+// const API_BASE = 'http://localhost:8080/api/assets';
+const API_BASE = import.meta.env.VITE_API_URL + `/assets` || `http://localhost:8080/api/assets`
 
 export const getAllAssets = async () => {
   const res = await axios.get(API_BASE);
