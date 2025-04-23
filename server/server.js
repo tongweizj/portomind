@@ -1,7 +1,6 @@
 const express = require("express");
 const bodyParser = require("body-parser");
 const cors = require("cors");
-const scheduleJobs = require("./cron-jobs"); // 引入定时任务模块
 const app = express();
 require('dotenv').config();
 
@@ -41,8 +40,6 @@ db.mongoose
     process.exit();
   });
 
-// 启动定时任务
-scheduleJobs();
 
 // simple route
 app.get("/", (req, res) => {
