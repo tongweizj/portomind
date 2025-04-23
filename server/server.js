@@ -3,7 +3,7 @@ const bodyParser = require("body-parser");
 const cors = require("cors");
 const scheduleJobs = require("./cron-jobs"); // 引入定时任务模块
 const app = express();
-
+require('dotenv').config();
 var corsOptions = {
   origin: "http://localhost:5173"
 };
@@ -18,7 +18,7 @@ app.use(bodyParser.urlencoded({ extended: true }));
 
 const db = require("./models");
 db.mongoose
-  .connect(db.url, {
+  .connect(process.env.MONGO_URI, {
     useNewUrlParser: true,
     useUnifiedTopology: true
   })

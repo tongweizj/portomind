@@ -1,7 +1,8 @@
 const mongoose = require('mongoose');
 const etfService = require('../services/sina.service');
+require('dotenv').config();
 // 连接 MongoDB
-mongoose.connect('mongodb://etfdata:etfdata123@192.168.2.110:27017/etf-data?authSource=admin', {
+mongoose.connect(process.env.MONGO_URI, {
   useNewUrlParser: true,
   useUnifiedTopology: true,
 });

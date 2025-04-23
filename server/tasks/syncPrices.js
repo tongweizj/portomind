@@ -4,8 +4,7 @@ const Asset = require('../models/asset');
 const Price = require('../models/price');
 const getYahooPrice = require('../services/yahooPrice');
 const getFundDailyInfo = require('../services/tiantianPrice');
-
-const MONGO_URI = 'mongodb://etfdata:etfdata123@192.168.2.110:27017/etf-data?authSource=admin';
+require('dotenv').config();
 
 function getPriceFetcher(market) {
     if (market === 'CN-FUND') return getFundDailyInfo;
@@ -15,7 +14,7 @@ function getPriceFetcher(market) {
   
   async function syncPrices() {
     try {
-      await mongoose.connect(MONGO_URI, {
+      await mongoose.connect(process.env.MONGO_URI, {
         useNewUrlParser: true,
         useUnifiedTopology: true
       });
