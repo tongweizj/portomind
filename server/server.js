@@ -4,8 +4,19 @@ const cors = require("cors");
 const scheduleJobs = require("./cron-jobs"); // 引入定时任务模块
 const app = express();
 require('dotenv').config();
-var corsOptions = {
-  origin: "http://localhost:5173"
+
+const corsOptions = {
+  origin: function (origin, callback) {
+    const allowedOrigins = [
+      'http://localhost:5173',
+      'http://192.168.2.110:9000'
+    ];
+    if (!origin || allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else {
+      callback(new Error('Not allowed by CORS'));
+    }
+  }
 };
 
 app.use(cors(corsOptions));
