@@ -17,7 +17,7 @@ export default function AppLayout() {
     <span className="text-xl">💰</span>
     ETF Portfolio
   </div>
-
+  
   {/* 右侧搜索栏 + 用户 */}
   <div className="flex items-center gap-6">
     <div className="relative">
