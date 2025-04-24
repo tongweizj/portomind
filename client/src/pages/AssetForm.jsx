@@ -1,3 +1,4 @@
+// ✅ 文件：src/pages/AssetForm.jsx
 import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router';
 import { createAsset, getAssetById, updateAsset } from '../services/assetService';
@@ -22,7 +23,7 @@ export default function AssetForm() {
       getAssetById(id).then(asset => {
         setForm({
           ...asset,
-          tags: asset.tags?.join(', ') || '' // 转为逗号分隔的文本
+          tags: asset.tags?.join(', ') || ''
         });
       });
     }
@@ -46,45 +47,107 @@ export default function AssetForm() {
   };
 
   return (
-    <div>
-      <h2>{isEdit ? '编辑' : '添加'}资产</h2>
-      <form onSubmit={handleSubmit}>
-        <input name="symbol" value={form.symbol} onChange={handleChange} placeholder="代码（如 AAPL, 600519.SS）" required /><br/>
-        <input name="name" value={form.name} onChange={handleChange} placeholder="名称（如 苹果公司）" /><br/>
+    <div className="max-w-xl mx-auto space-y-6">
+      <h1 className="text-2xl font-bold text-gray-800">{isEdit ? '编辑资产' : '添加资产'}</h1>
+      <form onSubmit={handleSubmit} className="space-y-4 bg-white p-6 rounded shadow">
+        <div>
+          <label className="block text-sm text-gray-700 mb-1">代码</label>
+          <input
+            name="symbol"
+            value={form.symbol}
+            onChange={handleChange}
+            placeholder="如 AAPL, 600519.SS"
+            required
+            className="w-full border px-3 py-2 rounded"
+          />
+        </div>
 
-        <label>市场：</label>
-        <select name="market" value={form.market} onChange={handleChange}>
-          <option value="US">美股</option>
-          <option value="CA">加股</option>
-          <option value="CN-SH">上海</option>
-          <option value="CN-SZ">深圳</option>
-          <option value="CN-FUND">中国基金</option>
-        </select><br/>
+        <div>
+          <label className="block text-sm text-gray-700 mb-1">名称</label>
+          <input
+            name="name"
+            value={form.name}
+            onChange={handleChange}
+            placeholder="如 苹果公司"
+            className="w-full border px-3 py-2 rounded"
+          />
+        </div>
 
-        <label>币种：</label>
-        <select name="currency" value={form.currency} onChange={handleChange}>
-          <option value="USD">美元</option>
-          <option value="CAD">加元</option>
-          <option value="CNY">人民币</option>
-        </select><br/>
+        <div>
+          <label className="block text-sm text-gray-700 mb-1">市场</label>
+          <select
+            name="market"
+            value={form.market}
+            onChange={handleChange}
+            className="w-full border px-3 py-2 rounded"
+          >
+            <option value="US">美股</option>
+            <option value="CA">加股</option>
+            <option value="CN-SH">上海</option>
+            <option value="CN-SZ">深圳</option>
+            <option value="CN-FUND">中国基金</option>
+          </select>
+        </div>
 
-        <label>类型：</label>
-        <select name="type" value={form.type} onChange={handleChange}>
-          <option value="stock">股票</option>
-          <option value="etf">ETF</option>
-          <option value="fund">基金</option>
-          <option value="cash">现金</option>
-          <option value="crypto">加密货币</option>
-          <option value="bond">债券</option>
-        </select><br/>
+        <div>
+          <label className="block text-sm text-gray-700 mb-1">币种</label>
+          <select
+            name="currency"
+            value={form.currency}
+            onChange={handleChange}
+            className="w-full border px-3 py-2 rounded"
+          >
+            <option value="USD">美元</option>
+            <option value="CAD">加元</option>
+            <option value="CNY">人民币</option>
+          </select>
+        </div>
 
-        <input name="tags" value={form.tags} onChange={handleChange} placeholder="标签（多个用英文逗号）" /><br/>
+        <div>
+          <label className="block text-sm text-gray-700 mb-1">类型</label>
+          <select
+            name="type"
+            value={form.type}
+            onChange={handleChange}
+            className="w-full border px-3 py-2 rounded"
+          >
+            <option value="stock">股票</option>
+            <option value="etf">ETF</option>
+            <option value="fund">基金</option>
+            <option value="cash">现金</option>
+            <option value="crypto">加密货币</option>
+            <option value="bond">债券</option>
+          </select>
+        </div>
 
-        <label>
-          <input type="checkbox" name="active" checked={form.active} onChange={handleChange} /> 是否启用
-        </label><br/>
+        <div>
+          <label className="block text-sm text-gray-700 mb-1">标签（多个用英文逗号分隔）</label>
+          <input
+            name="tags"
+            value={form.tags}
+            onChange={handleChange}
+            placeholder="如 growth, tech"
+            className="w-full border px-3 py-2 rounded"
+          />
+        </div>
 
-        <button type="submit">保存</button>
+        <div className="flex items-center">
+          <input
+            type="checkbox"
+            name="active"
+            checked={form.active}
+            onChange={handleChange}
+            className="mr-2"
+          />
+          <label className="text-sm text-gray-700">启用</label>
+        </div>
+
+        <button
+          type="submit"
+          className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
+        >
+          保存
+        </button>
       </form>
     </div>
   );

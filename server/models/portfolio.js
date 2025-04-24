@@ -18,7 +18,7 @@ const PortfolioSchema = new mongoose.Schema({
   // ✅ 新增：币种（人民币，加币，美金）
   currency: {
     type: String,
-    enum: ['RMB', 'CAD', 'USD'],
+    enum: ['CNY', 'CAD', 'USD'],
     default: '加币'
   },
 

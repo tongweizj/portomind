@@ -15,6 +15,11 @@ export const getTransactionById = async (id) => {
   return res.data;
 };
 
+export async function getTransactionsByPortfolio(portfolioId) {
+  const res = await api.get(`/transactions/portfolio/${portfolioId}`);
+  return res.data;
+}
+
 export const addTransaction = async (tx) => {
   return await api.post('/transactions', tx);
 };
