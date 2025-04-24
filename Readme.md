@@ -1,10 +1,17 @@
-# 🧠 PortoMind – Smart Portfolio Manager for ETF Investors
+# PortoMind – Smart Portfolio Manager for ETF Investors
 
+
+
+
+
+    
 ![PortoMind Logo](./doc/logo.png)
 
-**PortoMind** is a modern, self-hosted ETF and multi-asset portfolio management system designed for individuals and families to track, analyze, and optimize their long-term investments.
+## PortoMind – Smart Portfolio Manager for ETF Investors
 
----
+PortoMind is a modern, self-hosted ETF and multi-asset portfolio management system designed for individuals and families to track, analyze, and optimize their long-term investments.
+
+[中文版介绍](/doc/README.zh-CN.md)
 
 ## ✨ Features
 
