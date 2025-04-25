@@ -19,7 +19,7 @@ export const getAllPortfolios = async () => {
   return res.data; // ✅ 确保是返回 .data，而不是整个 res
 };
 export const getPortfolioById = async (id) => {
-    return await api.get(`/${id}`);
+    return await api.get(`/${id}`).then(res=>res.data);
   };
   
   export const updatePortfolio = async (id, data) => {

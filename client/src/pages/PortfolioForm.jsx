@@ -1,87 +1,163 @@
-// ✅ 文件：src/pages/PortfolioForm.jsx
-import { useEffect, useState } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
-import { createPortfolio, getPortfolioById, updatePortfolio } from '../services/portfolioService';
-
-export default function PortfolioForm() {
+// src/pages/CreatePortfolio.jsx
+import { useState, useEffect } from 'react';
+import { useNavigate, useParams } from 'react-router';
+import {
+  createPortfolio,
+  getPortfolioById,
+  updatePortfolio
+} from '../services/portfolioService';
+import { getAllAssets } from '../services/assetService';
+export default function CreatePortfolio() {
   const navigate = useNavigate();
   const { id } = useParams();
-  const isEdit = !!id;
+  const isEdit = Boolean(id);
 
   const [form, setForm] = useState({
     name: '',
     description: '',
-    type: '长期',
-    currency: 'CNY',
+    type: '稳健',
+    currency: 'CAD',
+    targets: Array.from({ length: 4 }, () => ({ symbol: '', targetRatio: 0 }))
   });
-
+  // 资产列表，用于下拉
+  const [assets, setAssets] = useState([]);
+  // ▶️ 编辑模式：页面加载后拉取原组合数据并预填表单
   useEffect(() => {
-    if (isEdit) {
-      getPortfolioById(id).then(setForm);
-    }
-  }, [id]);
+    getAllAssets().then(data => setAssets(data));
+    if (!isEdit) return;
 
+    getPortfolioById(id)
+      .then(data => {
+        console.log("data:", data)
+        setForm({
+          name: data.name || '',
+          description: data.description || '',
+          type: data.type,
+          currency: data.currency,
+          // 如果已有 targets，则用它，否则保持初始的 4 行
+          targets: (data.targets && data.targets.length > 0)
+            ? data.targets
+            : Array.from({ length: 4 }, () => ({ symbol: '', targetRatio: 0 }))
+        });
+      })
+      .catch(err => {
+        alert('❌ 无法加载组合数据：' + err.message);
+      });
+  }, [id, isEdit]);
+
+  // 通用字段变更
   const handleChange = (e) => {
     const { name, value } = e.target;
-    setForm({ ...form, [name]: value });
+    setForm(prev => ({ ...prev, [name]: value }));
   };
 
+  // 目标配置行变更
+  const handleTargetChange = (idx, field, value) => {
+    setForm(prev => {
+      const newTargets = prev.targets.map((t, i) =>
+        i === idx
+          ? {
+              ...t,
+              [field]:
+                field === 'targetRatio' ? parseFloat(value) || 0 : value
+            }
+          : t
+      );
+      return { ...prev, targets: newTargets };
+    });
+  };
+
+  // 新增一行目标配置
+  const addTarget = () => {
+    setForm(prev => ({
+      ...prev,
+      targets: [...prev.targets, { symbol: '', targetRatio: 0 }]
+    }));
+  };
+
+  // 删除一行目标配置
+  const removeTarget = (idx) => {
+    setForm(prev => ({
+      ...prev,
+      targets: prev.targets.filter((_, i) => i !== idx)
+    }));
+  };
+
+  // 提交：根据模式调用不同服务
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (isEdit) await updatePortfolio(id, form);
-    else await createPortfolio(form);
-    navigate('/portfolios');
+    try {
+      if (isEdit) {
+        await updatePortfolio(id, form);
+      } else {
+        await createPortfolio(form);
+      }
+      navigate('/portfolios');
+    } catch (err) {
+      alert(
+        `❌ ${isEdit ? '更新' : '创建'}失败：` +
+          (err.response?.data?.message || err.message)
+      );
+    }
   };
 
   return (
-    <div className="max-w-xl mx-auto space-y-6">
-      <h1 className="text-2xl font-bold text-gray-800">{isEdit ? '编辑组合' : '添加组合'}</h1>
-
-      <form onSubmit={handleSubmit} className="space-y-4 bg-white p-6 rounded shadow">
+    <div className="p-6 max-w-lg mx-auto bg-white rounded-lg shadow">
+      <h2 className="text-2xl font-bold mb-4">
+        {isEdit ? '编辑投资组合1' : '添加投资组合'}
+      </h2>
+      <form onSubmit={handleSubmit} className="space-y-4">
+        {/* 组合名称 */}
         <div>
-          <label className="block text-sm text-gray-700 mb-1">名称</label>
+          <label className="block text-gray-700 mb-1">名称</label>
           <input
+            type="text"
             name="name"
             value={form.name}
             onChange={handleChange}
-            placeholder="例如：退休计划、子女教育"
+            className="w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring focus:ring-blue-200"
             required
-            className="w-full border px-3 py-2 rounded"
           />
         </div>
 
+        {/* 描述 */}
         <div>
-          <label className="block text-sm text-gray-700 mb-1">描述</label>
+          <label className="block text-gray-700 mb-1">描述</label>
           <textarea
             name="description"
             value={form.description}
             onChange={handleChange}
-            placeholder="此组合的目标、策略说明等"
-            className="w-full border px-3 py-2 rounded"
-          ></textarea>
+            className="w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring focus:ring-blue-200"
+          />
         </div>
 
+        {/* 类型 */}
         <div>
-          <label className="block text-sm text-gray-700 mb-1">类型</label>
-          <select
-            name="type"
-            value={form.type}
-            onChange={handleChange}
-            className="w-full border px-3 py-2 rounded"
-          >
-            <option value="活钱">活钱</option>
-            <option value="稳健">稳健</option>
-            <option value="长期">长期</option>
-          </select>
+          <label className="block text-gray-700 mb-1">类型</label>
+          <div className="flex space-x-4">
+            {['活钱', '稳健', '长期'].map(opt => (
+              <label key={opt} className="flex items-center">
+                <input
+                  type="radio"
+                  name="type"
+                  value={opt}
+                  checked={form.type === opt}
+                  onChange={handleChange}
+                />
+                <span className="ml-2">{opt}</span>
+              </label>
+            ))}
+          </div>
         </div>
 
+        {/* 币种 */}
         <div>
-          <label className="block text-sm text-gray-700 mb-1">币种</label>
+          <label className="block text-gray-700 mb-1">币种</label>
           <select
             name="currency"
             value={form.currency}
             onChange={handleChange}
-            className="w-full border px-3 py-2 rounded"
+            className="w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring focus:ring-blue-200"
           >
             <option value="CNY">人民币</option>
             <option value="CAD">加元</option>
@@ -89,11 +165,63 @@ export default function PortfolioForm() {
           </select>
         </div>
 
+        {/* 目标资产配置 */}
+        <div>
+          <div className="flex items-center justify-between mb-2">
+            <label className="block text-gray-700">目标资产配置</label>
+            <button
+              type="button"
+              onClick={addTarget}
+              className="text-blue-600 hover:underline text-sm"
+            >
+              + 添加资产
+            </button>
+          </div>
+
+          {form.targets.map((t, idx) => (
+            <div key={idx} className="flex items-center gap-2 mb-2">
+              <select
+                value={t.symbol}
+                onChange={e => handleTargetChange(idx, 'symbol', e.target.value)}
+                className="flex-1 border border-gray-300 rounded px-2 py-1 focus:outline-none focus:ring focus:ring-blue-200"
+                required
+              >
+                <option value="">请选择资产</option>
+                {assets.map(asset => (
+                  <option key={asset._id} value={asset.symbol}>
+                    {asset.symbol} {asset.name ? `- ${asset.name}` : ''}
+                  </option>
+                ))}
+              </select>
+              <input
+                type="number"
+                placeholder="%"
+                value={t.targetRatio}
+                onChange={e =>
+                  handleTargetChange(idx, 'targetRatio', e.target.value)
+                }
+                className="w-20 border border-gray-300 rounded px-2 py-1 focus:outline-none focus:ring focus:ring-blue-200"
+                min="0"
+                max="100"
+                required
+              />
+              <button
+                type="button"
+                onClick={() => removeTarget(idx)}
+                className="text-red-500 hover:underline text-sm"
+              >
+                删除
+              </button>
+            </div>
+          ))}
+        </div>
+
+        {/* 提交 */}
         <button
           type="submit"
-          className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
+          className="w-full bg-blue-600 text-white py-2 rounded hover:bg-blue-700 transition"
         >
-          保存
+          {isEdit ? '更新组合' : '保存组合'}
         </button>
       </form>
     </div>

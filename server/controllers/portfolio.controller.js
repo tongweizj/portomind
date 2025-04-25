@@ -4,16 +4,17 @@ const Transaction = require('../models/transaction');
 
 exports.createPortfolio = async (req, res) => {
   try {
-    const { name, description, type, currency } = req.body;
+    // const { name, description, type, currency } = req.body;
+    const newPortfolio = new Portfolio(req.body);
+    const saved = await newPortfolio.save();
+    // const portfolio = new Portfolio({
+    //   name,
+    //   description,
+    //   type,
+    //   currency
+    // });
 
-    const portfolio = new Portfolio({
-      name,
-      description,
-      type,
-      currency
-    });
-
-    const saved = await portfolio.save();
+    // const saved = await portfolio.save();
     res.status(201).json(saved);
   } catch (err) {
     res.status(400).json({ message: '创建组合失败', error: err.message });

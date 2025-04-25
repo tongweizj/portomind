@@ -9,7 +9,7 @@ import {
   import AddTransaction from './pages/AddTransaction';
   import PortfolioList from './pages/PortfolioList';
   import PortfolioDetail from './pages/PortfolioDetail';
-  import CreatePortfolio from './pages/CreatePortfolio';
+  import PortfolioForm from './pages/PortfolioForm';
   import AssetList from './pages/AssetList';
   import AssetForm from './pages/AssetForm'; 
   import LogViewer from './pages/LogViewer';
@@ -25,7 +25,8 @@ import {
         <Route path="/transactions/edit/:id" element={<EditTransaction />} />
         <Route path="/portfolios" element={<PortfolioList />} />
         <Route path="/portfolios/view/:id" element={<PortfolioDetail />} />
-        <Route path="/portfolios/new" element={<CreatePortfolio />} />
+        <Route path="/portfolios/new" element={<PortfolioForm />} />
+        <Route path="/portfolios/edit/:id" element={<PortfolioForm />} />
         <Route path="/assets" element={<AssetList />} />
         <Route path="/assets/new" element={<AssetForm />} />    
         <Route path='/assets/edit/:id' element={<AssetForm />} />

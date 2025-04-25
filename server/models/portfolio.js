@@ -21,7 +21,12 @@ const PortfolioSchema = new mongoose.Schema({
     enum: ['CNY', 'CAD', 'USD'],
     default: '加币'
   },
-
+  targets: [
+    {
+      symbol: { type: String, required: true },       // 资产代码，例如 VTI、VXUS、600519.SS
+      targetRatio: { type: Number, required: true },   // 目标比例，如 50.0 表示 50%
+    }
+  ],
   createdAt: {
     type: Date,
     default: Date.now
