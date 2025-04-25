@@ -4,6 +4,7 @@ import { useNavigate, useParams } from 'react-router';
 import { getPortfolioById } from '../services/portfolioService';
 import { getTransactionById } from '../services/transactionService';
 import { Pencil, Plus } from 'lucide-react';
+import PortfolioStats from './PortfolioStats';
 
 export default function PortfolioDetail() {
   const { id } = useParams();
@@ -12,11 +13,10 @@ export default function PortfolioDetail() {
   const [transactions, setTransactions] = useState([]);
 
   useEffect(() => {
-    getPortfolioById(id).then(data=>{
-      
-      setPortfolio(data.data);
-    });
-    getTransactionById(id).then(data=>{
+    // 拉取组合详情
+    getPortfolioById(id).then(setPortfolio);
+    // 拉取该组合下的交易记录
+    getTransactionById(id).then(data => {
       console.log('🧪 getTransactionById:', data);
       setTransactions(data)
     });
@@ -28,6 +28,12 @@ export default function PortfolioDetail() {
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <h1 className="text-2xl font-bold text-gray-800">组合：{portfolio.name}</h1>
+        <button
+          onClick={() => navigate(`/portfolios/edit/${id}`)}
+          className="text-blue-600 hover:underline text-sm"
+        >
+          编辑组合
+        </button>
         <button
           onClick={() => navigate('/portfolios')}
           className="text-sm px-3 py-1 bg-gray-100 hover:bg-gray-200 rounded border"
@@ -41,7 +47,12 @@ export default function PortfolioDetail() {
         <p><strong>币种：</strong> {portfolio.currency}</p>
         <p><strong>描述：</strong> {portfolio.description || '暂无描述'}</p>
       </div>
-
+      {/* 资产统计板块 */}
+      <div className="bg-white rounded-lg shadow p-6">
+        <h2 className="text-xl font-semibold text-gray-800 mb-4">资产统计</h2>
+        {/* 将 PortfolioStats 嵌入此处 */}
+        <PortfolioStats />
+      </div>
       <h2 className="text-xl font-semibold text-gray-800">交易记录</h2>
       {transactions.length === 0 ? (
         <p className="text-gray-500">暂无交易记录。</p>

@@ -25,7 +25,11 @@ export default function PortfolioList() {
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {portfolios.map(pf => (
-          <div key={pf._id} className="bg-white shadow rounded-xl p-6 relative">
+          <div
+                     key={pf._id}
+                     onClick={() => navigate(`/portfolios/view/${pf._id}`)}
+                     className="bg-white shadow rounded-xl p-6 relative cursor-pointer hover:bg-gray-50 transition"
+                    >
             <h2 className="text-xl font-semibold text-gray-800">{pf.name}</h2>
             <p className="text-gray-600 mt-2">{pf.description}</p>
             {/* 编辑按钮 */}
