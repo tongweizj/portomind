@@ -1,7 +1,7 @@
 // ✅ 文件：src/pages/PortfolioDetail.jsx
 import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router';
-import { getPortfolioById } from '../services/portfolioService';
+import { getPortfolioById, deletePortfolio } from '../services/portfolioService';
 import { getTransactionById } from '../services/transactionService';
 import { Pencil, Plus } from 'lucide-react';
 import PortfolioStats from './PortfolioStats';
@@ -23,7 +23,16 @@ export default function PortfolioDetail() {
   }, [id]);
 
   if (!portfolio) return <div className="text-gray-500">加载中...</div>;
-
+   // 删除组合
+    const handleDelete = async () => {
+      if (!window.confirm('确认要删除此组合及其所有配置吗？此操作不可撤销。')) return;
+      try {
+        await deletePortfolio(id);
+        navigate('/portfolios');
+      } catch (err) {
+        alert('删除失败：' + (err.response?.data?.message || err.message));
+      }
+    };
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
@@ -33,6 +42,13 @@ export default function PortfolioDetail() {
           className="text-blue-600 hover:underline text-sm"
         >
           编辑组合
+        </button>
+
+        <button
+          onClick={handleDelete}
+          className="text-blue-600 hover:underline text-sm"
+        >
+          删除组合
         </button>
         <button
           onClick={() => navigate('/portfolios')}

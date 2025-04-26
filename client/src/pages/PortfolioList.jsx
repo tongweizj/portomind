@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router';
 import { getAllPortfolios } from '../services/portfolioService';
-import { Pencil, Plus } from 'lucide-react';
+import { Pencil, ChevronRight } from 'lucide-react';
 
 export default function PortfolioList() {
   const [portfolios, setPortfolios] = useState([]);
@@ -32,13 +32,17 @@ export default function PortfolioList() {
                     >
             <h2 className="text-xl font-semibold text-gray-800">{pf.name}</h2>
             <p className="text-gray-600 mt-2">{pf.description}</p>
-            {/* 编辑按钮 */}
-            <button
-              onClick={() => navigate(`/portfolios/edit/${pf._id}`)}
-              className="absolute top-4 right-4 text-gray-500 hover:text-blue-600"
+            <div className="flex items-center justify-between text-sm text-gray-700 mt-4">
+               <span>类型：{pf.type}</span>
+               <span>币种：{pf.currency}</span>
+             </div>
+            
+            <div
+              className="absolute top-4 right-4 text-gray-400"
+              /* 点击箭头也触发卡片 onClick */
             >
-              <Pencil size={20} />
-            </button>
+              <ChevronRight size={24} />
+            </div>
           </div>
         ))}
       </div>
