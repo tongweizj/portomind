@@ -30,3 +30,9 @@ export const getPortfolioById = async (id) => {
     return await api.delete(`/${id}`);
   };
   
+  // 获取实时持仓比例
+export function getActualRatios(id) {
+  return api
+    .get(`/${id}/actual-ratios`)
+    .then(res => res.data);
+}

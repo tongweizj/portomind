@@ -10,6 +10,7 @@ import {
   import PortfolioList from './pages/PortfolioList';
   import PortfolioDetail from './pages/PortfolioDetail';
   import PortfolioForm from './pages/PortfolioForm';
+  import PortfolioRebalance from './pages/PortfolioRebalance';
   import AssetList from './pages/AssetList';
   import AssetForm from './pages/AssetForm'; 
   import LogViewer from './pages/LogViewer';
@@ -27,6 +28,7 @@ import {
         <Route path="/portfolios/view/:id" element={<PortfolioDetail />} />
         <Route path="/portfolios/new" element={<PortfolioForm />} />
         <Route path="/portfolios/edit/:id" element={<PortfolioForm />} />
+        <Route path="/portfolios/rebalance/:id" element={<PortfolioRebalance />} />
         <Route path="/assets" element={<AssetList />} />
         <Route path="/assets/new" element={<AssetForm />} />    
         <Route path='/assets/edit/:id' element={<AssetForm />} />

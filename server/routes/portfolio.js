@@ -12,5 +12,6 @@ router.put('/:id', portfolioController.updatePortfolio);
 router.delete('/:id', portfolioController.deletePortfolio);
 router.get('/:id/stats', portfolioController.getPortfolioStats);
 router.get('/:id/transactions', transactionController.getTransactionsByPortfolio);
+router.get('/:id/actual-ratios', portfolioController.getActualRatios); // 实时持仓比例
 
 module.exports = router;

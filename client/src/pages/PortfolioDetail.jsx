@@ -38,6 +38,12 @@ export default function PortfolioDetail() {
       <div className="flex justify-between items-center">
         <h1 className="text-2xl font-bold text-gray-800">组合：{portfolio.name}</h1>
         <button
+  onClick={() => navigate(`/portfolios/rebalance/${id}`)}
+  className="ml-4 text-sm px-3 py-1 bg-green-600 text-white rounded hover:bg-green-700"
+>
+  查看再平衡对比
+</button>
+        <button
           onClick={() => navigate(`/portfolios/edit/${id}`)}
           className="text-blue-600 hover:underline text-sm"
         >
