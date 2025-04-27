@@ -25,6 +25,10 @@
     "express": "^4.17.1",
     "mongoose": "^5.8.10",
     "node-cron": "^3.0.3",
+    "on-finished": "^2.4.1",
+    "uuid": "^11.1.0",
+    "winston": "^3.17.0",
+    "winston-daily-rotate-file": "^5.0.0",
     "yahoo-finance2": "^2.13.3"
   },
   "devDependencies": {

@@ -1,5 +1,6 @@
 // ✅ 文件：server/tasks/syncPrices.js（只执行一次同步，并退出）
 const mongoose = require('mongoose');
+const logger = require('../config/logger');   
 const fs = require('fs');
 const path = require('path');
 const Asset = require('../models/asset');
@@ -7,15 +8,6 @@ const Price = require('../models/price');
 const getYahooPrice = require('../services/yahooPrice');
 const getFundDailyInfo = require('../services/tiantianPrice');
 require('dotenv').config({ path: path.resolve(__dirname, '../.env') });
-
-const logPath = path.resolve(process.env.LOG || './logs');
-const logFile = fs.createWriteStream(`${logPath}/sync.log`, { flags: 'a' });
-
-function log(msg) {
-  const line = `[${new Date().toLocaleString()}] ${msg}\n`;
-  console.log(line.trim());
-  logFile.write(line);
-}
 
 function getPriceFetcher(market) {
   if (market === 'CN-FUND') return getFundDailyInfo;
@@ -29,10 +21,10 @@ async function syncPrices() {
       useNewUrlParser: true,
       useUnifiedTopology: true
     });
-    log('✅ MongoDB 已连接');
+    logger.info('✅ MongoDB 已连接');
 
     const assets = await Asset.find({ active: true });
-    log(`📊 准备抓取 ${assets.length} 个资产价格...`);
+    logger.info(`📊 准备抓取 ${assets.length} 个资产价格...`);
 
     for (const asset of assets) {
       let { symbol, market } = asset;
@@ -41,7 +33,7 @@ async function syncPrices() {
       try {
         fetcher = getPriceFetcher(market);
       } catch (fetcherErr) {
-        log(`❌ ${asset.symbol}: ${fetcherErr.message}`);
+        logger.info(`❌ ${asset.symbol}: ${fetcherErr.message}`);
         continue;
       }
 
@@ -65,7 +57,7 @@ async function syncPrices() {
         });
 
         if (alreadyExists) {
-          log(`✅ 跳过已存在价格: ${resolvedSymbol}`);
+          logger.info(`✅ 跳过已存在价格: ${resolvedSymbol}`);
           continue;
         }
 
@@ -78,27 +70,27 @@ async function syncPrices() {
           source: market
         });
 
-        log(`📦 成功保存：${resolvedSymbol} @ ${price}`);
+        logger.info(`📦 成功保存：${resolvedSymbol} @ ${price}`);
       } catch (err) {
-        log(`❌ 抓取失败 ${asset.symbol}: ${err.message}`);
+        logger.info(`❌ 抓取失败 ${asset.symbol}: ${err.message}`);
       }
     }
   } catch (err) {
-    log(`❌ 数据库连接失败：${err.message}`);
+    logger.info(`❌ 数据库连接失败：${err.message}`);
   } finally {
     await mongoose.disconnect();
-    log('✅ 断开 MongoDB 连接');
+    logger.info('✅ 断开 MongoDB 连接');
   }
 }
 
 if (require.main === module) {
   syncPrices()
     .then(() => {
-      log('✅ 同步完成，进程退出');
+      logger.info('✅ 同步完成，进程退出');
       process.exit(0);
     })
     .catch(err => {
-      log(`❌ 同步失败: ${err.message}`);
+      logger.info(`❌ 同步失败: ${err.message}`);
       process.exit(1);
     });
 }

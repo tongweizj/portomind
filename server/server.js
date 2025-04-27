@@ -1,8 +1,13 @@
 const express = require("express");
 const bodyParser = require("body-parser");
 const cors = require("cors");
+const logger = require('./config/logger');
 const app = express();
 require('dotenv').config();
+const traceId = require('./middleware/traceId');
+const requestLogger = require('./middleware/requestLogger');
+const errorHandler = require('./middleware/errorHandler');
+const logsRouter = require('./routes/logs');
 
 const corsOptions = {
   origin: function (origin, callback) {
@@ -20,6 +25,10 @@ const corsOptions = {
 
 app.use(cors(corsOptions));
 
+// 注入 Trace ID 中间件 & 请求日志中间件
+app.use(traceId);
+app.use(requestLogger);
+
 // parse requests of content-type - application/json
 app.use(bodyParser.json());
 
@@ -34,28 +43,34 @@ db.mongoose
   })
   .then(() => {
     console.log("Connected to the database!");
+    logger.info("Connected to the database!");
   })
   .catch(err => {
     console.log("Cannot connect to the database!", err);
+    logger.error("Cannot connect to the database!", { error: err.message, stack: err.stack });
     process.exit();
   });
 
 
 // simple route
 app.get("/", (req, res) => {
-  res.json({ message: "Welcome to bezkoder application." });
+  res.json({ message: "Welcome to Max application." });
 });
 
-//require("./doc/turorial.routes")(app); // 一个模块,使用单一路径 + router 文件 
-require("./routes/etf.routes")(app);
 const transactionRoutes = require('./routes/transaction');
 app.use('/api/transactions', transactionRoutes);
 // 挂载投资组合
 const portfolioRoutes = require('./routes/portfolio');
 app.use('/api/portfolios', portfolioRoutes);
-// 中挂载 asset 路由
+// 挂载 asset 路由
 const assetRoutes = require('./routes/asset');
 app.use('/api/assets', assetRoutes);
+
+// 日志查询接口，仅 Admin 可访问（开发模式开放）
+app.use('/api/logs', logsRouter);
+// 全局异常处理（需在所有路由之后注册）
+app.use(errorHandler);
+
 // set port, listen for requests
 const PORT = process.env.PORT || 8080;
 app.listen(PORT, () => {

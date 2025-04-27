@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const assetController = require('../controllers/assetController');
+const assetController = require('../controllers/asset.controller');
 
 router.get('/', assetController.getAllAssets);
 router.post('/', assetController.createAsset);
