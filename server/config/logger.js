@@ -72,7 +72,8 @@ const logger = createLogger({
       dirname: LOG_DIR,
       filename: 'exceptions-%DATE%.log',
       datePattern: 'YYYY-MM-DD',
-      maxFiles: LOG_MAX_FILES
+      maxFiles: LOG_MAX_FILES,
+      utc:true,
     })
   ],
 
@@ -83,7 +84,8 @@ const logger = createLogger({
       dirname: LOG_DIR,
       filename: 'rejections-%DATE%.log',
       datePattern: 'YYYY-MM-DD',
-      maxFiles: LOG_MAX_FILES
+      maxFiles: LOG_MAX_FILES,
+      utc:true,
     })
   ],
 
@@ -104,7 +106,8 @@ const taskLogger = createLogger({
       datePattern:'YYYY-MM-DD',
       zippedArchive: false,
       maxFiles:  LOG_MAX_FILES,
-      level:     'info'
+      level:     'info',
+      utc:true,
     })
   ],
   exitOnError: false

@@ -28,68 +28,19 @@ const path = require('path');
 const readline = require('readline');
 
 const router = express.Router();
+const logController = require('../controllers/log.controller');
 
-// 日志目录（与 logger.js 中一致）
-const LOG_DIR = process.env.LOG_DIR || path.join(__dirname, '../logs');
-// 当天日志文件名，例如 app-2025-04-26.log
-const today = new Date().toISOString().slice(0, 10); // 'YYYY-MM-DD'
-const LOG_FILE = path.join(LOG_DIR, `app-${today}.log`);
+/**
+ * GET /api/logs/tasks
+ * 查询任务专用日志（syncPrices-YYYY-MM-DD.log）
+ */
+router.get('/tasks', logController.getTaskLogs);
 
 /**
  * GET /api/logs
+ * 查询通用日志（app-YYYY-MM-DD.log）
  */
-router.get('/', async (req, res, next) => {
-  try {
-    // 1. 解析查询参数
-    const level    = (req.query.level || 'error').toLowerCase();
-    const page     = Math.max(parseInt(req.query.page, 10) || 1, 1);
-    const pageSize = Math.max(parseInt(req.query.pageSize, 10) || 20, 1);
+router.get('/', logController.getLogs);
 
-    // 2. 确保日志文件存在
-    if (!fs.existsSync(LOG_FILE)) {
-      return res.json({ page, pageSize, total: 0, entries: [] });
-    }
-
-    // 3. 按行读取日志文件
-    const stream = fs.createReadStream(LOG_FILE, { encoding: 'utf8' });
-    const rl = readline.createInterface({ input: stream, crlfDelay: Infinity });
-
-    const entries = [];
-    let total = 0;
-
-    for await (const line of rl) {
-      let log;
-      try {
-        // 4. JSON 解析每行日志
-        log = JSON.parse(line);
-      } catch (e) {
-        // 跳过无法解析的行
-        continue;
-      }
-      // 5. 过滤指定级别
-      if ((log.level || '').toLowerCase() === level) {
-        total++;
-        const start = (page - 1) * pageSize;
-        const end = page * pageSize;
-        // 6. 只收集当前页范围内的日志
-        if (total > start && total <= end) {
-          // 7. 只返回常用字段，可根据需要展开 meta
-          entries.push({
-            timestamp: log.timestamp,
-            level:     log.level,
-            traceId:   log.traceId || null,
-            message:   log.message,
-            ...log.meta   // 若有其他自定义字段
-          });
-        }
-      }
-    }
-
-    // 8. 返回分页结果
-    res.json({ page, pageSize, total, entries });
-  } catch (err) {
-    next(err);
-  }
-});
 
 module.exports = router;
