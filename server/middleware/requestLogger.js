@@ -13,7 +13,7 @@
  */
 
 const onFinished = require('on-finished');
-const logger = require('../config/logger');
+const {logger} = require('../config/logger');
 
 module.exports = function requestLogger(req, res, next) {
   // 1. 记录请求到达的时间戳

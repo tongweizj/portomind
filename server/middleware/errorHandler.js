@@ -13,7 +13,7 @@
  *   app.use(errorHandler);
  */
 
-const logger = require('../config/logger');
+const {logger} = require('../config/logger');
 
 module.exports = function errorHandler(err, req, res, next) {
   // 1. 从请求中取出 traceId，如果中间件未注入也不会报错

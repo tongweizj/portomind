@@ -1,6 +1,6 @@
 // ✅ 文件：server/tasks/syncPrices.js（只执行一次同步，并退出）
 const mongoose = require('mongoose');
-const logger = require('../config/logger');   
+const {taskLogger} = require('../config/logger');   
 const fs = require('fs');
 const path = require('path');
 const Asset = require('../models/asset');
@@ -16,15 +16,16 @@ function getPriceFetcher(market) {
 }
 
 async function syncPrices() {
+  taskLogger.info('Sync_Prices_START');
   try {
     await mongoose.connect(process.env.MONGO_URI, {
       useNewUrlParser: true,
       useUnifiedTopology: true
     });
-    logger.info('✅ MongoDB 已连接');
+    taskLogger.info('✅ MongoDB 已连接');
 
     const assets = await Asset.find({ active: true });
-    logger.info(`📊 准备抓取 ${assets.length} 个资产价格...`);
+    taskLogger.info(`📊 准备抓取 ${assets.length} 个资产价格...`);
 
     for (const asset of assets) {
       let { symbol, market } = asset;
@@ -33,7 +34,7 @@ async function syncPrices() {
       try {
         fetcher = getPriceFetcher(market);
       } catch (fetcherErr) {
-        logger.info(`❌ ${asset.symbol}: ${fetcherErr.message}`);
+        taskLogger.error(`❌ ${asset.symbol}: ${fetcherErr.message}`);
         continue;
       }
 
@@ -57,7 +58,7 @@ async function syncPrices() {
         });
 
         if (alreadyExists) {
-          logger.info(`✅ 跳过已存在价格: ${resolvedSymbol}`);
+          taskLogger.info(`✅ 跳过已存在价格: ${resolvedSymbol}`);
           continue;
         }
 
@@ -70,27 +71,27 @@ async function syncPrices() {
           source: market
         });
 
-        logger.info(`📦 成功保存：${resolvedSymbol} @ ${price}`);
+        taskLogger.info(`📦 成功保存：${resolvedSymbol} @ ${price}`);
       } catch (err) {
-        logger.info(`❌ 抓取失败 ${asset.symbol}: ${err.message}`);
+        taskLogger.error(`❌ 抓取失败 ${asset.symbol}: ${err.message}`);
       }
     }
   } catch (err) {
-    logger.info(`❌ 数据库连接失败：${err.message}`);
+    taskLogger.error(`❌ 数据库连接失败：${err.message}`);
   } finally {
     await mongoose.disconnect();
-    logger.info('✅ 断开 MongoDB 连接');
+    taskLogger.info('✅ 断开 MongoDB 连接');
   }
 }
 
 if (require.main === module) {
   syncPrices()
     .then(() => {
-      logger.info('✅ 同步完成，进程退出');
+      taskLogger.info('✅ 同步完成，进程退出');
       process.exit(0);
     })
     .catch(err => {
-      logger.info(`❌ 同步失败: ${err.message}`);
+      taskLogger.info(`❌ 同步失败: ${err.message}`);
       process.exit(1);
     });
 }

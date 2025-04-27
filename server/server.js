@@ -1,7 +1,7 @@
 const express = require("express");
 const bodyParser = require("body-parser");
 const cors = require("cors");
-const logger = require('./config/logger');
+const {logger} = require('./config/logger');
 const app = express();
 require('dotenv').config();
 const traceId = require('./middleware/traceId');

@@ -90,4 +90,28 @@ const logger = createLogger({
   exitOnError: false  // 当发生错误时，不退出应用
 });
 
-module.exports = logger;
+// ─────────────────────────────────────────────────────────────
+// 4. priceSyncLogger：专用于 syncPrices 任务
+// ─────────────────────────────────────────────────────────────
+const taskLogger = createLogger({
+  level: LOG_LEVEL,
+  format: logFormat,
+  transports: [
+    // 单独写入 syncPrices-YYYY-MM-DD.log
+    new DailyRotateFile({
+      dirname:   LOG_DIR,
+      filename:  'task-%DATE%.log',
+      datePattern:'YYYY-MM-DD',
+      zippedArchive: false,
+      maxFiles:  LOG_MAX_FILES,
+      level:     'info'
+    })
+  ],
+  exitOnError: false
+});
+
+
+module.exports = {
+  logger: logger,
+  taskLogger: taskLogger
+};
