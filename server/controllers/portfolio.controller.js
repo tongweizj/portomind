@@ -2,6 +2,8 @@
 const Portfolio = require('../models/portfolio');
 const Transaction = require('../models/transaction');
 const Price = require('../models/price');
+const PortfolioService = require('../services/portfolioService');
+const { positionTracker } = PortfolioService;
 
 exports.createPortfolio = async (req, res) => {
   try {
@@ -158,5 +160,116 @@ exports.getActualRatios = async (req, res) => {
   } catch (err) {
     console.error('❌ getActualRatios error:', err);
     res.status(500).json({ message: '获取实际持仓比例失败', error: err.message });
+  }
+};
+
+/* stard: 新增 getRebalanceSettings 接口 开始 */
+exports.getRebalanceSettings = async (req, res, next) => {
+  try {
+    const portfolio = await Portfolio.findById(req.params.pid);
+    if (!portfolio) {
+      return res.status(404).json({ message: '组合未找到' });
+    }
+    // 直接返回子文档 rebalanceSettings
+    res.json(portfolio.rebalanceSettings);
+  } catch (err) {
+    next(err);
+  }
+};
+/* end: 新增 getRebalanceSettings 接口 结束 */
+
+/* stard: 新增 updateRebalanceSettings 接口 开始 */
+exports.updateRebalanceSettings = async (req, res, next) => {
+  try {
+    const { absoluteDeviation, relativeDeviation, timeInterval } = req.body;
+    const updates = {};
+
+    // 1. 参数校验 & 构建更新对象
+    if (absoluteDeviation !== undefined) {
+      if (absoluteDeviation < 0 || absoluteDeviation > 100) {
+        return res.status(400).json({ message: 'absoluteDeviation 必须在 0-100 之间' });
+      }
+      updates['rebalanceSettings.absoluteDeviation'] = absoluteDeviation;
+    }
+    if (relativeDeviation !== undefined) {
+      if (relativeDeviation < 0 || relativeDeviation > 100) {
+        return res.status(400).json({ message: 'relativeDeviation 必须在 0-100 之间' });
+      }
+      updates['rebalanceSettings.relativeDeviation'] = relativeDeviation;
+    }
+    if (timeInterval !== undefined) {
+      if (!Number.isInteger(timeInterval) || timeInterval < 1) {
+        return res.status(400).json({ message: 'timeInterval 必须是大于等于1的整数' });
+      }
+      updates['rebalanceSettings.timeInterval'] = timeInterval;
+    }
+
+    // 2. 执行更新
+    const updatedPortfolio = await Portfolio.findByIdAndUpdate(
+      req.params.pid,
+      { $set: updates },
+      { new: true, runValidators: true }
+    );
+    if (!updatedPortfolio) {
+      return res.status(404).json({ message: '组合未找到' });
+    }
+
+    // 3. 返回更新后的设置
+    res.json(updatedPortfolio.rebalanceSettings);
+  } catch (err) {
+    next(err);
+  }
+};
+/* end: 新增 updateRebalanceSettings 接口 结束 */
+
+
+/**
+ * GET /api/portfolios/:pid/positions
+ * 持仓概览：分页返回聚合 + 盈亏计算后的结果
+ */
+exports.getPositions = async (req, res, next) => {
+  try {
+    const { pid }      = req.params;
+    const page         = Math.max(parseInt(req.query.page, 10) || 1, 1);
+    const pageSize     = Math.min(Math.max(parseInt(req.query.pageSize, 10) || 20, 1), 100);
+    const symbolFilter = req.query.symbol || null;
+    
+    /* start: 调用聚合 & 盈亏计算 */
+    // 1. 聚合持仓
+    const rawPositions = await positionTracker.aggregate(pid, symbolFilter);
+    console.log("rawPositions: ", rawPositions);
+  
+    // 2. 计算浮动盈亏
+    const positionsWithPnl = positionTracker.calculatePnL(rawPositions);
+    /* end: 调用聚合 & 盈亏计算 */
+
+    // 3. 分页逻辑
+    const total = positionsWithPnl.length;
+    const start = (page - 1) * pageSize;
+    const data  = positionsWithPnl.slice(start, start + pageSize);
+
+    res.json({ total, data });
+  } catch (err) {
+    next(err);
+  }
+};
+
+/**
+ * GET /api/portfolios/:pid/positions/history
+ * 持仓历史：返回指定标的或全组合在给定粒度下的时间序列
+ */
+exports.getPositionHistory = async (req, res, next) => {
+  try {
+    const { pid }     = req.params;
+    const symbol      = req.query.symbol || null;
+    const interval    = req.query.interval || 'day'; // day | week | month
+
+    /* start: 调用历史趋势服务 */
+    const history = await positionTracker.getHistory(pid, symbol, interval);
+    /* end: 调用历史趋势服务 */
+
+    res.json({ data: history });
+  } catch (err) {
+    next(err);
   }
 };

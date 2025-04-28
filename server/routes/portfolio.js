@@ -13,5 +13,18 @@ router.delete('/:id', portfolioController.deletePortfolio);
 router.get('/:id/stats', portfolioController.getPortfolioStats);
 router.get('/:id/transactions', transactionController.getTransactionsByPortfolio);
 router.get('/:id/actual-ratios', portfolioController.getActualRatios); // 实时持仓比例
-
+// 获取阈值
+router.get('/:pid/rebalance-settings', portfolioController.getRebalanceSettings);
+// 更新阈值
+router.put('/:pid/rebalance-settings', portfolioController.updateRebalanceSettings);
+// 持仓概览
+router.get(
+    '/:pid/positions',
+    portfolioController.getPositions
+  );
+  // 持仓历史
+  router.get(
+    '/:pid/positions/history',
+    portfolioController.getPositionHistory
+  );
 module.exports = router;

@@ -10,11 +10,14 @@ import {
   import PortfolioList from './pages/PortfolioList';
   import PortfolioDetail from './pages/PortfolioDetail';
   import PortfolioForm from './pages/PortfolioForm';
-  import PortfolioRebalance from './pages/PortfolioRebalance';
+  import PortfolioRebalance from './pages/PortfolioRebalanceSettings';
+  import PositionOverview from './pages/PositionOverview';
+  import PositionHistory from './pages/PositionHistory';
   import AssetList from './pages/AssetList';
   import AssetForm from './pages/AssetForm'; 
   import LogViewer from './pages/LogViewer';
   import EditTransaction from './pages/EditTransaction';
+
 
 
   const router = createBrowserRouter(
@@ -29,6 +32,8 @@ import {
         <Route path="/portfolios/new" element={<PortfolioForm />} />
         <Route path="/portfolios/edit/:id" element={<PortfolioForm />} />
         <Route path="/portfolios/rebalance/:id" element={<PortfolioRebalance />} />
+        <Route path="/portfolios/:id/positions" element={<PositionOverview />}/>
+        <Route path="/portfolios/:id/positions/history" element={<PositionHistory />}/>
         <Route path="/assets" element={<AssetList />} />
         <Route path="/assets/new" element={<AssetForm />} />    
         <Route path='/assets/edit/:id' element={<AssetForm />} />
