@@ -15,7 +15,13 @@ const RebalanceSettingsSchema = new mongoose.Schema({
   timeInterval: {        // 时间间隔阈值（天）
     type: Number,
     default: 60
-  }
+  },
+  rebalanceSchedule: {
+    type: String,
+    enum: ['daily', 'weekly', 'monthly'],
+    default: 'daily',   // 默认每天检查一次
+    required: true
+  },
 }, { _id: false });
 
 const PortfolioSchema = new mongoose.Schema({
@@ -48,6 +54,7 @@ const PortfolioSchema = new mongoose.Schema({
     type: RebalanceSettingsSchema,
     default: () => ({})
   },
+
   createdAt: {
     type: Date,
     default: Date.now

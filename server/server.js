@@ -8,6 +8,10 @@ const traceId = require('./middleware/traceId');
 const requestLogger = require('./middleware/requestLogger');
 const errorHandler = require('./middleware/errorHandler');
 const logsRouter = require('./routes/logs');
+const rebalanceRecordRoutes = require('./routes/rebalanceRecord.routes');
+const transactionRoutes = require('./routes/transaction');
+const portfolioRoutes = require('./routes/portfolio');
+const assetRoutes = require('./routes/asset');
 
 const corsOptions = {
   origin: function (origin, callback) {
@@ -57,20 +61,21 @@ app.get("/", (req, res) => {
   res.json({ message: "Welcome to Max application." });
 });
 
-const transactionRoutes = require('./routes/transaction');
+
 app.use('/api/transactions', transactionRoutes);
+
 // 挂载投资组合
-const portfolioRoutes = require('./routes/portfolio');
 app.use('/api/portfolios', portfolioRoutes);
+
 // 挂载 asset 路由
-const assetRoutes = require('./routes/asset');
 app.use('/api/assets', assetRoutes);
 
 // 日志查询接口，仅 Admin 可访问（开发模式开放）
 app.use('/api/logs', logsRouter);
+app.use('/api/rebalance', rebalanceRecordRoutes);
+
 // 全局异常处理（需在所有路由之后注册）
 app.use(errorHandler);
-
 // set port, listen for requests
 const PORT = process.env.PORT || 8080;
 app.listen(PORT, () => {

@@ -6,6 +6,8 @@ import { getTransactionById } from '../services/transactionService';
 import PortfolioRebalance from './PortfolioRebalanceSettings'; // 新增
 import PositionOverview from './PositionOverview';          // 新增
 import PositionHistory from './PositionHistory';
+import RebalanceSuggester from './RebalanceSuggester';
+import RebalanceHistory from './RebalanceHistory';
 import { Pencil, Trash, Plus } from 'lucide-react';
 
 
@@ -48,8 +50,10 @@ export default function PortfolioDetail() {
     { key: 'details', label: '详情' },
     { key: 'transactions', label: '交易记录' },
     { key: 'rebalance', label: '阈值设置' },
-    { key: 'positions', label: '持仓概览' },  
-    { key: 'history', label: '持仓趋势' }  
+    { key: 'positions', label: '持仓概览' },
+    { key: 'history', label: '持仓趋势' },
+    { key: 'rebalance-ui', label: '再平衡' },       // 新增
+    { key: 'rebalance-history', label: '再平衡历史' }
   ];
   return (
     <div className="space-y-6">
@@ -59,18 +63,17 @@ export default function PortfolioDetail() {
           <button
             key={tab.key}
             onClick={() => setActiveTab(tab.key)}
-            className={`px-4 py-2 -mb-px border-b-2 ${
-              activeTab === tab.key
+            className={`px-4 py-2 -mb-px border-b-2 ${activeTab === tab.key
                 ? 'border-blue-500 text-blue-500'
                 : 'border-transparent text-gray-600 hover:text-blue-500'
-            }`}
+              }`}
           >
             {tab.label}
           </button>
         ))}
       </div>
-{/* Tab 内容渲染 */}
-{activeTab === 'details' && (
+      {/* Tab 内容渲染 */}
+      {activeTab === 'details' && (
         /* 现有: 组合基本信息 */
         <div className="space-y-6">
           <div className="flex justify-between items-center">
@@ -106,7 +109,7 @@ export default function PortfolioDetail() {
             <p><strong>币种：</strong> {portfolio.currency}</p>
             <p><strong>描述：</strong> {portfolio.description || '暂无描述'}</p>
           </div>
-        
+
 
           {/* 新增: 目标资产配置展示 */}
           <div className="bg-white p-4 rounded shadow text-sm text-gray-700">
@@ -137,7 +140,7 @@ export default function PortfolioDetail() {
             )}
           </div>
         </div>
-    
+
 
       )}
 
@@ -182,9 +185,18 @@ export default function PortfolioDetail() {
       )}
 
 
-{activeTab === 'positions' && <PositionOverview />}
+      {activeTab === 'positions' && <PositionOverview />}
 
-{activeTab === 'history' && <PositionHistory />}
+      {activeTab === 'history' && <PositionHistory />}
+      {/* —— 新增：再平衡界面 —— */}
+      {activeTab === 'rebalance-ui' && (
+        <RebalanceSuggester />
+      )}
+
+      {/* —— 新增：再平衡历史 —— */}
+      {activeTab === 'rebalance-history' && (
+        <RebalanceHistory />
+      )}
     </div>
   );
 }

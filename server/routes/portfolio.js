@@ -3,6 +3,7 @@ const express = require('express');
 const router = express.Router();
 const portfolioController = require('../controllers/portfolio.controller');
 const transactionController = require('../controllers/transaction.controller');
+const rebalanceController  = require('../controllers/rebalance.controller');
 
 // ✅ 创建组合
 router.post('/', portfolioController.createPortfolio);
@@ -21,10 +22,33 @@ router.put('/:pid/rebalance-settings', portfolioController.updateRebalanceSettin
 router.get(
     '/:pid/positions',
     portfolioController.getPositions
-  );
-  // 持仓历史
-  router.get(
+);
+// 持仓历史
+router.get(
     '/:pid/positions/history',
     portfolioController.getPositionHistory
-  );
+);
+
+// ——— 再平衡 ——
+// POST /api/portfolios/:pid/rebalance/check
+router.post(
+    '/:pid/rebalance/check',
+    rebalanceController.check
+);
+// POST /api/portfolios/:pid/rebalance/suggestions
+router.post(
+    '/:pid/rebalance/suggestions',
+    rebalanceController.suggestions
+);
+// POST /api/portfolios/:pid/rebalance/execute
+router.post(
+    '/:pid/rebalance/execute',
+    rebalanceController.execute
+);
+// GET  /api/portfolios/:pid/rebalance/history
+router.get(
+    '/:pid/rebalance/history',
+    rebalanceController.history
+);
+
 module.exports = router;

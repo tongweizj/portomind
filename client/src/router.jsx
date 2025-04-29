@@ -17,7 +17,8 @@ import {
   import AssetForm from './pages/AssetForm'; 
   import LogViewer from './pages/LogViewer';
   import EditTransaction from './pages/EditTransaction';
-
+  import RebalanceSuggester from './pages/RebalanceSuggester'; 
+  import RebalanceHistory from './pages/RebalanceHistory';
 
 
   const router = createBrowserRouter(
@@ -34,6 +35,14 @@ import {
         <Route path="/portfolios/rebalance/:id" element={<PortfolioRebalance />} />
         <Route path="/portfolios/:id/positions" element={<PositionOverview />}/>
         <Route path="/portfolios/:id/positions/history" element={<PositionHistory />}/>
+        <Route
+          path="/portfolios/:id/rebalance"
+          element={<RebalanceSuggester />}
+        />
+        <Route
+          path="/portfolios/:id/rebalance/history"
+          element={<RebalanceHistory />}
+        />
         <Route path="/assets" element={<AssetList />} />
         <Route path="/assets/new" element={<AssetForm />} />    
         <Route path='/assets/edit/:id' element={<AssetForm />} />
