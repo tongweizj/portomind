@@ -1,10 +1,9 @@
 // ✅ 文件：src/pages/PortfolioDetail.jsx
 import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router';
-import { getPortfolioById, deletePortfolio } from '../services/portfolioService';
+import { getPortfolioById, deletePortfolio, getActualRatios } from '../services/portfolioService';
 import { getTransactionById } from '../services/transactionService';
 import PortfolioRebalance from './PortfolioRebalanceSettings'; // 新增
-import PortfolioStats from './PortfolioStats';         // 新增
 import PositionOverview from './PositionOverview';          // 新增
 import PositionHistory from './PositionHistory';
 import { Pencil, Trash, Plus } from 'lucide-react';
@@ -15,6 +14,7 @@ export default function PortfolioDetail() {
   const navigate = useNavigate();
   const [portfolio, setPortfolio] = useState(null);
   const [transactions, setTransactions] = useState([]);
+  const [actualRatios, setActualRatios] = useState([]);
   const [activeTab, setActiveTab] = useState('details');
 
   useEffect(() => {
@@ -25,6 +25,10 @@ export default function PortfolioDetail() {
       console.log('🧪 getTransactionById:', data);
       setTransactions(data)
     });
+    getActualRatios(id).then(data => {
+      console.log('🧪 getActualRatios:', data);
+      setActualRatios(data)
+    });   // 拉取当前持仓比例
   }, [id]);
 
   if (!portfolio) return <div className="text-gray-500">加载中...</div>;
@@ -44,7 +48,6 @@ export default function PortfolioDetail() {
     { key: 'details', label: '详情' },
     { key: 'transactions', label: '交易记录' },
     { key: 'rebalance', label: '阈值设置' },
-    { key: 'stats', label: '统计' },
     { key: 'positions', label: '持仓概览' },  
     { key: 'history', label: '持仓趋势' }  
   ];
@@ -103,7 +106,39 @@ export default function PortfolioDetail() {
             <p><strong>币种：</strong> {portfolio.currency}</p>
             <p><strong>描述：</strong> {portfolio.description || '暂无描述'}</p>
           </div>
+        
+
+          {/* 新增: 目标资产配置展示 */}
+          <div className="bg-white p-4 rounded shadow text-sm text-gray-700">
+            <h2 className="text-lg font-semibold mb-2">目标资产配置</h2>
+            {portfolio.targets && portfolio.targets.length > 0 ? (
+              <div className="overflow-x-auto">
+                <table className="min-w-full table-auto divide-y divide-gray-200">
+                  <thead>
+                    <tr className="bg-gray-100">
+                      <th className="px-4 py-2 text-left">Symbol</th>
+                      <th className="px-4 py-2 text-right">目标比例 (%)</th>
+                      <th className="px-4 py-2 text-right">当前比例 (%)</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {portfolio.targets.map((t, idx) => (
+                      <tr key={idx} className="hover:bg-gray-50">
+                        <td className="px-4 py-2">{t.symbol}</td>
+                        <td className="px-4 py-2 text-right">{t.targetRatio}</td>
+                        <td className="px-4 py-2 text-right">{(actualRatios.find(r => r.symbol === t.symbol)?.ratio ?? 0).toFixed(2)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            ) : (
+              <p className="text-gray-500">未设置目标资产配置。</p>
+            )}
+          </div>
         </div>
+    
+
       )}
 
       {activeTab === 'transactions' && (
@@ -146,10 +181,6 @@ export default function PortfolioDetail() {
         <PortfolioRebalance />
       )}
 
-      {activeTab === 'stats' && (
-        /* 新增: 统计 Tab */
-        <PortfolioStats />
-      )}
 
 {activeTab === 'positions' && <PositionOverview />}
 
