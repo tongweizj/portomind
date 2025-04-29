@@ -4,7 +4,7 @@ const ThresholdChecker     = require('../services/rebalanceEngine/thresholdCheck
 const SuggestionGenerator  = require('../services/rebalanceEngine/suggestionGenerator');
 const CostEstimator        = require('../services/rebalanceEngine/costEstimator');
 const Recorder             = require('../services/rebalanceEngine/recorder');
-const positionTracker      = require('../services/portfolioService').positionTracker;
+const positionTracker      = require('../services/portfolio').positionTracker;
 
 /**
  * POST /api/portfolios/:pid/rebalance/check

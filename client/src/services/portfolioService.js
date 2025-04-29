@@ -36,7 +36,7 @@ export const deletePortfolio = async (id) => {
 // 获取实时持仓比例
 export function getActualRatios(id) {
   return api
-    .get(`/${id}/actual-ratios`)
+    .get(`/${id}/stats/actual-ratios`)
     .then(res => res.data);
 }
 

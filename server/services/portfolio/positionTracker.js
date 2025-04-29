@@ -42,7 +42,8 @@ const agg = txns.reduce((map, txn) => {
   const positions = Object.values(agg).map(({ symbol, quantity, costAcc }) => ({
     symbol,
     quantity,
-    avgCost: quantity ? costAcc / quantity : 0
+    avgCost: parseFloat(quantity ? costAcc / quantity : 0).toFixed(2),
+    totalCost:parseFloat(((quantity ? costAcc / quantity : 0) * quantity).toFixed(2))
   }));
 
   // 4. 批量获取最新价格

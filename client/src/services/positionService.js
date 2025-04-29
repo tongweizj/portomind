@@ -30,7 +30,7 @@ export async function getPositions(
   if (sortBy) params.sortBy = sortBy;
   if (sortOrder) params.sortOrder = sortOrder;
 
-  const response = await api.get(`/${portfolioId}/positions`, { params });
+  const response = await api.get(`/${portfolioId}/stats/positions`, { params });
   // 后端返回 { total, data: [...] }
   return response.data;
 }

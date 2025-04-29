@@ -1,7 +1,7 @@
 // server/services/rebalanceEngine/thresholdChecker.js
 
 const Portfolio = require('../../models/portfolio');
-const { positionTracker } = require('../portfolioService');
+const { positionTracker } = require('../portfolio');
 const RebalanceRecord = require('../../models/rebalanceRecord');
 
 /**

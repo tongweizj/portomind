@@ -98,7 +98,7 @@ export default function PositionOverview() {
                 <tr key={idx} className="hover:bg-gray-50">
                   <td className="px-4 py-2">{pos.symbol}</td>
                   <td className="px-4 py-2 text-right">{pos.quantity}</td>
-                  <td className="px-4 py-2 text-right">{pos.avgCost.toFixed(2)}</td>
+                  <td className="px-4 py-2 text-right">{pos.avgCost}</td>
                   <td className="px-4 py-2 text-right">{pos.price != null ? pos.price.toFixed(2) : '-'}</td>
                   <td className="px-4 py-2 text-right">{pos.marketValue != null ? pos.marketValue.toFixed(2) : '-'}</td>
                   <td className="px-4 py-2 text-right">{pos.pnl != null ? pos.pnl.toFixed(2) : '-'}</td>
