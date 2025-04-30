@@ -20,6 +20,7 @@ const marketData  = require('../marketDataService'); // 批量获取行情
  * @param {String} [symbolFilter] - 可选，过滤单个资产标识
  * @returns {Promise<Array<{ symbol, quantity, avgCost, price, marketValue }>>}
  */
+
 async function aggregate(portfolioId, symbolFilter) {
   // 1. 用正确字段名查询交易
   const match = { portfolioId };

@@ -1,6 +1,34 @@
 // server/services/rebalanceEngine/suggestionGenerator.js
-
+const { aggregatePositions } = require('../portfolio');
+const thresholdChecker    = require('./thresholdChecker');
+const costEstimator       = require('./costEstimator');
 const Portfolio = require('../../models/portfolio');
+ /**
+   * 生成再平衡建议并预估成本
+   * @param {String} portfolioId
+   * @param {Object} [feeModel={}]  固定费/比例费/税率等
+   * @returns {Promise<Array>}      建议列表，每项含 symbol, action, quantity, estimatedCost, estimatedTax, postRebalanceRatio
+   */
+ async function getSuggestions(portfolioId, feeModel = {}) {
+  // 1. 聚合当前持仓
+  const positions = await aggregatePositions(portfolioId);
+
+  // 2. 阈值检测，决定哪些阈值被触发
+  const { triggeredThresholds } = await thresholdChecker.checkThresholds(portfolioId);
+
+  // 3. 生成原始建议
+  let suggestions = await generateSuggestions(
+    portfolioId,
+    positions,
+    triggeredThresholds
+  );
+
+  // 4. 对每条建议预估交易成本和税费
+  suggestions = costEstimator.estimateCost(suggestions, feeModel);
+
+  return suggestions;
+}
+
 
 /**
  * 建议生成子模块
@@ -53,4 +81,4 @@ async function generateSuggestions(portfolioId, positions, triggeredThresholds) 
   return suggestions;
 }
 
-module.exports = { generateSuggestions };
+module.exports = { getSuggestions, generateSuggestions };

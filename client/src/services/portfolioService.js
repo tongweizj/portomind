@@ -51,3 +51,9 @@ export const updateRebalanceSettings = async (id, settings) => {
   const res = await api.put(`/${id}/rebalance-settings`, settings);
   return res.data;
 };
+
+/** 根据组合id获取所有交易 */
+export async function getTransactions(pid) {
+  const res = await api.get(`/${pid}/transactions/`);
+  return res.data;
+}

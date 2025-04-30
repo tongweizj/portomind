@@ -5,8 +5,8 @@ import {
   createPortfolio,
   getPortfolioById,
   updatePortfolio
-} from '../services/portfolioService';
-import { getAllAssets } from '../services/assetService';
+} from '../../services/portfolioService';
+import { getAllAssets } from '../../services/assetService';
 export default function CreatePortfolio() {
   const navigate = useNavigate();
   const { id } = useParams();
@@ -102,13 +102,15 @@ export default function CreatePortfolio() {
   };
 
   return (
-    <div className="p-6 max-w-lg mx-auto bg-white rounded-lg shadow">
+    <div className="p-10 mx-auto bg-white rounded-lg shadow">
       <h2 className="text-2xl font-bold mb-4">
-        {isEdit ? '编辑投资组合1' : '添加投资组合'}
+        {isEdit ? '编辑组合' : '创建组合'}
       </h2>
+
+      <h3 className="font-bold text-lg my-5">基本信息</h3> 
       <form onSubmit={handleSubmit} className="space-y-4">
         {/* 组合名称 */}
-        <div>
+        <div class="max-w-lg justify-start">
           <label className="block text-gray-700 mb-1">名称</label>
           <input
             type="text"
@@ -121,7 +123,7 @@ export default function CreatePortfolio() {
         </div>
 
         {/* 描述 */}
-        <div>
+        <div class="max-w-lg justify-start">
           <label className="block text-gray-700 mb-1">描述</label>
           <textarea
             name="description"
@@ -132,7 +134,7 @@ export default function CreatePortfolio() {
         </div>
 
         {/* 类型 */}
-        <div>
+        <div class="max-w-lg justify-start">
           <label className="block text-gray-700 mb-1">类型</label>
           <div className="flex space-x-4">
             {['活钱', '稳健', '长期'].map(opt => (
@@ -151,7 +153,7 @@ export default function CreatePortfolio() {
         </div>
 
         {/* 币种 */}
-        <div>
+        <div class="max-w-lg justify-start">
           <label className="block text-gray-700 mb-1">币种</label>
           <select
             name="currency"
@@ -166,9 +168,10 @@ export default function CreatePortfolio() {
         </div>
 
         {/* 目标资产配置 */}
-        <div>
+        <div class="max-w-lg justify-start">
           <div className="flex items-center justify-between mb-2">
-            <label className="block text-gray-700">目标资产配置</label>
+            <h3 className="font-bold text-lg my-5">资产配置</h3> 
+            {/* // <label className="block text-gray-700"></label> */}
             <button
               type="button"
               onClick={addTarget}
@@ -183,7 +186,7 @@ export default function CreatePortfolio() {
               <select
                 value={t.symbol}
                 onChange={e => handleTargetChange(idx, 'symbol', e.target.value)}
-                className="flex-1 border border-gray-300 rounded px-2 py-1 focus:outline-none focus:ring focus:ring-blue-200"
+                className="max-w-sm flex-1 border border-gray-300 rounded px-2 py-1 focus:outline-none focus:ring focus:ring-blue-200"
                 required
               >
                 <option value="">请选择资产</option>
@@ -208,7 +211,7 @@ export default function CreatePortfolio() {
               <button
                 type="button"
                 onClick={() => removeTarget(idx)}
-                className="text-red-500 hover:underline text-sm"
+                className="w-20 text-red-500 hover:underline text-sm"
               >
                 删除
               </button>
@@ -219,7 +222,7 @@ export default function CreatePortfolio() {
         {/* 提交 */}
         <button
           type="submit"
-          className="w-full bg-blue-600 text-white py-2 rounded hover:bg-blue-700 transition"
+          className="w-30 bg-blue-600 text-white py-2 rounded hover:bg-blue-700 transition"
         >
           {isEdit ? '更新组合' : '保存组合'}
         </button>

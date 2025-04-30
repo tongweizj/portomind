@@ -1,7 +1,7 @@
 // client/src/pages/PositionOverview.jsx
 import React, { useState, useEffect } from 'react';
 import { useParams } from 'react-router';
-import { getPositions } from '../services/positionService';
+import { getPositions } from '../../services/positionService';
 
 export default function PositionOverview() {
   const { id: portfolioId } = useParams();
@@ -75,21 +75,22 @@ export default function PositionOverview() {
             <thead>
               <tr className="bg-gray-100">
                 <th className="px-4 py-2 text-left">Symbol</th>
-                <th className="px-4 py-2 text-right">Quantity</th>
-                <th className="px-4 py-2 text-right">AvgCost</th>
-                <th className="px-4 py-2 text-right">Price</th>
+                <th className="px-4 py-2 text-right">份额</th>
+                <th className="px-4 py-2 text-right">平均成本</th>
+                <th className="px-4 py-2 text-right">总成本</th>
+                <th className="px-4 py-2 text-right">最新价格</th>
                 <th
                   className="px-4 py-2 text-right cursor-pointer"
                   onClick={() => handleSort('marketValue')}
                 >
-                  MarketValue {sortBy === 'marketValue' && (sortOrder === 'asc' ? '↑' : '↓')}
+                  总金额 {sortBy === 'marketValue' && (sortOrder === 'asc' ? '↑' : '↓')}
                 </th>
-                <th className="px-4 py-2 text-right">PnL</th>
+                <th className="px-4 py-2 text-right">盈亏</th>
                 <th
                   className="px-4 py-2 text-right cursor-pointer"
                   onClick={() => handleSort('pnlPct')}
                 >
-                  PnL% {sortBy === 'pnlPct' && (sortOrder === 'asc' ? '↑' : '↓')}
+                  盈亏比 {sortBy === 'pnlPct' && (sortOrder === 'asc' ? '↑' : '↓')}
                 </th>
               </tr>
             </thead>
@@ -99,6 +100,7 @@ export default function PositionOverview() {
                   <td className="px-4 py-2">{pos.symbol}</td>
                   <td className="px-4 py-2 text-right">{pos.quantity}</td>
                   <td className="px-4 py-2 text-right">{pos.avgCost}</td>
+                  <td className="px-4 py-2 text-right">{pos.totalCost}</td>
                   <td className="px-4 py-2 text-right">{pos.price != null ? pos.price.toFixed(2) : '-'}</td>
                   <td className="px-4 py-2 text-right">{pos.marketValue != null ? pos.marketValue.toFixed(2) : '-'}</td>
                   <td className="px-4 py-2 text-right">{pos.pnl != null ? pos.pnl.toFixed(2) : '-'}</td>

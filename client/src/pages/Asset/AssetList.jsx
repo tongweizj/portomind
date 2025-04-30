@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Pencil,Plus } from 'lucide-react';
-import { getAllAssets, deleteAsset } from '../services/assetService';
+import { getAllAssets, deleteAsset } from '../../services/assetService';
 import { useNavigate } from 'react-router';
 
 export default function AssetList() {

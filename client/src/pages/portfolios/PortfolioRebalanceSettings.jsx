@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router';
 import {
   getRebalanceSettings, updateRebalanceSettings
-} from '../services/portfolioService';
+} from '../../services/portfolioService';
 import { ChevronLeft } from 'lucide-react';
 
 export default function PortfolioRebalance() {

@@ -6,8 +6,8 @@ import {
   getSuggestions,
   executeSuggestions,
   getHistory
-} from '../services/rebalanceService';
-import { getActualRatios } from '../services/portfolioService';
+} from '../../services/rebalanceService';
+import { getActualRatios } from '../../services/portfolioService';
 import {
   ResponsiveContainer,
   PieChart,
@@ -36,6 +36,8 @@ export default function RebalanceSuggester() {
   useEffect(() => {
     async function init() {
       try {
+        const pid = portfolioId.id;
+        console.log("pid: ", pid);
         const history = await getHistory(portfolioId, { page: 1, pageSize: 1 });
         if (history.data && history.data.length) {
           setLastRunTime(history.data[0].timestamp);

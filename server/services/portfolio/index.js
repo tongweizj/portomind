@@ -9,8 +9,8 @@ module.exports = {
   updateRebalanceSettings: settings.updateRebalanceSettings,
   aggregatePositions: tracker.aggregate,
   calculatePnL: tracker.calculatePnL,
+  getHistory: tracker.getHistory,
   computeStats: stats.computeStats,
-  computeNetPositionStats:stats.computeNetPositionStats,
   computeActualRatios: actualRatios.computeActualRatios,
   listPositions:           lister.listPositions
 };

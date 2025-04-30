@@ -2,12 +2,12 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router';
 import { getPortfolioById, deletePortfolio, getActualRatios } from '../services/portfolioService';
-import { getTransactionById } from '../services/transactionService';
-import PortfolioRebalance from './PortfolioRebalanceSettings'; // 新增
-import PositionOverview from './PositionOverview';          // 新增
-import PositionHistory from './PositionHistory';
-import RebalanceSuggester from './RebalanceSuggester';
-import RebalanceHistory from './RebalanceHistory';
+import { getTransactions } from '../services/portfolioService';
+import PortfolioRebalance from '../pages/portfolios/PortfolioRebalanceSettings'; // 新增
+import PositionOverview from '../pages/portfolios/PositionOverview';          // 新增
+import PositionHistory from '../pages/portfolios/PositionHistory';
+import RebalanceSuggester from '../pages/portfolios/RebalanceSuggester';
+import RebalanceHistory from '../pages/portfolios/RebalanceHistory';
 import { Pencil, Trash, Plus } from 'lucide-react';
 
 
@@ -23,7 +23,7 @@ export default function PortfolioDetail() {
     // 拉取组合详情
     getPortfolioById(id).then(setPortfolio);
     // 拉取该组合下的交易记录
-    getTransactionById(id).then(data => {
+    getTransactions(id).then(data => {
       console.log('🧪 getTransactionById:', data);
       setTransactions(data)
     });
@@ -148,7 +148,7 @@ export default function PortfolioDetail() {
         /* 现有: 交易记录 */
         <div>
           <h2 className="text-xl font-semibold text-gray-800">交易记录</h2>
-          {transactions.length === 0 ? (
+          {transactions.total === 0 ? (
             <p className="text-gray-500">暂无交易记录。</p>
           ) : (
             <div className="overflow-x-auto">
@@ -163,7 +163,7 @@ export default function PortfolioDetail() {
                   </tr>
                 </thead>
                 <tbody className="text-sm text-gray-700 divide-y">
-                  {transactions.map(tx => (
+                  {transactions.data.map(tx => (
                     <tr key={tx._id} className="hover:bg-gray-50">
                       <td className="px-4 py-2 whitespace-nowrap">{tx.date.slice(0, 10)}</td>
                       <td className="px-4 py-2 whitespace-nowrap">{tx.symbol}</td>

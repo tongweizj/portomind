@@ -1,8 +1,8 @@
 // src/pages/TransactionList.jsx
 import { useEffect, useState } from 'react';
-import { getTransactions, deleteTransaction } from '../services/transactionService';
+import { getTransactions, deleteTransaction } from '../../services/transactionService';
 import { useNavigate } from 'react-router';
-import { getAllPortfolios } from '../services/portfolioService';
+import { getAllPortfolios } from '../../services/portfolioService';
 
 export default function TransactionList() {
   const [transactions, setTransactions] = useState([]);

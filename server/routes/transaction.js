@@ -7,7 +7,7 @@ const transactionController = require('../controllers/transaction.controller');
 // 获取所有交易记录
 router.get('/', transactionController.getAllTransactions);
 router.get('/:id', transactionController.getTransactionById);
-router.get('/:portfolioId', transactionController.getTransactionsByPortfolio); // 获取某个投资组合的所有交易
+// router.get('/:portfolioId', transactionController.getByPortfolio); // 获取某个投资组合的所有交易
 
 
 // 添加交易

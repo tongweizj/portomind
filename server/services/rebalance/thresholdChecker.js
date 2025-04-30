@@ -1,9 +1,8 @@
 // server/services/rebalanceEngine/thresholdChecker.js
 
 const Portfolio = require('../../models/portfolio');
-const { positionTracker } = require('../portfolio');
 const RebalanceRecord = require('../../models/rebalanceRecord');
-
+const { aggregatePositions } = require('../portfolio');
 /**
  * 阈值检测
  * @param {String} portfolioId
@@ -17,7 +16,7 @@ async function checkThresholds(portfolioId) {
   const { rebalanceSettings, targets } = portfolio;
 
   // 2. 当前持仓聚合
-  const positions = await positionTracker.aggregate(portfolioId);
+  const positions = await aggregatePositions(portfolioId);
   const totalValue = positions.reduce((sum, p) => sum + (p.marketValue || 0), 0);
 
   // 3. 绝对偏离 & 相对偏离检查

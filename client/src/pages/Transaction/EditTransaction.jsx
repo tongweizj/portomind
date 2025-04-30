@@ -1,13 +1,13 @@
-// ✅ 文件：src/pages/AddTransaction.jsx
+// ✅ 文件：src/pages/EditTransaction.jsx
 import { useEffect, useState } from 'react';
-import { useNavigate, useSearchParams } from 'react-router';
-import { addTransaction } from '../services/transactionService';
-import { getAllPortfolios } from '../services/portfolioService';
-import { getAllAssets } from '../services/assetService';
+import { useNavigate, useParams } from 'react-router';
+import { getTransactionById, updateTransaction } from '../../services/transactionService';
+import { getAllPortfolios } from '../../services/portfolioService';
+import { getAllAssets } from '../../services/assetService';
 
-export default function AddTransaction() {
+export default function EditTransaction() {
+  const { id } = useParams();
   const navigate = useNavigate();
-  const [searchParams] = useSearchParams();
 
   const [form, setForm] = useState({
     portfolioId: '',
@@ -26,17 +26,15 @@ export default function AddTransaction() {
   const [assets, setAssets] = useState([]);
 
   useEffect(() => {
-    getAllPortfolios().then(data => {
-      setPortfolios(data);
-      const preset = searchParams.get('portfolioId');
-      if (preset) {
-        setForm(prev => ({ ...prev, portfolioId: preset }));
-      } else if (data.length > 0) {
-        setForm(prev => ({ ...prev, portfolioId: data[0]._id }));
-      }
-    });
+    getAllPortfolios().then(setPortfolios);
     getAllAssets().then(setAssets);
-  }, []);
+    getTransactionById(id).then(tx => {
+      setForm({
+        ...tx,
+        date: tx.date.slice(0, 10),
+      });
+    });
+  }, [id]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -56,13 +54,13 @@ export default function AddTransaction() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    await addTransaction(form);
+    await updateTransaction(id, form);
     navigate('/transactions');
   };
 
   return (
     <div className="max-w-xl mx-auto space-y-6">
-      <h1 className="text-2xl font-bold text-gray-800">添加交易记录</h1>
+      <h1 className="text-2xl font-bold text-gray-800">编辑交易记录</h1>
 
       <form onSubmit={handleSubmit} className="space-y-4 bg-white p-6 rounded shadow">
         <div>
@@ -130,7 +128,7 @@ export default function AddTransaction() {
         </div>
 
         <button type="submit" className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">
-          提交交易
+          更新交易
         </button>
       </form>
     </div>

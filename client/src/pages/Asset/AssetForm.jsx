@@ -1,7 +1,7 @@
 // ✅ 文件：src/pages/AssetForm.jsx
 import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router';
-import { createAsset, getAssetById, updateAsset } from '../services/assetService';
+import { createAsset, getAssetById, updateAsset } from '../../services/assetService';
 
 export default function AssetForm() {
   const navigate = useNavigate();

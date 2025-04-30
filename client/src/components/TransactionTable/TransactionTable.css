@@ -1,0 +1,15 @@
+.transaction-table {
+    width: 100%;
+    border-collapse: collapse;
+  }
+  .transaction-table th,
+  .transaction-table td {
+    padding: 0.5rem;
+    border: 1px solid #eee;
+    text-align: left;
+  }
+  .transaction-table th {
+    background-color: #fafafa;
+    font-weight: bold;
+  }
+  

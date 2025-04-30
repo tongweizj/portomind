@@ -1,0 +1,26 @@
+.portfolio-card {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1rem;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: background-color 0.2s ease;
+  }
+  .portfolio-card:hover {
+    background-color: #f9f9f9;
+  }
+  .portfolio-card__title {
+    margin: 0;
+    font-size: 1.1rem;
+  }
+  .portfolio-card__desc {
+    margin: 0.25rem 0 0;
+    color: #666;
+  }
+  .portfolio-card__arrow {
+    font-size: 1.2rem;
+    color: #aaa;
+  }
+  

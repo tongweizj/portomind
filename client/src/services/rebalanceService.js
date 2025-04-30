@@ -29,6 +29,7 @@ export async function checkRebalance(portfolioId) {
  * @returns {Promise<Array<Object>>} 建议列表
  */
 export async function getSuggestions(portfolioId) {
+  console.log("portfolioId: ",portfolioId)
   const url = `${PORTFOLIO_BASE}/${portfolioId}/rebalance/suggestions`;
   const response = await axios.post(url);
   return response.data;

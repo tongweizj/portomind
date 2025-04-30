@@ -185,4 +185,13 @@ server/
 
 
 
+error: UNHANDLED_ERROR Recorder is not defined {"headers":{"referer":null,"user-agent":"PostmanRuntime/7.43.3"},"method":"GET","stack":"ReferenceError: 
+
+Recorder is not defined\n    at exports.history (
+    
+    /Volumes/workspace/projects/portomind/server/controllers/rebalance.controller.js:61:29)\n 
+    
+    
+       at Layer.handle [as handle_request] (/Volumes/workspace/projects/portomind/server/node_modules/express/lib/router/layer.js:95:5)\n    at next (/Volumes/workspace/projects/portomind/server/node_modules/express/lib/router/route.js:149:13)\n    at Route.dispatch (/Volumes/workspace/projects/portomind/server/node_modules/express/lib/router/route.js:119:3)\n    at Layer.handle [as handle_request] (/Volumes/workspace/projects/portomind/server/node_modules/express/lib/router/layer.js:95:5)\n    at /Volumes/workspace/projects/portomind/server/node_modules/express/lib/router/index.js:284:15\n    at param (/Volumes/workspace/projects/portomind/server/node_modules/express/lib/router/index.js:365:14)\n    at param (/Volumes/workspace/projects/portomind/server/node_modules/express/lib/router/index.js:376:14)\n    at Function.process_params (/Volumes/workspace/projects/portomind/server/node_modules/express/lib/router/index.js:421:3)\n    at next (/Volumes/workspace/projects/portomind/server/node_modules/express/lib/router/index.js:280:10)\n    at Function.handle (/Volumes/workspace/projects/portomind/server/node_modules/express/lib/router/index.js:175:3)\n    at router (/Volumes/workspace/projects/portomind/server/node_modules/express/lib/router/index.js:47:12)\n    at Layer.handle [as handle_request] (/Volumes/workspace/projects/portomind/server/node_modules/express/lib/router/layer.js:95:5)\n    at trim_prefix (/Volumes/workspace/projects/portomind/server/node_modules/express/lib/router/index.js:328:13)\n    at /Volumes/workspace/projects/portomind/server/node_modules/express/lib/router/index.js:286:9\n    at Function.process_params (/Volumes/workspace/projects/portomind/server/node_modules/express/lib/router/index.js:346:12)","timestamp":"2025-04-29 16:00:36","traceId":"6ed5af56-b409-4770-9a03-1caa128e6003","url":"/api/portfolios/6807a00b2464cf0c3afd2160/rebalance/history?page=1&pageSize=20"}
+
 

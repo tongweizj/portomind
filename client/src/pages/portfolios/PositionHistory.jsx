@@ -4,7 +4,7 @@ import { useParams } from 'react-router';
 import {
   getPositionHistory,
   getPositions,
-} from '../services/positionService';
+} from '../../services/positionService';
 import {
   ResponsiveContainer,
   LineChart,

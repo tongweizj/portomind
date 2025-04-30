@@ -1,7 +1,7 @@
 // server/controllers/transactionController.js
 const mongoose = require('mongoose');
 const Transaction = require('../models/transaction');
-
+const { getTransactionsByPortfolio } = require('../services/transactionService');
 exports.getAllTransactions = async (req, res) => {
   try {
     const transactions = await Transaction.find().sort({ date: -1 });
@@ -11,10 +11,19 @@ exports.getAllTransactions = async (req, res) => {
   }
 };
 
-exports.getTransactionsByPortfolio = async (req, res) => {
+exports.getByPortfolio = async (req, res) => {
   try {
-    const txs = await Transaction.find({ portfolioId: req.params.portfolioId }).sort({ date: -1 });
-    res.json(txs);
+    const { pid } = req.params;
+    console.log("pid: ",req)
+    const { symbol, page, pageSize } = req.query;
+    const result = await getTransactionsByPortfolio(pid, {
+      symbol,
+      page:    Number(page)    || 1,
+      pageSize:Number(pageSize)|| 50
+    });
+
+    //const txs = await Transaction.find({ portfolioId: req.params.portfolioId }).sort({ date: -1 });
+    res.json(result);
   } catch (err) {
     res.status(500).json({ message: 'Error fetching transactions', error: err });
   }

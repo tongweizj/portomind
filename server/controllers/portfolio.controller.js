@@ -3,7 +3,6 @@ const Portfolio = require('../models/portfolio');
 const Transaction = require('../models/transaction');
 const Price = require('../models/price');
 const PortfolioService = require('../services/portfolio');
-const { positionTracker } = PortfolioService;
 
 exports.createPortfolio = async (req, res) => {
   try {
@@ -146,7 +145,7 @@ exports.getPositionHistory = async (req, res, next) => {
     const interval = req.query.interval || 'day'; // day | week | month
 
     /* start: 调用历史趋势服务 */
-    const history = await positionTracker.getHistory(pid, symbol, interval);
+    const history = await PortfolioService.getHistory(pid, symbol, interval);
     /* end: 调用历史趋势服务 */
 
     res.json({ data: history });
