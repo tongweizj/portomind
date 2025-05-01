@@ -1,6 +1,6 @@
 const yahoo = require('./yahooPrice');
 const tiantian = require('./tiantianPrice');
-const Price = require('../models/price');
+const Price = require('../../models/price');
 /**
  * 统一价格获取入口，根据 symbol 自动分发
  * 示例:

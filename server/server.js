@@ -1,17 +1,18 @@
-const express = require("express");
-const bodyParser = require("body-parser");
-const cors = require("cors");
-const {logger} = require('./config/logger');
-const app = express();
+const express               = require("express");
+const bodyParser            = require("body-parser");
+const cors                  = require("cors");
+const { logger }            = require('./config/logger');
+const app                   = express();
 require('dotenv').config();
-const traceId = require('./middleware/traceId');
-const requestLogger = require('./middleware/requestLogger');
-const errorHandler = require('./middleware/errorHandler');
-const logsRouter = require('./routes/logs');
+const traceId               = require('./middleware/traceId');
+const requestLogger         = require('./middleware/requestLogger');
+const errorHandler          = require('./middleware/errorHandler');
+const logsRouter            = require('./routes/logs.routes');
 const rebalanceRecordRoutes = require('./routes/rebalanceRecord.routes');
-const transactionRoutes = require('./routes/transaction');
-const portfolioRoutes = require('./routes/portfolio');
-const assetRoutes = require('./routes/asset');
+const transactionRoutes     = require('./routes/transaction.routes');
+const portfolioRoutes       = require('./routes/portfolio.routes');
+const priceRoutes           = require('./routes/price.routes');
+const assetRoutes           = require('./routes/asset.routes');
 
 const corsOptions = {
   origin: function (origin, callback) {
@@ -55,24 +56,16 @@ db.mongoose
     process.exit();
   });
 
-
-// simple route
+// 挂载路由
 app.get("/", (req, res) => {
   res.json({ message: "Welcome to Max application." });
 });
-
-
 app.use('/api/transactions', transactionRoutes);
-
-// 挂载投资组合
-app.use('/api/portfolios', portfolioRoutes);
-
-// 挂载 asset 路由
-app.use('/api/assets', assetRoutes);
-
-// 日志查询接口，仅 Admin 可访问（开发模式开放）
-app.use('/api/logs', logsRouter);
+app.use('/api/portfolios', portfolioRoutes); // 投资组合
+app.use('/api/assets', assetRoutes); // asset 路由
+app.use('/api/logs', logsRouter); // 日志查询接口
 app.use('/api/rebalance', rebalanceRecordRoutes);
+app.use('/api/prices', priceRoutes);
 
 // 全局异常处理（需在所有路由之后注册）
 app.use(errorHandler);

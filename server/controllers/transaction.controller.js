@@ -2,6 +2,7 @@
 const mongoose = require('mongoose');
 const Transaction = require('../models/transaction');
 const { getTransactionsByPortfolio } = require('../services/transactionService');
+
 exports.getAllTransactions = async (req, res) => {
   try {
     const transactions = await Transaction.find().sort({ date: -1 });
