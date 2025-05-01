@@ -3,7 +3,6 @@ const mongoose = require('mongoose');
 const {taskLogger} = require('../config/logger');   
 const fs = require('fs');
 const path = require('path');
-const Asset = require('../models/asset');
 const Price = require('../models/price');
 const getYahooPrice = require('../services/yahooPrice');
 const getFundDailyInfo = require('../services/tiantianPrice');
