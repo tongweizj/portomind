@@ -23,12 +23,11 @@ export default function CreatePortfolio() {
   const [assets, setAssets] = useState([]);
   // ▶️ 编辑模式：页面加载后拉取原组合数据并预填表单
   useEffect(() => {
-    getAssets().then(data => setAssets(data));
+    getAssets().then(data =>setAssets(data.data));
     if (!isEdit) return;
 
     getPortfolioById(id)
       .then(data => {
-        console.log("data:", data)
         setForm({
           name: data.name || '',
           description: data.description || '',
