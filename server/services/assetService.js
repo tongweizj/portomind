@@ -1,6 +1,6 @@
 // server/services/asset.service.js
 
-const Asset = require('../models/Asset');
+const Asset = require('../models/asset');
 
 /**
  * 获取所有资产
