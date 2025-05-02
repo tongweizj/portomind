@@ -36,6 +36,8 @@ import RebalanceHistory     from './pages/portfolios/RebalanceHistory';
 
 import LogViewer            from './pages/LogViewer';
 
+import Today from './pages/Prices/Today';
+import History from './pages/Prices/History';
  
 
 export default function AppRouter() {
@@ -102,7 +104,15 @@ export default function AppRouter() {
           path={ROUTE_PATTERNS.PORTFOLIO_REBALANCE}
           element={<Rebalance />}
         />
-
+{/* —— 新增：价格分类 —— */}
+<Route
+          path="/prices"
+          element={<Today />}
+        />
+        <Route
+          path="/prices/:symbol/history"
+          element={<History />}
+        />
         {/* 默认重定向到 列表 页 */}
         <Route
           path="*"

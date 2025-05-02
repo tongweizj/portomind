@@ -1,25 +1,51 @@
 import { useEffect, useState } from 'react';
 import { Pencil,Plus } from 'lucide-react';
-import { getAllAssets, deleteAsset } from '../../services/assetService';
+import { getAssets, deleteAsset } from '../../services/assetService';
 import { useNavigate } from 'react-router';
 
 export default function AssetList() {
-  const [assets, setAssets] = useState([]);
   const navigate = useNavigate();
+  const [assets, setAssets] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+  const [page, setPage] = useState(1);
+  const [pageSize] = useState(20);
+  const [total, setTotal] = useState(0);
+  const [searchTerm, setSearchTerm] = useState('');
+
+  const totalPages = Math.ceil(total / pageSize);
 
   const loadAssets = async () => {
-    const res = await getAllAssets();
-    setAssets(res);
+    setLoading(true);
+    setError('');
+    try {
+      const { total: t, data } = await getAssets({
+        page,
+        pageSize,
+        search: searchTerm || undefined
+      });
+      setAssets(data);
+      setTotal(t);
+    } catch (e) {
+      console.error(e);
+      setError('获取资产列表失败');
+    } finally {
+      setLoading(false);
+    }
   };
 
   useEffect(() => {
     loadAssets();
-  }, []);
+  }, [page, searchTerm]);
 
   const handleDelete = async (id) => {
-    if (confirm('确定要删除吗？')) {
+    if (!window.confirm('确定要删除此资产吗？')) return;
+    try {
       await deleteAsset(id);
       loadAssets();
+    } catch (e) {
+      console.error(e);
+      alert('删除失败，请重试');
     }
   };
 

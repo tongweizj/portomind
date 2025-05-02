@@ -6,6 +6,7 @@ import {
 
 const navItems = [
   { to: '/', icon: LayoutDashboard, label: 'Dashboard' },
+  { to: '/prices', icon: Folder, label: '价格' },
   { to: '/portfolios', icon: Folder, label: '组合管理' },
   { to: '/transactions', icon: ListOrdered, label: '交易记录' },
   { to: '/assets', icon: Coins, label: '资产管理' },

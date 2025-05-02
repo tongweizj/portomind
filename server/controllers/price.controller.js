@@ -46,3 +46,15 @@ exports.getPricesBySymbol = asyncHandler(async (req, res) => {
   const prices = await priceService.getPricesBySymbol(symbol);
   res.json({ success: true, data: prices });
 });
+
+
+/**
+ * GET /api/prices/today
+ * 查询所有资产当天的最新价格
+ */
+exports.getTodayPrices = asyncHandler(async (req, res) => {
+
+    const prices = await priceService.getTodayPrices();
+    res.json({ success: true, date: new Date().toISOString().slice(0, 10), data: prices });
+  
+});

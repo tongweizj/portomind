@@ -3,7 +3,7 @@ import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router';
 import { getTransactionById, updateTransaction } from '../../services/transactionService';
 import { getAllPortfolios } from '../../services/portfolioService';
-import { getAllAssets } from '../../services/assetService';
+import { getAssets } from '../../services/assetService';
 
 export default function EditTransaction() {
   const { id } = useParams();
@@ -27,7 +27,7 @@ export default function EditTransaction() {
 
   useEffect(() => {
     getAllPortfolios().then(setPortfolios);
-    getAllAssets().then(setAssets);
+    getAssets().then(setAssets);
     getTransactionById(id).then(tx => {
       setForm({
         ...tx,

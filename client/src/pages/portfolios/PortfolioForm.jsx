@@ -6,7 +6,7 @@ import {
   getPortfolioById,
   updatePortfolio
 } from '../../services/portfolioService';
-import { getAllAssets } from '../../services/assetService';
+import { getAssets } from '../../services/assetService';
 export default function CreatePortfolio() {
   const navigate = useNavigate();
   const { id } = useParams();
@@ -23,7 +23,7 @@ export default function CreatePortfolio() {
   const [assets, setAssets] = useState([]);
   // ▶️ 编辑模式：页面加载后拉取原组合数据并预填表单
   useEffect(() => {
-    getAllAssets().then(data => setAssets(data));
+    getAssets().then(data => setAssets(data));
     if (!isEdit) return;
 
     getPortfolioById(id)

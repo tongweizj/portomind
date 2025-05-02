@@ -13,6 +13,9 @@ router
   .get(priceController.getAllPrices)
   .post(priceController.createPrice);
 
+// 查询所有资产今天的价格
+router.get('/today', priceController.getTodayPrices);
+
 router
   .route('/:id')
   .get(priceController.getPriceById)

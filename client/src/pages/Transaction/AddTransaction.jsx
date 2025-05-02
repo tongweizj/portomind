@@ -3,7 +3,7 @@ import { useEffect, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router';
 import { addTransaction } from '../../services/transactionService';
 import { getAllPortfolios } from '../../services/portfolioService';
-import { getAllAssets } from '../../services/assetService';
+import { getAssets } from '../../services/assetService';
 
 export default function AddTransaction() {
   const navigate = useNavigate();
@@ -35,7 +35,7 @@ export default function AddTransaction() {
         setForm(prev => ({ ...prev, portfolioId: data[0]._id }));
       }
     });
-    getAllAssets().then(setAssets);
+    getAssets().then(setAssets);
   }, []);
 
   const handleChange = (e) => {
