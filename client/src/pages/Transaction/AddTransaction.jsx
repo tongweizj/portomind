@@ -27,6 +27,7 @@ export default function AddTransaction() {
 
   useEffect(() => {
     getAllPortfolios().then(data => {
+      
       setPortfolios(data);
       const preset = searchParams.get('portfolioId');
       if (preset) {
@@ -35,7 +36,10 @@ export default function AddTransaction() {
         setForm(prev => ({ ...prev, portfolioId: data[0]._id }));
       }
     });
-    getAssets().then(setAssets);
+    getAssets().then(data =>{
+      console.log("setAssets:", data)
+      setAssets(data.data)
+    });
   }, []);
 
   const handleChange = (e) => {

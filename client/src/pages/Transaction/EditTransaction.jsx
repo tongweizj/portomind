@@ -26,8 +26,12 @@ export default function EditTransaction() {
   const [assets, setAssets] = useState([]);
 
   useEffect(() => {
-    getAllPortfolios().then(setPortfolios);
-    getAssets().then(setAssets);
+    getAllPortfolios().then(data =>{
+      setPortfolios(data)
+    });
+    getAssets().then(data =>{
+      setAssets(data.data)
+    });
     getTransactionById(id).then(tx => {
       setForm({
         ...tx,
