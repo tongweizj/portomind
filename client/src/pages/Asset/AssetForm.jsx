@@ -113,9 +113,7 @@ export default function AssetForm() {
           >
             <option value="stock">股票</option>
             <option value="etf">ETF</option>
-            <option value="fund">基金</option>
             <option value="cash">现金</option>
-            <option value="crypto">加密货币</option>
             <option value="bond">债券</option>
           </select>
         </div>
