@@ -74,9 +74,10 @@ export default function AppRouter() {
           path={ROUTE_PATTERNS.PORTFOLIO_LIST}
           element={<List />}
         />
-        <Route path="/portfolios/newold" element={<PortfolioForm />} />
-        <Route path={ROUTE_PATTERNS.PORTFOLIO_EDIT} element={<PortfolioForm />} />
         {/* 新建 投资组合 */}
+        <Route path="/portfolios/new" element={<PortfolioForm />} />
+        <Route path={ROUTE_PATTERNS.PORTFOLIO_EDIT} element={<PortfolioForm />} />
+        
         {/* <Route
           path={ROUTE_PATTERNS.PORTFOLIO_NEW}
           element={<Edit />}

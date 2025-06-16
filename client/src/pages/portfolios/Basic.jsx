@@ -2,13 +2,14 @@ import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router';
 import { ButtonGroup } from '../../components/ButtonGroup';
 import { ROUTES } from '../../constants/routes';
-
+import {  deletePortfolio } from '../../services/portfolioService';
 export default function Basic(pf) {
   const { id } = useParams();
   const navigate = useNavigate();
   const [actualRatios, setActualRatios] = useState([]);
 
   const buttons = [
+     { label: '删除', onClick: () => handleDelete(), type: 'primary' },
     { label: '编辑', onClick: () => navigate(ROUTES.PORTFOLIO_EDIT(id)), type: 'primary' },
     { label: '返回', onClick: () => navigate(ROUTES.PORTFOLIO_LIST) },
   ];

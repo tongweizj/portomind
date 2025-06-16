@@ -11,7 +11,7 @@ export default function List() {
   if (isLoading) return <p>加载组合中…</p>;
   if (isError) return <p>加载组合失败，请重试</p>;
   const buttons = [
-    { label: '新建', onClick: () => navigate('/portfolios/newold'), type: 'primary' },
+    { label: '新建', onClick: () => navigate('/portfolios/new'), type: 'primary' },
   ];
   return (
     <div>
