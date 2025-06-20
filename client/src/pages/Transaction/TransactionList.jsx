@@ -73,7 +73,7 @@ export default function TransactionList() {
                 <td className="px-4 py-2 whitespace-nowrap">{tx.action === 'buy' ? '买入' : '卖出'}</td>
                 <td className="px-4 py-2 whitespace-nowrap">{tx.quantity}</td>
                 <td className="px-4 py-2 whitespace-nowrap">${tx.price}</td>
-                <td className="px-4 py-2 whitespace-nowrap">{tx.portfolioId}</td>
+                <td className="px-4 py-2 whitespace-nowrap">{findPortfolioName(tx.portfolioId)}</td>
                 <td className="px-4 py-2">
                   <button
                     onClick={() => navigate(`/transactions/edit/${tx._id}`)}
