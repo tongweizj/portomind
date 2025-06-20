@@ -44,8 +44,8 @@ export function updateTransaction(portfolioId, txId, payload) {
  * @param {string} txId
  * @returns {Promise<void>}
  */
-export function deleteTransaction(portfolioId, txId) {
+export function deleteTransaction(txId) {
   return axios
-    .delete(`${API_BASE}/portfolios/${portfolioId}/transactions/${txId}`)
+    .delete(`${API_BASE}/transactions/${txId}`)
     .then(res => res.data);
 }

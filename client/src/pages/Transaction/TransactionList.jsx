@@ -29,8 +29,8 @@ export default function TransactionList() {
     return pf ? pf.name : '未知组合';
   };
 
-  const handleDelete = async (id) => {
-    await deleteTransaction(id);
+  const handleDelete = async (txId) => {
+    await deleteTransaction(txId);
     const txData = await getTransactions();
     setTransactions(txData);
   };
@@ -80,6 +80,13 @@ export default function TransactionList() {
                     className="text-blue-600 hover:underline text-sm"
                   >
                     编辑
+                  </button>
+
+                    <button
+                    onClick={() => handleDelete(tx._id)}
+                    className="text-blue-600 hover:underline text-sm  ml-3"
+                  >
+                    删除
                   </button>
                 </td>
               </tr>
