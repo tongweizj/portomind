@@ -72,6 +72,8 @@ export default function AssetList() {
                 <th className="px-4 py-2 text-left">名称</th>
                 <th className="px-4 py-2 text-left">市场</th>
                 <th className="px-4 py-2 text-left">币种</th>
+                <th className="px-4 py-2 text-left">类型</th>
+                <th className="px-4 py-2 text-left">标签</th>
                 <th className="px-4 py-2 text-left">启用</th>
                 <th className="px-4 py-2 text-left whitespace-nowrap w-80">操作</th>
               </tr>
@@ -90,6 +92,8 @@ export default function AssetList() {
                   <td className="px-4 py-2 overflow-hidden whitespace-nowrap truncate">{a.name}</td>
                   <td className="px-4 py-2 whitespace-nowrap">{a.market}</td>
                   <td className="px-4 py-2 whitespace-nowrap">{a.currency}</td>
+                  <td className="px-4 py-2 whitespace-nowrap">{a.type}</td>
+                  <td className="px-4 py-2 whitespace-nowrap">{a.tags}</td>
                   <td className="px-4 py-2 whitespace-nowrap">
                     {a.active ? '✅' : '❌'}
                   </td>
