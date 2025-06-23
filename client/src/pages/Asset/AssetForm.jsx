@@ -21,9 +21,10 @@ export default function AssetForm() {
   useEffect(() => {
     if (isEdit) {
       getAssetById(id).then(asset => {
+        const assetData = asset?.data || asset;
         setForm({
-          ...asset,
-          tags: asset.tags?.join(', ') || ''
+          ...assetData,
+          tags: assetData.tags?.join(', ') || ''
         });
       });
     }
