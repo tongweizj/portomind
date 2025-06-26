@@ -16,7 +16,7 @@ const API_BASE = import.meta.env.VITE_API_URL + `/prices` || `http://localhost:8
  */
 export async function getTodayPrices({ date, page = 1, pageSize = 20 } = {}) {
   const params = { date, page, pageSize };
-  const response = await axios.get(`${API_BASE}/today`, { params });
+  const response = await axios.get(`${API_BASE}`, { params });
   return response.data;
 }
 

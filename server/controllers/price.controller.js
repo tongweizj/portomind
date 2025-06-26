@@ -4,8 +4,20 @@ const asyncHandler = require('express-async-handler');
 const priceService = require('../services/price.service');
 
 exports.getAllPrices = asyncHandler(async (req, res) => {
-  const prices = await priceService.getAllPrices();
-  res.json({ success: true, data: prices });
+  const { date } = req.query;
+  // 校验格式: 若传入但格式错误，返回错误
+  if (date && !/^\d{4}-\d{2}-\d{2}$/.test(date)) {
+    return res.status(400).json({
+      success: false,
+      message: 'Invalid date format. Use YYYY-MM-DD.',
+    });
+  }
+  const result = await priceService.getPricesByDate(date);
+  res.json({
+    success: true,
+    date: result.date,
+    data: result.data
+  });
 });
 
 exports.getPriceById = asyncHandler(async (req, res) => {

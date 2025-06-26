@@ -17,7 +17,7 @@ export default function AssetForm() {
     tags: '',
     active: true
   });
-
+  const [error, setError] = useState(null); // ⬅️ 新增错误状态
   useEffect(() => {
     if (isEdit) {
       getAssetById(id).then(asset => {
@@ -38,13 +38,23 @@ export default function AssetForm() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    setError(null); // 提交前清空错误
     const submitData = {
       ...form,
       tags: form.tags.split(',').map(t => t.trim())
     };
+    try {
     if (isEdit) await updateAsset(id, submitData);
     else await createAsset(submitData);
     navigate('/assets');
+    }catch (err) {
+      console.error('Error saving asset:', err);
+      if (err.response?.data?.message) {
+        setError(err.response.data.message); // 显示服务器返回的 message
+      } else {
+        setError('Unexpected error occurred.');
+      }
+    }
   };
 
   return (
@@ -147,6 +157,7 @@ export default function AssetForm() {
         >
           保存
         </button>
+        {error && <div style={{ color: 'red' }}>{error}</div>}
       </form>
     </div>
   );

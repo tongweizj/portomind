@@ -2,8 +2,31 @@
 
 const Price = require('../models/price');
 
-async function getAllPrices() {
-  return await Price.find().sort({ timestamp: -1 });
+async function getPricesByDate(dateStr) {
+  let startDate, endDate;
+
+  if (dateStr) {
+    // 指定日期
+    startDate = new Date(`${dateStr}T00:00:00.000Z`);
+    endDate = new Date(`${dateStr}T23:59:59.999Z`);
+  } else {
+    // 默认为今天（UTC 时间）
+    const today = new Date();
+    const yyyy = today.getUTCFullYear();
+    const mm = String(today.getUTCMonth() + 1).padStart(2, '0');
+    const dd = String(today.getUTCDate()).padStart(2, '0');
+    const dateStrToday = `${yyyy}-${mm}-${dd}`;
+
+    startDate = new Date(`${dateStrToday}T00:00:00.000Z`);
+    endDate = new Date(`${dateStrToday}T23:59:59.999Z`);
+    dateStr = dateStrToday;
+  }
+
+  const data = await Price.find({
+    timestamp: { $gte: startDate, $lte: endDate }
+  }).sort({ symbol: 1 });
+
+  return { date: dateStr, data };
 }
 
 async function getPriceById(id) {
@@ -65,7 +88,7 @@ async function getPricesBySymbol(symbol) {
 }
 
 module.exports = {
-  getAllPrices,
+  getPricesByDate,
   getPriceById,
   createPrice,
   updatePrice,
