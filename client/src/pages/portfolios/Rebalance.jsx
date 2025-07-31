@@ -46,7 +46,7 @@ export default  function Rebalance() {
   return (
     <div>
       <h1>再平衡：{pf.name}</h1>
-
+console.log(pf)
       <TransactionTable
         transactions={ops}
         columns={['symbol', 'action', 'quantity']}

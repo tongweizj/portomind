@@ -4,11 +4,11 @@ import { usePortfolio } from '../../hooks/usePortfolio';
 import { useTransactions } from '../../hooks/useTransactions';
 import { TransactionTable } from '../../components/TransactionTable';
 import { ButtonGroup } from '../../components/ButtonGroup';
-import PortfolioRebalance from './PortfolioRebalanceSettings';
+import PortfolioRebalance from '../PortfolioEditor/old/PortfolioRebalanceSettings';
 import PositionOverview from './PositionOverview';
 import Rebalance from './Rebalance';
-import RebalanceSuggester from './RebalanceSuggester';
-import RebalanceHistory from './RebalanceHistory';
+import RebalanceSuggester from './old/RebalanceSuggester';
+import RebalanceHistory from './old/RebalanceHistory';
 import { ROUTES } from '../../constants/routes';
 import Basic from './Basic';
 import { Pencil, Trash, Plus } from 'lucide-react';
@@ -42,13 +42,9 @@ const [activeTab, setActiveTab] = useState('details');
   // Tab 列表
   const tabs = [
     { key: 'details', label: '详情' },
-    { key: 'transactions', label: '交易记录' },
-    { key: 'rebalanceSetting',    label: '阈值设置' },
     { key: 'positions',    label: '持仓概览' },
-    { key: 'position-history',    label: '持仓历史' },
     { key: 'rebalance', label: '再平衡' }, 
-    { key: 'rebalance-history', label: '再平衡历史' }, 
-    { key: 'rebalance-suggester', label: '再平衡建议' }, 
+    { key: 'transactions', label: '交易记录' },
   ];
   return (
     <div className="space-y-6">
@@ -84,25 +80,10 @@ const [activeTab, setActiveTab] = useState('details');
         /* 持仓概览 Tab */
         <PositionOverview />)}
 
-      {activeTab === 'positions-history' && (
-        /* 阈值设置 Tab */
-        <PositionHistory />)}
-
       {activeTab === 'rebalance' && (
         /* 再平衡界面 Tab */
         <Rebalance />
       )}
-
-      {activeTab === 'rebalance-history' && (
-        /* 再平衡历史 Tab */
-        <RebalanceHistory />
-      )}
- 
-  {activeTab === 'rebalance-suggester' && (
-        /* 再平衡界面 Tab */
-        <RebalanceSuggester />
-      )}
- 
     </div>
   );
 }

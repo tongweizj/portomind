@@ -5,8 +5,8 @@ import {
   createPortfolio,
   getPortfolioById,
   updatePortfolio
-} from '../../services/portfolioService';
-import { getAssets } from '../../services/assetService';
+} from '../../../services/portfolioService';
+import { getAssets } from '../../../services/assetService';
 export default function CreatePortfolio() {
   const navigate = useNavigate();
   const { id } = useParams();

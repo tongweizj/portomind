@@ -22,17 +22,17 @@ import EditTransaction      from './pages/Transaction/EditTransaction';
 
 // import PortfolioList        from './pages/PortfolioList';
 // import PortfolioDetail      from './pages/PortfolioDetail';
-import PortfolioForm        from './pages/portfolios/PortfolioForm';
+import PortfolioForm        from './pages/PortfolioEditor/old/PortfolioForm';
 // import PortfolioRebalance   from './pages/PortfolioRebalanceSettings';
-
+import PortfolioCreator     from './pages/PortfolioEditor/PortfolioCreator';
+import PortfolioEditor      from './pages/PortfolioEditor/PortfolioEditor';
 import PositionOverview     from './pages/portfolios/PositionOverview';
 import PositionHistory      from './pages/portfolios/PositionHistory';
+import RebalanceSuggester   from './pages/portfolios/old/RebalanceSuggester';
+import RebalanceHistory     from './pages/portfolios/old/RebalanceHistory';
 
 import AssetList            from './pages/Asset/AssetList';
 import AssetForm            from './pages/Asset/AssetForm';
-
-import RebalanceSuggester   from './pages/portfolios/RebalanceSuggester';
-import RebalanceHistory     from './pages/portfolios/RebalanceHistory';
 
 import LogViewer            from './pages/LogViewer';
 
@@ -75,13 +75,10 @@ export default function AppRouter() {
           element={<List />}
         />
         {/* 新建 投资组合 */}
-        <Route path="/portfolios/new" element={<PortfolioForm />} />
-        <Route path={ROUTE_PATTERNS.PORTFOLIO_EDIT} element={<PortfolioForm />} />
+        <Route path="/portfolios/new" element={<PortfolioCreator />} />
         
-        {/* <Route
-          path={ROUTE_PATTERNS.PORTFOLIO_NEW}
-          element={<Edit />}
-        /> */}
+        {/* 编辑 投资组合 */}   
+        <Route path={ROUTE_PATTERNS.PORTFOLIO_EDIT} element={<PortfolioEditor />} />
 
         {/* 查看 投资组合 详情 */}
         <Route
@@ -93,13 +90,6 @@ export default function AppRouter() {
           path={ROUTE_PATTERNS.PORTFOLIO_BASIC}
           element={<Basic />}
         />
-
-        {/* 编辑 投资组合 */}
-        {/* <Route
-          path={ROUTE_PATTERNS.PORTFOLIO_EDIT}
-          element={<Edit />}
-        /> */}
-
         {/* 再平衡 */}
         <Route
           path={ROUTE_PATTERNS.PORTFOLIO_REBALANCE}

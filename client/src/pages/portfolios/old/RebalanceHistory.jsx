@@ -1,7 +1,7 @@
 // client/src/pages/RebalanceHistory.jsx
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router';
-import { getHistory, revoke, reexecute } from '../../services/rebalanceService';
+import { getHistory, revoke, reexecute } from '../../../services/rebalanceService';
 
 export default function RebalanceHistory() {
   const { id: portfolioId } = useParams();

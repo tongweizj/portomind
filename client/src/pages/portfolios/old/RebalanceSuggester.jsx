@@ -6,8 +6,8 @@ import {
   getSuggestions,
   executeSuggestions,
   getHistory
-} from '../../services/rebalanceService';
-import { getActualRatios } from '../../services/portfolioService';
+} from '../../../services/rebalanceService';
+import { getActualRatios } from '../../../services/portfolioService';
 import {
   ResponsiveContainer,
   PieChart,
