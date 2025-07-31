@@ -13,12 +13,11 @@ router.put('/:id', portfolioController.updatePortfolio);
 router.delete('/:id', portfolioController.deletePortfolio);
 
 // 组合, 统计
-
 router.get('/:id/stats/actual-ratios', portfolioController.getActualRatios); // 实时持仓比例
-router.get('/:pid/stats/positions',portfolioController.getPositions); // 持仓概览
 router.get('/:id/stats', portfolioController.getPortfolioStats);
-router.get('/:pid/positions/history',portfolioController.getPositionHistory); // 持仓历史
 
+router.get('/:pid/stats/positions',portfolioController.getPositions); // 持仓概览
+router.get('/:pid/positions/history',portfolioController.getPositionHistory); // 持仓历史
 router.get('/:pid/transactions', transactionController.getByPortfolio); // 流水
 
 // 组合,配置和再平衡
