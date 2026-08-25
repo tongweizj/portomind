@@ -12,6 +12,7 @@
 const path = require('path');
 const { createLogger, format, transports } = require('winston');
 const DailyRotateFile = require('winston-daily-rotate-file');
+const { sanitizeLogValue } = require('../utils/logSanitizer');
 
 // ---------------------------------------------------------------------
 // 1. 环境变量及默认值
@@ -28,12 +29,12 @@ const logFormat = format.combine(
   format.timestamp({ format: 'YYYY-MM-DD HH:mm:ss' }),  // 时间格式
   format.printf(({ timestamp, level, message, ...meta }) => {
     // 自定义输出：时间 + 级别 + 消息 + 额外字段
-    return JSON.stringify({
+    return JSON.stringify(sanitizeLogValue({
       timestamp,
       level,
       message,
       ...meta
-    });
+    }));
   })
 );
 
@@ -115,5 +116,6 @@ const taskLogger = createLogger({
 
 module.exports = {
   logger: logger,
-  taskLogger: taskLogger
+  taskLogger: taskLogger,
+  LOG_DIR
 };

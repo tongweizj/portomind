@@ -1,42 +1,50 @@
 // client/src/pages/Price/Today.jsx
-import React, { useState, useEffect } from 'react';
+import { useCallback, useState, useEffect } from 'react';
 import { useNavigate } from 'react-router';
-import { getTodayPrices } from '../../services/priceService';
+import { getPricesByDate, getTodayPrices } from '../../services/price.service';
+import { getApiErrorMessage } from '../../services/api';
 
 export default function Today() {
   const navigate = useNavigate();
-  const [date, setDate] = useState(new Date().toISOString().slice(0, 10));
+  const [date, setDate] = useState('');
   const [data, setData] = useState([]);
+  const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
   const [pageSize] = useState(20);
-  const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
-  const totalPages = Math.ceil(total / pageSize);
-
-  const loadPrices = async () => {
+  const loadPrices = useCallback(async () => {
     setLoading(true);
     setError('');
     try {
-      const res = await getTodayPrices({ date, page, pageSize });
+      const res = date
+        ? await getPricesByDate(date, { page, pageSize })
+        : await getTodayPrices({ page, pageSize });
       setData(res.data);
-      setTotal(res.total);
+      setTotal(res.pagination.total);
     } catch (e) {
       console.error(e);
-      setError('获取价格失败');
+      setError(getApiErrorMessage(e, '获取价格失败'));
     } finally {
       setLoading(false);
     }
-  };
+  }, [date, page, pageSize]);
 
   useEffect(() => {
     loadPrices();
-  }, [date, page]);
+  }, [loadPrices]);
+
+  const totalPages = Math.max(Math.ceil(total / pageSize), 1);
 
   return (
     <div className="p-4">
-      <h1 className="text-2xl font-bold mb-4">{date} 价格列表</h1>
+      <h1 className="text-2xl font-bold mb-2">
+        {date ? `${date} 全部价格` : '当日各资产最新价格'}
+      </h1>
+      <p className="text-sm text-gray-500 mb-4">
+        显示 {data.length} 条，共匹配 {total} 条记录
+      </p>
 
       {/* 顶部筛选 */}
       <div className="flex items-center space-x-4 mb-4">
@@ -47,9 +55,15 @@ export default function Today() {
           className="border rounded px-2 py-1"
         />
         <button
-          onClick={() => { setPage(1); loadPrices(); }}
+          onClick={loadPrices}
           className="px-3 py-1 bg-blue-600 text-white rounded hover:bg-blue-700"
         >刷新</button>
+        {date && (
+          <button
+            onClick={() => { setDate(''); setPage(1); }}
+            className="px-3 py-1 bg-gray-200 text-gray-700 rounded hover:bg-gray-300"
+          >显示最近数据</button>
+        )}
       </div>
 
       {error && <div className="text-red-500 mb-2">{error}</div>}
@@ -67,8 +81,15 @@ export default function Today() {
               </tr>
             </thead>
             <tbody>
-              {data.map((row, idx) => (
-                <tr key={idx} className="hover:bg-gray-50">
+              {data.length === 0 && (
+                <tr>
+                  <td colSpan="4" className="px-4 py-8 text-center text-gray-500">
+                    {date ? '该日期没有价格数据' : '暂无价格数据'}
+                  </td>
+                </tr>
+              )}
+              {data.map((row) => (
+                <tr key={`${row.symbol}-${row.timestamp}`} className="hover:bg-gray-50">
                   <td className="px-4 py-2">{row.symbol}</td>
                   <td className="px-4 py-2 text-right">{row.price.toFixed(2)}</td>
                   <td className="px-4 py-2">{row.timestamp}</td>
@@ -84,19 +105,17 @@ export default function Today() {
           </table>
         </div>
       )}
-
-      {/* 分页 */}
-      <div className="flex justify-between items-center mt-4">
+      <div className="flex items-center justify-end gap-3 mt-4">
         <button
           disabled={page <= 1}
-          onClick={() => setPage(p => p - 1)}
-          className="px-3 py-1 bg-gray-200 hover:bg-gray-300 rounded disabled:opacity-50"
+          onClick={() => setPage((value) => Math.max(value - 1, 1))}
+          className="px-3 py-1 bg-gray-200 rounded disabled:opacity-50"
         >上一页</button>
         <span>第 {page} / {totalPages} 页</span>
         <button
           disabled={page >= totalPages}
-          onClick={() => setPage(p => p + 1)}
-          className="px-3 py-1 bg-gray-200 hover:bg-gray-300 rounded disabled:opacity-50"
+          onClick={() => setPage((value) => Math.min(value + 1, totalPages))}
+          className="px-3 py-1 bg-gray-200 rounded disabled:opacity-50"
         >下一页</button>
       </div>
     </div>

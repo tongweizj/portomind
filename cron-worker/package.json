@@ -1,0 +1,25 @@
+{
+  "name": "cron-worker",
+  "version": "1.0.0",
+  "description": "PortoMind 独立调度与价格采集 Worker（从 ../server 拆分，纯 Node 无 Web 框架）",
+  "license": "ISC",
+  "type": "commonjs",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js",
+    "sync:prices": "node src/tasks/dailySync.js",
+    "sync:history": "node src/tasks/historySync.cjs",
+    "check:integrity": "node src/tasks/integrityCheck.js",
+    "test": "node --test"
+  },
+  "dependencies": {
+    "axios": "^1.19.0",
+    "dayjs": "^1.11.23",
+    "dotenv": "^16.6.1",
+    "minimist": "^1.2.8",
+    "mongoose": "^6.13.11",
+    "node-cron": "^4.6.0",
+    "p-limit": "^4.0.0",
+    "winston": "^3.19.0"
+  }
+}

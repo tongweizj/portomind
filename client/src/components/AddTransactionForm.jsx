@@ -1,7 +1,7 @@
 // client/src/components/AddTransactionForm.jsx
 
 import { useState } from 'react';
-import axios from 'axios';
+import { createTransaction } from '../services/transaction.service';
 
 export default function AddTransactionForm({ portfolioId, onTransactionAdded }) {
   const [form, setForm] = useState({
@@ -12,7 +12,7 @@ export default function AddTransactionForm({ portfolioId, onTransactionAdded }) 
 
   const handleSubmit = async e => {
     e.preventDefault();
-    await axios.post('/api/transactions', { ...form, portfolioId });
+    await createTransaction({ ...form, portfolioId });
     onTransactionAdded(); // 通知刷新列表
   };
 

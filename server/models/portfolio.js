@@ -44,12 +44,10 @@ const PortfolioSchema = new mongoose.Schema({
     enum: ['CNY', 'CAD', 'USD'],
     default: 'CAD'
   },
-  targets: [
-    {
-      symbol: { type: String, required: true },       // 资产代码，例如 VTI、VXUS、600519.SS
-      targetRatio: { type: Number, required: true },   // 目标比例，如 50.0 表示 50%
-    }
-  ],
+  targets: [{
+    symbol: { type: String, required: true, trim: true, uppercase: true },
+    targetRatio: { type: Number, required: true, min: 0, max: 100 }
+  }],
   rebalanceSettings: {
     type: RebalanceSettingsSchema,
     default: () => ({})

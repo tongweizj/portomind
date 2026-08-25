@@ -14,6 +14,7 @@
 
 const onFinished = require('on-finished');
 const {logger} = require('../config/logger');
+const { sanitizeUrl } = require('../utils/logSanitizer');
 
 module.exports = function requestLogger(req, res, next) {
   // 1. 记录请求到达的时间戳
@@ -28,7 +29,7 @@ module.exports = function requestLogger(req, res, next) {
     const logMeta = {
       traceId: req.traceId,               // 从 traceId 中间件注入
       method: req.method,                 // HTTP 方法（GET/POST/...）
-      url: req.originalUrl,               // 完整请求路径（含查询串）
+      url: sanitizeUrl(req.originalUrl),  // 查询串中的凭据会被脱敏
       status: response.statusCode,        // 响应状态码
       durationMs,                         // 耗时（毫秒）
       userId: req.user?.id || null        // 若已鉴权，则由鉴权中间件注入

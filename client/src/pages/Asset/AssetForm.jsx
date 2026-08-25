@@ -1,7 +1,9 @@
 // ✅ 文件：src/pages/AssetForm.jsx
 import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router';
-import { createAsset, getAssetById, updateAsset } from '../../services/assetService';
+import { createAsset, getAssetById, updateAsset } from '../../services/asset.service';
+import { getApiErrorMessage } from '../../services/api';
+import { ASSET_TYPES, ASSET_MARKETS, ASSET_CURRENCIES } from '../../constants/enums';
 
 export default function AssetForm() {
   const navigate = useNavigate();
@@ -15,20 +17,20 @@ export default function AssetForm() {
     currency: 'USD',
     type: 'stock',
     tags: '',
-    active: true
+    active: true,
+    watchlist: false
   });
-  const [error, setError] = useState(null); // ⬅️ 新增错误状态
+  const [error, setError] = useState(null);
   useEffect(() => {
     if (isEdit) {
       getAssetById(id).then(asset => {
-        const assetData = asset?.data || asset;
         setForm({
-          ...assetData,
-          tags: assetData.tags?.join(', ') || ''
+          ...asset,
+          tags: asset.tags?.join(', ') || ''
         });
-      });
+      }).catch(err => setError(getApiErrorMessage(err, '加载资产失败')));
     }
-  }, [id]);
+  }, [id, isEdit]);
 
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
@@ -38,22 +40,18 @@ export default function AssetForm() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setError(null); // 提交前清空错误
+    setError(null);
     const submitData = {
       ...form,
-      tags: form.tags.split(',').map(t => t.trim())
+      tags: form.tags.split(',').map(t => t.trim()).filter(Boolean)
     };
     try {
-    if (isEdit) await updateAsset(id, submitData);
-    else await createAsset(submitData);
-    navigate('/assets');
-    }catch (err) {
+      if (isEdit) await updateAsset(id, submitData);
+      else await createAsset(submitData);
+      navigate('/assets');
+    } catch (err) {
       console.error('Error saving asset:', err);
-      if (err.response?.data?.message) {
-        setError(err.response.data.message); // 显示服务器返回的 message
-      } else {
-        setError('Unexpected error occurred.');
-      }
+      setError(getApiErrorMessage(err, '保存资产失败'));
     }
   };
 
@@ -80,6 +78,7 @@ export default function AssetForm() {
             value={form.name}
             onChange={handleChange}
             placeholder="如 苹果公司"
+            required
             className="w-full border px-3 py-2 rounded"
           />
         </div>
@@ -92,11 +91,9 @@ export default function AssetForm() {
             onChange={handleChange}
             className="w-full border px-3 py-2 rounded"
           >
-            <option value="US">美股</option>
-            <option value="CA">加股</option>
-            <option value="CN-SH">上海</option>
-            <option value="CN-SZ">深圳</option>
-            <option value="CN-FUND">中国基金</option>
+            {ASSET_MARKETS.map(option => (
+              <option key={option.value} value={option.value}>{option.label}</option>
+            ))}
           </select>
         </div>
 
@@ -108,9 +105,9 @@ export default function AssetForm() {
             onChange={handleChange}
             className="w-full border px-3 py-2 rounded"
           >
-            <option value="USD">美元</option>
-            <option value="CAD">加元</option>
-            <option value="CNY">人民币</option>
+            {ASSET_CURRENCIES.map(option => (
+              <option key={option.value} value={option.value}>{option.label}</option>
+            ))}
           </select>
         </div>
 
@@ -122,10 +119,9 @@ export default function AssetForm() {
             onChange={handleChange}
             className="w-full border px-3 py-2 rounded"
           >
-            <option value="stock">股票</option>
-            <option value="etf">ETF</option>
-            <option value="cash">现金</option>
-            <option value="bond">债券</option>
+            {ASSET_TYPES.map(option => (
+              <option key={option.value} value={option.value}>{option.label}</option>
+            ))}
           </select>
         </div>
 
@@ -140,15 +136,31 @@ export default function AssetForm() {
           />
         </div>
 
-        <div className="flex items-center">
-          <input
-            type="checkbox"
-            name="active"
-            checked={form.active}
-            onChange={handleChange}
-            className="mr-2"
-          />
-          <label className="text-sm text-gray-700">启用</label>
+        <div className="space-y-3 rounded border p-3">
+          <label className="flex items-start gap-2">
+            <input
+              type="checkbox"
+              name="active"
+              checked={form.active}
+              onChange={handleChange}
+              className="mt-1"
+            />
+            <span className="text-sm text-gray-700">
+              <strong>启用</strong>：允许该资产用于交易选择、行情同步等业务流程。
+            </span>
+          </label>
+          <label className="flex items-start gap-2">
+            <input
+              type="checkbox"
+              name="watchlist"
+              checked={form.watchlist}
+              onChange={handleChange}
+              className="mt-1"
+            />
+            <span className="text-sm text-gray-700">
+              <strong>关注</strong>：仅表示用户希望重点查看，与是否启用相互独立。
+            </span>
+          </label>
         </div>
 
         <button

@@ -1,6 +1,6 @@
 // src/hooks/usePortfolio.js
 import { useQuery } from '@tanstack/react-query';
-import { fetchPortfolio } from '../services/portfolio';
+import { getPortfolio } from '../services/portfolio.service';
 
 /**
  * 获取单个组合详情
@@ -15,7 +15,7 @@ import { fetchPortfolio } from '../services/portfolio';
 export function usePortfolio(id) {
   const { data = null, isLoading, isError, refetch } = useQuery({
     queryKey: ['portfolio', id],
-    queryFn: () => fetchPortfolio(id),
+    queryFn: () => getPortfolio(id),
     enabled: Boolean(id),
     staleTime: 1000 * 60,
     retry: 1,

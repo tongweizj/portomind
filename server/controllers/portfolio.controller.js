@@ -1,154 +1,139 @@
-// server/controllers/portfolioController.js
+const mongoose = require('mongoose');
 const Portfolio = require('../models/portfolio');
-const Transaction = require('../models/transaction');
-const Price = require('../models/price');
 const PortfolioService = require('../services/portfolio');
+const { validateTargets } = require('../services/portfolio/validateTargets');
+const { success, failure, pagination, parsePagination } = require('../utils/apiResponse');
 
-exports.createPortfolio = async (req, res) => {
+function validId(req, res, id) {
+  if (mongoose.Types.ObjectId.isValid(id)) return true;
+  failure(req, res, 400, 'Invalid portfolio ID');
+  return false;
+}
+
+function forward(err, next, fallbackStatus) {
+  if (err.name === 'ValidationError' || err.name === 'CastError') err.status = 400;
+  else if (!err.status) err.status = fallbackStatus;
+  next(err);
+}
+
+exports.createPortfolio = async (req, res, next) => {
   try {
-    // const { name, description, type, currency } = req.body;
-    const newPortfolio = new Portfolio(req.body);
-    const saved = await newPortfolio.save();
-
-    res.status(201).json(saved);
+    validateTargets(req.body.targets);
+    return success(res, await new Portfolio(req.body).save(), { status: 201 });
   } catch (err) {
-    res.status(400).json({ message: '创建组合失败', error: err.message });
+    forward(err, next, 400);
   }
 };
 
-// ✅ 获取所有组合
-exports.getAllPortfolios = async (req, res) => {
+exports.getAllPortfolios = async (req, res, next) => {
   try {
-    const portfolios = await Portfolio.find().sort({ createdAt: -1 });
-    res.json(portfolios);
+    const { page, pageSize } = parsePagination(req.query);
+    const [total, data] = await Promise.all([
+      Portfolio.countDocuments({}),
+      Portfolio.find().sort({ createdAt: -1 }).skip((page - 1) * pageSize).limit(pageSize)
+    ]);
+    return success(res, data, { pagination: pagination(page, pageSize, total) });
   } catch (err) {
-    res.status(500).json({ message: '获取组合列表失败', error: err.message });
+    next(err);
   }
 };
 
-// ✅ 获取单个组合详情
-exports.getPortfolioById = async (req, res) => {
+exports.getPortfolioById = async (req, res, next) => {
+  if (!validId(req, res, req.params.id)) return;
   try {
     const portfolio = await Portfolio.findById(req.params.id);
-    if (!portfolio) return res.status(404).json({ message: '组合未找到' });
-    res.json(portfolio);
+    if (!portfolio) return failure(req, res, 404, 'Portfolio not found');
+    return success(res, portfolio);
   } catch (err) {
-    res.status(500).json({ message: '获取组合失败', error: err.message });
+    next(err);
   }
 };
 
-// ✅ 更新组合
-exports.updatePortfolio = async (req, res) => {
+exports.updatePortfolio = async (req, res, next) => {
+  if (!validId(req, res, req.params.id)) return;
   try {
+    validateTargets(req.body.targets);
     const updated = await Portfolio.findByIdAndUpdate(req.params.id, req.body, {
       new: true,
       runValidators: true
     });
-    res.json(updated);
+    if (!updated) return failure(req, res, 404, 'Portfolio not found');
+    return success(res, updated);
   } catch (err) {
-    res.status(400).json({ message: '更新组合失败', error: err.message });
+    forward(err, next, 400);
   }
 };
 
-// ✅ 删除组合
-exports.deletePortfolio = async (req, res) => {
+exports.deletePortfolio = async (req, res, next) => {
+  if (!validId(req, res, req.params.id)) return;
   try {
-    await Portfolio.findByIdAndDelete(req.params.id);
-    res.json({ message: '组合已删除' });
+    const deleted = await PortfolioService.deletePortfolioCascade(req.params.id);
+    if (!deleted) return failure(req, res, 404, 'Portfolio not found');
+    return success(res, deleted);
   } catch (err) {
-    res.status(500).json({ message: '删除失败', error: err.message });
+    next(err);
   }
 };
 
-// TODO: 获取组合资产总值
 exports.getPortfolioStats = async (req, res, next) => {
   try {
-    const stats = await PortfolioService.computeStats(req.params.id);
-    res.json(stats);
+    return success(res, await PortfolioService.computeStats(req.params.id));
   } catch (err) {
     next(err);
   }
 };
 
-// ✅ 获取组合统计:净持仓
-// exports.getPortfolioNetPositionStats = async (req, res, next) => {
-//   try {
-//     const stats = await PortfolioService.computeNetPositionStats(req.params.id);
-//     res.json(stats);
-//   } catch (err) {
-//     next(err);
-//   }
-// };
-
-
-/**
- * GET /api/portfolios/:id/actual-ratios
- * 计算给定组合下，每个资产的实际持仓比例
- */
 exports.getActualRatios = async (req, res, next) => {
   try {
-    const ratios = await PortfolioService.computeActualRatios(req.params.id);
-    res.json(ratios);
+    return success(res, await PortfolioService.computeActualRatios(req.params.id));
   } catch (err) {
     next(err);
   }
 };
 
-
-/* stard: 新增 getRebalanceSettings 接口 开始 */
 exports.getRebalanceSettings = async (req, res, next) => {
   try {
-    const settings = await PortfolioService.getRebalanceSettings(req.params.pid);
-    res.json(settings);
+    return success(res, await PortfolioService.getRebalanceSettings(req.params.pid));
   } catch (err) {
+    if (err.message.includes('not found')) return failure(req, res, 404, err.message);
     next(err);
   }
 };
-/* end: 新增 getRebalanceSettings 接口 结束 */
 
-/* stard: 新增 updateRebalanceSettings 接口 开始 */
 exports.updateRebalanceSettings = async (req, res, next) => {
   try {
-    const updatedSettings = await PortfolioService.updateRebalanceSettings(
-      req.params.pid,
-      req.body
-    );
-    res.json(updatedSettings);
+    const data = await PortfolioService.updateRebalanceSettings(req.params.pid, req.body);
+    return success(res, data);
   } catch (err) {
-    // 如果 Service 抛出“Portfolio not found”，映射为 404
-    if (err.message.includes('not found')) {
-      return res.status(404).json({ message: err.message });
-    }
-    // 其余交给全局 ErrorHandler（会输出 400/422 错误集）
+    if (err.message.includes('not found')) return failure(req, res, 404, err.message);
+    forward(err, next, 400);
+  }
+};
+
+exports.getPositions = async (req, res, next) => {
+  try {
+    const { page, pageSize } = parsePagination(req.query);
+    const result = await PortfolioService.listPositions(req.params.pid, {
+      page,
+      pageSize,
+      symbol: req.query.symbol,
+      sortBy: req.query.sortBy,
+      sortOrder: req.query.sortOrder
+    });
+    return success(res, result.data, { pagination: pagination(page, pageSize, result.total) });
+  } catch (err) {
     next(err);
   }
 };
 
- exports.getPositions = async (req, res, next) => {
-     try {
-       const { pid } = req.params;
-       const { page, pageSize, symbol } = req.query;
-       const result = await PortfolioService.listPositions(pid, { page, pageSize, symbol });
-       res.json(result);
-     } catch (err) {
-       next(err);
-     }
-  };
-/**
- * GET /api/portfolios/:pid/positions/history
- * 持仓历史：返回指定标的或全组合在给定粒度下的时间序列
- */
 exports.getPositionHistory = async (req, res, next) => {
   try {
-    const { pid } = req.params;
-    const symbol = req.query.symbol || null;
-    const interval = req.query.interval || 'day'; // day | week | month
-
-    /* start: 调用历史趋势服务 */
-    const history = await PortfolioService.getHistory(pid, symbol, interval);
-    /* end: 调用历史趋势服务 */
-
-    res.json({ data: history });
+    const interval = req.query.interval || 'day';
+    if (!['day', 'week', 'month'].includes(interval)) {
+      return failure(req, res, 400, 'interval must be day, week, or month');
+    }
+    const data = await PortfolioService.getHistory(req.params.pid, req.query.symbol || null, interval);
+    return success(res, data);
   } catch (err) {
     next(err);
   }

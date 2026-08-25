@@ -1,13 +1,15 @@
 // ✅ 文件：src/pages/AddTransaction.jsx
 import { useEffect, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router';
-import { addTransaction } from '../../services/transactionService';
-import { getAllPortfolios } from '../../services/portfolioService';
-import { getAssets } from '../../services/assetService';
+import { createTransaction } from '../../services/transaction.service';
+import { getPortfolios } from '../../services/portfolio.service';
+import { getAssets } from '../../services/asset.service';
+import { getApiErrorMessage } from '../../services/api';
 
 export default function AddTransaction() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
+  const presetPortfolioId = searchParams.get('portfolioId');
 
   const [form, setForm] = useState({
     portfolioId: '',
@@ -24,23 +26,22 @@ export default function AddTransaction() {
 
   const [portfolios, setPortfolios] = useState([]);
   const [assets, setAssets] = useState([]);
+  const [error, setError] = useState('');
 
   useEffect(() => {
-    getAllPortfolios().then(data => {
+    getPortfolios().then(data => {
       
       setPortfolios(data);
-      const preset = searchParams.get('portfolioId');
-      if (preset) {
-        setForm(prev => ({ ...prev, portfolioId: preset }));
+      if (presetPortfolioId) {
+        setForm(prev => ({ ...prev, portfolioId: presetPortfolioId }));
       } else if (data.length > 0) {
         setForm(prev => ({ ...prev, portfolioId: data[0]._id }));
       }
     });
-    getAssets().then(data =>{
-      console.log("setAssets:", data)
+    getAssets({ pageSize: 100, active: true }).then(data =>{
       setAssets(data.data)
     });
-  }, []);
+  }, [presetPortfolioId]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -60,8 +61,13 @@ export default function AddTransaction() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    await addTransaction(form);
-    navigate('/transactions');
+    setError('');
+    try {
+      await createTransaction(form);
+      navigate('/transactions');
+    } catch (err) {
+      setError(getApiErrorMessage(err, '创建交易失败'));
+    }
   };
 
   return (
@@ -113,18 +119,18 @@ export default function AddTransaction() {
           </div>
           <div>
             <label className="block text-sm mb-1">交易日期</label>
-            <input type="date" name="date" value={form.date} onChange={handleChange} className="w-full border px-3 py-2 rounded" />
+            <input type="date" name="date" value={form.date} onChange={handleChange} required className="w-full border px-3 py-2 rounded" />
           </div>
         </div>
 
         <div className="grid grid-cols-2 gap-4">
           <div>
             <label className="block text-sm mb-1">交易份额</label>
-            <input type="number" name="quantity" value={form.quantity} onChange={handleChange} className="w-full border px-3 py-2 rounded" />
+            <input type="number" name="quantity" value={form.quantity} onChange={handleChange} min="0.00000001" step="any" required className="w-full border px-3 py-2 rounded" />
           </div>
           <div>
             <label className="block text-sm mb-1">交易价格</label>
-            <input type="number" name="price" value={form.price} onChange={handleChange} className="w-full border px-3 py-2 rounded" />
+            <input type="number" name="price" value={form.price} onChange={handleChange} min="0.00000001" step="any" required className="w-full border px-3 py-2 rounded" />
           </div>
         </div>
 
@@ -133,6 +139,7 @@ export default function AddTransaction() {
           <textarea name="notes" value={form.notes} onChange={handleChange} className="w-full border px-3 py-2 rounded" />
         </div>
 
+        {error && <div className="rounded bg-red-50 p-3 text-red-700">{error}</div>}
         <button type="submit" className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">
           提交交易
         </button>

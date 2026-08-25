@@ -1,98 +1,93 @@
-// services/price.service.js (CommonJS 版)
-
 const Price = require('../models/price');
+const { dateBounds, monthBounds, todayString } = require('../utils/marketTime');
 
-async function getPricesByDate(dateStr) {
-  let startDate, endDate;
-
-  if (dateStr) {
-    // 指定日期
-    startDate = new Date(`${dateStr}T00:00:00.000Z`);
-    endDate = new Date(`${dateStr}T23:59:59.999Z`);
-  } else {
-    // 默认为今天（UTC 时间）
-    const today = new Date();
-    const yyyy = today.getUTCFullYear();
-    const mm = String(today.getUTCMonth() + 1).padStart(2, '0');
-    const dd = String(today.getUTCDate()).padStart(2, '0');
-    const dateStrToday = `${yyyy}-${mm}-${dd}`;
-
-    startDate = new Date(`${dateStrToday}T00:00:00.000Z`);
-    endDate = new Date(`${dateStrToday}T23:59:59.999Z`);
-    dateStr = dateStrToday;
-  }
-
-  const data = await Price.find({
-    timestamp: { $gte: startDate, $lte: endDate }
-  }).sort({ symbol: 1 });
-
-  return { date: dateStr, data };
+function pagedFind(query, { page, pageSize, sort = { timestamp: -1, symbol: 1 } }) {
+  return Promise.all([
+    Price.countDocuments(query),
+    Price.find(query)
+      .sort(sort)
+      .skip((page - 1) * pageSize)
+      .limit(pageSize)
+  ]).then(([total, data]) => ({ total, data }));
 }
 
-async function getPriceById(id) {
-  return await Price.findById(id);
+async function getPricesByDate(date, { page = 1, pageSize = 20 } = {}) {
+  const { start, end } = dateBounds(date);
+  return pagedFind(
+    { timestamp: { $gte: start, $lt: end } },
+    { page, pageSize, sort: { symbol: 1, timestamp: -1 } }
+  );
 }
 
-/**
- * 查询所有资产今天的最新价格
- * @returns {Promise<Array<{ symbol, price, currency, market, timestamp }>>}
- */
-async function getTodayPrices() {
-  // 1. 计算今天的起止时间（东部时区）
-  const now   = new Date();
-  const start = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-  const end   = new Date(start);
-  end.setDate(end.getDate() + 1);
-
-  // 2. 聚合：按 symbol 取 timestamp 最大的一条记录
-  const docs = await Price.aggregate([
+async function getTodayLatest({ page = 1, pageSize = 20, now = new Date() } = {}) {
+  const date = todayString(now);
+  const { start, end } = dateBounds(date);
+  const [result = { metadata: [], data: [] }] = await Price.aggregate([
     { $match: { timestamp: { $gte: start, $lt: end } } },
     { $sort: { timestamp: -1 } },
     { $group: {
-        _id: '$symbol',
-        symbol:        { $first: '$symbol' },
-        price:         { $first: '$price' },
-        currency:      { $first: '$currency' },
-        market:        { $first: '$market' },
-        timestamp:     { $first: '$timestamp' }
-    }},
-    { $project: {
-        _id: 0,
-        symbol:    1,
-        price:     1,
-        currency:  1,
-        market:    1,
-        timestamp: 1
-    }}
+      _id: '$symbol',
+      symbol: { $first: '$symbol' },
+      name: { $first: '$name' },
+      price: { $first: '$price' },
+      currency: { $first: '$currency' },
+      market: { $first: '$market' },
+      timestamp: { $first: '$timestamp' }
+    } },
+    { $project: { _id: 0, symbol: 1, name: 1, price: 1, currency: 1, market: 1, timestamp: 1 } },
+    { $facet: {
+      metadata: [{ $count: 'total' }],
+      data: [
+        { $sort: { symbol: 1 } },
+        { $skip: (page - 1) * pageSize },
+        { $limit: pageSize }
+      ]
+    } }
   ]);
-
-  return docs;
+  return { date, total: result.metadata[0]?.total || 0, data: result.data };
 }
 
+function historyTimestampQuery({ year, month, from, to }) {
+  if (year !== undefined) {
+    if (month !== undefined) return monthBounds(year, month);
+    const start = dateBounds(`${year}-01-01`).start;
+    const end = dateBounds(`${year + 1}-01-01`).start;
+    return { start, end };
+  }
 
-async function createPrice(data) {
-  return await Price.create(data);
+  const range = {};
+  if (from) range.start = dateBounds(from).start;
+  if (to) range.end = dateBounds(to).end;
+  return range;
 }
 
-async function updatePrice(id, data) {
-  return await Price.findByIdAndUpdate(id, data, { new: true });
+async function getPriceHistory(symbol, options = {}) {
+  const { page = 1, pageSize = 20 } = options;
+  const query = { symbol: symbol.trim().toUpperCase() };
+  const { start, end } = historyTimestampQuery(options);
+  if (start || end) {
+    query.timestamp = {};
+    if (start) query.timestamp.$gte = start;
+    if (end) query.timestamp.$lt = end;
+  }
+  return pagedFind(query, { page, pageSize, sort: { timestamp: -1 } });
 }
 
-async function deletePrice(id) {
-  return await Price.findByIdAndDelete(id);
-}
-
-// 按 symbol 查询
-async function getPricesBySymbol(symbol) {
-  return await Price.find({ symbol }).sort({ timestamp: -1 });
-}
+const getPriceById = id => Price.findById(id);
+const createPrice = data => Price.create(data);
+const updatePrice = (id, data) => Price.findByIdAndUpdate(id, data, {
+  new: true,
+  runValidators: true,
+  context: 'query'
+});
+const deletePrice = id => Price.findByIdAndDelete(id);
 
 module.exports = {
   getPricesByDate,
+  getTodayLatest,
+  getPriceHistory,
   getPriceById,
   createPrice,
   updatePrice,
-  deletePrice,
-  getPricesBySymbol,
-  getTodayPrices,
+  deletePrice
 };

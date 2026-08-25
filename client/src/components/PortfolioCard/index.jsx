@@ -1,5 +1,3 @@
-import React from 'react';
-// import './PortfolioCard.css'; // 或者 .module.css
 import { ChevronRight } from 'lucide-react';
 /**
  * @param {Object} props
@@ -10,7 +8,7 @@ import { ChevronRight } from 'lucide-react';
 export function PortfolioCard({ portfolio, onClick, className = '' }) {
   return (
     <div
-      className="bg-white shadow rounded-xl p-6 relative cursor-pointer hover:bg-gray-50 transition"
+      className={`bg-white shadow rounded-xl p-6 relative cursor-pointer hover:bg-gray-50 transition ${className}`}
       onClick={onClick}
       role="button"
       tabIndex={0}

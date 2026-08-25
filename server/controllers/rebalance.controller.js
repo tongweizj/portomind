@@ -1,93 +1,86 @@
-// server/controllers/rebalance.controller.js
+const { thresholdChecker, suggestionGenerator, recorder } = require('../services/rebalance');
+const {
+  executeRebalance,
+  revokeExecution,
+  prepareReexecution
+} = require('../services/rebalance/executeRebalance');
+const { success, failure, pagination, parsePagination } = require('../utils/apiResponse');
 
-const { thresholdChecker, suggestionGenerator, costEstimator, recorder } = require('../services/rebalance');
-const { aggregatePositions } = require('../services/portfolio');
-
-/**
- * POST /api/portfolios/:pid/rebalance/check
- * 阈值检测
- */
 exports.check = async (req, res, next) => {
   try {
-    const { pid } = req.params;
-    const { needsRebalance, triggeredThresholds } =
-      await thresholdChecker.checkThresholds(pid);
-    res.json({ needsRebalance, triggeredThresholds });
+    return success(res, await thresholdChecker.checkThresholds(req.params.pid));
   } catch (err) {
     next(err);
   }
 };
 
-/**
- * POST /api/portfolios/:pid/rebalance/suggestions
- * 生成再平衡建议
- */
 exports.suggestions = async (req, res, next) => {
   try {
-    const { pid } = req.params;
-    // 从 body 中取费率模型，传给服务层
-    const feeModel = req.body.feeModel || {};
-    const suggestions = await suggestionGenerator.getSuggestions(pid, feeModel);
-    res.json(suggestions);
+    return success(res, await suggestionGenerator.getSuggestions(req.params.pid, {
+      feeModel: req.body.feeModel || {},
+      cashBudget: req.body.cashBudget || 0,
+      mode: 'MANUAL'
+    }), { status: 201 });
   } catch (err) {
     next(err);
   }
 };
 
-/**
- * POST /api/portfolios/:pid/rebalance/execute
- * 执行建议并记录
- */
 exports.execute = async (req, res, next) => {
+  const { recordId, suggestions, mode = 'MANUAL' } = req.body;
+  if (!Array.isArray(suggestions) || suggestions.length === 0) {
+    return failure(req, res, 400, 'suggestions must be a non-empty array');
+  }
+  if (!recordId) {
+    return failure(req, res, 400, 'recordId is required');
+  }
+  if (mode !== 'MANUAL') {
+    return failure(req, res, 400, 'mode must be MANUAL; automatic execution is disabled');
+  }
   try {
-    const { pid } = req.params;
-    const { suggestions, mode } = req.body;
-    const updated = await recorder.reexecute(pid, mode, suggestions);
-    res.json({ recordId: updated._id, status: updated.status });
+    const updated = await executeRebalance(req.params.pid, { recordId, suggestions, mode });
+    return success(res, {
+      recordId: updated._id,
+      status: updated.status,
+      transactionIds: updated.executedTransactionIds
+    });
   } catch (err) {
     next(err);
   }
 };
 
-/**
- * GET /api/portfolios/:pid/rebalance/history
- * 查询再平衡记录
- */
 exports.history = async (req, res, next) => {
   try {
-    const { pid } = req.params;
-    const page = Math.max(parseInt(req.query.page, 10) || 1, 1);
-    const pageSize = Math.max(parseInt(req.query.pageSize, 10) || 20, 1);
-    const { total, data } = await recorder.getHistory(pid, page, pageSize);
-    res.json({ total, data });
+    const { page, pageSize } = parsePagination(req.query);
+    const result = await recorder.getHistory(req.params.pid, page, pageSize);
+    return success(res, result.data, { pagination: pagination(page, pageSize, result.total) });
   } catch (err) {
     next(err);
   }
 };
 
-/**
- * POST /api/rebalance/:recordId/revoke
- * 撤销再平衡操作
- */
 exports.revoke = async (req, res, next) => {
   try {
-    const { recordId } = req.params;
-    const rec = await Recorder.revoke(recordId);
-    res.json({ recordId: rec._id, status: rec.status });
+    const record = await revokeExecution(req.params.recordId);
+    return success(res, {
+      recordId: record._id,
+      status: record.status,
+      reversalTransactionIds: record.reversalTransactionIds
+    });
   } catch (err) {
     next(err);
   }
 };
 
-/**
- * POST /api/rebalance/:recordId/reexecute
- * 重做再平衡操作
- */
 exports.reexecute = async (req, res, next) => {
   try {
-    const { recordId } = req.params;
-    const rec = await Recorder.reexecute(recordId);
-    res.json({ recordId: rec._id, status: rec.status });
+    const record = await prepareReexecution(req.params.recordId);
+    return success(res, {
+      recordId: record._id,
+      sourceRecordId: record.sourceRecordId,
+      status: record.status,
+      suggestions: record.suggestions
+    }, { status: 201 });
   } catch (err) {
     next(err);
   }

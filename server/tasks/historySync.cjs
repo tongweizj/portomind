@@ -4,10 +4,11 @@ const path = require('path');
 require('dotenv').config({ path: path.resolve(__dirname, '../.env') });
 
 const mongoose = require('mongoose');
+mongoose.set('strictQuery', true);
 const minimist = require('minimist');
 const dayjs    = require('dayjs');
 const {logger}   = require('../config/logger');
-const { getAllAssets }  = require('../services/assetService');
+const { getActiveAssets }  = require('../services/asset.service');
 const { fetchHistory }  = require('../services/priceFetch.service');
 const { saveHistory }   = require('../services/priceStorage.service');
 
@@ -19,7 +20,7 @@ async function historySync(from, to) {
   if (symbolList.length > 0) {
     symbols = symbolList;
   } else {
-    const assets = await getAllAssets();
+    const assets = await getActiveAssets();
     symbols = assets.map(a => a.symbol);
   }
 
@@ -29,7 +30,12 @@ async function historySync(from, to) {
       await saveHistory(records);
       logger.info(`Saved ${records.length} records for ${symbol}`);
     } catch (err) {
-      logger.error(`Error for ${symbol}: ${err.message}`, { stack: err.stack });
+      logger.error(`Error for ${symbol}: ${err.message}`, {
+        category: err.category || 'INTERNAL',
+        provider: err.provider,
+        retryable: err.retryable,
+        stack: err.stack
+      });
     }
   }
 }
@@ -51,14 +57,11 @@ if (require.main === module) {
 
   const mongoUri = process.env.MONGO_URI;
   if (!mongoUri) {
-    console.error('Error: 未配置 MONGODB_URI 环境变量');
+    console.error('Error: 未配置 MONGO_URI 环境变量');
     process.exit(1);
   }
 
-  mongoose.connect(mongoUri, {
-    useNewUrlParser: true,
-    useUnifiedTopology: true
-  })
+  mongoose.connect(mongoUri)
     .then(() => {
       logger.info('MongoDB connected');
       return historySync(from.toDate(), to.toDate());

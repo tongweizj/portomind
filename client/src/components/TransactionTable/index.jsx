@@ -1,4 +1,3 @@
-import React from 'react';
 import './TransactionTable.css';
 
 /**
@@ -12,7 +11,6 @@ export function TransactionTable({
   columns = ['date', 'symbol', 'action', 'quantity', 'price'],
   className = '',
 }) {
-  console.log("transactions: ",transactions);
   return (
     <table className={`transaction-table ${className}`}>
       <thead>

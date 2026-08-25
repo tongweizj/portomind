@@ -1,59 +1,88 @@
-// server/services/rebalanceEngine/thresholdChecker.js
-
 const Portfolio = require('../../models/portfolio');
 const RebalanceRecord = require('../../models/rebalanceRecord');
 const { aggregatePositions } = require('../portfolio');
-/**
- * 阈值检测
- * @param {String} portfolioId
- * @returns {Promise<{ needsRebalance: boolean, triggeredThresholds: string[] }>}
- */
-async function checkThresholds(portfolioId) {
-  // 1. 读取 portfolio 配置
-  const portfolio = await Portfolio.findById(portfolioId).lean();
-  if (!portfolio) throw new Error('Portfolio not found');
-  console.log("portfolio:", portfolio);
-  const { rebalanceSettings, targets } = portfolio;
 
-  // 2. 当前持仓聚合
-  const positions = await aggregatePositions(portfolioId);
-  const totalValue = positions.reduce((sum, p) => sum + (p.marketValue || 0), 0);
-
-  // 3. 绝对偏离 & 相对偏离检查
-  const triggered = [];
-  console.log("positions:", positions);
-  positions.forEach(p => {
-    console.log("targets:", targets);
-    const target = targets.find(t => t.symbol === p.symbol);
-   
-    if (!target) return;
-    const targetValue = totalValue * (target.targetRatio / 100);
-    const currValue = p.marketValue || 0;
-    const absDev = Math.abs(currValue - targetValue) / totalValue * 100;
-    if (absDev > rebalanceSettings.absoluteDeviation) {
-      triggered.push('absoluteDeviation');
-    }
-    const relDev = targetValue>0 ? Math.abs(currValue - targetValue) / targetValue * 100 : 0;
-    if (relDev > rebalanceSettings.relativeDeviation) {
-      triggered.push('relativeDeviation');
-    }
-  });
-
-  // 4. 时间间隔阈值检查
-  const lastRecord = await RebalanceRecord.findOne({ portfolioId })
-    .sort({ timestamp: -1 }).lean();
-  if (lastRecord) {
-    const days = (Date.now() - new Date(lastRecord.timestamp)) / 86400000;
-    if (days >= rebalanceSettings.timeInterval) {
-      triggered.push('timeInterval');
-    }
-  } else {
-    triggered.push('timeInterval');
-  }
-
-  // 去重并决定是否触发
-  const triggeredThresholds = Array.from(new Set(triggered));
-  return { needsRebalance: triggeredThresholds.length > 0, triggeredThresholds };
+function businessError(status, code, message) {
+  const error = new Error(message);
+  error.status = status;
+  error.code = code;
+  return error;
 }
 
-module.exports = { checkThresholds };
+function evaluateThresholds({ targets = [], positions = [], settings = {}, lastExecutedAt = null, now = new Date() }) {
+  const positionBySymbol = new Map(positions.map(position => [position.symbol, position]));
+  const targetBySymbol = new Map(targets.map(target => [target.symbol, target]));
+  const symbols = [...new Set([...positionBySymbol.keys(), ...targetBySymbol.keys()])].sort();
+  const totalValue = positions.reduce(
+    (sum, position) => sum + (Number.isFinite(position.marketValue) ? position.marketValue : 0),
+    0
+  );
+  const triggered = new Set();
+  const reasons = [];
+
+  const details = symbols.map(symbol => {
+    const currentValue = positionBySymbol.get(symbol)?.marketValue || 0;
+    const targetRatio = Number(targetBySymbol.get(symbol)?.targetRatio || 0);
+    const currentRatio = totalValue > 0 ? currentValue / totalValue * 100 : 0;
+    const absoluteDeviation = totalValue > 0 ? Math.abs(currentRatio - targetRatio) : null;
+    const relativeDeviation = totalValue > 0 && targetRatio > 0
+      ? absoluteDeviation / targetRatio * 100
+      : null;
+    const symbolTriggers = [];
+    if (absoluteDeviation != null && settings.absoluteDeviation != null &&
+        absoluteDeviation > Number(settings.absoluteDeviation)) {
+      triggered.add('absoluteDeviation');
+      symbolTriggers.push('absoluteDeviation');
+    }
+    if (relativeDeviation != null && settings.relativeDeviation != null &&
+        relativeDeviation > Number(settings.relativeDeviation)) {
+      triggered.add('relativeDeviation');
+      symbolTriggers.push('relativeDeviation');
+    }
+    return {
+      symbol,
+      targetRatio,
+      currentRatio,
+      absoluteDeviation,
+      relativeDeviation,
+      triggeredThresholds: symbolTriggers
+    };
+  });
+
+  if (totalValue <= 0) reasons.push('TOTAL_VALUE_ZERO');
+
+  if (settings.timeInterval != null) {
+    const elapsedDays = lastExecutedAt
+      ? (new Date(now) - new Date(lastExecutedAt)) / 86400000
+      : null;
+    if (lastExecutedAt == null || elapsedDays >= Number(settings.timeInterval)) {
+      triggered.add('timeInterval');
+      reasons.push(lastExecutedAt == null ? 'NEVER_EXECUTED' : 'TIME_INTERVAL_EXCEEDED');
+    }
+  }
+
+  return {
+    needsRebalance: triggered.size > 0,
+    triggeredThresholds: [...triggered],
+    totalValue,
+    details,
+    reasons
+  };
+}
+
+async function checkThresholds(portfolioId) {
+  const [portfolio, positions, lastRecord] = await Promise.all([
+    Portfolio.findById(portfolioId).lean(),
+    aggregatePositions(portfolioId),
+    RebalanceRecord.findOne({ portfolioId, status: 'EXECUTED' }).sort({ executedAt: -1, timestamp: -1 }).lean()
+  ]);
+  if (!portfolio) throw businessError(404, 'PORTFOLIO_NOT_FOUND', 'Portfolio not found');
+  return evaluateThresholds({
+    targets: portfolio.targets,
+    positions,
+    settings: portfolio.rebalanceSettings,
+    lastExecutedAt: lastRecord?.executedAt || lastRecord?.timestamp
+  });
+}
+
+module.exports = { checkThresholds, evaluateThresholds };

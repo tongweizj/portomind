@@ -20,4 +20,8 @@
  *     price: number,
  *     timestamp: Date
  *   }>>
+ *
+ * 失败时抛出 MarketDataError，category 为：
+ * TIMEOUT | RATE_LIMIT | NOT_FOUND | INVALID_RESPONSE | UPSTREAM。
+ * 所有外部调用必须受 MARKET_DATA_TIMEOUT_MS 限制。
  */

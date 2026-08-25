@@ -1,28 +1,35 @@
 // src/pages/TransactionList.jsx
 import { useEffect, useState } from 'react';
-import { getTransactions, deleteTransaction } from '../../services/transactionService';
+import { getTransactions, deleteTransaction } from '../../services/transaction.service';
 import { useNavigate } from 'react-router';
-import { getAllPortfolios } from '../../services/portfolioService';
+import { getPortfolios } from '../../services/portfolio.service';
+import { getApiErrorMessage } from '../../services/api';
 
 export default function TransactionList() {
   const [transactions, setTransactions] = useState([]);
   const [portfolios, setPortfolios] = useState([]);
+  const [page, setPage] = useState(1);
+  const [pagination, setPagination] = useState({ page: 1, pageSize: 20, total: 0 });
+  const [error, setError] = useState('');
   const navigate = useNavigate();
-  const fetchData = async () => {
-    const data = await getTransactions();
-    console.log('🧪 Fetched data:', data); // ✅ 检查返回是否为数组
-    setTransactions(Array.isArray(data) ? data : []);
-  };
 
   useEffect(() => {
     async function fetchData() {
-      const txData = await getTransactions();
-      const pfData = await getAllPortfolios();
-      setTransactions(txData);
-      setPortfolios(pfData);
+      try {
+        setError('');
+        const [txResult, pfData] = await Promise.all([
+          getTransactions({ page, pageSize: 20 }),
+          getPortfolios()
+        ]);
+        setTransactions(txResult.data);
+        setPagination(txResult.pagination);
+        setPortfolios(pfData);
+      } catch (err) {
+        setError(getApiErrorMessage(err, '加载交易失败'));
+      }
     }
     fetchData();
-  }, []);
+  }, [page]);
 
   const findPortfolioName = (id) => {
     const pf = portfolios.find(p => p._id === id);
@@ -30,9 +37,19 @@ export default function TransactionList() {
   };
 
   const handleDelete = async (txId) => {
-    await deleteTransaction(txId);
-    const txData = await getTransactions();
-    setTransactions(txData);
+    try {
+      setError('');
+      await deleteTransaction(txId);
+      const result = await getTransactions({ page, pageSize: 20 });
+      if (result.data.length === 0 && page > 1) {
+        setPage(page - 1);
+      } else {
+        setTransactions(result.data);
+        setPagination(result.pagination);
+      }
+    } catch (err) {
+      setError(getApiErrorMessage(err, '删除交易失败'));
+    }
   };
 
   return (
@@ -47,6 +64,7 @@ export default function TransactionList() {
     创建交易记录
   </button>
 </div>
+    {error && <div className="rounded bg-red-50 p-3 text-red-700">{error}</div>}
     {transactions.length === 0 ? (
       <p className="text-gray-500">暂无交易记录。</p>
     ) : (
@@ -93,6 +111,13 @@ export default function TransactionList() {
             ))}
           </tbody>
         </table>
+      </div>
+    )}
+    {pagination.total > pagination.pageSize && (
+      <div className="flex items-center justify-end gap-3 text-sm">
+        <button disabled={page <= 1} onClick={() => setPage(value => value - 1)} className="disabled:opacity-40">上一页</button>
+        <span>第 {page} 页，共 {Math.ceil(pagination.total / pagination.pageSize)} 页</span>
+        <button disabled={page * pagination.pageSize >= pagination.total} onClick={() => setPage(value => value + 1)} className="disabled:opacity-40">下一页</button>
       </div>
     )}
   </div>

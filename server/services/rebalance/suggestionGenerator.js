@@ -1,84 +1,189 @@
-// server/services/rebalanceEngine/suggestionGenerator.js
-const { aggregatePositions } = require('../portfolio');
-const thresholdChecker    = require('./thresholdChecker');
-const costEstimator       = require('./costEstimator');
 const Portfolio = require('../../models/portfolio');
- /**
-   * 生成再平衡建议并预估成本
-   * @param {String} portfolioId
-   * @param {Object} [feeModel={}]  固定费/比例费/税率等
-   * @returns {Promise<Array>}      建议列表，每项含 symbol, action, quantity, estimatedCost, estimatedTax, postRebalanceRatio
-   */
- async function getSuggestions(portfolioId, feeModel = {}) {
-  // 1. 聚合当前持仓
-  const positions = await aggregatePositions(portfolioId);
+const { aggregatePositions } = require('../portfolio');
+const marketData = require('../marketData.service');
+const thresholdChecker = require('./thresholdChecker');
+const recorder = require('./recorder');
+const { estimateTradeCost, normalizeFeeModel } = require('./costEstimator');
 
-  // 2. 阈值检测，决定哪些阈值被触发
-  const { triggeredThresholds } = await thresholdChecker.checkThresholds(portfolioId);
+const EPSILON = 1e-8;
 
-  // 3. 生成原始建议
-  let suggestions = await generateSuggestions(
-    portfolioId,
-    positions,
-    triggeredThresholds
-  );
-
-  // 4. 对每条建议预估交易成本和税费
-  suggestions = costEstimator.estimateCost(suggestions, feeModel);
-
-  return suggestions;
+function businessError(status, code, message) {
+  const error = new Error(message);
+  error.status = status;
+  error.code = code;
+  return error;
 }
 
+function buildSuggestions({ targets = [], positions = [], latestPrices = {}, feeModel = {}, cashBudget = 0 }) {
+  const fees = normalizeFeeModel(feeModel);
+  const externalCash = Number(cashBudget);
+  if (!Number.isFinite(externalCash) || externalCash < 0) {
+    throw businessError(400, 'INVALID_CASH_BUDGET', 'cashBudget must be a non-negative number');
+  }
 
-/**
- * 建议生成子模块
- * 根据触发的阈值，为每个持仓生成买/卖建议
- * @param {String} portfolioId - 组合 ID
- * @param {Array} positions - 持仓数组，元素为 { symbol, quantity, avgCost, price, marketValue }
- * @param {Array} triggeredThresholds - 触发的阈值列表
- * @returns {Promise<Array>} - 建议列表，元素 { symbol, action, quantity, estimatedCost, postRebalanceRatio }
- */
-async function generateSuggestions(portfolioId, positions, triggeredThresholds) {
-  // 1. 加载组合，获取目标配比
-  const portfolio = await Portfolio.findById(portfolioId).lean();
-  if (!portfolio) throw new Error('Portfolio not found');
-  const { targets } = portfolio;
+  const positionBySymbol = new Map(positions.map(position => [position.symbol, position]));
+  const targetBySymbol = new Map(targets.map(target => [
+    String(target.symbol).toUpperCase(), Number(target.targetRatio)
+  ]));
+  const symbols = [...new Set([...positionBySymbol.keys(), ...targetBySymbol.keys()])].sort();
+  const warnings = [];
 
-  // 2. 计算组合总市值
-  const totalValue = positions.reduce((sum, p) => sum + (p.marketValue || 0), 0);
+  for (const position of positions) {
+    if (position.marketValue == null || position.latestPrice == null) {
+      throw businessError(400, 'MISSING_MARKET_PRICE', `Latest price is required for ${position.symbol}`);
+    }
+  }
 
-  // 3. 为每笔持仓生成再平衡建议
-  const suggestions = positions.map(p => {
-    // 找到对应的目标配比（%）
-    const target = targets.find(t => t.symbol === p.symbol) || { targetRatio: 0 };
-    const targetValue = totalValue * (target.targetRatio / 100);
-    const currValue   = p.marketValue || 0;
-    const deltaValue  = targetValue - currValue;
-    const price       = p.price || 0;
-
-    // 计算交易数量：买入向上取整，卖出向下取整
-    const tradeQty = price > 0
-      ? (deltaValue > 0
-          ? Math.ceil(deltaValue / price)
-          : Math.floor(deltaValue / price))
-      : 0;
-    const action = deltaValue > 0 ? 'BUY' : 'SELL';
-
-    // 计算调整后的配比
-    const postRatio = price > 0
-      ? ((currValue + tradeQty * price) / totalValue * 100)
-      : target.targetRatio;
-
+  const currentTotalValue = positions.reduce((sum, position) => sum + position.marketValue, 0);
+  const investableValue = currentTotalValue + externalCash;
+  if (investableValue <= EPSILON) {
     return {
-      symbol: p.symbol,
-      action,
-      quantity: Math.abs(tradeQty),
-      estimatedCost: 0,          // 由 CostEstimator 模块后续填充
-      postRebalanceRatio: postRatio
+      suggestions: [],
+      warnings: ['TOTAL_VALUE_ZERO'],
+      funding: { cashBudget: externalCash, saleProceeds: 0, availableForBuys: externalCash }
     };
-  });
+  }
 
-  return suggestions;
+  const rows = [];
+  for (const symbol of symbols) {
+    const position = positionBySymbol.get(symbol);
+    const targetRatio = targetBySymbol.get(symbol) || 0;
+    const currentValue = position?.marketValue || 0;
+    const priceValue = position?.latestPrice ?? latestPrices[symbol];
+    const price = priceValue == null ? null : Number(priceValue);
+    if (!Number.isFinite(price) || price <= 0) {
+      if (targetRatio > 0 || currentValue > 0) warnings.push(`MISSING_PRICE:${symbol}`);
+      continue;
+    }
+    rows.push({
+      symbol,
+      price,
+      currentValue,
+      currentQuantity: position?.quantity || 0,
+      targetRatio,
+      desiredValue: investableValue * targetRatio / 100
+    });
+  }
+
+  const suggestions = [];
+  let saleProceeds = 0;
+  const projectedValues = new Map(rows.map(row => [row.symbol, row.currentValue]));
+
+  // 先卖出，卖出净所得才可成为买入资金。
+  for (const row of rows.filter(item => item.currentValue - item.desiredValue > EPSILON)) {
+    const desiredGross = row.currentValue - row.desiredValue;
+    const quantity = Math.min(row.currentQuantity, desiredGross / row.price);
+    if (quantity <= EPSILON) continue;
+    const grossValue = quantity * row.price;
+    const costs = estimateTradeCost('sell', grossValue, fees);
+    const netProceeds = Math.max(grossValue - costs.estimatedCost, 0);
+    saleProceeds += netProceeds;
+    projectedValues.set(row.symbol, row.currentValue - grossValue);
+    suggestions.push({
+      symbol: row.symbol,
+      action: 'sell',
+      quantity,
+      price: row.price,
+      grossValue,
+      ...costs,
+      cashImpact: netProceeds,
+      targetRatio: row.targetRatio
+    });
+  }
+
+  const desiredBuys = rows
+    .map(row => ({ ...row, desiredGross: Math.max(row.desiredValue - row.currentValue, 0) }))
+    .filter(row => row.desiredGross > EPSILON);
+  const totalDesiredBuy = desiredBuys.reduce((sum, row) => sum + row.desiredGross, 0);
+  const availableForBuys = externalCash + saleProceeds;
+  let buySpend = 0;
+
+  for (const row of desiredBuys) {
+    const allocation = totalDesiredBuy > 0
+      ? availableForBuys * row.desiredGross / totalDesiredBuy
+      : 0;
+    const affordableGross = Math.max((allocation - fees.fixedFee) / (1 + fees.ratioFee), 0);
+    const grossValue = Math.min(row.desiredGross, affordableGross);
+    const quantity = grossValue / row.price;
+    if (quantity <= EPSILON) continue;
+    const costs = estimateTradeCost('buy', grossValue, fees);
+    const cashRequired = grossValue + costs.estimatedCost;
+    buySpend += cashRequired;
+    projectedValues.set(row.symbol, row.currentValue + grossValue);
+    suggestions.push({
+      symbol: row.symbol,
+      action: 'buy',
+      quantity,
+      price: row.price,
+      grossValue,
+      ...costs,
+      cashImpact: -cashRequired,
+      targetRatio: row.targetRatio
+    });
+  }
+
+  if (totalDesiredBuy > availableForBuys + EPSILON || buySpend + EPSILON < totalDesiredBuy) {
+    warnings.push('BUYS_LIMITED_BY_AVAILABLE_CASH');
+  }
+
+  const postTotalValue = [...projectedValues.values()].reduce((sum, value) => sum + value, 0);
+  for (const suggestion of suggestions) {
+    suggestion.postRebalanceRatio = postTotalValue > EPSILON
+      ? projectedValues.get(suggestion.symbol) / postTotalValue * 100
+      : 0;
+  }
+
+  suggestions.sort((left, right) => {
+    if (left.action !== right.action) return left.action === 'sell' ? -1 : 1;
+    return left.symbol.localeCompare(right.symbol);
+  });
+  return {
+    suggestions,
+    warnings: [...new Set(warnings)],
+    funding: {
+      cashBudget: externalCash,
+      saleProceeds,
+      availableForBuys,
+      buySpend,
+      remainingCash: Math.max(availableForBuys - buySpend, 0)
+    }
+  };
 }
 
-module.exports = { getSuggestions, generateSuggestions };
+async function getSuggestions(portfolioId, { feeModel = {}, cashBudget = 0, mode = 'MANUAL' } = {}) {
+  const [portfolio, positions, thresholdResult] = await Promise.all([
+    Portfolio.findById(portfolioId).lean(),
+    aggregatePositions(portfolioId),
+    thresholdChecker.checkThresholds(portfolioId)
+  ]);
+  if (!portfolio) throw businessError(404, 'PORTFOLIO_NOT_FOUND', 'Portfolio not found');
+
+  const targetSymbols = portfolio.targets.map(target => String(target.symbol).toUpperCase());
+  const latestPrices = targetSymbols.length ? await marketData.getLatestPrices(targetSymbols) : {};
+  const result = buildSuggestions({
+    targets: portfolio.targets,
+    positions,
+    latestPrices,
+    feeModel,
+    cashBudget
+  });
+  const record = await recorder.createRecord(portfolioId, mode, result.suggestions, {
+    feeModel: normalizeFeeModel(feeModel),
+    cashBudget: Number(cashBudget),
+    triggeredThresholds: thresholdResult.triggeredThresholds,
+    thresholdDetails: thresholdResult.details,
+    warnings: result.warnings,
+    funding: result.funding
+  });
+  return {
+    recordId: record._id,
+    status: record.status,
+    suggestions: result.suggestions,
+    triggeredThresholds: thresholdResult.triggeredThresholds,
+    thresholdDetails: thresholdResult.details,
+    warnings: result.warnings,
+    funding: result.funding
+  };
+}
+
+module.exports = { getSuggestions, buildSuggestions, generateSuggestions: buildSuggestions };

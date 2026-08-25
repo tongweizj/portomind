@@ -10,9 +10,9 @@ const cron                = require('node-cron');
 const Portfolio           = require('../../models/portfolio');
 const ThresholdChecker    = require('./thresholdChecker');
 const SuggestionGenerator = require('./suggestionGenerator');
-const CostEstimator       = require('./costEstimator');
-const Recorder            = require('./recorder');
-const AlertCenterService  = require('../alertCenterService');
+const AlertCenterService  = require('../alertCenter.service');
+const { taskLogger }      = require('../../config/logger');
+const { runTrackedTask }  = require('../taskRunner');
 
 // 保存每个 portfolio 对应的 cron 任务实例
 const taskMap = new Map();
@@ -30,7 +30,8 @@ const cronExpressions = {
  */
 async function scheduleJobForPortfolio(portfolio) {
   const pid       = portfolio._id.toString();
-  const schedule  = portfolio.rebalanceSettings.rebalanceSchedule;
+  const settings  = portfolio.rebalanceSettings || {};
+  const schedule  = settings.rebalanceSchedule || 'daily';
   const expr      = cronExpressions[schedule];
 
   if (!expr) {
@@ -45,33 +46,37 @@ async function scheduleJobForPortfolio(portfolio) {
   // 定义并启动新任务
   const job = cron.schedule(expr, async () => {
     try {
-      // 1. 阈值检测
-      const { needsRebalance, triggeredThresholds } =
-        await ThresholdChecker.checkThresholds(pid);
-      if (!needsRebalance) return;
+      const periodKey = new Intl.DateTimeFormat('en-CA', {
+        timeZone: process.env.SCHEDULER_TIMEZONE || process.env.MARKET_TIMEZONE || 'America/Toronto',
+        year: 'numeric', month: '2-digit', day: '2-digit'
+      }).format(new Date());
+      await runTrackedTask({
+        taskName: `rebalance-suggestions:${pid}`,
+        runKey: `${schedule}:${periodKey}`,
+        trigger: 'SCHEDULED',
+        execute: async () => {
+          const { needsRebalance } = await ThresholdChecker.checkThresholds(pid);
+          if (!needsRebalance) return { totalCount: 1, successCount: 1, failureCount: 0 };
 
-      // 2. 读取最新持仓，并生成建议
-      const positions   = await require('../portfolio/positionTracker').aggregate(pid);
-      let suggestions   = await SuggestionGenerator.generateSuggestions(
-        pid, positions, triggeredThresholds
-      );
-
-      // 3. 预估成本（来自组合的费率模型或全局配置）
-      const feeModel    = portfolio.rebalanceSettings.feeModel || {};
-      suggestions       = CostEstimator.estimateCost(suggestions, feeModel);
-
-      // 4. 记录并通知
-      const record      = await Recorder.createRecord(pid, 'AUTO', suggestions);
-      await Recorder.updateStatus(record._id, 'PENDING');
-      AlertCenterService.notify(pid, record);
-
+          const result = await SuggestionGenerator.getSuggestions(pid, {
+            feeModel: settings.feeModel || {},
+            cashBudget: 0,
+            mode: 'AUTO'
+          });
+          await AlertCenterService.notify({
+            portfolioId: pid,
+            record: { _id: result.recordId, timestamp: new Date() },
+            suggestions: result.suggestions
+          });
+          return { totalCount: 1, successCount: 1, failureCount: 0 };
+        }
+      });
     } catch (err) {
-      // 任务内部异常，打印日志但不影响下次调度
-      console.error(`[autoRebalance:${pid}] error:`, err);
+      taskLogger.error('REBALANCE_SCHEDULER_FAILED', { portfolioId: pid, message: err.message });
     }
   }, {
     scheduled: true,    // 脚本启动后立即生效
-    timezone:  'America/Toronto'
+    timezone: process.env.SCHEDULER_TIMEZONE || process.env.MARKET_TIMEZONE || 'America/Toronto'
   });
 
   taskMap.set(pid, job);
@@ -83,7 +88,14 @@ async function scheduleJobForPortfolio(portfolio) {
 async function initSchedules() {
   const portfolios = await Portfolio.find().lean();
   for (const p of portfolios) {
-    await scheduleJobForPortfolio(p);
+    try {
+      await scheduleJobForPortfolio(p);
+    } catch (error) {
+      taskLogger.error('REBALANCE_SCHEDULE_REGISTRATION_FAILED', {
+        portfolioId: p._id?.toString(),
+        message: error.message
+      });
+    }
   }
 }
 
@@ -99,8 +111,14 @@ function cancelSchedule(portfolioId) {
   }
 }
 
+function cancelAllSchedules() {
+  for (const job of taskMap.values()) job.stop();
+  taskMap.clear();
+}
+
 module.exports = {
   scheduleJobForPortfolio,
   cancelSchedule,
-  initSchedules
+  initSchedules,
+  cancelAllSchedules
 };

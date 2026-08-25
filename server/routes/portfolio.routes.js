@@ -8,10 +8,7 @@ const rebalanceController = require('../controllers/rebalance.controller');
 // 组合, 增删改查
 router.post('/', portfolioController.createPortfolio);
 router.get('/', portfolioController.getAllPortfolios);
-router.get('/:id', portfolioController.getPortfolioById);
-router.put('/:id', portfolioController.updatePortfolio);
-router.delete('/:id', portfolioController.deletePortfolio);
-
+// 更具体的子资源路由先于 /:id 注册。
 // 组合, 统计
 router.get('/:id/stats/actual-ratios', portfolioController.getActualRatios); // 实时持仓比例
 router.get('/:id/stats', portfolioController.getPortfolioStats);
@@ -44,5 +41,9 @@ router.get(
     '/:pid/rebalance/history',
     rebalanceController.history
 );
+
+router.get('/:id', portfolioController.getPortfolioById);
+router.put('/:id', portfolioController.updatePortfolio);
+router.delete('/:id', portfolioController.deletePortfolio);
 
 module.exports = router;

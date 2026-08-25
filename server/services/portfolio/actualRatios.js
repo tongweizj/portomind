@@ -1,55 +1,27 @@
-// 实际持仓比例
+const { aggregate } = require('./positionTracker');
 
-// server/services/portfolio/actualRatios.js
-
-const Transaction = require('../../models/transaction');
-const Price       = require('../../models/price');
-
-/**
- * computeActualRatios
- * 计算组合中每个标的的实际持仓比例
- * 原 logic 位于 controllers/portfolio.controller.js#getActualRatios
- * @param {String} portfolioId - 组合 ID
- * @returns {Promise<Array<{ symbol: string, ratio: number }>>}
- */
-
+/** 比例仅在相同原币种内部计算；未引入汇率前不跨币种汇总。 */
 async function computeActualRatios(portfolioId) {
-  // 1. 拉取该组合下所有交易记录
-  const txs = await Transaction.find({ portfolioId }).lean();
+  const positions = await aggregate(portfolioId);
+  const totalsByCurrency = positions.reduce((totals, position) => {
+    if (position.marketValue != null) {
+      const currency = position.currency || 'UNKNOWN';
+      totals[currency] = (totals[currency] || 0) + position.marketValue;
+    }
+    return totals;
+  }, {});
 
-  // 2. 按 symbol 累加净持仓数量（买入 +，卖出 -）
-  const positionMap = {};
-  txs.forEach(tx => {
-    const sign = tx.action === 'buy' ? 1 : -1;
-    positionMap[tx.symbol] = (positionMap[tx.symbol] || 0) + sign * tx.quantity;
+  return positions.map(position => {
+    const currency = position.currency || 'UNKNOWN';
+    const total = totalsByCurrency[currency] || 0;
+    return {
+      symbol: position.symbol,
+      currency,
+      ratio: position.marketValue != null && total > 0
+        ? Number((position.marketValue / total * 100).toFixed(1))
+        : 0
+    };
   });
-
-  // 3. 过滤掉净持仓 <= 0 的资产
-  const assets = Object.entries(positionMap)
-    .filter(([_, qty]) => qty > 0);
-
-  // 4. 获取最新价格 & 计算各资产市值
-  let totalValue = 0;
-  const assetValues = await Promise.all(
-    assets.map(async ([symbol, qty]) => {
-      const priceDoc = await Price
-        .findOne({ symbol })
-        .sort({ timestamp: -1 })  // 按最新 timestamp
-        .lean();
-      const price = priceDoc?.price ?? 0;
-      const value = price * qty;
-      totalValue += value;
-      return { symbol, value };
-    })
-  );
-
-  // 5. 计算比例并返回
-  return assetValues.map(({ symbol, value }) => ({
-    symbol,
-    ratio: totalValue > 0
-      ? parseFloat((value / totalValue * 100).toFixed(1))
-      : 0
-  }));
 }
 
 module.exports = { computeActualRatios };

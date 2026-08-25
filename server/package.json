@@ -4,8 +4,14 @@
   "description": "Node.js Restful CRUD API with Node.js, Express and MongoDB",
   "main": "server.js",
   "scripts": {
+    "test": "node --test test/integration/*.test.js",
     "dev": "nodemon server.js",
-    "start": "node server.js"
+    "start": "node server.js",
+    "sync:prices": "node tasks/dailySync.js",
+    "seed:baseline": "node scripts/seedBaseline.js",
+    "validate": "node scripts/validate.js",
+    "verify:baseline": "node scripts/verifyBaseline.js",
+    "verify": "npm run validate && npm run verify:baseline"
   },
   "keywords": [
     "nodejs",
@@ -17,24 +23,23 @@
   "author": "bezkoder",
   "license": "ISC",
   "dependencies": {
-    "axios": "^1.7.9",
-    "body-parser": "^1.19.0",
-    "cheerio": "^1.0.0",
-    "cors": "^2.8.5",
-    "dayjs": "^1.11.13",
-    "dotenv": "^16.5.0",
-    "express": "^4.17.1",
+    "axios": "^1.19.0",
+    "body-parser": "^1.20.6",
+    "cors": "^2.8.6",
+    "dayjs": "^1.11.23",
+    "dotenv": "^16.6.1",
+    "express": "^4.22.2",
     "express-async-handler": "^1.2.0",
     "minimist": "^1.2.8",
-    "mongoose": "^5.8.10",
-    "node-cron": "^3.0.3",
+    "mongoose": "^6.13.11",
+    "node-cron": "^4.6.0",
     "on-finished": "^2.4.1",
-    "uuid": "^11.1.0",
-    "winston": "^3.17.0",
+    "uuid": "^11.1.1",
+    "winston": "^3.19.0",
     "winston-daily-rotate-file": "^5.0.0",
-    "yahoo-finance2": "^2.13.3"
+    "yahoo-finance2": "^2.14.2"
   },
   "devDependencies": {
-    "nodemon": "^3.1.9"
+    "nodemon": "^3.1.14"
   }
 }

@@ -1,155 +1,87 @@
-太好了 ✅  
-以下是适用于你当前部署架构（**Ubuntu 容器 + MongoDB 容器 + PM2 启动 + Cron 抓取任务**）的完整部署文档模板，你可以将其保存为：
+# PortoMind 部署说明
 
-```
-📁 docs
- └── DEPLOY.md
-```
+当前版本适合部署在可信局域网。由于尚未实现认证和多用户授权，不要把 API 直接暴露到公网。
 
----
-
-## ✅ `docs/DEPLOY.md` 内容如下：
-
-```md
-# 🚀 PortoMind 部署指南（适用于 Ubuntu + NAS）
-
-本指南适用于在自建服务器、NAS、或本地 Ubuntu 容器中部署 **PortoMind** 项目（使用 MongoDB + Node.js + React + PM2）。
-
----
-
-## 📦 1. 克隆项目代码
+## 构建
 
 ```bash
-git clone https://github.com/your-username/portomind-app.git
-cd portomind-app
-```
+git clone <repository-url> portomind
+cd portomind
 
----
+cp server/.env.example server/.env
+cp client/.env.example client/.env
 
-## ⚙️ 2. 配置 .env 环境变量
-
-在 `server/` 目录下创建 `.env` 文件：
-
-```ini
-# .env
-PORT=8080
-MONGO_URI=mongodb://<用户名>:<密码>@mongo:27017/etf-data?authSource=admin
-LOG=./logs
-```
-
-⚠️ 如果你使用的是 Docker bridge 网络，`mongo` 应为另一个容器的别名。
-
----
-
-## 🧱 3. 安装依赖
-
-### 3.1 安装后端依赖
-
-```bash
 cd server
-npm install
-```
+npm ci
+npm test
 
-### 3.2 安装前端依赖
-
-```bash
 cd ../client
-npm install
+npm ci
+npm run lint
+npm run build
 ```
 
----
+将 `client/dist/` 交给 Nginx 或其他静态服务器。`VITE_API_URL` 是构建时变量；若前端和 API 同域，建议使用默认同源 `/api` 并由 Nginx 转发。
 
-## 🧪 4. 本地测试运行（开发环境）
+## 后端环境变量
 
-### 启动后端服务
+至少配置：
+
+```dotenv
+MONGO_URI=mongodb://127.0.0.1:27017/portomind
+PORT=8080
+CORS_ORIGINS=https://portomind.example.internal
+LOG_DIR=./logs
+SCHEDULER_ENABLED=true
+SCHEDULER_TIMEZONE=America/Toronto
+PRICE_SYNC_CRON=0 3 * * *
+```
+
+MongoDB 账号应只拥有 PortoMind 数据库所需权限；`.env` 和日志文件不能进入静态目录或版本控制。
+
+## PM2
 
 ```bash
 cd server
-npm run dev
-```
-
-### 启动前端服务
-
-```bash
-cd client
-npm run dev
-```
-
-访问前端地址：[http://localhost:5173](http://localhost:5173)
-
----
-
-## 🧰 5. 后端服务后台守护（使用 PM2）
-
-```bash
-cd server
-npm install -g pm2
-pm2 start server.js --name portomind-api
-```
-
-查看日志：
-
-```bash
-pm2 logs portomind-api
-```
-
-开机自启（可选）：
-
-```bash
-pm2 startup
+npm ci --omit=dev
+pm2 start server.js --name portomind-api --instances 1
 pm2 save
 ```
 
----
+价格和再平衡调度由 Node API 常驻进程统一管理。不要设置系统 cron，也不要单独启动 `priceScheduler.js`。若未来使用多个 API worker，只允许一个 worker 设置 `SCHEDULER_ENABLED=true`，其他 worker 必须禁用调度。
 
-## 🕒 6. 设置自动抓取价格任务（cron）
-
-确保 `server/tasks/syncPrices.js` 可独立执行。
-
-```bash
-crontab -e
-```
-
-添加：
-
-```cron
-*/5 * * * * cd /path/to/portomind-app/server && /usr/bin/node tasks/syncPrices.js >> ./logs/sync.log 2>&1
-```
-
-说明：每 5 分钟抓取一次资产价格，日志输出到 `logs/sync.log`
-
----
-
-## 🌐 7. 外网访问（Nginx 反向代理建议）
-
-示例配置（监听 80，将前端转发到本地 vite 编译端口）：
+## Nginx 示例
 
 ```nginx
 server {
-  listen 80;
-  server_name your.domain.com;
+  listen 443 ssl;
+  server_name portomind.example.internal;
+
+  root /srv/portomind/client/dist;
+  index index.html;
+
+  location /api/ {
+    proxy_pass http://127.0.0.1:8080;
+    proxy_set_header Host $host;
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    proxy_set_header X-Forwarded-Proto $scheme;
+  }
 
   location / {
-    proxy_pass http://localhost:5173;
-    proxy_http_version 1.1;
-    proxy_set_header Upgrade $http_upgrade;
-    proxy_set_header Connection 'upgrade';
-    proxy_set_header Host $host;
+    try_files $uri /index.html;
   }
 }
 ```
 
-也可将前端打包部署为纯静态：
+TLS 证书配置因环境而异，示例未包含证书路径。
 
-```bash
-cd client
-npm run build
-```
+## 上线检查
 
-然后将 `dist/` 目录交由 nginx 或 NAS 静态服务托管。
+- `npm test`、`npm run verify`、前端 lint/build 全部通过。
+- `npm audit --omit=dev` 前后端均无已知漏洞。
+- 只有一个调度器所有者。
+- MongoDB 和日志目录有备份、容量与保留策略。
+- `/api/logs` 仅在可信网络可访问。
+- 外部行情失败能在任务日志中追踪，但不会中断其他资产。
 
----
-
-## ✅ Done！
-
-你现在可以通过浏览器访问：`http://your-ip:5173` 或绑定域名访问。
+Docker 尚未作为当前交付方式；容器化前应先设计健康检查、非 root 用户、持久卷、备份恢复和调度器单例策略。

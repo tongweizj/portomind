@@ -39,7 +39,18 @@ const RebalanceRecordSchema = new Schema({
     type: String,
     enum: ['PENDING', 'EXECUTED', 'REVOKED'],
     default: 'PENDING'
-  }
-});
+  },
+  triggeredThresholds: { type: [String], default: [] },
+  thresholdDetails: { type: [Schema.Types.Mixed], default: [] },
+  warnings: { type: [String], default: [] },
+  feeModel: { type: Schema.Types.Mixed, default: () => ({}) },
+  cashBudget: { type: Number, default: 0, min: 0 },
+  funding: { type: Schema.Types.Mixed, default: () => ({}) },
+  executedTransactionIds: [{ type: Types.ObjectId, ref: 'Transaction' }],
+  reversalTransactionIds: [{ type: Types.ObjectId, ref: 'Transaction' }],
+  sourceRecordId: { type: Types.ObjectId, ref: 'RebalanceRecord', default: null },
+  executedAt: { type: Date, default: null },
+  revokedAt: { type: Date, default: null }
+}, { timestamps: true, versionKey: false });
 
 module.exports = model('RebalanceRecord', RebalanceRecordSchema);

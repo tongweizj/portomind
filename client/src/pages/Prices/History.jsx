@@ -1,7 +1,8 @@
 // client/src/pages/Price/History.jsx
-import React, { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useParams } from 'react-router';
-import { getPriceHistory } from '../../services/priceService';
+import { getPriceHistory } from '../../services/price.service';
+import { getApiErrorMessage } from '../../services/api';
 import {
   LineChart,
   Line,
@@ -19,7 +20,7 @@ export default function History() {
     String(today.getMonth() + 1).padStart(2, '0')
   );
   const [page, setPage] = useState(1);
-  const [pageSize] = useState(20);
+  const [pageSize] = useState(50);
   const [total, setTotal] = useState(0);
   const [data, setData] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -37,11 +38,14 @@ export default function History() {
           page,
           pageSize,
         });
-        setData(res.data);
-        setTotal(res.total);
+        setData(res.data.map(row => ({
+          ...row,
+          date: row.timestamp.slice(0, 10)
+        })));
+        setTotal(res.pagination.total);
       } catch (err) {
         console.error(err);
-        setError('加载历史价格失败');
+        setError(getApiErrorMessage(err, '加载历史价格失败'));
       } finally {
         setLoading(false);
       }
@@ -49,7 +53,8 @@ export default function History() {
     fetchHistory();
   }, [symbol, year, month, page, pageSize]);
 
-  const totalPages = Math.ceil(total / pageSize);
+  const totalPages = Math.max(Math.ceil(total / pageSize), 1);
+  const chartData = useMemo(() => [...data].reverse(), [data]);
 
   return (
     <div className="p-6 bg-gray-50 min-h-screen space-y-6">
@@ -82,7 +87,7 @@ export default function History() {
           {/* Chart */}
           <div className="w-full h-64 bg-white rounded-lg shadow p-4">
             <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={data}>
+              <LineChart data={chartData}>
                 <XAxis dataKey="date" tick={{ fontSize: 12 }} />
                 <YAxis tick={{ fontSize: 12 }} />
                 <Tooltip />
@@ -109,7 +114,7 @@ export default function History() {
               <tbody>
                 {data.map((row) => (
                   <tr key={row.timestamp} className="hover:bg-gray-50">
-                    <td className="px-4 py-2">{row.timestamp}</td>
+                    <td className="px-4 py-2">{row.date}</td>
                     <td className="px-4 py-2 text-right">{row.price}</td>
                   </tr>
                 ))}
@@ -133,7 +138,7 @@ export default function History() {
               onClick={() =>
                 setPage((p) => Math.min(totalPages, p + 1))
               }
-              disabled={page === totalPages}
+              disabled={page >= totalPages}
               className="px-3 py-1 bg-blue-100 text-blue-700 rounded disabled:opacity-50"
             >
               下一页

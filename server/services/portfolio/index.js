@@ -3,6 +3,7 @@ const tracker       = require('./positionTracker');
 const stats         = require('./stats');
 const actualRatios  = require('./actualRatios');
 const lister         = require('./listPositions');
+const deletion       = require('./deletePortfolio');
 
 module.exports = {
   getRebalanceSettings: settings.getRebalanceSettings,
@@ -12,5 +13,6 @@ module.exports = {
   getHistory: tracker.getHistory,
   computeStats: stats.computeStats,
   computeActualRatios: actualRatios.computeActualRatios,
-  listPositions:           lister.listPositions
+  listPositions: lister.listPositions,
+  deletePortfolioCascade: deletion.deletePortfolioCascade
 };

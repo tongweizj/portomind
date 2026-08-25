@@ -1,4 +1,8 @@
-## TODO List
+# 历史日志需求（已归档）
+
+以下内容是早期设计记录，不再作为实施清单；当前实现和接口以 `API_CONTRACT.md` 与 `DEVELOPMENT.md` 为准。
+
+## 原始任务清单
 
 1. **创建日志目录**：在 `server/` 根下创建 `logs/` 目录并设置写权限。
 2. **安装依赖**：运行 `npm install winston winston-daily-rotate-file uuid on-finished`。

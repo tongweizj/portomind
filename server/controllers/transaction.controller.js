@@ -1,118 +1,98 @@
-// server/controllers/transactionController.js
 const mongoose = require('mongoose');
-const Transaction = require('../models/transaction');
-const { getTransactionsByPortfolio } = require('../services/transactionService');
+const transactionService = require('../services/transaction.service');
+const { success, failure, pagination, parsePagination } = require('../utils/apiResponse');
 
-exports.getAllTransactions = async (req, res) => {
-  try {
-    const transactions = await Transaction.find().sort({ date: -1 });
-    res.json(transactions);
-  } catch (err) {
-    res.status(500).json({ message: 'Failed to get all transactions', error: err });
+function validId(req, res, id, label = 'transaction') {
+  if (mongoose.Types.ObjectId.isValid(id)) return true;
+  failure(req, res, 400, `Invalid ${label} ID`);
+  return false;
+}
+
+function validPagination(req, res) {
+  for (const field of ['page', 'pageSize']) {
+    if (req.query[field] !== undefined && !/^[1-9]\d*$/.test(req.query[field])) {
+      failure(req, res, 400, `${field} must be a positive integer`);
+      return false;
+    }
   }
-};
+  if (Number(req.query.pageSize) > 100) {
+    failure(req, res, 400, 'pageSize cannot exceed 100');
+    return false;
+  }
+  return true;
+}
 
-exports.getByPortfolio = async (req, res) => {
+function forwardBusinessError(error, next) {
+  if (error.name === 'ValidationError' || error.name === 'CastError') error.status = 400;
+  next(error);
+}
+
+exports.getAllTransactions = async (req, res, next) => {
+  if (!validPagination(req, res)) return;
+  if (req.query.portfolioId && !validId(req, res, req.query.portfolioId, 'portfolio')) return;
   try {
-    const { pid } = req.params;
-    console.log("pid: ",req)
-    const { symbol, page, pageSize } = req.query;
-    const result = await getTransactionsByPortfolio(pid, {
-      symbol,
-      page:    Number(page)    || 1,
-      pageSize:Number(pageSize)|| 50
+    const { page, pageSize } = parsePagination(req.query);
+    const result = await transactionService.getTransactions({
+      page,
+      pageSize,
+      portfolioId: req.query.portfolioId,
+      symbol: req.query.symbol
     });
-
-    //const txs = await Transaction.find({ portfolioId: req.params.portfolioId }).sort({ date: -1 });
-    res.json(result);
-  } catch (err) {
-    res.status(500).json({ message: 'Error fetching transactions', error: err });
+    return success(res, result.data, { pagination: pagination(page, pageSize, result.total) });
+  } catch (error) {
+    forwardBusinessError(error, next);
   }
 };
 
-// 获取单个交易记录（用于编辑）
-exports.getTransactionById = async (req, res) => {
-
+exports.getByPortfolio = async (req, res, next) => {
+  if (!validPagination(req, res)) return;
+  if (!validId(req, res, req.params.pid, 'portfolio')) return;
   try {
-    const id = req.params.id;
-    console.log("🟢 进入 getTransactionById，参数ID =", id);
-    // ✅ 如果 id 不是合法 ObjectId，直接返回 400
-    if (!mongoose.Types.ObjectId.isValid(id)) {
-     return res.status(400).json({ message: '无效的交易 ID' });
-   }
-    // const transaction = await Transaction.findById(id);
-    const transaction = await Transaction.findOne({ _id: mongoose.Types.ObjectId(id) });
-    if (!transaction) {
-      return res.status(404).json({ message: '交易记录未找到' });
-    }
-
-    res.json(transaction);
-  } catch (err) {
-    // res.status(500).json({ message: '获取交易记录失败', error: err });
-    res.status(500).json({ message: '获取交易记录失败', error: err.message || err.toString() });
-
-  }
-};
-
-// 添加交易
-exports.createTransaction = async (req, res) => {
-  try {
-    const { portfolioId, assetType, symbol, market, currency, action, quantity, price, date, notes } = req.body;
-
-    // ✅ 1. 校验 portfolioId 是否存在且格式合法
-    if (!portfolioId || !mongoose.Types.ObjectId.isValid(portfolioId)) {
-      return res.status(400).json({ message: '无效或缺失的 portfolioId' });
-    }
-
-    // ✅ 2. 创建交易对象
-    const newTx = new Transaction({
-      portfolioId,
-      assetType,
-      symbol,
-      market,
-      currency,
-      action,
-      quantity,
-      price,
-      date,
-      notes
+    const { page, pageSize } = parsePagination(req.query, { pageSize: 50 });
+    const result = await transactionService.getTransactionsByPortfolio(req.params.pid, {
+      symbol: req.query.symbol,
+      page,
+      pageSize
     });
-
-    const saved = await newTx.save();
-    res.status(201).json(saved);
-  } catch (err) {
-    res.status(400).json({ message: '保存交易失败', error: err.message || err });
+    return success(res, result.data, { pagination: pagination(page, pageSize, result.total) });
+  } catch (error) {
+    forwardBusinessError(error, next);
   }
 };
 
-
-// 更新交易记录
-exports.updateTransaction = async (req, res) => {
+exports.getTransactionById = async (req, res, next) => {
+  if (!validId(req, res, req.params.id)) return;
   try {
-    const id = req.params.id;
-    const updateData = req.body;
-
-    const updatedTransaction = await Transaction.findByIdAndUpdate(
-      id,
-      updateData,
-      { new: true, runValidators: true }
-    );
-
-    if (!updatedTransaction) {
-      return res.status(404).json({ message: '交易记录未找到' });
-    }
-
-    res.json(updatedTransaction);
-  } catch (err) {
-    res.status(500).json({ message: '更新交易记录失败', error: err });
+    const transaction = await transactionService.getTransactionById(req.params.id);
+    if (!transaction) return failure(req, res, 404, 'Transaction not found');
+    return success(res, transaction);
+  } catch (error) {
+    forwardBusinessError(error, next);
   }
 };
 
-exports.deleteTransaction = async (req, res) => {
+exports.createTransaction = async (req, res, next) => {
   try {
-    await Transaction.findByIdAndDelete(req.params.id);
-    res.json({ message: 'Deleted' });
-  } catch (err) {
-    res.status(500).json({ message: 'Delete failed', error: err });
+    return success(res, await transactionService.createTransaction(req.body), { status: 201 });
+  } catch (error) {
+    forwardBusinessError(error, next);
+  }
+};
+
+exports.updateTransaction = async (req, res, next) => {
+  if (!validId(req, res, req.params.id)) return;
+  try {
+    return success(res, await transactionService.updateTransaction(req.params.id, req.body));
+  } catch (error) {
+    forwardBusinessError(error, next);
+  }
+};
+
+exports.deleteTransaction = async (req, res, next) => {
+  if (!validId(req, res, req.params.id)) return;
+  try {
+    return success(res, await transactionService.deleteTransaction(req.params.id));
+  } catch (error) {
+    forwardBusinessError(error, next);
   }
 };

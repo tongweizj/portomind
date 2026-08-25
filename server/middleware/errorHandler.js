@@ -14,6 +14,8 @@
  */
 
 const {logger} = require('../config/logger');
+const { failure } = require('../utils/apiResponse');
+const { sanitizeUrl } = require('../utils/logSanitizer');
 
 module.exports = function errorHandler(err, req, res, next) {
   // 1. 从请求中取出 traceId，如果中间件未注入也不会报错
@@ -23,13 +25,8 @@ module.exports = function errorHandler(err, req, res, next) {
   const errorMeta = {
     traceId,                              // 本次请求的唯一标识
     method: req.method,                   // HTTP 方法
-    url: req.originalUrl,                 // 请求路径
-    headers: {
-      // 仅记录非敏感头信息；若需记录更多，可自行添加
-      'user-agent': req.headers['user-agent'],
-      referer: req.headers['referer'] || null,
-    },
-    message: err.message,                 // 错误消息
+    url: sanitizeUrl(req.originalUrl),    // 请求路径（敏感查询参数已脱敏）
+    errorMessage: err.message,            // 错误消息
     stack: err.stack                       // 堆栈信息
   };
 
@@ -38,10 +35,16 @@ module.exports = function errorHandler(err, req, res, next) {
 
   // 4. 如果响应头尚未发送，则返回统一的错误响应
   if (!res.headersSent) {
-    res.status(500).json({
-      error: 'Internal Server Error',
-      traceId   // 将 traceId 返回给客户端，方便问题追踪
-    });
+    let status = Number.isInteger(err.status) && err.status >= 400 && err.status < 600
+      ? err.status
+      : 500;
+    if (err.name === 'ValidationError' || err.name === 'CastError' || err.type === 'entity.parse.failed') {
+      status = 400;
+    } else if (err.code === 11000) {
+      status = 409;
+    }
+    const message = status === 500 ? 'Internal Server Error' : err.message;
+    failure(req, res, status, message);
   } else {
     // 如果已发送响应，则交给默认错误处理
     next(err);

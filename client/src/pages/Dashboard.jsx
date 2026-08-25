@@ -13,8 +13,6 @@ export default function Dashboard() {
           <li>查看价格 <strong className="text-gray-900">同步日志</strong></li>
         </ul>
       </div>
-
-      {/* TODO: 后续可以放总资产、今日盈亏等统计卡片 */}
     </div>
   );
 }

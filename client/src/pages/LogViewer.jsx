@@ -1,6 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
-import { getLogs, getTaskLogs } from '../services/logsService';
+import { getLogs, getTaskLogs } from '../services/log.service';
 
 const LogsPage = () => {
   const [logType, setLogType] = useState('server'); // 'server' or 'task'
@@ -9,25 +9,28 @@ const LogsPage = () => {
   const [pageSize] = useState(20);
   const [total, setTotal] = useState(0);
   const [levelFilter, setLevelFilter] = useState('all');
+  const [dateFilter, setDateFilter] = useState(() => new Date().toLocaleDateString('en-CA'));
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
 
-  useEffect(() => {
-    loadLogs();
-  }, [page, levelFilter, logType]);
-
-  const loadLogs = async () => {
+  const loadLogs = useCallback(async () => {
     setLoading(true);
+    setError('');
     try {
       const service = logType === 'server' ? getLogs : getTaskLogs;
-      const data = await service(page, pageSize, levelFilter);
-      setEntries(data.entries);
-      setTotal(data.total);
+      const data = await service(page, pageSize, levelFilter, dateFilter);
+      setEntries(data.data);
+      setTotal(data.pagination.total);
     } catch (error) {
-      console.error('Failed to load logs:', error);
+      setError(error.message || '日志加载失败');
     } finally {
       setLoading(false);
     }
-  };
+  }, [dateFilter, levelFilter, logType, page, pageSize]);
+
+  useEffect(() => {
+    loadLogs();
+  }, [loadLogs]);
 
   const totalPages = Math.ceil(total / pageSize);
 
@@ -53,6 +56,13 @@ const LogsPage = () => {
 
       {/* 级别筛选 */}
       <div className="flex items-center mb-4 space-x-4">
+        <input
+          type="date"
+          value={dateFilter}
+          onChange={(e) => { setPage(1); setDateFilter(e.target.value); }}
+          className="border rounded px-2 py-1"
+          aria-label="日志日期"
+        />
         <select
           value={levelFilter}
           onChange={(e) => { setPage(1); setLevelFilter(e.target.value); }}
@@ -66,7 +76,9 @@ const LogsPage = () => {
       </div>
 
       {/* 日志表格 */}
-      {loading ? (
+      {error ? (
+        <div className="text-red-600">{error}</div>
+      ) : loading ? (
         <div>加载中...</div>
       ) : (
         <div className="overflow-x-auto">
@@ -104,7 +116,7 @@ const LogsPage = () => {
           上一页
         </button>
         <span>
-          第 {page} / {totalPages} 页
+          第 {page} / {Math.max(totalPages, 1)} 页
         </span>
         <button
           onClick={() => setPage((p) => p + 1)}
