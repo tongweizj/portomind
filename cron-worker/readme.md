@@ -84,8 +84,8 @@
   - 现状：`yahooFetcher` / `eastmoneyFetcher` 直接依赖 axios 网络，无测试。
   - 建议：用注入/axios mock 覆盖：host 回退、timeout→`TIMEOUT`、429→`RATE_LIMIT`、404/`data:null`→`NOT_FOUND`、非法响应→`INVALID_RESPONSE`，以及价格按 `f59` 缩放。
 
-- [ ] **`priceFetch.service.js` 路由无单测**
-  - 建议：覆盖 `resolveFetcher` 的 market 优先（CN*/US/CA）与 symbol 特征推断（`.TO` / `.SS/.SZ/.CN` / 6 位数字码）。
+- [x] **`priceFetch.service.js` 路由无单测**
+  - 现状：`resolveFetcher` 已覆盖 market 优先（CN-FUND→Tiantian、CN*/US/CA）与 symbol 特征推断（`.TO` / `.CN` / `.SS/.SZ` / 6 位数字码），见 `test/priceFetch.test.js`。
 
 - [ ] **`priceStorage.service.js` 无单测**
   - 建议：覆盖 `normalizeDailyRecord` 的时区归桶（`canonicalDayTimestamp`）与 symbol 大写规范化。
@@ -102,10 +102,8 @@
   - 现状：AGENTS.md 已标注「仍缺完整的集成测试」，`dailySync` / `historySync` / `integrityCheck` 均未做真实库的端到端断言。
   - 建议：用 `mongodb-memory-server` 或 dev 库做：价格幂等 upsert、TaskRun 落库与防重、完整性 Expected/Actual 对比、补全后重查收敛。
 
-- [ ] **完整性检查补全应传资产对象而非 symbol 字符串**
-  - 位置：`integrityCheck.js`（`repairAsset` 调用 `historySync({ symbols: [symbol] })`）
-  - 现状：丢失 market 上下文，6 位 CN 码靠特征推断尚可，但语义上应复用 `dailySync` 的「传资产对象启用 market 路由」能力。
-  - 建议：`historySync` 支持按资产对象回补，或由 `integrityCheck` 显式传入 `{ symbol, market }`。
+- [x] **完整性检查补全应传资产对象而非 symbol 字符串**
+  - 现状：`historySync` 已改为按 `--symbols` 解析 DB 资产对象（`resolveItems`，DB 未命中的符号退化为原始字符串走特征路由），`integrityCheck.repairAsset` 的 `{ symbols: [symbol] }` 自动获得 market 上下文；CN-FUND 场外基金回补因此不再误走 EastMoney。
 
 - [ ] **健康检查调度可增加启用开关**
   - 现状：`scheduler.js` 恒注册 `startHealthScheduler()`，无 `HEALTH_CHECK_ENABLED` 之类的开关。

@@ -398,7 +398,8 @@ async function integrityCheck(options = {}) {
 }
 
 async function runFromCommandLine() {
-  const argv = minimist(process.argv.slice(2));
+  // string: 显式声明，避免 minimist 把 000191 之类数字符号强转为 191。
+  const argv = minimist(process.argv.slice(2), { string: ['from', 'to', 'symbols'] });
   const symbols = argv.symbols
     ? String(argv.symbols).split(',').map(s => s.trim()).filter(Boolean)
     : [];

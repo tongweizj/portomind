@@ -9,18 +9,22 @@ const { test } = require('node:test');
 const assert = require('node:assert');
 const yahooFetcher = require('../src/fetchers/yahooFetcher');
 const eastmoneyFetcher = require('../src/fetchers/eastmoneyFetcher');
+const tiantianFetcher = require('../src/fetchers/tiantianFetcher');
 
 // 永不 resolve 的 Promise，模拟上游挂起（超时由 withMarketDataTimeout 的计时器触发）。
 const hang = () => new Promise(() => {});
 
-// 可注入的 http 客户端：记录被调用的 URL，并按 handler 返回/拒绝。
+// 可注入的 http 客户端：记录被调用的 URL 与选项，并按 handler 返回/拒绝。
 function mockHttp(handler) {
   const calls = [];
+  const callsOptions = [];
   return {
     calls,
-    async get(url) {
+    callsOptions,
+    async get(url, options) {
       calls.push(url);
-      return handler(url);
+      callsOptions.push(options);
+      return handler(url, options);
     }
   };
 }
@@ -132,4 +136,69 @@ test('Eastmoney：fetchHistory 解析 K 线', async () => {
   assert.equal(records[0].price, 1.1);
   assert.equal(records[0].symbol, '510300');
   assert.equal(records[0].timestamp.toISOString().slice(0, 10), '2024-08-01');
+});
+
+test('Tiantian：fetchLatest 取最近一期单位净值', async () => {
+  const http = mockHttp(() => ({
+    data: {
+      Data: { LSJZList: [{ FSRQ: '2026-08-25', DWJZ: '1.3596' }] },
+      TotalCount: 1
+    }
+  }));
+
+  const result = await tiantianFetcher.fetchLatest('000191', http);
+  assert.equal(result.price, 1.3596);
+  assert.equal(result.market, 'CN-FUND');
+  assert.equal(result.currency, 'CNY');
+  assert.equal(result.timestamp.toISOString().slice(0, 10), '2026-08-25');
+  assert.equal(http.callsOptions[0].params.fundCode, '000191');
+  assert.equal(http.callsOptions[0].params.pageSize, 1);
+});
+
+test('Tiantian：查无净值抛 NOT_FOUND 且不可重试', async () => {
+  const http = mockHttp(() => ({ data: { Data: { LSJZList: [] }, TotalCount: 0 } }));
+  await assert.rejects(
+    tiantianFetcher.fetchLatest('999999', http),
+    err => {
+      assert.equal(err.category, 'NOT_FOUND');
+      assert.equal(err.provider, 'TIANTIAN');
+      assert.equal(err.retryable, false);
+      return true;
+    }
+  );
+});
+
+test('Tiantian：非法响应抛 INVALID_RESPONSE', async () => {
+  const http = mockHttp(() => ({ data: {} }));
+  await assert.rejects(
+    tiantianFetcher.fetchLatest('000191', http),
+    err => {
+      assert.equal(err.category, 'INVALID_RESPONSE');
+      assert.equal(err.retryable, false);
+      return true;
+    }
+  );
+});
+
+test('Tiantian：fetchHistory 分页解析净值', async () => {
+  let page = 0;
+  const http = mockHttp(() => {
+    page += 1;
+    return {
+      data: {
+        Data: { LSJZList: [{ FSRQ: '2026-08-25', DWJZ: '1.3596' }, { FSRQ: '2026-08-24', DWJZ: '1.3596' }] },
+        TotalCount: 2
+      }
+    };
+  });
+
+  const records = await tiantianFetcher.fetchHistory('000191', new Date('2026-08-20T12:00:00Z'), new Date('2026-08-25T12:00:00Z'), http);
+  assert.equal(records.length, 2);
+  assert.equal(records[0].price, 1.3596);
+  assert.equal(records[1].price, 1.3596);
+  assert.equal(records[0].symbol, '000191');
+  assert.equal(records[0].timestamp.toISOString().slice(0, 10), '2026-08-25');
+  assert.equal(http.calls.length, 1);
+  assert.ok(http.callsOptions[0].params.startDate === '2026-08-20');
+  assert.ok(http.callsOptions[0].params.endDate === '2026-08-25');
 });

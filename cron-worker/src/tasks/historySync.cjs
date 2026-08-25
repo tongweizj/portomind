@@ -12,22 +12,33 @@ const minimist = require('minimist');
 const dayjs = require('dayjs');
 const pLimit = require('p-limit').default || require('p-limit');
 const { taskLogger } = require('../config/logger');
-const { getActiveAssets } = require('../services/asset.service');
+const { getActiveAssets, getAssetsBySymbols } = require('../services/asset.service');
 const { fetchHistory } = require('../services/priceFetch.service');
 const { saveHistory } = require('../services/priceStorage.service');
 
 const DEFAULT_CONCURRENCY = 3;
 
+// 符号列表解析：优先用 DB 资产对象（启用 market 路由，如 CN-FUND → 天天基金），
+// DB 中不存在的符号退化为原始 symbol 字符串（按 Symbol 特征推断路由）。
+async function resolveItems({ symbols, loadAssets, loadBySymbols }) {
+  if (symbols && symbols.length) {
+    const rawSymbols = symbols.map(symbol => String(symbol).trim().toUpperCase());
+    const assets = await loadBySymbols(rawSymbols);
+    const bySymbol = new Map(assets.map(asset => [asset.symbol, asset]));
+    return rawSymbols.map(symbol => bySymbol.get(symbol) || symbol);
+  }
+  return (await loadAssets()).map(asset => ({ symbol: asset.symbol, market: asset.market }));
+}
+
 async function historySync(from, to, options = {}) {
   const loadAssets = options.getActiveAssets || getActiveAssets;
   const loadHistory = options.fetchHistory || fetchHistory;
   const persistHistory = options.saveHistory || saveHistory;
+  const loadBySymbols = options.getAssetsBySymbols || getAssetsBySymbols;
   const concurrency = options.concurrency || DEFAULT_CONCURRENCY;
   const limit = pLimit(concurrency);
 
-  const items = options.symbols && options.symbols.length
-    ? options.symbols.map(symbol => String(symbol).trim().toUpperCase())
-    : (await loadAssets()).map(asset => ({ symbol: asset.symbol, market: asset.market }));
+  const items = await resolveItems({ symbols: options.symbols, loadAssets, loadBySymbols });
 
   if (items.length === 0) {
     taskLogger.warn('HISTORY_SYNC_EMPTY', { reason: 'no symbols and no active assets' });
@@ -69,7 +80,8 @@ async function historySync(from, to, options = {}) {
 }
 
 if (require.main === module) {
-  const argv = minimist(process.argv.slice(2));
+  // string: 显式声明，避免 minimist 把 000191 之类数字符号强转为 191。
+  const argv = minimist(process.argv.slice(2), { string: ['from', 'to', 'symbols'] });
   const from = argv.from ? dayjs(argv.from, 'YYYY-MM-DD') : null;
   const to = argv.to ? dayjs(argv.to, 'YYYY-MM-DD') : dayjs();
   const symbols = argv.symbols
@@ -115,3 +127,4 @@ if (require.main === module) {
 }
 
 module.exports = historySync;
+module.exports.resolveItems = resolveItems;
