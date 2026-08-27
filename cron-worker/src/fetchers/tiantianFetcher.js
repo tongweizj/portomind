@@ -67,11 +67,15 @@ async function fetchLatest(symbol, http = axios) {
 }
 
 // 历史净值：按日期区间分页拉取单位净值。
+// 注意：lsjz 接口服务端把 pageSize 硬性截断为 20（传 200 也只返回 20 条），
+// 分页步长必须按实际返回的 20 计算，否则 TotalCount 大于 20 时只会取到第一页。
+const NAV_PAGE_SIZE = 20;
+
 async function fetchHistory(symbol, from, to, http = axios) {
   const fromString = dayjs(from).format('YYYY-MM-DD');
   const toString = dayjs(to).format('YYYY-MM-DD');
   const records = [];
-  const pageSize = 200;
+  const pageSize = NAV_PAGE_SIZE;
   let page = 1;
   let totalCount = 1;
 

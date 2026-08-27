@@ -199,6 +199,29 @@ test('Tiantian：fetchHistory 分页解析净值', async () => {
   assert.equal(records[0].symbol, '000191');
   assert.equal(records[0].timestamp.toISOString().slice(0, 10), '2026-08-25');
   assert.equal(http.calls.length, 1);
+  assert.equal(http.callsOptions[0].params.pageSize, 20);
   assert.ok(http.callsOptions[0].params.startDate === '2026-08-20');
   assert.ok(http.callsOptions[0].params.endDate === '2026-08-25');
+});
+
+test('Tiantian：fetchHistory 超出单页(20 条)时分页取全', async () => {
+  let page = 0;
+  const http = mockHttp(() => {
+    page += 1;
+    if (page === 1) {
+      const list = Array.from({ length: 20 }, (_, i) => ({ FSRQ: `2026-07-${String(31 - i).padStart(2, '0')}`, DWJZ: '1.0' }));
+      return { data: { Data: { LSJZList: list }, TotalCount: 22 } };
+    }
+    return {
+      data: {
+        Data: { LSJZList: [{ FSRQ: '2026-07-09', DWJZ: '1.1' }, { FSRQ: '2026-07-08', DWJZ: '1.2' }] },
+        TotalCount: 22
+      }
+    };
+  });
+
+  const records = await tiantianFetcher.fetchHistory('000191', new Date('2026-07-01T12:00:00Z'), new Date('2026-08-25T12:00:00Z'), http);
+  assert.equal(records.length, 22);
+  assert.equal(http.calls.length, 2);
+  assert.equal(http.callsOptions[1].params.pageIndex, 2);
 });

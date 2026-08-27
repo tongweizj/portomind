@@ -60,7 +60,9 @@ async function fetchHistory(symbol, from, to) {
     const fromString = dayjs(from).format('YYYY-MM-DD');
     const toString = dayjs(to).format('YYYY-MM-DD');
     const records = [];
-    const pageSize = 200;
+    // lsjz 接口服务端把 pageSize 硬性截断为 20（传 200 也只返回 20 条），
+    // 分页步长必须按实际返回的 20 计算，否则 TotalCount 大于 20 时只会取到第一页。
+    const pageSize = 20;
     let page = 1;
     let totalCount = 1;
 

@@ -20,14 +20,15 @@ const allowedOrigins = (process.env.CORS_ORIGINS ||
   .map(origin => origin.trim())
   .filter(Boolean);
 
-app.use(cors({
-  origin(origin, callback) {
-    if (!origin || allowedOrigins.includes(origin)) return callback(null, true);
-    const error = new Error('Not allowed by CORS');
-    error.status = 403;
-    return callback(error);
-  }
-}));
+// app.use(cors({
+//   origin(origin, callback) {
+//     if (!origin || allowedOrigins.includes(origin)) return callback(null, true);
+//     const error = new Error('Not allowed by CORS');
+//     error.status = 403;
+//     return callback(error);
+//   }
+// }));
+app.use(cors({ origin: true }));
 app.use(traceId);
 app.use(requestLogger);
 app.use(bodyParser.json());
