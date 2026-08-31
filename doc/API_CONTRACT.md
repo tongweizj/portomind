@@ -20,6 +20,8 @@ API 前缀为 `/api`。客户端只通过 `VITE_API_URL` 配置此前缀；变�
 
 Asset 枚举：`type` 为 `stock | etf | fund | bond | cash`，`market` 为 `US | CA | CN-SH | CN-SZ | CN-FUND`，`currency` 为 `USD | CAD | CNY`。`active` 控制资产能否进入交易选择、行情同步等业务流程；`watchlist` 仅表示用户关注偏好，二者互不替代。
 
+Portfolio 枚举：`type`（风险定位）为 `活钱 | 稳健 | 长期`；`accountType`（账户载体）为 `tiantian | xueqiu | tfsa | rrsp | resp | taxable | other`，二者正交。`accountType` 缺省为 `other`；存量组合未写入该字段时读取侧按 `other` 兜底。
+
 交易方向统一使用小写 `buy | sell`。持仓采用移动平均成本：买入增加数量和 `quantity * price` 的账面成本；卖出按卖出前的平均成本减少账面成本，已实现盈亏为 `(卖出价 - 卖出前平均成本) * 卖出数量`。系统不允许做空，任何新增、修改或删除导致交易时点可用数量不足的操作都返回 `400`。交易查询统一按 `date DESC, _id DESC` 排序；计算持仓时则按相反顺序重放账本。
 
 删除组合采用应用层级联：先删除该组合的交易和再平衡记录，再删除组合本身，并在响应中返回删除数量。若子资源清理失败，组合会保留，避免新增孤儿记录。
@@ -62,7 +64,7 @@ Asset 枚举：`type` 为 `stock | etf | fund | bond | cash`，`market` 为 `US 
 | `PUT /api/prices/:id` | Path: `id`; Body: Price 可更新字段 | 更新后 Price | `200`; `404` |
 | `DELETE /api/prices/:id` | Path: `id` | 删除的 Price | `200`; `404` |
 | `GET /api/portfolios` | Query: `page,pageSize` | Portfolio 数组 + 分页 | `200` |
-| `POST /api/portfolios` | Body: `{name,description?,type?,currency?,targets?,rebalanceSettings?}` | 新 Portfolio | `201`; `400` |
+| `POST /api/portfolios` | Body: `{name,description?,type?,currency?,accountType?,targets?,rebalanceSettings?}` | 新 Portfolio | `201`; `400` |
 | `GET /api/portfolios/:id` | Path: `id` | Portfolio | `200`; ID 无效 `400`; `404` |
 | `PUT /api/portfolios/:id` | Path: `id`; Body: Portfolio 可更新字段 | 更新后 Portfolio | `200`; `400`; `404` |
 | `DELETE /api/portfolios/:id` | Path: `id` | `{portfolio,deletedTransactions,deletedRebalanceRecords}`；级联删除交易和再平衡记录 | `200`; `400`; `404` |

@@ -27,3 +27,17 @@ export const ASSET_CURRENCIES = Object.freeze([
   { value: 'CAD', label: '加元' },
   { value: 'CNY', label: '人民币' },
 ]);
+
+/**
+ * 组合账户类型（账户载体）。与组合类型（风险定位：活钱/稳健/长期）正交。
+ * 后端枚举见 server/models/portfolio.js 的 accountType。
+ */
+export const PORTFOLIO_ACCOUNT_TYPES = Object.freeze([
+  { value: 'tiantian', label: '天天基金' },
+  { value: 'xueqiu', label: '雪球' },
+  { value: 'tfsa', label: 'TFSA' },
+  { value: 'rrsp', label: 'RRSP' },
+  { value: 'resp', label: 'RESP' },
+  { value: 'taxable', label: '应税账户' },
+  { value: 'other', label: '其他' },
+]);

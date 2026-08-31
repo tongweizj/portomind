@@ -44,6 +44,15 @@ const PortfolioSchema = new mongoose.Schema({
     enum: ['CNY', 'CAD', 'USD'],
     default: 'CAD'
   },
+
+  // ✅ 新增：账户类型（账户载体）。与 type（风险定位：活钱/稳健/长期）正交：
+  // tiantian 天天基金 / xueqiu 雪球 / tfsa / rrsp / resp / taxable 应税 / other。
+  // 存量组合未写入该字段时，业务侧按 'other' 处理（前端展示时兜底）。
+  accountType: {
+    type: String,
+    enum: ['tiantian', 'xueqiu', 'tfsa', 'rrsp', 'resp', 'taxable', 'other'],
+    default: 'other'
+  },
   targets: [{
     symbol: { type: String, required: true, trim: true, uppercase: true },
     targetRatio: { type: Number, required: true, min: 0, max: 100 }

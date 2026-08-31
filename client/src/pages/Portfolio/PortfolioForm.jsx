@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router';
 import { ErrorState, LoadingState } from '../../components/DataState';
+import { PORTFOLIO_ACCOUNT_TYPES } from '../../constants/enums';
 import { ROUTES } from '../../constants/routes';
 import { getApiErrorMessage } from '../../services/api';
 import { getAssets } from '../../services/asset.service';
@@ -14,7 +15,7 @@ export default function PortfolioForm() {
   const { id } = useParams();
   const isEdit = Boolean(id);
   const [form, setForm] = useState({
-    name: '', description: '', type: '稳健', currency: 'CAD', targets: [emptyTarget()]
+    name: '', description: '', type: '稳健', currency: 'CAD', accountType: 'other', targets: [emptyTarget()]
   });
   const [assets, setAssets] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -38,6 +39,8 @@ export default function PortfolioForm() {
             description: portfolio.description || '',
             type: portfolio.type || '稳健',
             currency: portfolio.currency || 'CAD',
+            // 存量组合无 accountType 字段时兜底为 other。
+            accountType: portfolio.accountType || 'other',
             targets: portfolio.targets?.length ? portfolio.targets : []
           });
         }
@@ -109,6 +112,15 @@ export default function PortfolioForm() {
             <select value={form.type} onChange={event => setForm(current => ({ ...current, type: event.target.value }))}
               className="w-full rounded border px-3 py-2">
               {['活钱', '稳健', '长期'].map(value => <option key={value}>{value}</option>)}
+            </select>
+          </div>
+          <div>
+            <label className="mb-1 block text-sm">账户类型</label>
+            <select value={form.accountType} onChange={event => setForm(current => ({ ...current, accountType: event.target.value }))}
+              className="w-full rounded border px-3 py-2">
+              {PORTFOLIO_ACCOUNT_TYPES.map(({ value, label }) => (
+                <option key={value} value={value}>{label}</option>
+              ))}
             </select>
           </div>
           <div>

@@ -1,4 +1,10 @@
 import { ChevronRight } from 'lucide-react';
+import { PORTFOLIO_ACCOUNT_TYPES } from '../../constants/enums';
+
+const ACCOUNT_TYPE_LABELS = Object.fromEntries(
+  PORTFOLIO_ACCOUNT_TYPES.map(({ value, label }) => [value, label])
+);
+
 /**
  * @param {Object} props
  * @param {Object} props.portfolio      投资组合对象，至少包含 { _id, name, description }
@@ -6,6 +12,8 @@ import { ChevronRight } from 'lucide-react';
  * @param {string} [props.className]    额外的 className，用于样式定制
  */
 export function PortfolioCard({ portfolio, onClick, className = '' }) {
+  // 存量组合无 accountType 字段时兜底为 other。
+  const accountLabel = ACCOUNT_TYPE_LABELS[portfolio.accountType || 'other'] || '其他';
   return (
     <div
       className={`bg-white shadow rounded-xl p-6 relative cursor-pointer hover:bg-gray-50 transition ${className}`}
@@ -17,6 +25,7 @@ export function PortfolioCard({ portfolio, onClick, className = '' }) {
       <p className="text-gray-600 mt-2">{portfolio.description}</p>
       <div className="flex items-center justify-between text-sm text-gray-700 mt-4">
         <span>类型：{portfolio.type}</span>
+        <span>账户：{accountLabel}</span>
         <span>币种：{portfolio.currency}</span>
       </div>
 
