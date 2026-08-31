@@ -1,13 +1,13 @@
 // cron-worker/src/services/calendar.service.js
 // 交易日历校验：判断某市场在指定日期是否开市（排除周末与法定节假日）。
 // US/CA 节假日按规则计算（周几 + 复活节 + 周末顺延，可覆盖任意年份）；
-// CN 节假日依赖农历与官方调休公告，闭市日静态表见 src/config/markets.js，需逐年维护。
-// CN 年份未在表中维护时打 warn（每 (market, year) 一次），避免「无节假日」被静默当作全开市。
+// CN/HK 节假日依赖农历与官方公告，闭市日静态表见 src/config/markets.js，需逐年维护。
+// CN/HK 年份未在表中维护时打 warn（每 (market, year) 一次），避免「无节假日」被静默当作全开市。
 
 const dayjs = require('dayjs');
 const utc = require('dayjs/plugin/utc');
 const timezone = require('dayjs/plugin/timezone');
-const { MARKETS, CN_HOLIDAYS } = require('../config/markets');
+const { MARKETS, CN_HOLIDAYS, HK_HOLIDAYS } = require('../config/markets');
 const { logger } = require('../config/logger');
 
 dayjs.extend(utc);
@@ -123,17 +123,18 @@ function caHolidays(year) {
 
 const warnedYears = new Set();
 
-// CN 闭市日表：未维护年份按空表处理并告警（每 (normalized, year) 一次），避免静默高估交易日。
-function cnHolidaysFor(normalized, year) {
-  const closed = CN_HOLIDAYS[year];
+// CN/HK 闭市日表：未维护年份按空表处理并告警（每 (label, year) 一次），避免静默高估交易日。
+// 事件名沿用各市场既有约定：CN_HOLIDAYS_YEAR_NOT_MAINTAINED / HK_HOLIDAYS_YEAR_NOT_MAINTAINED。
+function staticHolidaysFor(table, label, eventName, year) {
+  const closed = table[year];
   if (!closed) {
-    const key = `${normalized}:${year}`;
+    const key = `${label}:${year}`;
     if (!warnedYears.has(key)) {
       warnedYears.add(key);
-      logger.warn('CN_HOLIDAYS_YEAR_NOT_MAINTAINED', {
+      logger.warn(eventName, {
         year,
-        market: normalized,
-        message: `A股节假日闭市表未维护 ${year} 年，将按无节假日判定，理论交易日可能被高估`
+        market: label,
+        message: `${label}节假日闭市表未维护 ${year} 年，将按无节假日判定，理论交易日可能被高估`
       });
     }
     return [];
@@ -141,7 +142,7 @@ function cnHolidaysFor(normalized, year) {
   return closed;
 }
 
-// 判断 market（US / CA / CN*）在 date（默认当天，按市场时区解释）是否为交易日。
+// 判断 market（US / CA / CN* / HK）在 date（默认当天，按市场时区解释）是否为交易日。
 function isMarketOpenToday(market, date = new Date()) {
   const normalized = normalizeMarket(market);
   const config = MARKETS[normalized];
@@ -154,7 +155,12 @@ function isMarketOpenToday(market, date = new Date()) {
   if (isWeekend(date, config.timezone)) return false;
 
   if (normalized === 'CN') {
-    const closed = cnHolidaysFor(normalized, year);
+    const closed = staticHolidaysFor(CN_HOLIDAYS, 'CN', 'CN_HOLIDAYS_YEAR_NOT_MAINTAINED', year);
+    return !closed.includes(dateStr);
+  }
+
+  if (normalized === 'HK') {
+    const closed = staticHolidaysFor(HK_HOLIDAYS, 'HK', 'HK_HOLIDAYS_YEAR_NOT_MAINTAINED', year);
     return !closed.includes(dateStr);
   }
 

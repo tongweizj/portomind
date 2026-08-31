@@ -85,7 +85,7 @@
   - 建议：用注入/axios mock 覆盖：host 回退、timeout→`TIMEOUT`、429→`RATE_LIMIT`、404/`data:null`→`NOT_FOUND`、非法响应→`INVALID_RESPONSE`，以及价格按 `f59` 缩放。
 
 - [x] **`priceFetch.service.js` 路由无单测**
-  - 现状：`resolveFetcher` 已覆盖 market 优先（CN-FUND→Tiantian、CN*/US/CA）与 symbol 特征推断（`.TO` / `.CN` / `.SS/.SZ` / 6 位数字码），见 `test/priceFetch.test.js`。
+  - 现状：`resolveFetcher` 已覆盖 market 优先（CN-FUND→Tiantian、CN*/US/CA/HK）与 symbol 特征推断（`.TO` / `.CN` / `.SS/.SZ` / `.HK` / 6 位数字码），见 `test/priceFetch.test.js`（含 `.HK` 与 `.CN` 互斥用例）。
 
 - [ ] **`priceStorage.service.js` 无单测**
   - 建议：覆盖 `normalizeDailyRecord` 的时区归桶（`canonicalDayTimestamp`）与 symbol 大写规范化。

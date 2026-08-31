@@ -198,7 +198,7 @@ Portfolio {
 | AS-05 | 历史价格页：折线图 + 每日价格表格 + 年月筛选 + 分页 | ✅ | — | — |
 | AS-06 | 每日同步：默认 03:00（`PRICE_SYNC_CRON`）逐资产「开市校验 → fetcher 路由 → 幂等入库」，TaskRun 防重追踪，休市记 skip | ✅ | — | Price 以 symbol+timestamp 唯一索引幂等；逐资产故障隔离（单资产失败不影响其余） |
 | AS-07 | 完整性检查：默认 03:30（`HEALTH_CHECK_CRON`），按 launchDate 推断应有交易日数，缺口可选自动补全（`INTEGRITY_AUTO_REPAIR` 默认开） | ✅ | — | 未填 launchDate 的资产跳过并记 `SKIPPED_NO_LAUNCH_DATE` |
-| AS-08 | **港股支持**：market 增加 `HK`、currency 增加 `HKD`、路由 Yahoo（`XXXX.HK` 代码）、交易日历增加 HK 节假日 | 🔲 | **P0（批次1）** | 用 `0700.HK`（腾讯）、`1211.HK`（比亚迪）实测实时+历史+开市判断；A股 `.HK` 后缀不与场外基金 `.CN` 推断冲突 |
+| AS-08 | **港股支持**：market 增加 `HK`、currency 增加 `HKD`、路由 Yahoo（`XXXX.HK` 代码）、交易日历增加 HK 节假日 | ✅ | **P0（批次1）** | 已实测：`0700.HK`（腾讯 453 HKD）、`1211.HK`（比亚迪 87.2 HKD）实时+历史（2024 年 1 月 K 线）+ 开市判断全部通过；`.HK` 后缀与场外基金 `.CN` 推断互斥无冲突；HK 节假日静态表 2024/2025 官方 + 2026 推算（需逐年核对 HKEX 公告） |
 | AS-09 | assetClass 大类字段（equity/bond/gold/cash） | 🔲 | P2（批次4） | 为 CM-08 大类目标层与家庭视图大类分组铺垫；存量资产需补数据 |
 | AS-10 | A股股票日线（非 ETF） | ✅ | — | 东方财富 fetcher 按 secid 路由：5/6/9 开头→上海 `1.x`，其余→深圳 `0.x`；实测个股后确认 |
 | AS-11 | 估值分位（A股宽基 PE/PB 历史分位） | 🔲 | P2 | 衔接 index-valuation-selfcalc 产出，作提醒规则输入（§4.4） |
@@ -210,10 +210,10 @@ Portfolio {
 | CN-FUND | 天天基金 | 场外基金净值 |
 | CN-SH / CN-SZ | 东方财富 | 实时 push2（push2delay 回退）+ 历史 K 线；单请求粒度超时控制 |
 | US / CA | Yahoo | 加股带 `.TO` 后缀 |
-| HK（🔲 批次1） | Yahoo | `0700.HK` 形式；Yahoo 原生支持，改造点在枚举与日历 |
-| （无 market） | 按符号推断 | `.CN`→天天基金；`.SS/.SZ`/6 位数字→东方财富；其余→Yahoo |
+| HK（✅ 批次1） | Yahoo | `0700.HK` 形式；Yahoo 原生支持，已实测腾讯/比亚迪实时+历史 |
+| （无 market） | 按符号推断 | `.CN`→天天基金；`.SS/.SZ`/6 位数字→东方财富；`.HK`→Yahoo；其余→Yahoo |
 
-交易日历：US/CA 节假日按规则计算（周末+法定+顺延）；CN 为逐年静态表（`config/markets.js`，未维护年份打 warn 不静默）；**HK 待加入**（建议同样走静态表，港股节假日与 A股不同步）。
+交易日历：US/CA 节假日按规则计算（周末+法定+顺延）；CN 为逐年静态表（`config/markets.js`，未维护年份打 warn 不静默）；**HK 已加入**（静态表 2024/2025 官方 + 2026 推算，未维护年份打 `HK_HOLIDAYS_YEAR_NOT_MAINTAINED` warn，与 CN 同模式）。
 
 #### 4.2.5 API 面（现状）
 
@@ -225,11 +225,11 @@ Portfolio {
 | GET | `/api/prices/date/:date` | 指定日期全量价格 | ✅ |
 | GET | `/api/prices/symbol/:symbol/history` | 单资产历史（年月筛选+分页） | ✅ |
 | POST/GET/PUT/DELETE | `/api/prices/:id` 等 | 价格手工维护 | ✅ |
-| — | HK 相关枚举与日历扩展 | — | 🔲 P0 |
+| — | HK 相关枚举与日历扩展 | — | ✅ 已实现（AS-08） |
 
 #### 4.2.6 测试要点
 
-- priceFetch 路由：CN-FUND/CN-SH/CN-SZ/US/CA 各走对 fetcher；HK 接入后补路由用例；
+- priceFetch 路由：CN-FUND/CN-SH/CN-SZ/US/CA/HK（market 字段与 `.HK` 后缀推断）各走对 fetcher，`.HK` 与 `.CN` 互斥；
 - 幂等：同一 (symbol, timestamp) 重复入库不产生重复记录；
 - 完整性检查：launchDate 缺失跳过、缺口检测、自动补全触发；
 - 港股验收：0700.HK 抓取（含历史 K 线）、HK 开市判断（含节假日）、组合内持仓计算含 HKD 不与 CNY 混算。
@@ -238,7 +238,7 @@ Portfolio {
 
 | 项 | 优先级 | 批次 |
 |---|---|---|
-| AS-08 港股（枚举+路由+日历+实测） | P0 | 1 |
+| ~~AS-08 港股（枚举+路由+日历+实测）~~ ✅ 已完成（2026-08-31） | P0 | 1 |
 | AS-09 assetClass 字段 | P2 | 4 |
 | AS-11 估值分位接入 | P2 | — |
 
@@ -487,3 +487,4 @@ RebalanceRecord {
 | 2026-08-31 | **T1 完成**：工作区已有未提交的 accountType 实现（模型/枚举/表单/卡片/API文档/测试），逐项核对符合规格后全量验证（npm test 60/60、lint 清洁、build 成功），CM-05 置 ✅ |
 | 2026-08-31 | **T2 完成**：新增 `GET /api/portfolios/summary`（summary.js 纯函数+编排，10 条新测试），PortfolioCard 市值按币种分桶/持仓数/漂移徽标，usePortfolios 切换 summary；CM-12 置 ◐（提醒数留批次1）。提交 49b4edb(T1)/6fc6846(PRD)/本次 T2 |
 | 2026-08-31 | **T3 完成**：CM-20 组合归档落地——model `archived` 默认 false；summary 默认排除归档、`?includeArchived=true` 可选包含；List「显示已归档」开关 + 卡片徽标 + Form 归档复选框；再平衡调度三层防护（initSchedules 查询过滤 + 循环防御 + cron 回调运行时守卫）；CM-20 置 ✅，§4.1 待实现仅剩 CM-08（T4，批次4） |
+| 2026-08-31 | **AS-08 港股支持完成（批次1）**：server/cron-worker/client 三份枚举同步加 `HK`/`HKD`；fetcher 路由 market=HK 与 `.HK` 后缀 → Yahoo（`.CN` 互斥）；HK 交易日历（Asia/Hong_Kong 时区 + 2024/2025 官方节假日表 + 2026 推算，未维护年份告警 `HK_HOLIDAYS_YEAR_NOT_MAINTAINED`）；yahooFetcher `.HK` → market=HK。实测验收：0700.HK（腾讯 453 HKD）/1211.HK（比亚迪 87.2 HKD）实时+历史+开市判断通过。cron-worker 69/69、server 80/80、lint/build 清洁 |

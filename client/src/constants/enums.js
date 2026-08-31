@@ -20,12 +20,14 @@ export const ASSET_MARKETS = Object.freeze([
   { value: 'CN-SH', label: '上海' },
   { value: 'CN-SZ', label: '深圳' },
   { value: 'CN-FUND', label: '中国基金' },
+  { value: 'HK', label: '港股' },
 ]);
 
 export const ASSET_CURRENCIES = Object.freeze([
   { value: 'USD', label: '美元' },
   { value: 'CAD', label: '加元' },
   { value: 'CNY', label: '人民币' },
+  { value: 'HKD', label: '港币' },
 ]);
 
 /**

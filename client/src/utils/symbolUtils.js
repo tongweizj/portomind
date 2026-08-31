@@ -5,6 +5,7 @@ export function inferMarketCurrency(symbol = '') {
   if (s.endsWith('.SS')) return ['CN-SH', 'CNY'];
   if (s.endsWith('.SZ')) return ['CN-SZ', 'CNY'];
   if (s.endsWith('.CN')) return ['CN-FUND', 'CNY'];
+  if (s.endsWith('.HK')) return ['HK', 'HKD'];
 
   return ['US', 'USD'];
 }

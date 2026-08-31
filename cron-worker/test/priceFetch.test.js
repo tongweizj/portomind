@@ -63,6 +63,26 @@ test('Symbol 特征：其余默认 Yahoo', () => {
   assert.equal(resolved.providerSymbol, 'VOO');
 });
 
+test('market=HK 路由到 Yahoo 且符号原样透传（AS-08）', () => {
+  for (const [symbol, market] of [['0700.HK', 'HK'], ['1211.HK', 'HK']]) {
+    const resolved = resolveFetcher({ symbol, market });
+    assert.equal(resolved.provider, 'YAHOO');
+    assert.equal(resolved.providerSymbol, symbol);
+    assert.equal(resolved.requestedSymbol, symbol);
+  }
+});
+
+test('Symbol 特征：.HK 后缀路由到 Yahoo，不与场外基金 .CN 推断冲突', () => {
+  const hk = resolveFetcher('0700.HK');
+  assert.equal(hk.provider, 'YAHOO');
+  assert.equal(hk.providerSymbol, '0700.HK');
+
+  // 无 market 字段时两者按后缀互斥：.HK → Yahoo，.CN → Tiantian
+  const cn = resolveFetcher('000191.CN');
+  assert.equal(cn.provider, 'TIANTIAN');
+  assert.equal(cn.providerSymbol, '000191');
+});
+
 test('空 symbol 抛 TypeError', () => {
   assert.throws(() => resolveFetcher({ symbol: '', market: 'CN-FUND' }), TypeError);
 });

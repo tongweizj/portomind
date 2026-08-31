@@ -1,6 +1,7 @@
 const ASSET_TYPES = Object.freeze(['stock', 'etf', 'fund', 'bond', 'cash']);
-const ASSET_MARKETS = Object.freeze(['US', 'CA', 'CN-SH', 'CN-SZ', 'CN-FUND']);
-const ASSET_CURRENCIES = Object.freeze(['USD', 'CAD', 'CNY']);
+// 港股（AS-08）：market=HK，交易货币 HKD，行情走 Yahoo（XXXX.HK 代码）。
+const ASSET_MARKETS = Object.freeze(['US', 'CA', 'CN-SH', 'CN-SZ', 'CN-FUND', 'HK']);
+const ASSET_CURRENCIES = Object.freeze(['USD', 'CAD', 'CNY', 'HKD']);
 const ASSET_SORT_FIELDS = Object.freeze([
   'symbol',
   'name',

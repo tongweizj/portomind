@@ -1,5 +1,5 @@
 // cron-worker/src/fetchers/yahooFetcher.js
-// 通过 Yahoo Finance 公开 chart API 抓取美股/加股（如 VOO、XEQT.TO）的最新价格与历史 K 线。
+// 通过 Yahoo Finance 公开 chart API 抓取美股/加股/港股（如 VOO、XEQT.TO、0700.HK）的最新价格与历史 K 线。
 // 使用 axios 直连 REST API（不依赖 yahoo-finance2 SDK），query1 被限流时回退 query2。
 // 超时按「单次请求」粒度由 withMarketDataTimeout 施加，host 回退在超时场景下依然生效。
 
@@ -11,7 +11,9 @@ const PROVIDER = 'YAHOO';
 const HOSTS = ['https://query1.finance.yahoo.com', 'https://query2.finance.yahoo.com'];
 
 function marketForSymbol(symbol) {
-  return /\.TO$/i.test(symbol) ? 'CA' : 'US';
+  if (/\.TO$/i.test(symbol)) return 'CA';
+  if (/\.HK$/i.test(symbol)) return 'HK';
+  return 'US';
 }
 
 // 单次 host 请求：每个请求独立受 MARKET_DATA_TIMEOUT_MS 约束，失败抛规范化错误。

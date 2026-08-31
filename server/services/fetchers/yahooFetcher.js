@@ -6,6 +6,7 @@ const PROVIDER = 'YAHOO';
 
 function marketForSymbol(symbol) {
   if (/\.TO$/i.test(symbol)) return 'CA';
+  if (/\.HK$/i.test(symbol)) return 'HK';
   if (/\.SS$/i.test(symbol)) return 'CN-SH';
   if (/\.SZ$/i.test(symbol)) return 'CN-SZ';
   return 'US';
