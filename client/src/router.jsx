@@ -11,6 +11,7 @@ import AssetForm from './pages/Asset/AssetForm';
 import AssetList from './pages/Asset/AssetList';
 import Dashboard from './pages/Dashboard';
 import LogViewer from './pages/LogViewer';
+import AlertRules from './pages/Alerts/AlertRules';
 import Detail from './pages/Portfolio/Detail';
 import List from './pages/Portfolio/List';
 import PortfolioForm from './pages/Portfolio/PortfolioForm';
@@ -26,6 +27,8 @@ export default function AppRouter() {
       <Routes>
         <Route element={<AppLayout />}>
           <Route path="/" element={<Dashboard />} />
+
+          <Route path="/alerts/rules" element={<AlertRules />} />
 
           <Route path="/transactions" element={<TransactionList />} />
           <Route path="/transactions/new" element={<AddTransaction />} />

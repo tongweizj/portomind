@@ -81,6 +81,13 @@ Portfolio 枚举：`type`（风险定位）为 `活钱 | 稳健 | 长期`；`acc
 | `POST /api/portfolios/:pid/rebalance/execute` | Path: `pid`; Body: `{recordId,suggestions: object[],mode:"MANUAL"}` | `{recordId,status:"EXECUTED",transactionIds}` | `200`; 请求体/自动执行 `400`; 状态冲突 `409`; `404` |
 | `GET /api/portfolios/:pid/rebalance/history` | Path: `pid`; Query: `page,pageSize` | RebalanceRecord 数组 + 分页 | `200`; `500` |
 | `GET /api/transactions` | Query: `page,pageSize,portfolioId?,symbol?`；按 `date DESC,_id DESC` | Transaction 数组 + 分页 | `200` |
+| `GET /api/alerts/rules` | Query: `page,pageSize,active?,scope?,portfolioId?,ruleType?` | AlertRule 数组 + 分页 | `200` |
+| `POST /api/alerts/rules` | Body: `{name,scope,portfolioId?,symbol?,ruleType,params?,direction?(signal),reason?(signal),validUntil?(signal),cooldownDays?,active?}`；scope=asset 须 symbol、scope=portfolio 须 portfolioId、signal 须 direction、price/gain/drift 须对应 params | 新 AlertRule | `201`; `400` |
+| `GET/PUT/DELETE /api/alerts/rules/:id` | Path: `id` | 详情 / 更新 / 删除（事件保留审计） | `200`; `400`; `404` |
+| `GET /api/alerts/events` | Query: `page,pageSize,status?,level?,portfolioId?,ruleId?` | AlertEvent 数组 + 分页（triggeredAt 倒序） | `200` |
+| `PATCH /api/alerts/events/:id/read` | Path: `id`; Body: `{status:"read"\|"dismissed"}` | 更新后 AlertEvent | `200`; `400`; `404` |
+| `GET /api/alerts/events/unread-count` | 无 | `{count}`（Dashboard 徽标） | `200` |
+| `POST /api/alerts/evaluate` | 空 Body | 手动触发评估跑批：`{evaluated,created,archived,failed}` | `200` |
 | `POST /api/transactions` | Body: `{portfolioId,symbol,action,quantity,price,date?,notes?}`；资产元数据由 Asset 派生 | 新 Transaction | `201`; 校验或超卖 `400`; 组合/资产不存在 `404` |
 | `GET /api/transactions/:id` | Path: `id` | Transaction | `200`; `400`; `404` |
 | `PUT /api/transactions/:id` | Path: `id`; Body: Transaction 可更新字段；更新后重放账本 | 更新后 Transaction | `200`; 校验或超卖 `400`; `404` |

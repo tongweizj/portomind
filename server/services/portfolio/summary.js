@@ -10,6 +10,7 @@
 
 const Portfolio = require('../../models/portfolio');
 const RebalanceRecord = require('../../models/rebalanceRecord');
+const AlertEvent = require('../../models/alertEvent');
 const tracker = require('./positionTracker');
 const { evaluateThresholds } = require('../rebalance/thresholdChecker');
 
@@ -66,6 +67,12 @@ function buildPortfolioSummary({ portfolio, positions = [], lastExecutedAt = nul
 async function computeSummary({ includeArchived = false } = {}) {
   const filter = includeArchived ? {} : { archived: { $ne: true } };
   const portfolios = await Portfolio.find(filter).sort({ createdAt: -1 }).lean();
+  // CM-12：每组合待处理提醒数（未读 AlertEvent），供组合卡片徽标展示（批次1 落地）
+  const unreadAgg = await AlertEvent.aggregate([
+    { $match: { status: 'unread', portfolioId: { $ne: null } } },
+    { $group: { _id: '$portfolioId', count: { $sum: 1 } } }
+  ]);
+  const unreadByPortfolio = new Map(unreadAgg.map(item => [item._id.toString(), item.count]));
   return Promise.all(portfolios.map(async (portfolio) => {
     const [positions, lastExecuted] = await Promise.all([
       tracker.aggregate(portfolio._id),
@@ -76,11 +83,14 @@ async function computeSummary({ includeArchived = false } = {}) {
     ]);
     return {
       ...portfolio,
-      stats: buildPortfolioSummary({
-        portfolio,
-        positions,
-        lastExecutedAt: lastExecuted?.executedAt || lastExecuted?.timestamp || null
-      })
+      stats: {
+        ...buildPortfolioSummary({
+          portfolio,
+          positions,
+          lastExecutedAt: lastExecuted?.executedAt || lastExecuted?.timestamp || null
+        }),
+        unreadAlertCount: unreadByPortfolio.get(portfolio._id.toString()) || 0
+      }
     };
   }));
 }

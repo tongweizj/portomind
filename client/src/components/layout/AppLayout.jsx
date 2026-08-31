@@ -1,9 +1,13 @@
 // ✅ 文件：src/layout/AppLayout.jsx
-import { Outlet } from 'react-router';
-import { Search, User } from 'lucide-react';
+import { Outlet, useNavigate } from 'react-router';
+import { Bell, Search, User } from 'lucide-react';
 import Sidebar from './Sidebar';
+import { useUnreadAlertCount } from '../../hooks/useAlerts';
 
 export default function AppLayout() {
+  const navigate = useNavigate();
+  const { count } = useUnreadAlertCount();
+
   return (
     <div className="flex min-h-screen bg-gray-50">
       <Sidebar />
@@ -18,7 +22,7 @@ export default function AppLayout() {
     ETF Portfolio
   </div>
   
-  {/* 右侧搜索栏 + 用户 */}
+  {/* 右侧搜索栏 + 铃铛 + 用户 */}
   <div className="flex items-center gap-6">
     <div className="relative">
       <input
@@ -28,6 +32,21 @@ export default function AppLayout() {
       />
       <Search className="w-4 h-4 text-gray-400 absolute left-3 top-2.5" />
     </div>
+
+    {/* 提醒中心入口：未读徽标（PRD AL-07 / FAM-03） */}
+    <button
+      type="button"
+      onClick={() => navigate('/')}
+      title="提醒中心"
+      className="relative w-9 h-9 rounded-full border border-gray-200 flex items-center justify-center hover:bg-gray-100 transition"
+    >
+      <Bell className="w-5 h-5 text-gray-600" />
+      {count > 0 && (
+        <span className="absolute -top-1.5 -right-1.5 min-w-5 h-5 px-1 rounded-full bg-red-600 text-white text-xs font-semibold flex items-center justify-center">
+          {count > 99 ? '99+' : count}
+        </span>
+      )}
+    </button>
 
     <button className="w-9 h-9 rounded-full border border-gray-200 flex items-center justify-center hover:bg-gray-100 transition">
       <User className="w-5 h-5 text-gray-600" />

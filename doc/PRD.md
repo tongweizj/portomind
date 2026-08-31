@@ -335,14 +335,14 @@ Transaction {
 
 | 编号 | 需求 | 状态 | 优先级 | 验收标准 |
 |---|---|---|---|---|
-| AL-01 | AlertRule CRUD：名称、作用域（资产级/组合级）、规则类型、参数、启停 | 🔲 | **P0（批次1）** | 资产级规则绑定 (portfolioId, symbol) 或全局 symbol；组合级绑定 portfolioId |
-| AL-02 | 规则类型 MVP 集：`price_above` / `price_below`（到价）、`gain_loss_pct`（相对成本±%）、`drift_exceed`（组合漂移%）、`signal`（人工信号） | 🔲 | **P0（批次1）** | 评估输入：最新价（Price）、持仓成本（positions）、漂移（复用 thresholdChecker 口径） |
-| AL-03 | signal 规则：方向（buy/sell/hold）+ 理由 + 有效期 validUntil | 🔲 | **P0（批次1）** | 有效期内持续展示于通知中心；过期自动 `active=false` 归档，事件保留历史 |
-| AL-04 | AlertEvent：触发记录（级别 info/warning/action、标题、内容、触发时快照值）、已读状态 | 🔲 | **P0（批次1）** | 事件不可删（审计），可标记已读/忽略 |
-| AL-05 | 评估引擎：每日价格同步后跑批（建议 04:00，`ALERT_EVAL_CRON`），复用 createCronScheduler + runTrackedTask | 🔲 | **P0（批次1）** | 逐规则故障隔离（单规则异常记 error 不中断批次）；TaskRun 可追踪 |
-| AL-06 | 去重静默：同规则触发后 cooldownDays（默认 7）内不重复产生事件 | 🔲 | **P0（批次1）** | 静默期内条件持续满足也只留一条活跃事件 |
-| AL-07 | Dashboard 通知中心：未读徽标 + 面板（未读/全部/按组合筛选），点击事件跳转对应资产或再平衡页 | 🔲 | **P0（批次1）** | 即 FAM-03 的落地形态；signal 类事件常显直至过期或手动处理 |
-| AL-08 | 规则管理页：规则列表 + 新建/编辑/启停 + 触发历史查看 | 🔲 | **P0（批次1）** | — |
+| AL-01 | AlertRule CRUD：名称、作用域（资产级/组合级）、规则类型、参数、启停 | ✅ | **P0（批次1）** | 资产级规则绑定 (portfolioId, symbol) 或全局 symbol；组合级绑定 portfolioId |
+| AL-02 | 规则类型 MVP 集：`price_above` / `price_below`（到价）、`gain_loss_pct`（相对成本±%）、`drift_exceed`（组合漂移%）、`signal`（人工信号） | ✅ | **P0（批次1）** | 评估输入：最新价（Price）、持仓成本（positions）、漂移（复用 thresholdChecker 口径） |
+| AL-03 | signal 规则：方向（buy/sell/hold）+ 理由 + 有效期 validUntil | ✅ | **P0（批次1）** | 有效期内持续展示于通知中心；过期自动 `active=false` 归档，事件保留历史 |
+| AL-04 | AlertEvent：触发记录（级别 info/warning/action、标题、内容、触发时快照值）、已读状态 | ✅ | **P0（批次1）** | 事件不可删（审计），可标记已读/忽略 |
+| AL-05 | 评估引擎：每日价格同步后跑批（建议 04:00，`ALERT_EVAL_CRON`），复用 createCronScheduler + runTrackedTask | ✅ | **P0（批次1）** | 逐规则故障隔离（单规则异常记 error 不中断批次）；TaskRun 可追踪 |
+| AL-06 | 去重静默：同规则触发后 cooldownDays（默认 7）内不重复产生事件 | ✅ | **P0（批次1）** | 静默期内条件持续满足也只留一条活跃事件 |
+| AL-07 | Dashboard 通知中心：未读徽标 + 面板（未读/全部/按组合筛选），点击事件跳转对应资产或再平衡页 | ✅ | **P0（批次1）** | 即 FAM-03 的落地形态；signal 类事件常显直至过期或手动处理 |
+| AL-08 | 规则管理页：规则列表 + 新建/编辑/启停 + 触发历史查看 | ✅ | **P0（批次1）** | — |
 | AL-09 | 52 周新高/新低规则 | 🔲 | P2 | 批次1 后 |
 | AL-10 | 估值分位规则（A股宽基 PE/PB 分位，输入来自 AS-11） | 🔲 | P2 | 依赖 AS-11 |
 
@@ -379,11 +379,11 @@ AlertEvent {
 
 | 方法 | 路径 | 用途 | 状态 |
 |---|---|---|---|
-| GET/POST | `/api/alerts/rules` | 规则列表 / 创建 | 🔲 P0 |
-| GET/PUT/DELETE | `/api/alerts/rules/:id` | 详情 / 编辑 / 删除 | 🔲 P0 |
-| GET | `/api/alerts/events` | 事件列表（未读/组合/类型筛选，分页） | 🔲 P0 |
-| PATCH | `/api/alerts/events/:id/read` | 标记已读/忽略 | 🔲 P0 |
-| GET | `/api/alerts/events/unread-count` | Dashboard 徽标 | 🔲 P0 |
+| GET/POST | `/api/alerts/rules` | 规则列表 / 创建 | ✅ |
+| GET/PUT/DELETE | `/api/alerts/rules/:id` | 详情 / 编辑 / 删除 | ✅ |
+| GET | `/api/alerts/events` | 事件列表（未读/组合/类型筛选，分页） | ✅ |
+| PATCH | `/api/alerts/events/:id/read` | 标记已读/忽略 | ✅ |
+| GET | `/api/alerts/events/unread-count` | Dashboard 徽标 | ✅ |
 
 #### 4.4.6 测试要点
 
@@ -397,7 +397,7 @@ AlertEvent {
 
 | 项 | 优先级 | 批次 |
 |---|---|---|
-| AL-01~08 提醒中心整体（模型+引擎+通知中心+规则管理） | P0 | 1 |
+| ~~AL-01~08 提醒中心整体（模型+引擎+通知中心+规则管理）~~ ✅ 已完成（2026-08-31） | P0 | 1 |
 | AL-09 52周新高低 | P2 | — |
 | AL-10 估值分位规则 | P2 | — |
 
@@ -488,3 +488,4 @@ RebalanceRecord {
 | 2026-08-31 | **T2 完成**：新增 `GET /api/portfolios/summary`（summary.js 纯函数+编排，10 条新测试），PortfolioCard 市值按币种分桶/持仓数/漂移徽标，usePortfolios 切换 summary；CM-12 置 ◐（提醒数留批次1）。提交 49b4edb(T1)/6fc6846(PRD)/本次 T2 |
 | 2026-08-31 | **T3 完成**：CM-20 组合归档落地——model `archived` 默认 false；summary 默认排除归档、`?includeArchived=true` 可选包含；List「显示已归档」开关 + 卡片徽标 + Form 归档复选框；再平衡调度三层防护（initSchedules 查询过滤 + 循环防御 + cron 回调运行时守卫）；CM-20 置 ✅，§4.1 待实现仅剩 CM-08（T4，批次4） |
 | 2026-08-31 | **AS-08 港股支持完成（批次1）**：server/cron-worker/client 三份枚举同步加 `HK`/`HKD`；fetcher 路由 market=HK 与 `.HK` 后缀 → Yahoo（`.CN` 互斥）；HK 交易日历（Asia/Hong_Kong 时区 + 2024/2025 官方节假日表 + 2026 推算，未维护年份告警 `HK_HOLIDAYS_YEAR_NOT_MAINTAINED`）；yahooFetcher `.HK` → market=HK。实测验收：0700.HK（腾讯 453 HKD）/1211.HK（比亚迪 87.2 HKD）实时+历史+开市判断通过。cron-worker 69/69、server 80/80、lint/build 清洁 |
+| 2026-08-31 | **提醒中心完成（批次1，AL-01~08）**：AlertRule/AlertEvent 模型（scope/ruleType/params/direction/validUntil/cooldownDays；事件含 level/snapshot/status 审计不可删）；alertEngine 评估引擎（5 规则类型严格边界、逐规则故障隔离、cooldown 去重、同日幂等、signal 常显/过期归档、drift 复用组合徽标口径）；alertScheduler 04:00 跑批（ALERT_EVAL_CRON + runTrackedTask）；/api/alerts 六端点；alertCenter.notify 改造为写 AlertEvent（再平衡通知入库）；summary 补 unreadAlertCount（CM-12 落地）；客户端 Header 未读徽标（5s 轮询）+ Dashboard 通知中心（未读/全部/组合筛选/标读/忽略/跳转）+ 规则管理页 + PortfolioCard 未读提醒数。测试 server 102/102（新增 22：engine 11 + api 11），lint/build 清洁 |

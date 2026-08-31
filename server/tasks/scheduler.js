@@ -1,5 +1,6 @@
 const { logger } = require('../config/logger');
 const { startPriceScheduler } = require('./priceScheduler');
+const { startAlertScheduler } = require('./alertScheduler');
 const rebalanceScheduleManager = require('../services/rebalance/scheduleManager');
 
 let schedulerState = null;
@@ -12,16 +13,19 @@ async function startSchedulers() {
   if (schedulerState) return schedulerState;
 
   const priceJob = startPriceScheduler();
+  const alertJob = startAlertScheduler();
   try {
     await rebalanceScheduleManager.initSchedules();
   } catch (error) {
     priceJob.stop();
+    alertJob.stop();
     throw error;
   }
   schedulerState = {
     enabled: true,
     stop() {
       priceJob.stop();
+      alertJob.stop();
       rebalanceScheduleManager.cancelAllSchedules();
       schedulerState = null;
     }

@@ -76,6 +76,11 @@ export function PortfolioCard({ portfolio, onClick, className = '' }) {
 
       <div className="mt-3 flex items-center justify-between">
         <DriftBadge drift={portfolio.stats?.drift} />
+        {portfolio.stats?.unreadAlertCount > 0 && (
+          <span className="rounded-full bg-red-50 px-2 py-0.5 text-xs text-red-700">
+            {portfolio.stats.unreadAlertCount} 条未读提醒
+          </span>
+        )}
       </div>
 
       <div

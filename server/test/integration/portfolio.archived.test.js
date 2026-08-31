@@ -111,6 +111,9 @@ test('computeSummary：默认过滤 archived != true', async (t) => {
     filters.push(filter);
     return { sort: () => ({ lean: async () => [] }) };
   });
+  // summary 现聚合未读提醒数（CM-12），stub 掉无 MongoDB 的 aggregate
+  const AlertEvent = require('../../models/alertEvent');
+  t.mock.method(AlertEvent, 'aggregate', async () => []);
 
   const result = await computeSummary();
 
@@ -124,6 +127,8 @@ test('computeSummary：includeArchived=true 时不过滤', async (t) => {
     filters.push(filter);
     return { sort: () => ({ lean: async () => [] }) };
   });
+  const AlertEvent = require('../../models/alertEvent');
+  t.mock.method(AlertEvent, 'aggregate', async () => []);
 
   await computeSummary({ includeArchived: true });
 

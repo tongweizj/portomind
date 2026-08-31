@@ -12,6 +12,7 @@ const assetRoutes = require('./routes/asset.routes');
 const logsRouter = require('./routes/logs.routes');
 const rebalanceRecordRoutes = require('./routes/rebalanceRecord.routes');
 const priceRoutes = require('./routes/price.routes');
+const alertRoutes = require('./routes/alert.routes');
 
 const app = express();
 const allowedOrigins = (process.env.CORS_ORIGINS ||
@@ -41,6 +42,7 @@ app.use('/api/assets', assetRoutes);
 app.use('/api/logs', logsRouter);
 app.use('/api/rebalance', rebalanceRecordRoutes);
 app.use('/api/prices', priceRoutes);
+app.use('/api/alerts', alertRoutes);
 
 app.use((req, res) => failure(req, res, 404, 'API route not found'));
 app.use(errorHandler);
