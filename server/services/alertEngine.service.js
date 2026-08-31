@@ -13,12 +13,14 @@
 const AlertRule = require('../models/alertRule');
 const AlertEvent = require('../models/alertEvent');
 const Portfolio = require('../models/portfolio');
+const Price = require('../models/price');
 const RebalanceRecord = require('../models/rebalanceRecord');
 const marketData = require('./marketData.service');
+const valuationService = require('./valuation.service');
 const tracker = require('./portfolio/positionTracker');
 const aggregator = require('./portfolio/assetClassAggregator');
 const { buildPortfolioSummary } = require('./portfolio/summary');
-const { todayString } = require('../utils/marketTime');
+const { todayString, dateBounds } = require('../utils/marketTime');
 const { logger } = require('../config/logger');
 
 const RULE_TYPE_LABELS = {
@@ -26,7 +28,10 @@ const RULE_TYPE_LABELS = {
   price_below: '价格低于',
   gain_loss_pct: '盈亏比例',
   drift_exceed: '组合偏离',
-  signal: '人工信号'
+  signal: '人工信号',
+  high_52w: '52 周新高',
+  low_52w: '52 周新低',
+  valuation_percentile: '估值分位'
 };
 
 const DIRECTION_LABELS = { buy: '买入', sell: '卖出', hold: '持有' };
@@ -38,9 +43,17 @@ const DIRECTION_LABELS = { buy: '买入', sell: '卖出', hold: '持有' };
  * @param {Object} ctx.latestPrices       { [symbol]: price|null }
  * @param {Object} ctx.positionsBySymbol  { [symbol]: position }（含 avgCost/pnlPct）
  * @param {Object|null} ctx.drift         { needsRebalance, triggeredThresholds }（组合级）
+ * @param {Object} ctx.rangeStats        { [symbol]: { maxPrice, minPrice } }（52 周窗口，不含今日）
+ * @param {Object} ctx.valuations        { 'INDEXCODE:pe': valuation }（最新估值分位）
  * @returns {Object|null} { level, title, content, snapshot }；不触发/缺输入返回 null
  */
-function evaluateRule(rule, { latestPrices = {}, positionsBySymbol = {}, drift = null }) {
+function evaluateRule(rule, {
+  latestPrices = {},
+  positionsBySymbol = {},
+  drift = null,
+  rangeStats = {},
+  valuations = {}
+}) {
   const symbol = rule.symbol || '';
   switch (rule.ruleType) {
     case 'price_above':
@@ -86,6 +99,46 @@ function evaluateRule(rule, { latestPrices = {}, positionsBySymbol = {}, drift =
         title: `${rule.name || '组合'}偏离阈值`,
         content: `触发条件：${drift.triggeredThresholds.join('、')}`,
         snapshot: { triggeredThresholds: drift.triggeredThresholds, threshold }
+      };
+    }
+    case 'high_52w':
+    case 'low_52w': {
+      // AL-09：52 周新高/新低。rangeStats 为历史窗口（不含今日）最高/最低价，
+      // 最新价严格突破才触发（恰好等于不触发）。
+      const price = latestPrices[symbol];
+      const range = rangeStats[symbol];
+      const lookbackDays = Number(rule.params && rule.params.lookbackDays) || 365;
+      if (price == null || !range || range.maxPrice == null) return null;
+      const isHigh = rule.ruleType === 'high_52w';
+      const triggered = isHigh ? price > range.maxPrice : price < range.minPrice;
+      if (!triggered) return null;
+      return {
+        level: 'info',
+        title: `${symbol || rule.name} 创${isHigh ? '52 周新高' : '52 周新低'}`,
+        content: `最新价 ${price}，${lookbackDays} 日区间高 ${range.maxPrice} / 低 ${range.minPrice}`,
+        snapshot: { price, lookbackDays, maxPrice: range.maxPrice, minPrice: range.minPrice }
+      };
+    }
+    case 'valuation_percentile': {
+      // AL-10：估值分位（输入来自 AS-11）。direction='above' → 分位 > 阈值（高估）；
+      // 'below' → 分位 < 阈值（低估）。严格比较。
+      const { indexCode, metric, threshold, direction } = rule.params || {};
+      if (!indexCode || (metric !== 'pe' && metric !== 'pb')) return null;
+      const valuation = valuations[`${String(indexCode).toUpperCase()}:${metric}`];
+      const pct = Number(threshold);
+      if (!valuation || valuation.percentile == null || !Number.isFinite(pct)) return null;
+      const isAbove = direction === 'above';
+      const triggered = isAbove ? valuation.percentile > pct : valuation.percentile < pct;
+      if (!triggered) return null;
+      const metricLabel = metric === 'pe' ? '市盈率' : '市净率';
+      return {
+        level: isAbove ? 'warning' : 'info',
+        title: `${valuation.indexName || indexCode} ${metricLabel}分位${isAbove ? '高估' : '低估'}`,
+        content: `当前分位 ${valuation.percentile}（${metric.toUpperCase()} ${valuation.value}），阈值 ${pct}`,
+        snapshot: {
+          indexCode: valuation.indexCode, metric, percentile: valuation.percentile,
+          value: valuation.value, threshold: pct, direction
+        }
       };
     }
     default:
@@ -186,7 +239,7 @@ async function evaluateAll({ now = new Date() } = {}) {
   // ── 聚合评估输入 ──
   const symbols = [...new Set(assetRules
     .filter(rule => rule.ruleType === 'price_above' || rule.ruleType === 'price_below' ||
-      rule.ruleType === 'gain_loss_pct')
+      rule.ruleType === 'gain_loss_pct' || rule.ruleType === 'high_52w' || rule.ruleType === 'low_52w')
     .map(rule => rule.symbol)
     .filter(Boolean))];
   const latestPrices = symbols.length ? await marketData.getLatestPrices(symbols) : {};
@@ -205,6 +258,34 @@ async function evaluateAll({ now = new Date() } = {}) {
     if (!driftCache.has(key)) driftCache.set(key, await computeDrift(rule.portfolioId));
   }
 
+  // AL-09：52 周新高/新低——聚合历史窗口（不含今日）最高/最低价
+  const rangeRules = assetRules.filter(rule =>
+    rule.ruleType === 'high_52w' || rule.ruleType === 'low_52w');
+  const rangeSymbols = [...new Set(rangeRules.map(rule => rule.symbol).filter(Boolean))];
+  let rangeStats = {};
+  if (rangeSymbols.length > 0) {
+    const todayStart = dateBounds(todayString(now)).start;
+    const maxLookback = Math.max(...rangeRules.map(rule => Number(rule.params && rule.params.lookbackDays) || 365));
+    const windowStart = new Date(todayStart.getTime() - maxLookback * 86400000);
+    const rows = await Price.aggregate([
+      { $match: { symbol: { $in: rangeSymbols }, timestamp: { $gte: windowStart, $lt: todayStart } } },
+      { $group: { _id: '$symbol', maxPrice: { $max: '$price' }, minPrice: { $min: '$price' } } }
+    ]);
+    rangeStats = Object.fromEntries(
+      rows.map(row => [row._id, { maxPrice: row.maxPrice, minPrice: row.minPrice }])
+    );
+  }
+
+  // AL-10：估值分位——最新分位（输入来自 AS-11）
+  const valuationRules = assetRules.filter(rule => rule.ruleType === 'valuation_percentile');
+  let valuationMap = {};
+  if (valuationRules.length > 0) {
+    const latest = await valuationService.getLatestValuations();
+    valuationMap = Object.fromEntries(
+      latest.map(item => [`${item.indexCode}:${item.metric}`, item])
+    );
+  }
+
   // ── 逐规则评估（故障隔离：单规则异常不中断批次） ──
   for (const rule of assetRules) {
     try {
@@ -218,7 +299,7 @@ async function evaluateAll({ now = new Date() } = {}) {
         ? driftCache.get(rule.portfolioId.toString())
         : null;
 
-      const result = evaluateRule(rule, { latestPrices, positionsBySymbol, drift });
+      const result = evaluateRule(rule, { latestPrices, positionsBySymbol, drift, rangeStats, valuations: valuationMap });
       if (!result) continue;
 
       if (await shouldSuppress(rule, now)) continue;

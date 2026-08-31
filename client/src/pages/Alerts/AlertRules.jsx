@@ -16,6 +16,19 @@ const RULE_TYPE_OPTIONS = [
   { value: 'gain_loss_pct', label: '盈亏比例' },
   { value: 'drift_exceed', label: '组合偏离' },
   { value: 'signal', label: '人工信号' },
+  { value: 'high_52w', label: '52 周新高' },
+  { value: 'low_52w', label: '52 周新低' },
+  { value: 'valuation_percentile', label: '估值分位' },
+];
+
+const VALUATION_DIRECTION_OPTIONS = [
+  { value: 'below', label: '低于（低估）' },
+  { value: 'above', label: '高于（高估）' },
+];
+
+const METRIC_OPTIONS = [
+  { value: 'pe', label: '市盈率 PE' },
+  { value: 'pb', label: '市净率 PB' },
 ];
 
 const DIRECTION_OPTIONS = [
@@ -32,6 +45,7 @@ const SCOPE_OPTIONS = [
 const emptyForm = () => ({
   name: '', scope: 'asset', portfolioId: '', symbol: '', ruleType: 'price_above',
   threshold: '', pct: '', drift: '', direction: 'hold', reason: '', validUntil: '',
+  lookbackDays: 365, indexCode: '', metric: 'pe', valuationThreshold: '', valuationDirection: 'below',
   cooldownDays: 7, active: true
 });
 
@@ -69,6 +83,9 @@ export default function AlertRules() {
       symbol: rule.symbol || '', ruleType: rule.ruleType || 'price_above',
       threshold: rule.params?.threshold ?? '', pct: rule.params?.pct ?? '', drift: rule.params?.drift ?? '',
       direction: rule.direction || 'hold', reason: rule.reason || '', validUntil: rule.validUntil?.slice(0, 10) || '',
+      lookbackDays: rule.params?.lookbackDays ?? 365,
+      indexCode: rule.params?.indexCode || '', metric: rule.params?.metric || 'pe',
+      valuationThreshold: rule.params?.threshold ?? '', valuationDirection: rule.params?.direction || 'below',
       cooldownDays: rule.cooldownDays ?? 7, active: rule.active !== false
     });
     setEditing(rule); setFormError('');
@@ -80,6 +97,13 @@ export default function AlertRules() {
     if (form.ruleType === 'price_above' || form.ruleType === 'price_below') params.threshold = Number(form.threshold);
     if (form.ruleType === 'gain_loss_pct') params.pct = Number(form.pct);
     if (form.ruleType === 'drift_exceed') params.drift = Number(form.drift);
+    if (form.ruleType === 'high_52w' || form.ruleType === 'low_52w') params.lookbackDays = Number(form.lookbackDays) || 365;
+    if (form.ruleType === 'valuation_percentile') {
+      params.indexCode = form.indexCode.trim().toUpperCase();
+      params.metric = form.metric;
+      params.threshold = Number(form.valuationThreshold);
+      params.direction = form.valuationDirection;
+    }
     return {
       name: form.name, scope: form.scope,
       portfolioId: form.portfolioId || null,
@@ -98,6 +122,11 @@ export default function AlertRules() {
     if (form.scope === 'asset' && !form.symbol.trim()) { setFormError('资产级规则需填写资产代码'); return; }
     if (form.scope === 'portfolio' && !form.portfolioId) { setFormError('组合级规则需选择组合'); return; }
     if (form.ruleType === 'signal' && !form.direction) { setFormError('信号规则需选择方向'); return; }
+    if (form.ruleType === 'valuation_percentile' && !form.indexCode.trim()) { setFormError('估值分位规则需填写指数代码'); return; }
+    if (form.ruleType === 'valuation_percentile' && (form.valuationThreshold === '' || Number(form.valuationThreshold) < 0 || Number(form.valuationThreshold) > 100)) {
+      setFormError('估值分位阈值需为 0-100 数值');
+      return;
+    }
     setSaving(true);
     try {
       const payload = buildPayload();
@@ -117,6 +146,10 @@ export default function AlertRules() {
 
   const paramText = (rule) => {
     if (rule.ruleType === 'signal') return `${rule.direction || ''}${rule.validUntil ? ` · 至 ${rule.validUntil.slice(0, 10)}` : ''}`;
+    if (rule.ruleType === 'high_52w' || rule.ruleType === 'low_52w') return `${rule.params?.lookbackDays || 365} 日`;
+    if (rule.ruleType === 'valuation_percentile') {
+      return `${rule.params?.indexCode} ${rule.params?.metric?.toUpperCase()} ${rule.params?.threshold ?? '—'}%（${rule.params?.direction === 'above' ? '高估' : '低估'}）`;
+    }
     const value = rule.params?.threshold ?? rule.params?.pct ?? rule.params?.drift;
     return value != null ? String(value) : '—';
   };
@@ -171,7 +204,7 @@ export default function AlertRules() {
                 {RULE_TYPE_OPTIONS.map(option => <option key={option.value} value={option.value}>{option.label}</option>)}
               </select>
             </div>
-            {form.ruleType !== 'signal' && (
+            {form.ruleType !== 'signal' && paramLabel(form.ruleType) && (
               <div>
                 <label className="mb-1 block text-sm">{paramLabel(form.ruleType)}</label>
                 <input type="number" step="any" value={paramValue(form, form.ruleType)}
@@ -181,6 +214,46 @@ export default function AlertRules() {
                   }))}
                   className="w-full rounded border px-3 py-2" />
               </div>
+            )}
+            {(form.ruleType === 'high_52w' || form.ruleType === 'low_52w') && (
+              <div>
+                <label className="mb-1 block text-sm">回看天数（默认 365 = 52 周）</label>
+                <input type="number" min="1" max="3650" value={form.lookbackDays}
+                  onChange={event => setForm(current => ({ ...current, lookbackDays: event.target.value }))}
+                  className="w-full rounded border px-3 py-2" />
+              </div>
+            )}
+            {form.ruleType === 'valuation_percentile' && (
+              <>
+                <div>
+                  <label className="mb-1 block text-sm">指数代码（如 000300=沪深300 / 000016=上证50 / 000905=中证500）</label>
+                  <input value={form.indexCode}
+                    onChange={event => setForm(current => ({ ...current, indexCode: event.target.value }))}
+                    className="w-full rounded border px-3 py-2" />
+                </div>
+                <div>
+                  <label className="mb-1 block text-sm">指标</label>
+                  <select value={form.metric}
+                    onChange={event => setForm(current => ({ ...current, metric: event.target.value }))}
+                    className="w-full rounded border px-3 py-2">
+                    {METRIC_OPTIONS.map(option => <option key={option.value} value={option.value}>{option.label}</option>)}
+                  </select>
+                </div>
+                <div>
+                  <label className="mb-1 block text-sm">分位阈值（0-100）</label>
+                  <input type="number" min="0" max="100" value={form.valuationThreshold}
+                    onChange={event => setForm(current => ({ ...current, valuationThreshold: event.target.value }))}
+                    className="w-full rounded border px-3 py-2" />
+                </div>
+                <div>
+                  <label className="mb-1 block text-sm">触发方向</label>
+                  <select value={form.valuationDirection}
+                    onChange={event => setForm(current => ({ ...current, valuationDirection: event.target.value }))}
+                    className="w-full rounded border px-3 py-2">
+                    {VALUATION_DIRECTION_OPTIONS.map(option => <option key={option.value} value={option.value}>{option.label}</option>)}
+                  </select>
+                </div>
+              </>
             )}
             {form.ruleType === 'signal' && (
               <>

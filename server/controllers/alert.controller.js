@@ -7,7 +7,10 @@ const AlertEvent = require('../models/alertEvent');
 const alertEngine = require('../services/alertEngine.service');
 const { success, failure, pagination, parsePagination } = require('../utils/apiResponse');
 
-const RULE_TYPES = ['price_above', 'price_below', 'gain_loss_pct', 'drift_exceed', 'signal'];
+const RULE_TYPES = [
+  'price_above', 'price_below', 'gain_loss_pct', 'drift_exceed', 'signal',
+  'high_52w', 'low_52w', 'valuation_percentile'
+];
 const EVENT_STATUSES = ['unread', 'read', 'dismissed'];
 const EVENT_LEVELS = ['info', 'warning', 'action'];
 const SCOPE_TYPES = ['asset', 'portfolio'];
@@ -71,6 +74,33 @@ function validateRuleBody(req, res, body) {
     const drift = Number(body.params && body.params.drift);
     if (!Number.isFinite(drift)) {
       failure(req, res, 400, 'drift_exceed 规则需 params.drift 数值');
+      return false;
+    }
+  }
+  if (body.ruleType === 'high_52w' || body.ruleType === 'low_52w') {
+    const lookbackDays = body.params && body.params.lookbackDays;
+    if (lookbackDays !== undefined && (!Number.isFinite(Number(lookbackDays)) || Number(lookbackDays) < 1 || Number(lookbackDays) > 3650)) {
+      failure(req, res, 400, 'lookbackDays 需为 1-3650 的数值');
+      return false;
+    }
+  }
+  if (body.ruleType === 'valuation_percentile') {
+    const { indexCode, metric, threshold, direction } = body.params || {};
+    if (!indexCode) {
+      failure(req, res, 400, 'valuation_percentile 规则需 params.indexCode（指数代码）');
+      return false;
+    }
+    if (!['pe', 'pb'].includes(metric)) {
+      failure(req, res, 400, 'valuation_percentile 规则需 params.metric 为 pe 或 pb');
+      return false;
+    }
+    const pct = Number(threshold);
+    if (!Number.isFinite(pct) || pct < 0 || pct > 100) {
+      failure(req, res, 400, 'valuation_percentile 规则需 params.threshold 为 0-100 数值');
+      return false;
+    }
+    if (!['above', 'below'].includes(direction)) {
+      failure(req, res, 400, 'valuation_percentile 规则需 params.direction 为 above 或 below');
       return false;
     }
   }

@@ -82,7 +82,7 @@ Portfolio 枚举：`type`（风险定位）为 `活钱 | 稳健 | 长期`；`acc
 | `GET /api/portfolios/:pid/rebalance/history` | Path: `pid`; Query: `page,pageSize` | RebalanceRecord 数组 + 分页 | `200`; `500` |
 | `GET /api/transactions` | Query: `page,pageSize,portfolioId?,symbol?`；按 `date DESC,_id DESC` | Transaction 数组 + 分页 | `200` |
 | `GET /api/alerts/rules` | Query: `page,pageSize,active?,scope?,portfolioId?,ruleType?` | AlertRule 数组 + 分页 | `200` |
-| `POST /api/alerts/rules` | Body: `{name,scope,portfolioId?,symbol?,ruleType,params?,direction?(signal),reason?(signal),validUntil?(signal),cooldownDays?,active?}`；scope=asset 须 symbol、scope=portfolio 须 portfolioId、signal 须 direction、price/gain/drift 须对应 params | 新 AlertRule | `201`; `400` |
+| `POST /api/alerts/rules` | Body: `{name,scope,portfolioId?,symbol?,ruleType,params?,direction?(signal),reason?(signal),validUntil?(signal),cooldownDays?,active?}`；scope=asset 须 symbol、scope=portfolio 须 portfolioId、signal 须 direction、price/gain/drift 须对应 params；`high_52w/low_52w` 可选 `params.lookbackDays`（1-3650）；`valuation_percentile` 须 `params.{indexCode,metric:'pe'\|'pb',threshold:0-100,direction:'above'\|'below'}` | 新 AlertRule | `201`; `400` |
 | `GET/PUT/DELETE /api/alerts/rules/:id` | Path: `id` | 详情 / 更新 / 删除（事件保留审计） | `200`; `400`; `404` |
 | `GET /api/alerts/events` | Query: `page,pageSize,status?,level?,portfolioId?,ruleId?` | AlertEvent 数组 + 分页（triggeredAt 倒序） | `200` |
 | `PATCH /api/alerts/events/:id/read` | Path: `id`; Body: `{status:"read"\|"dismissed"}` | 更新后 AlertEvent | `200`; `400`; `404` |
@@ -92,6 +92,8 @@ Portfolio 枚举：`type`（风险定位）为 `活钱 | 稳健 | 长期`；`acc
 | `GET /api/family/fx/rates` | 无 | 各外币对 CNY 最新汇率详情数组（含 date/source） | `200` |
 | `PUT /api/family/fx/rates/:currency` | Path: `currency`（USD/CAD/HKD）；Body: `{rateToCny,date?,note?}` | 按 (currency, date) 幂等写入（source='manual'） | `201`; `400` |
 | `POST /api/family/fx/sync` | 空 Body | 手动触发汇率采集（er-api）：`{count,records}`；采集失败 `502` | `200`; `502` |
+| `GET /api/valuations` | 无 | 各指数最新估值分位数组（每 indexCode+metric 取最新一条） | `200` |
+| `PUT /api/valuations/:indexCode/:metric` | Path: `indexCode`（如 000300）、`metric`（pe\|pb）；Body: `{value,percentile,indexName?,date?,note?}` | 按 (indexCode, metric, date) 幂等写入（source='manual'，衔接 index-valuation-selfcalc 自算结果） | `201`; `400` |
 | `POST /api/transactions` | Body: `{portfolioId,symbol,action,quantity,price,date?,notes?}`；资产元数据由 Asset 派生 | 新 Transaction | `201`; 校验或超卖 `400`; 组合/资产不存在 `404` |
 | `GET /api/transactions/:id` | Path: `id` | Transaction | `200`; `400`; `404` |
 | `PUT /api/transactions/:id` | Path: `id`; Body: Transaction 可更新字段；更新后重放账本 | 更新后 Transaction | `200`; 校验或超卖 `400`; `404` |

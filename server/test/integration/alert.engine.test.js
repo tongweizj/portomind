@@ -78,6 +78,56 @@ test('drift_exceed：漂移阈值触发才产生事件', () => {
   assert.equal(evaluateRule(rule, { drift: null }), null);
 });
 
+// ───────────────────────── AL-09：52 周新高/新低 ─────────────────────────
+
+test('high_52w：最新价严格突破 52 周高点才触发', () => {
+  const rule = baseRule({ ruleType: 'high_52w', params: { lookbackDays: 365 } });
+  const rangeStats = { '0700.HK': { maxPrice: 450, minPrice: 200 } };
+  assert.ok(evaluateRule(rule, { latestPrices: { '0700.HK': 453 }, rangeStats }));
+  assert.equal(evaluateRule(rule, { latestPrices: { '0700.HK': 450 }, rangeStats }), null, '恰好等于 52 周高点不触发');
+  assert.equal(evaluateRule(rule, { latestPrices: { '0700.HK': 400 }, rangeStats }), null);
+  assert.equal(evaluateRule(rule, { latestPrices: { '0700.HK': 453 } }), null, '缺历史区间不触发');
+});
+
+test('low_52w：最新价严格跌破 52 周低点才触发', () => {
+  const rule = baseRule({ ruleType: 'low_52w' });
+  const rangeStats = { '0700.HK': { maxPrice: 500, minPrice: 300 } };
+  assert.ok(evaluateRule(rule, { latestPrices: { '0700.HK': 280 }, rangeStats }));
+  assert.equal(evaluateRule(rule, { latestPrices: { '0700.HK': 300 }, rangeStats }), null, '恰好等于 52 周低点不触发');
+  assert.equal(evaluateRule(rule, { latestPrices: { '0700.HK': 350 }, rangeStats }), null);
+});
+
+// ───────────────────────── AL-10：估值分位（输入来自 AS-11） ─────────────────────────
+
+const VALUATION = {
+  indexCode: '000300', indexName: '沪深300', metric: 'pe',
+  value: 12.5, percentile: 25
+};
+
+test('valuation_percentile：above → 分位严格大于阈值（高估）触发', () => {
+  const rule = baseRule({ ruleType: 'valuation_percentile', params: { indexCode: '000300', metric: 'pe', threshold: 20, direction: 'above' } });
+  const valuations = { '000300:pe': VALUATION };
+  assert.ok(evaluateRule(rule, { valuations }));
+  assert.equal(
+    evaluateRule(rule, { valuations: { '000300:pe': { ...VALUATION, percentile: 20 } } }),
+    null,
+    '恰好等于阈值不触发'
+  );
+  assert.equal(evaluateRule(rule, { valuations: { '000300:pe': { ...VALUATION, percentile: 15 } } }), null);
+  assert.equal(evaluateRule(rule, { valuations: {} }), null, '缺估值数据不触发');
+});
+
+test('valuation_percentile：below → 分位严格小于阈值（低估）触发', () => {
+  const rule = baseRule({ ruleType: 'valuation_percentile', params: { indexCode: '000300', metric: 'pb', threshold: 30, direction: 'below' } });
+  const valuations = { '000300:pb': { ...VALUATION, metric: 'pb', percentile: 12 } };
+  assert.ok(evaluateRule(rule, { valuations }));
+  assert.equal(
+    evaluateRule(rule, { valuations: { '000300:pb': { ...VALUATION, metric: 'pb', percentile: 30 } } }),
+    null,
+    '恰好等于阈值不触发'
+  );
+});
+
 // ───────────────────────── 静默/幂等：shouldSuppress ─────────────────────────
 
 test('shouldSuppress：cooldown 内抑制，超期放行', async (t) => {
@@ -255,4 +305,38 @@ test('evaluateAll：组合级 drift 规则触发口径与组合卡片一致', ()
   };
   assert.ok(evaluateRule(rule, { drift }));
   assert.equal(evaluateRule(rule, { drift: { needsRebalance: false, triggeredThresholds: [] } }), null);
+});
+
+test('evaluateAll：52 周新高 + 估值分位规则聚合输入并触发生成事件', async (t) => {
+  const now = new Date('2026-08-31T12:00:00.000Z');
+  const Price = require('../../models/price');
+  const valuationService = require('../../services/valuation.service');
+  const rules = [
+    makeRule({ _id: RULE_ID_A, ruleType: 'high_52w', params: { lookbackDays: 365 } }),
+    makeRule({
+      _id: '64b0000000000000000000f4',
+      ruleType: 'valuation_percentile',
+      params: { indexCode: '000300', metric: 'pe', threshold: 20, direction: 'above' }
+    })
+  ];
+  t.mock.method(AlertRule, 'find', () => ({ lean: async () => rules }));
+  t.mock.method(marketData, 'getLatestPrices', async () => ({ '0700.HK': 453 }));
+  // 52 周窗口：历史最高 450 < 最新 453 → 新高触发
+  t.mock.method(Price, 'aggregate', async () => [
+    { _id: '0700.HK', maxPrice: 450, minPrice: 200 }
+  ]);
+  // 估值：沪深300 PE 分位 25 > 20 → 高估触发
+  t.mock.method(valuationService, 'getLatestValuations', async () => [
+    { indexCode: '000300', indexName: '沪深300', metric: 'pe', value: 12.5, percentile: 25 }
+  ]);
+  mockFindOneEvent(t, null);
+  const created = [];
+  t.mock.method(AlertEvent, 'create', async (data) => { created.push(data); return { _id: 'evt-x', ...data }; });
+
+  const stats = await evaluateAll({ now });
+  assert.equal(stats.created, 2);
+  assert.equal(stats.failed, 0);
+  const titles = created.map(item => item.title);
+  assert.ok(titles.some(title => title.includes('52 周新高')));
+  assert.ok(titles.some(title => title.includes('市盈率分位高估')));
 });

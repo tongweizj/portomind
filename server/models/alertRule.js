@@ -27,7 +27,10 @@ const AlertRuleSchema = new mongoose.Schema({
   name: { type: String, required: true, trim: true, maxlength: 120 },
   ruleType: {
     type: String,
-    enum: ['price_above', 'price_below', 'gain_loss_pct', 'drift_exceed', 'signal'],
+    enum: [
+      'price_above', 'price_below', 'gain_loss_pct', 'drift_exceed', 'signal',
+      'high_52w', 'low_52w', 'valuation_percentile'
+    ],
     required: true
   },
   // 规则参数（Mixed）：
@@ -35,6 +38,9 @@ const AlertRuleSchema = new mongoose.Schema({
   // gain_loss_pct          → { pct: Number }（正=浮盈超 pct% 触发；负=浮亏超 |pct|% 触发）
   // drift_exceed           → { drift: Number }（组合偏离阈值 %，复用 thresholdChecker 口径）
   // signal                 → 无参数
+  // high_52w/low_52w       → { lookbackDays?: Number 默认 365 }（52 周新高/新低，严格突破触发）
+  // valuation_percentile   → { indexCode, metric: 'pe'|'pb', threshold: 0-100,
+  //                            direction: 'above'|'below' }（估值分位高估/低估，输入来自 AS-11）
   params: { type: mongoose.Schema.Types.Mixed, default: () => ({}) },
   // signal 必填：buy / sell / hold
   direction: {
