@@ -35,4 +35,4 @@
 
 ## 文档
 
-- 调度边界与后端结构见 `../doc/STRUCTURE.md`；运行与验证见 `../doc/DEVELOPMENT.md`。
+- 运行与验证见 `../doc/DEVELOPMENT.md`；日常操作与排障见 `../doc/USER_GUIDE.md`（§6/§7）。

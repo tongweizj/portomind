@@ -197,6 +197,6 @@ npm run verify
 - API CORS 白名单当前接受 `http://localhost:5173`，但不接受所有 Vite host 或端口。
 - 当前后端使用 Mongoose 6.13；跨主版本升级计划见 [`DEPENDENCY_UPGRADES.md`](./DEPENDENCY_UPGRADES.md)。
 - 默认日志写入 `server/logs/`，并被 Git 忽略。
-- 当前组合计算按原币种分组，不会直接相加 USD、CAD 与 CNY；尚未提供组合基准币种换算。
+- 当前组合计算按原币种分组，不会直接相加 USD、CAD 与 CNY；跨币种折算仅发生在家庭视图（最新汇率，见 [USER_GUIDE.md](./USER_GUIDE.md) §4.6）。
 
-页面和 API 的实测状态见 [`FUNCTIONAL_BASELINE.md`](./FUNCTIONAL_BASELINE.md)。重构改变状态后应同步更新该文件。
+功能验收以 [PRD.md](./PRD.md) 需求状态与自动化测试为准（`npm test` 当前 157/157、cron-worker 69/69）。
