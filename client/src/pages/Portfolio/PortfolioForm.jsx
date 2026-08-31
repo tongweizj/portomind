@@ -15,7 +15,7 @@ export default function PortfolioForm() {
   const { id } = useParams();
   const isEdit = Boolean(id);
   const [form, setForm] = useState({
-    name: '', description: '', type: '稳健', currency: 'CAD', accountType: 'other', targets: [emptyTarget()]
+    name: '', description: '', type: '稳健', currency: 'CAD', accountType: 'other', archived: false, targets: [emptyTarget()]
   });
   const [assets, setAssets] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -41,6 +41,8 @@ export default function PortfolioForm() {
             currency: portfolio.currency || 'CAD',
             // 存量组合无 accountType 字段时兜底为 other。
             accountType: portfolio.accountType || 'other',
+            // 存量组合无 archived 字段时兜底为 false。
+            archived: portfolio.archived === true,
             targets: portfolio.targets?.length ? portfolio.targets : []
           });
         }
@@ -136,6 +138,16 @@ export default function PortfolioForm() {
               onChange={event => setForm(current => ({ ...current, description: event.target.value }))}
               className="w-full rounded border px-3 py-2" />
           </div>
+          {isEdit && (
+            <div className="sm:col-span-2">
+              <label className="flex items-center gap-2 text-sm cursor-pointer select-none">
+                <input type="checkbox" checked={form.archived}
+                  onChange={event => setForm(current => ({ ...current, archived: event.target.checked }))}
+                  className="rounded border-gray-300" />
+                归档该组合（不删除任何数据，仅从默认列表与自动再平衡调度中隐藏）
+              </label>
+            </div>
+          )}
         </section>
 
         <section className="space-y-3">

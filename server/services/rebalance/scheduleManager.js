@@ -46,6 +46,15 @@ async function scheduleJobForPortfolio(portfolio) {
   // 定义并启动新任务
   const job = cron.schedule(expr, async () => {
     try {
+      // 运行时守卫（CM-20）：注册后组合可能被归档，执行时以数据库当前状态为准，
+      // 已归档组合直接跳过，不产生再平衡建议与提醒。
+      const current = await Portfolio.findById(pid).select('archived').lean();
+      if (!current) return;
+      if (current.archived === true) {
+        taskLogger.info('REBALANCE_SCHEDULE_SKIPPED_ARCHIVED', { portfolioId: pid });
+        return;
+      }
+
       const periodKey = new Intl.DateTimeFormat('en-CA', {
         timeZone: process.env.SCHEDULER_TIMEZONE || process.env.MARKET_TIMEZONE || 'America/Toronto',
         year: 'numeric', month: '2-digit', day: '2-digit'
@@ -83,11 +92,14 @@ async function scheduleJobForPortfolio(portfolio) {
 }
 
 /**
- * 初始化：为所有组合按当前数据库配置注册任务
+ * 初始化：为所有未归档组合按当前数据库配置注册任务
+ * （CM-20：归档组合不注册调度，归档 ≠ 删除，数据完整保留）
  */
 async function initSchedules() {
-  const portfolios = await Portfolio.find().lean();
+  const portfolios = await Portfolio.find({ archived: { $ne: true } }).lean();
   for (const p of portfolios) {
+    // 防御性二次检查：查询与注册之间数据可能变化，归档组合一律不注册
+    if (p.archived === true) continue;
     try {
       await scheduleJobForPortfolio(p);
     } catch (error) {

@@ -64,8 +64,8 @@ Portfolio 枚举：`type`（风险定位）为 `活钱 | 稳健 | 长期`；`acc
 | `PUT /api/prices/:id` | Path: `id`; Body: Price 可更新字段 | 更新后 Price | `200`; `404` |
 | `DELETE /api/prices/:id` | Path: `id` | 删除的 Price | `200`; `404` |
 | `GET /api/portfolios` | Query: `page,pageSize` | Portfolio 数组 + 分页 | `200` |
-| `GET /api/portfolios/summary` | 无 | Portfolio 数组（含 `stats: {positionCount, marketValueByCurrency, drift}`）。市值按币种分桶，不跨币种合计；某币种存在缺价持仓则该桶为 `null`。`drift` 仅反映绝对/相对偏离触发；无目标配置、无持仓或缺价时为 `null` | `200` |
-| `POST /api/portfolios` | Body: `{name,description?,type?,currency?,accountType?,targets?,rebalanceSettings?}` | 新 Portfolio | `201`; `400` |
+| `GET /api/portfolios/summary` | `includeArchived`（可选，默认 `false`：CM-20 归档组合默认排除，传 `true` 包含） | Portfolio 数组（含 `stats: {positionCount, marketValueByCurrency, drift}`）。市值按币种分桶，不跨币种合计；某币种存在缺价持仓则该桶为 `null`。`drift` 仅反映绝对/相对偏离触发；无目标配置、无持仓或缺价时为 `null` | `200` |
+| `POST /api/portfolios` | Body: `{name,description?,type?,currency?,accountType?,archived?,targets?,rebalanceSettings?}` | 新 Portfolio | `201`; `400` |
 | `GET /api/portfolios/:id` | Path: `id` | Portfolio | `200`; ID 无效 `400`; `404` |
 | `PUT /api/portfolios/:id` | Path: `id`; Body: Portfolio 可更新字段 | 更新后 Portfolio | `200`; `400`; `404` |
 | `DELETE /api/portfolios/:id` | Path: `id` | `{portfolio,deletedTransactions,deletedRebalanceRecords}`；级联删除交易和再平衡记录 | `200`; `400`; `404` |

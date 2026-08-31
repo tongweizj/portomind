@@ -39,9 +39,11 @@ exports.getAllPortfolios = async (req, res, next) => {
 };
 
 // 组合列表汇总（CM-12）：全部组合 + 每组合 { positionCount, marketValueByCurrency, drift }。
+// CM-20：默认排除已归档组合；?includeArchived=true 时包含（前端「显示已归档」开关）。
 exports.getPortfoliosSummary = async (req, res, next) => {
   try {
-    return success(res, await PortfolioService.computeSummary());
+    const includeArchived = req.query.includeArchived === 'true';
+    return success(res, await PortfolioService.computeSummary({ includeArchived }));
   } catch (err) {
     next(err);
   }

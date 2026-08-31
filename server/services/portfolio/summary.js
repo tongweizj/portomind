@@ -57,9 +57,15 @@ function buildPortfolioSummary({ portfolio, positions = [], lastExecutedAt = nul
   return { positionCount, marketValueByCurrency, drift };
 }
 
-/** 数据库编排：全部组合 + 逐组合持仓与最近一次已执行再平衡记录。 */
-async function computeSummary() {
-  const portfolios = await Portfolio.find().sort({ createdAt: -1 }).lean();
+/**
+ * 数据库编排：全部组合 + 逐组合持仓与最近一次已执行再平衡记录。
+ * @param {Object} [options]
+ * @param {boolean} [options.includeArchived=false] - CM-20：默认排除已归档组合，
+ *   前端「显示已归档」开关打开时传 true。归档组合数据完整保留，仅默认不展示。
+ */
+async function computeSummary({ includeArchived = false } = {}) {
+  const filter = includeArchived ? {} : { archived: { $ne: true } };
+  const portfolios = await Portfolio.find(filter).sort({ createdAt: -1 }).lean();
   return Promise.all(portfolios.map(async (portfolio) => {
     const [positions, lastExecuted] = await Promise.all([
       tracker.aggregate(portfolio._id),

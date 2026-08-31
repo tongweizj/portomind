@@ -40,21 +40,30 @@ function DriftBadge({ drift }) {
 /**
  * @param {Object} props
  * @param {Object} props.portfolio      投资组合对象，至少包含 { _id, name, description }；
- *                                      可选 stats: { positionCount, marketValueByCurrency, drift }
+ *                                      可选 stats: { positionCount, marketValueByCurrency, drift }、
+ *                                      archived: true（已归档，CM-20）
  * @param {() => void} props.onClick    点击卡片时调用
  * @param {string} [props.className]    额外的 className，用于样式定制
  */
 export function PortfolioCard({ portfolio, onClick, className = '' }) {
   // 存量组合无 accountType 字段时兜底为 other。
   const accountLabel = ACCOUNT_TYPE_LABELS[portfolio.accountType || 'other'] || '其他';
+  const archived = portfolio.archived === true;
   return (
     <div
-      className={`bg-white shadow rounded-xl p-6 relative cursor-pointer hover:bg-gray-50 transition ${className}`}
+      className={`bg-white shadow rounded-xl p-6 relative cursor-pointer hover:bg-gray-50 transition ${className} ${archived ? 'opacity-60' : ''}`}
       onClick={onClick}
       role="button"
       tabIndex={0}
     >
-      <h2 className="text-xl font-semibold text-gray-800">{portfolio.name}</h2>
+      <div className="flex items-center gap-2">
+        <h2 className="text-xl font-semibold text-gray-800">{portfolio.name}</h2>
+        {archived && (
+          <span className="rounded-full bg-gray-100 px-2 py-0.5 text-xs text-gray-500 border border-gray-200">
+            已归档
+          </span>
+        )}
+      </div>
       <p className="text-gray-600 mt-2">{portfolio.description}</p>
 
       <MarketValueRow stats={portfolio.stats} />

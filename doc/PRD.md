@@ -100,7 +100,7 @@ PortoMind 是 Max 家庭的自托管投资组合管理平台：家庭拥有多�
 | CM-17 | 组合持仓历史：市值与剩余成本趋势（日/周/月粒度） | ✅ | — | 币种分组展示，不跨币种合计 |
 | CM-18 | 组合内交易流水视图 | ✅ | — | 分页；增删改统一走交易模块 |
 | CM-19 | 级联删除：删除组合同时删除其全部交易与再平衡记录 | ✅ | — | 先删子资源再删组合；失败时保留组合避免孤儿记录；前端二次确认并明示后果 |
-| CM-20 | 组合归档（停用不删除，保留历史） | 🔲 | P2 | 归档组合不参与家庭市值与再平衡调度，数据保留 |
+| CM-20 | 组合归档（停用不删除，保留历史） | ✅ | P2 | 归档组合不参与家庭市值与再平衡调度，数据保留 |
 
 #### 4.1.4 数据模型（现状 + 增量）
 
@@ -168,7 +168,7 @@ Portfolio {
 |---|---|---|---|
 | **T1 · CM-05 账户类型** ✅ **已完成（2026-08-31）** | model `accountType` enum 默认 other + PortfolioForm 下拉 + PortfolioCard 徽标 + API_CONTRACT 文档 + 2 条模型测试 | 与 type（风险定位）正交；存量组合读取侧按 other 兜底 | `npm test` 60/60 通过；`npm run lint` 清洁；`npm run build` 成功 |
 | **T2 · CM-12 卡片增强** ✅ **已完成（2026-08-31，提醒数待批次1）** | ① `GET /api/portfolios/summary`（`services/portfolio/summary.js`：buildPortfolioSummary 纯函数 + computeSummary 编排）② PortfolioCard 市值分桶/持仓数/漂移徽标 ③ usePortfolios 切换到 summary | 市值按币种分桶（不跨币种合计）；缺价币种桶为 null 显示「—」；drift 仅计绝对/相对偏离（timeInterval 不算漂移）；无 targets/无持仓/缺价 → drift null | `npm test` 70/70（新增 10 条）；lint 清洁；build 成功 |
-| **T3 · CM-20 归档** | ① model 加 `archived` 默认 false ② 列表默认过滤 + 「显示已归档」开关 ③ rebalance AUTO 调度跳过归档组合 | 归档不删除任何数据；是批次2 家庭视图排除归档组合的前置 | 归档组合不出现在调度日志与默认列表；数据完整保留 |
+| **T3 · CM-20 归档** ✅ **已完成（2026-08-31）** | ① model `archived` 默认 false ② summary 默认过滤 + `?includeArchived=true` + List「显示已归档」开关 + 卡片「已归档」徽标（opacity 弱化）+ Form 归档复选框（仅编辑）③ initSchedules 查询过滤 + 循环防御 + cron 回调运行时守卫 | 归档不删除任何数据；运行时守卫以数据库当前状态为准（注册后归档也生效）；是批次2 家庭视图排除归档组合的前置 | `npm test` 80/80（新增 10 条：模型默认值/调度过滤/运行时守卫/summary 过滤/HTTP 契约）；lint 清洁；build 成功 |
 | **T4 · CM-08 大类层级** | 暂缓至批次4（前置 AS-09 assetClass 字段 + 存量补数据） | targets 需支持 level: asset_class；thresholdChecker/suggestionGenerator 均需扩展 | 见 PRD §4.5 RB-11 |
 
 **验证方式**：T1-T3 每任务完成即 `npm test`（58 用例 + 新增用例，无需 MongoDB）；端到端验证需本地 MongoDB（`npm run verify`，Windows 侧 MongoDB 可用性待确认）。
@@ -486,3 +486,4 @@ RebalanceRecord {
 | 2026-08-31 | §4.1.7 改写为实证评估 + 开发计划：16/20 已实现，T1 accountType → T2 卡片增强（summary 端点 + 市值按币种分桶）→ T3 归档，T4 大类层级暂缓（AS-09 阻塞） |
 | 2026-08-31 | **T1 完成**：工作区已有未提交的 accountType 实现（模型/枚举/表单/卡片/API文档/测试），逐项核对符合规格后全量验证（npm test 60/60、lint 清洁、build 成功），CM-05 置 ✅ |
 | 2026-08-31 | **T2 完成**：新增 `GET /api/portfolios/summary`（summary.js 纯函数+编排，10 条新测试），PortfolioCard 市值按币种分桶/持仓数/漂移徽标，usePortfolios 切换 summary；CM-12 置 ◐（提醒数留批次1）。提交 49b4edb(T1)/6fc6846(PRD)/本次 T2 |
+| 2026-08-31 | **T3 完成**：CM-20 组合归档落地——model `archived` 默认 false；summary 默认排除归档、`?includeArchived=true` 可选包含；List「显示已归档」开关 + 卡片徽标 + Form 归档复选框；再平衡调度三层防护（initSchedules 查询过滤 + 循环防御 + cron 回调运行时守卫）；CM-20 置 ✅，§4.1 待实现仅剩 CM-08（T4，批次4） |

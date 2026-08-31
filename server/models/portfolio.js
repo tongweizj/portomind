@@ -53,6 +53,12 @@ const PortfolioSchema = new mongoose.Schema({
     enum: ['tiantian', 'xueqiu', 'tfsa', 'rrsp', 'resp', 'taxable', 'other'],
     default: 'other'
   },
+  // ✅ 新增：归档标记（CM-20）。归档 ≠ 删除：数据完整保留，
+  // 默认列表与再平衡 AUTO 调度排除已归档组合；业务侧未写入时按 false 处理。
+  archived: {
+    type: Boolean,
+    default: false
+  },
   targets: [{
     symbol: { type: String, required: true, trim: true, uppercase: true },
     targetRatio: { type: Number, required: true, min: 0, max: 100 }
