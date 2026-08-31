@@ -20,6 +20,7 @@ export default function AddTransaction() {
     action: 'buy',
     quantity: '',
     price: '',
+    fee: '0',
     date: new Date().toISOString().slice(0, 10),
     notes: '',
   });
@@ -62,6 +63,15 @@ export default function AddTransaction() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
+    // TR-08：A股整手警告（不阻断）——CN 市场 buy 非 100 股整数倍时提示
+    const cnLots = ['CN-SH', 'CN-SZ'];
+    const isCnBuy = form.action === 'buy' && cnLots.includes(form.market);
+    if (isCnBuy && Number(form.quantity) % 100 !== 0) {
+      const ok = window.confirm(
+        `A股买入通常以 100 股（一手）的整数倍进行，当前数量 ${form.quantity} 不是整手。是否仍要提交？（仅提示，不阻止）`
+      );
+      if (!ok) return;
+    }
     try {
       await createTransaction(form);
       navigate('/transactions');
@@ -115,6 +125,8 @@ export default function AddTransaction() {
             <select name="action" value={form.action} onChange={handleChange} className="w-full border px-3 py-2 rounded">
               <option value="buy">买入</option>
               <option value="sell">卖出</option>
+              <option value="div_cash">现金分红</option>
+              <option value="div_reinvest">分红再投</option>
             </select>
           </div>
           <div>
@@ -123,16 +135,29 @@ export default function AddTransaction() {
           </div>
         </div>
 
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-3 gap-4">
           <div>
             <label className="block text-sm mb-1">交易份额</label>
             <input type="number" name="quantity" value={form.quantity} onChange={handleChange} min="0.00000001" step="any" required className="w-full border px-3 py-2 rounded" />
           </div>
           <div>
-            <label className="block text-sm mb-1">交易价格</label>
+            <label className="block text-sm mb-1">{form.action === 'div_cash' ? '每股分红' : '交易价格'}</label>
             <input type="number" name="price" value={form.price} onChange={handleChange} min="0.00000001" step="any" required className="w-full border px-3 py-2 rounded" />
           </div>
+          <div>
+            <label className="block text-sm mb-1">费用</label>
+            <input type="number" name="fee" value={form.fee} onChange={handleChange} min="0" step="any" className="w-full border px-3 py-2 rounded" />
+          </div>
         </div>
+        {form.action === 'div_cash' && (
+          <p className="text-xs text-gray-500">现金分红：分红金额 = 份额 × 每股分红，计入现金、不进持仓。</p>
+        )}
+        {form.action === 'div_reinvest' && (
+          <p className="text-xs text-gray-500">分红再投：按当日价格转增持仓（等价买入），份额填新增股数。</p>
+        )}
+        {form.action === 'buy' && ['CN-SH', 'CN-SZ'].includes(form.market) && (
+          <p className="text-xs text-gray-500">A股买入建议以 100 股（一手）整数倍进行。</p>
+        )}
 
         <div>
           <label className="block text-sm mb-1">备注</label>

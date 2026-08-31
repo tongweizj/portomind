@@ -73,7 +73,15 @@ exports.getTransactionById = async (req, res, next) => {
 
 exports.createTransaction = async (req, res, next) => {
   try {
-    return success(res, await transactionService.createTransaction(req.body), { status: 201 });
+    const transaction = await transactionService.createTransaction(req.body);
+    // TR-08：A股整手软警告（不阻断，附加到响应）
+    const asset = { market: transaction.market };
+    const warnings = transactionService.detectLotWarnings({
+      asset,
+      action: transaction.action,
+      quantity: transaction.quantity
+    });
+    return success(res, { ...transaction.toObject(), warnings }, { status: 201 });
   } catch (error) {
     forwardBusinessError(error, next);
   }
@@ -82,7 +90,13 @@ exports.createTransaction = async (req, res, next) => {
 exports.updateTransaction = async (req, res, next) => {
   if (!validId(req, res, req.params.id)) return;
   try {
-    return success(res, await transactionService.updateTransaction(req.params.id, req.body));
+    const transaction = await transactionService.updateTransaction(req.params.id, req.body);
+    const warnings = transactionService.detectLotWarnings({
+      asset: { market: transaction.market },
+      action: transaction.action,
+      quantity: transaction.quantity
+    });
+    return success(res, { ...transaction.toObject(), warnings });
   } catch (error) {
     forwardBusinessError(error, next);
   }
@@ -92,6 +106,16 @@ exports.deleteTransaction = async (req, res, next) => {
   if (!validId(req, res, req.params.id)) return;
   try {
     return success(res, await transactionService.deleteTransaction(req.params.id));
+  } catch (error) {
+    forwardBusinessError(error, next);
+  }
+};
+
+exports.importTransactions = async (req, res, next) => {
+  try {
+    const result = await transactionService.importTransactions(req.body);
+    const status = result.errors.length > 0 ? 422 : 201;
+    return success(res, result, { status });
   } catch (error) {
     forwardBusinessError(error, next);
   }

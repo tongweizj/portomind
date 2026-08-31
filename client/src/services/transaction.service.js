@@ -19,3 +19,5 @@ export const getTransaction = async (id) => (await api.get(`/transactions/${id}`
 export const createTransaction = async (tx) => (await api.post('/transactions', tx)).data;
 export const updateTransaction = async (id, tx) => (await api.put(`/transactions/${id}`, tx)).data;
 export const deleteTransaction = async (id) => (await api.delete(`/transactions/${id}`)).data;
+export const importTransactions = async (payload) =>
+  (await api.post('/transactions/import', payload)).data;

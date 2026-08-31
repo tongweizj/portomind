@@ -94,10 +94,11 @@ Portfolio 枚举：`type`（风险定位）为 `活钱 | 稳健 | 长期`；`acc
 | `POST /api/family/fx/sync` | 空 Body | 手动触发汇率采集（er-api）：`{count,records}`；采集失败 `502` | `200`; `502` |
 | `GET /api/valuations` | 无 | 各指数最新估值分位数组（每 indexCode+metric 取最新一条） | `200` |
 | `PUT /api/valuations/:indexCode/:metric` | Path: `indexCode`（如 000300）、`metric`（pe\|pb）；Body: `{value,percentile,indexName?,date?,note?}` | 按 (indexCode, metric, date) 幂等写入（source='manual'，衔接 index-valuation-selfcalc 自算结果） | `201`; `400` |
-| `POST /api/transactions` | Body: `{portfolioId,symbol,action,quantity,price,date?,notes?}`；资产元数据由 Asset 派生 | 新 Transaction | `201`; 校验或超卖 `400`; 组合/资产不存在 `404` |
+| `POST /api/transactions` | Body: `{portfolioId,symbol,action,quantity,price,fee?,date?,notes?}`；action ∈ `buy|sell|div_cash|div_reinvest`（TR-07）；资产元数据由 Asset 派生；CN 买入非整手响应附 `warnings:['CN_LOT_SIZE:symbol']`（TR-08，不阻断） | 新 Transaction | `201`; 校验或超卖 `400`; 组合/资产不存在 `404` |
 | `GET /api/transactions/:id` | Path: `id` | Transaction | `200`; `400`; `404` |
 | `PUT /api/transactions/:id` | Path: `id`; Body: Transaction 可更新字段；更新后重放账本 | 更新后 Transaction | `200`; 校验或超卖 `400`; `404` |
 | `DELETE /api/transactions/:id` | Path: `id`；删除后重放账本 | 删除的 Transaction | `200`; 导致超卖 `400`; `404` |
+| `POST /api/transactions/import` | Body: `{portfolioId,transactions:[{symbol,action,quantity,price,fee?,date?,notes?}]}`；≤500 行。数据校验失败/超卖 → 整批回滚（`422`+errors）；幂等：批次内去重 + 与库中按 (portfolioId,symbol,action,quantity,price,日,fee) 一致跳过 | `{imported,skipped,errors:[{index,message}]}` | `201`（含跳过）; `422`（整批回滚）; `400` |
 | `POST /api/rebalance/:recordId/revoke` | Path: `recordId`; 空 Body | `{recordId,status:"REVOKED",reversalTransactionIds}` | `200`; 状态冲突 `409`; `404` |
 | `POST /api/rebalance/:recordId/reexecute` | Path: `recordId`; 空 Body | `{recordId,sourceRecordId,status:"PENDING",suggestions}` | `201`; 状态冲突 `409`; `404` |
 | `GET /api/logs` | Query: `date?` (`YYYY-MM-DD`，默认市场当日), `level?` (`all\|error\|warn\|info\|verbose\|debug\|silly`), `page,pageSize` | 应用日志条目数组 + 分页 | `200`; 查询参数无效 `400`; `500` |

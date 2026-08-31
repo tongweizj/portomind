@@ -20,6 +20,7 @@ import History from './pages/Prices/History';
 import Today from './pages/Prices/Today';
 import AddTransaction from './pages/Transaction/AddTransaction';
 import EditTransaction from './pages/Transaction/EditTransaction';
+import ImportTransactions from './pages/Transaction/ImportTransactions';
 import TransactionList from './pages/Transaction/TransactionList';
 
 export default function AppRouter() {
@@ -35,6 +36,7 @@ export default function AppRouter() {
 
           <Route path="/transactions" element={<TransactionList />} />
           <Route path="/transactions/new" element={<AddTransaction />} />
+          <Route path="/transactions/import" element={<ImportTransactions />} />
           <Route path="/transactions/edit/:id" element={<EditTransaction />} />
 
           <Route path="/assets" element={<AssetList />} />

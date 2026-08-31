@@ -14,11 +14,14 @@ function normalizedSuggestion(suggestion) {
     symbol: String(suggestion?.symbol || '').trim().toUpperCase(),
     action: String(suggestion?.action || '').trim().toLowerCase(),
     quantity: Number(suggestion?.quantity),
-    price: Number(suggestion?.price)
+    price: Number(suggestion?.price),
+    // RB-10：建议预估费用（estimatedCost = fee + tax），执行时写入交易 fee 可对账
+    estimatedCost: Number(suggestion?.estimatedCost) || 0
   };
   if (!result.symbol || !['buy', 'sell'].includes(result.action) ||
       !Number.isFinite(result.quantity) || result.quantity <= 0 ||
-      !Number.isFinite(result.price) || result.price <= 0) {
+      !Number.isFinite(result.price) || result.price <= 0 ||
+      !Number.isFinite(result.estimatedCost) || result.estimatedCost < 0) {
     throw businessError(400, 'INVALID_REBALANCE_SUGGESTION', 'Invalid rebalance suggestion');
   }
   return result;
@@ -68,6 +71,7 @@ async function executeRebalance(portfolioId, { recordId, suggestions, mode = 'MA
       action: trade.action,
       quantity: trade.quantity,
       price: trade.price,
+      fee: trade.estimatedCost || 0, // RB-10：预估费用落地为实际交易 fee，可对账
       date: new Date(),
       notes: `Rebalance execution ${recordId}`
     });
@@ -106,6 +110,7 @@ async function revokeExecution(recordId) {
       action: original.action === 'buy' ? 'sell' : 'buy',
       quantity: original.quantity,
       price: original.price,
+      fee: original.fee || 0, // RB-10：撤销反向交易费用与原交易一致
       date: new Date(),
       notes: `Reversal of rebalance ${recordId}`
     });

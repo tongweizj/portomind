@@ -266,10 +266,10 @@ Portfolio {
 | TR-03 | 超卖校验 | ✅ | — | 重放时 `INSUFFICIENT_POSITION` 报错，消息含 symbol 与发生日期 |
 | TR-04 | 移动平均成本重放：按 date+_id 排序；buy 累加数量与成本；sell 按卖出前均价减记成本、累计已实现盈亏；清零清理 | ✅ | — | 输出 avgCost / remainingCost / realizedPnl / marketValue / unrealizedPnl / pnlPct；缺最新价时市值与盈亏为 null 不误算 |
 | TR-05 | 持仓历史：日/周/月粒度快照（增量账本重放），按币种分组隔离 | ✅ | — | `costBaseline` = 期末剩余成本，供图表叠加成本线；不跨币种合计 |
-| TR-06 | fee 字段：买入 `remainingCost += qty×price + fee`；卖出所得扣减 fee；已实现盈亏口径同步 | 🔲 | P1（批次3） | 与再平衡建议的费用模型（§4.5）统一口径；迁移默认 0 |
-| TR-07 | 分红类型 `div_cash` / `div_reinvest` | 🔲 | P1（批次3） | div_cash 计入现金（不进持仓）；div_reinvest 转增持仓；重放与统计兼容 |
-| TR-08 | A股整手校验：CN 市场 buy 非 100 股整数倍 | 🔲 | P1（批次3） | **警告不阻断**（默认裁决）；卖出与基金不受限 |
-| TR-09 | CSV 批量导入 | 🔲 | P1（批次3） | 按 ROADMAP P2 流程：上传 → 字段映射预览 → 校验 → 幂等导入 → 错误报告；定义天天基金/雪球模板、日期与数字区域格式、重复交易键、整批回滚 |
+| TR-06 | fee 字段：买入 `remainingCost += qty×price + fee`；卖出所得扣减 fee；已实现盈亏口径同步 | ✅ | P1（批次3） | 已实现：buy/div_reinvest 成本含费、sell 的 realizedPnl 扣 fee；不回溯漂移（重放天然满足）；与再平衡建议费用模型口径统一（RB-10 执行时写入建议预估费用）；迁移默认 0 |
+| TR-07 | 分红类型 `div_cash` / `div_reinvest` | ✅ | P1（批次3） | 已实现：div_cash 现金分红不进持仓（数量/成本/已实现盈亏均不变）；div_reinvest 等价买入转增持仓（成本含 fee）；重放与统计兼容（持仓历史/家庭汇总口径一致） |
+| TR-08 | A股整手校验：CN 市场 buy 非 100 股整数倍 | ✅ | P1（批次3） | 已实现：**警告不阻断**（默认裁决）——前端提交时 confirm 提示；后端响应附加 `warnings: ['CN_LOT_SIZE:symbol']`；卖出与基金不受限 |
+| TR-09 | CSV 批量导入 | ✅ | P1（批次3） | 已实现：`POST /api/transactions/import`（JSON 批量）——逐条校验（失败整批回滚）→ 幂等去重（批次内 + 与库中按 (portfolioId,symbol,action,quantity,price,日,fee) 比对跳过）→ 超卖重放校验 → insertMany；前端 CSV 上传页（天天基金/雪球列名智能映射 + 预览 + 错误报告，≤500 行/批） |
 
 #### 4.3.4 数据模型（现状 + 增量）
 
@@ -284,7 +284,7 @@ Transaction {
   date         Date
   notes        String ≤500
 }
-// 🔲 P1 增量：fee Number ≥0 默认0；action 枚举扩展 'div_cash' | 'div_reinvest'
+// ✅ 已实现（批次3，2026-08-31）：fee Number ≥0 默认0；action 枚举扩展 'div_cash' | 'div_reinvest'
 // 索引：{portfolioId, date:-1, _id:-1} 与 {portfolioId, symbol, date:1, _id:1}（重放排序）
 ```
 
@@ -295,7 +295,7 @@ Transaction {
 | GET/POST | `/api/transactions` | 列表 / 创建 | ✅ |
 | GET/PUT/DELETE | `/api/transactions/:id` | 详情 / 编辑 / 删除 | ✅ |
 | GET | `/api/portfolios/:pid/transactions` | 组合内流水 | ✅ |
-| POST | `/api/transactions/import` | CSV 幂等导入 | 🔲 P1（批次3） |
+| POST | `/api/transactions/import` | CSV 幂等导入（批量 JSON，整批回滚 + 幂等 + 错误报告） | ✅ |
 
 #### 4.3.6 测试要点
 
@@ -309,10 +309,10 @@ Transaction {
 
 | 项 | 优先级 | 批次 |
 |---|---|---|
-| TR-06 fee | P1 | 3 |
-| TR-07 分红 | P1 | 3 |
-| TR-08 A股整手警告 | P1 | 3 |
-| TR-09 CSV 导入 | P1 | 3 |
+| ~~TR-06 fee~~ ✅ 已完成（2026-08-31） | P1 | 3 |
+| ~~TR-07 分红~~ ✅ 已完成（2026-08-31） | P1 | 3 |
+| ~~TR-08 A股整手警告~~ ✅ 已完成（2026-08-31） | P1 | 3 |
+| ~~TR-09 CSV 导入~~ ✅ 已完成（2026-08-31） | P1 | 3 |
 
 ### 4.4 提醒（✅ 已实现——批次1，2026-08-31）
 
@@ -430,7 +430,7 @@ AlertEvent {
 | RB-07 | 重做：对 REVOKED 记录可重新生成待确认建议（sourceRecordId 链） | ✅ | — | — |
 | RB-08 | AUTO 调度：按 rebalanceSchedule（daily/weekly/monthly）自动检查并生成建议（不自动执行） | ✅ | — | 触发 alertCenter.notify → 写入 AlertEvent（action 级），Dashboard 通知中心可见（已接入） |
 | RB-09 | 前端：待确认建议恢复展示、最近执行记录、双层饼图（当前 vs 执行后） | ✅ | — | — |
-| RB-10 | 建议费用模型与交易 fee 字段口径统一 | 🔲 | P1（批次3） | TR-06 落地后，建议预估费用与实际交易记录 fee 可对账 |
+| RB-10 | 建议费用模型与交易 fee 字段口径统一 | ✅ | P1（批次3） | 已实现：执行再平衡时交易 fee = 建议 estimatedCost（费用+税），可对账；撤销反向交易 fee 与原交易一致 |
 | RB-11 | 大类层再平衡（equity/bond/gold/cash） | ✅ | P2（批次4） | 已实现：大类目标 → 类内市值占比摊分 symbol 级建议（保持大类内部结构）；新大类无持仓记 `CLASS_NO_POSITIONS`、未分类持仓记 `UNCLASSIFIED_POSITIONS`；建议标注 assetClass；RebalanceRecord 记 classMode |
 
 #### 4.5.4 数据模型（现状）
@@ -468,7 +468,7 @@ RebalanceRecord {
 
 | 项 | 优先级 | 批次 |
 |---|---|---|
-| RB-10 费用口径统一 | P1 | 3 |
+| ~~RB-10 费用口径统一~~ ✅ 已完成（2026-08-31） | P1 | 3 |
 | ~~RB-11 大类层再平衡~~ ✅ 已完成（2026-08-31，随 CM-08/T4） | P2 | 4 |
 
 ## 5. 里程碑（按裁决更新）
@@ -477,7 +477,7 @@ RebalanceRecord {
 |---|---|---|
 | 1 | **提醒中心 + 港股接入** ✅ **已完成（2026-08-31）** | AlertRule/AlertEvent + 04:00 跑批 + Dashboard 通知中心 + 规则管理页（仅 Dashboard 显示）；HK market + HKD + Yahoo 港股实测（0700.HK/1211.HK） |
 | 2 | **汇率 + 家庭视图** ✅ **已完成（2026-08-31）** | FxRate 模型与每日采集（er-api 公开源 + 手动录入兜底）；`/api/family/summary`（RMB 基准 + 币种分桶 + 组合贡献 + 最近动态）；家庭视图页（总资产卡片/分桶卡/贡献列表/动态流/汇率管理）。注：CM-05 accountType / CM-12 卡片增强已在批次1 前完成（T1/T2） |
-| 3 | **交易增强** | fee / 分红 / A股整手 / CSV 导入 |
+| 3 | **交易增强** ✅ **已完成（2026-08-31）** | fee 字段（重放成本含费/净得扣费 + RB-10 执行费用落地）；分红 div_cash/div_reinvest；A股整手软警告（不阻断）；CSV 批量导入（幂等 + 整批回滚 + 错误报告） |
 | 4 | **大类配置层** ✅ **已完成（2026-08-31）** | assetClass 字段（AS-09）+ 大类目标聚合视图与再平衡（CM-08/RB-11，targets level 二选一 + 类内摊分） |
 
 ## 6. 更新记录
@@ -497,3 +497,4 @@ RebalanceRecord {
 | 2026-08-31 | **AS-09 assetClass 完成（CM-08 前置就绪）**：三份常量加 ASSET_CLASSES（equity/bond/gold/cash，与 ASSET_TYPES 正交）；server/cron-worker asset 模型加 assetClass（enum 显式含 null=未分类）；asset.service 白名单/规范化/筛选（unclassified→null 特例）；controller 校验 + 透传；客户端 AssetForm 下拉（含说明文案）+ AssetList 大类列/筛选/排序。测试 server 118/118（新增 4：规范化/非法拒绝/筛选/模型枚举）、cron-worker 69/69、lint/build 清洁。**注意**：mongoose enum 须显式含 null 才允许未分类（踩坑） |
 | 2026-08-31 | **大类层级完成（批次4，CM-08/RB-11/T4）**：targets 支持 `level: 'asset'|'asset_class'`（二选一，混合禁止；model 去 uppercase 改由 normalizeTargets 按 level 规范化大小写）；assetClassAggregator（aggregateByAssetClass/buildClassPositions/hasClassTargets/deriveSymbolTargets 纯函数 + getAssetClassMap）；thresholdChecker 大类模式（聚合伪持仓复用 evaluateThresholds）；suggestionGenerator 大类摊分（类内市值占比 → symbol 目标；CLASS_NO_POSITIONS/UNCLASSIFIED_POSITIONS warning；建议标注 assetClass；RebalanceRecord.classMode）；actual-ratios `?level=asset_class`（币种内大类占比）；summary/alertEngine 组合漂移同口径兼容；前端 TargetAllocation 大类视图 + PortfolioForm 层级切换。测试 server 133/133（新增 15：targets 校验 4 + 聚合器 6 + threshold 1 + ratios 1 + HTTP 3），lint/build 清洁。§4.1 20/20 全部实现 |
 | 2026-08-31 | **AL-09/AL-10 完成（提醒规则扩展，随 AS-11）**：AS-11 估值分位数据层——Valuation 模型（indexCode/metric/value/percentile/date/source，幂等）+ valuation.service（getLatestValuations/getLatestValuation/upsertValuation）+ `/api/valuations`（列表/录入，手动为主衔接 index-valuation-selfcalc）；AL-09 规则 `high_52w`/`low_52w`（lookbackDays 默认 365，窗口取历史不含今日，Price.aggregate 批量 max/min）；AL-10 规则 `valuation_percentile`（indexCode/metric/threshold/direction，严格比较，低估 info/高估 warning）；controller params 校验 + 客户端表单（回看天数/指数代码/指标/阈值/方向）。测试 server 145/145（新增 12：engine 5 + valuation 7），lint/build 清洁。§4.4 提醒 10/10 全部实现 |
+| 2026-08-31 | **交易增强完成（批次3，TR-06~09 + RB-10）**：TR-06 fee——model fee（默认 0）+ 重放 buy/div_reinvest 成本含费、sell realizedPnl 扣费（不回溯漂移）+ 表单费用输入；TR-07 分红——action 扩展 div_cash（现金分红不进持仓）/div_reinvest（等价买入转增）+ 表单与说明；TR-08 整手——后端 detectLotWarnings（CN buy 非整手响应附加 `CN_LOT_SIZE` warnings 不阻断）+ 前端 confirm 提示；TR-09 CSV——POST /api/transactions/import（逐条校验失败整批回滚 → 幂等去重（按日比较）→ 超卖重放 → insertMany，≤500 行）+ 前端导入页（CSV 解析/列名智能映射/预览/错误报告，天天基金/雪球模板）；RB-10——执行再平衡交易 fee = 建议 estimatedCost、撤销反向 fee 与原一致。测试 server 157/157（新增 12：fee 重放 4 + 分红 2 + 整手 1 + 导入 3 + 执行/撤销 2），lint/build 清洁。**PRD 全部五大模块 + 四个批次全部完成** |

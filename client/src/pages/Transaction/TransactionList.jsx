@@ -57,12 +57,20 @@ export default function TransactionList() {
     
     <div className="flex items-center justify-between">
   <h2 className="text-xl font-semibold text-gray-800">交易记录</h2>
-  <button
-    onClick={() => navigate('/transactions/new')}
-    className="text-sm px-3 py-1 bg-blue-600 text-white rounded hover:bg-blue-700"
-  >
-    创建交易记录
-  </button>
+  <div className="flex items-center gap-2">
+    <button
+      onClick={() => navigate('/transactions/import')}
+      className="text-sm px-3 py-1 bg-white border border-gray-200 text-gray-700 rounded hover:bg-gray-100"
+    >
+      导入 CSV
+    </button>
+    <button
+      onClick={() => navigate('/transactions/new')}
+      className="text-sm px-3 py-1 bg-blue-600 text-white rounded hover:bg-blue-700"
+    >
+      创建交易记录
+    </button>
+  </div>
 </div>
     {error && <div className="rounded bg-red-50 p-3 text-red-700">{error}</div>}
     {transactions.length === 0 ? (

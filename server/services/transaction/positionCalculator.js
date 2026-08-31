@@ -31,6 +31,13 @@ function latestPriceFor(latestPrices, symbol) {
 /**
  * 使用移动平均成本重放标准化交易。该函数不访问数据库，也不做汇率换算。
  * 不同币种通过 currency 保持隔离，调用方不可直接跨币种汇总。
+ *
+ * 口径（TR-06/TR-07）：
+ * - buy：数量 += qty，成本 += qty×price + fee（成本含费）；
+ * - sell：数量 -= qty，成本按卖出前均价减记，realizedPnl += (price - avgCost)×qty - fee（净得扣费）；
+ * - div_cash：现金分红，不进持仓（数量/成本不变），realizedPnl 不变；
+ * - div_reinvest：分红再投，等价 buy（数量与成本增加，含 fee）；
+ * - fee 只影响发生之后的持仓，不回溯漂移（重放天然满足）。
  */
 function calculatePositions(transactions, latestPrices = {}) {
   if (!Array.isArray(transactions)) {
@@ -45,10 +52,11 @@ function calculatePositions(transactions, latestPrices = {}) {
     const action = String(transaction.action || '').trim().toLowerCase();
     const quantity = Number(transaction.quantity);
     const tradePrice = Number(transaction.price);
+    const fee = Number(transaction.fee) || 0;
     const transactionDate = new Date(transaction.date);
 
     if (!symbol) throw calculationError('INVALID_SYMBOL', 'transaction symbol is required');
-    if (!['buy', 'sell'].includes(action)) {
+    if (!['buy', 'sell', 'div_cash', 'div_reinvest'].includes(action)) {
       throw calculationError('INVALID_ACTION', `Invalid transaction action for ${symbol}`);
     }
     if (!Number.isFinite(quantity) || quantity <= 0) {
@@ -56,6 +64,9 @@ function calculatePositions(transactions, latestPrices = {}) {
     }
     if (!Number.isFinite(tradePrice) || tradePrice <= 0) {
       throw calculationError('INVALID_PRICE', `Invalid transaction price for ${symbol}`);
+    }
+    if (!Number.isFinite(fee) || fee < 0) {
+      throw calculationError('INVALID_FEE', `Invalid transaction fee for ${symbol}`);
     }
     if (Number.isNaN(transactionDate.getTime())) {
       throw calculationError('INVALID_DATE', `Invalid transaction date for ${symbol}`);
@@ -71,9 +82,12 @@ function calculatePositions(transactions, latestPrices = {}) {
       realizedPnl: 0
     };
 
-    if (action === 'buy') {
+    if (action === 'buy' || action === 'div_reinvest') {
+      // div_reinvest 等价买入（分红再投转增持仓）
       position.quantity += quantity;
-      position.remainingCost += quantity * tradePrice;
+      position.remainingCost += quantity * tradePrice + fee;
+    } else if (action === 'div_cash') {
+      // 现金分红：不进持仓，仅记录；数量/成本/已实现盈亏均不变
     } else {
       if (quantity > position.quantity + EPSILON) {
         throw calculationError(
@@ -86,7 +100,7 @@ function calculatePositions(transactions, latestPrices = {}) {
         : 0;
       position.quantity -= quantity;
       position.remainingCost -= averageCost * quantity;
-      position.realizedPnl += (tradePrice - averageCost) * quantity;
+      position.realizedPnl += (tradePrice - averageCost) * quantity - fee;
       if (Math.abs(position.quantity) < EPSILON) {
         position.quantity = 0;
         position.remainingCost = 0;
