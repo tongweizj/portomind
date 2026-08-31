@@ -104,3 +104,63 @@ test('getAllAssets 可独立过滤 active 和 watchlist', async () => {
   await assetService.getAllAssets({ active: true, watchlist: false });
   assert.deepEqual(capturedQuery, { active: true, watchlist: false });
 });
+
+// ─────────────────────── AS-09：assetClass 大类 ───────────────────────
+
+test('createAsset 规范化 assetClass：空串→null、大写→小写', async () => {
+  Asset.exists = async () => false;
+  Asset.create = async data => data;
+
+  const unclassified = await assetService.createAsset({
+    symbol: 'GLD', name: '黄金 ETF', market: 'US', currency: 'USD', type: 'etf', assetClass: ''
+  });
+  assert.equal(unclassified.assetClass, null);
+
+  const gold = await assetService.createAsset({
+    symbol: 'GLD2', name: '黄金 ETF 2', market: 'US', currency: 'USD', type: 'etf', assetClass: 'GOLD'
+  });
+  assert.equal(gold.assetClass, 'gold');
+});
+
+test('createAsset 非法 assetClass 拒绝（400）', async () => {
+  Asset.exists = async () => false;
+  await assert.rejects(
+    assetService.createAsset({
+      symbol: 'XYZ', name: '非法', market: 'US', currency: 'USD', type: 'stock', assetClass: 'realestate'
+    }),
+    error => error.status === 400
+  );
+});
+
+test('getAllAssets 支持 assetClass 筛选（unclassified → null）', async () => {
+  let capturedQuery;
+  Asset.countDocuments = async query => { capturedQuery = query; return 0; };
+  Asset.find = query => {
+    capturedQuery = query;
+    return {
+      sort() { return this; },
+      skip() { return this; },
+      limit() { return Promise.resolve([]); }
+    };
+  };
+
+  await assetService.getAllAssets({ assetClass: 'gold' });
+  assert.equal(capturedQuery.assetClass, 'gold');
+
+  await assetService.getAllAssets({ assetClass: 'unclassified' });
+  assert.equal(capturedQuery.assetClass, null);
+});
+
+test('asset 模型：assetClass 枚举校验（真实 validateSync）', () => {
+  const valid = new Asset({ symbol: 'BND', name: '债', market: 'US', currency: 'USD', type: 'etf', assetClass: 'bond' });
+  assert.equal(valid.validateSync(), undefined);
+  assert.equal(valid.assetClass, 'bond');
+
+  const unclassified = new Asset({ symbol: 'CASH', name: '现金', market: 'US', currency: 'USD', type: 'cash' });
+  assert.equal(unclassified.validateSync(), undefined);
+  assert.equal(unclassified.assetClass, null);
+
+  const invalid = new Asset({ symbol: 'BAD', name: '错', market: 'US', currency: 'USD', type: 'stock', assetClass: 'realestate' });
+  const error = invalid.validateSync();
+  assert.ok(error && error.errors.assetClass, '非法 assetClass 应触发枚举校验');
+});

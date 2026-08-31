@@ -14,6 +14,15 @@ export const ASSET_TYPES = Object.freeze([
   { value: 'cash', label: '现金' },
 ]);
 
+// 大类（AS-09）：与证券类型正交（黄金 ETF type=etf、assetClass=gold）。
+// 资产可留空 = 未分类（null），需逐条补齐以支撑大类目标配置层（CM-08）。
+export const ASSET_CLASSES = Object.freeze([
+  { value: 'equity', label: '股票类' },
+  { value: 'bond', label: '债券类' },
+  { value: 'gold', label: '黄金类' },
+  { value: 'cash', label: '现金类' },
+]);
+
 export const ASSET_MARKETS = Object.freeze([
   { value: 'US', label: '美股' },
   { value: 'CA', label: '加股' },

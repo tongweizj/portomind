@@ -1,6 +1,7 @@
 const mongoose = require('mongoose');
 const {
   ASSET_TYPES,
+  ASSET_CLASSES,
   ASSET_MARKETS,
   ASSET_CURRENCIES
 } = require('../constants/asset.constants');
@@ -25,6 +26,10 @@ const AssetSchema = new mongoose.Schema({
   market: { type: String, required: true, enum: ASSET_MARKETS },
   currency: { type: String, required: true, enum: ASSET_CURRENCIES },
   type: { type: String, required: true, enum: ASSET_TYPES },
+  // 大类（AS-09）：equity/bond/gold/cash。与 type（证券类型）正交；null = 未分类，
+  // 存量资产需逐条补齐（表单可编辑），支撑大类目标配置层（CM-08）与家庭大类分组。
+  // 注：mongoose enum 需显式包含 null 才允许「未分类」。
+  assetClass: { type: String, enum: [...ASSET_CLASSES, null], default: null },
   tags: {
     type: [{ type: String, trim: true, maxlength: 40 }],
     default: []

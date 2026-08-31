@@ -1,7 +1,7 @@
 import { api } from './api';
 
-export async function getAssets({ page = 1, pageSize = 20, search, sortBy, sortOrder, active, watchlist } = {}) {
-  const params = { page, pageSize, search, sortBy, sortOrder, active, watchlist };
+export async function getAssets({ page = 1, pageSize = 20, search, sortBy, sortOrder, active, watchlist, assetClass } = {}) {
+  const params = { page, pageSize, search, sortBy, sortOrder, active, watchlist, assetClass };
   const response = await api.get('/assets', { params });
   return { data: response.data, pagination: response.pagination };
 }

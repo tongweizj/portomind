@@ -1,6 +1,6 @@
 const mongoose = require('mongoose');
 const assetService = require('../services/asset.service');
-const { ASSET_SORT_FIELDS } = require('../constants/asset.constants');
+const { ASSET_SORT_FIELDS, ASSET_CLASSES } = require('../constants/asset.constants');
 const { success, failure, pagination, parsePagination } = require('../utils/apiResponse');
 
 function validateId(req, res) {
@@ -38,6 +38,13 @@ function validateListQuery(req, res) {
       return false;
     }
   }
+  // AS-09：assetClass 筛选（合法大类或 unclassified=未分类）
+  if (req.query.assetClass !== undefined &&
+      req.query.assetClass !== 'unclassified' &&
+      !ASSET_CLASSES.includes(req.query.assetClass)) {
+    failure(req, res, 400, `assetClass must be one of: ${ASSET_CLASSES.join(', ')} or unclassified`);
+    return false;
+  }
   return true;
 }
 
@@ -63,7 +70,8 @@ exports.getAllAssets = async (req, res, next) => {
       sortBy: req.query.sortBy,
       sortOrder: req.query.sortOrder,
       active: req.query.active === undefined ? undefined : req.query.active === 'true',
-      watchlist: req.query.watchlist === undefined ? undefined : req.query.watchlist === 'true'
+      watchlist: req.query.watchlist === undefined ? undefined : req.query.watchlist === 'true',
+      assetClass: req.query.assetClass
     });
     return success(res, result.data, { pagination: pagination(page, pageSize, result.total) });
   } catch (err) {

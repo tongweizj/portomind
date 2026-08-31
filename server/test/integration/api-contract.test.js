@@ -204,7 +204,8 @@ test('Asset 主要 CRUD 都遵循统一契约', async () => {
     sortBy: 'name',
     sortOrder: 'desc',
     active: undefined,
-    watchlist: undefined
+    watchlist: undefined,
+    assetClass: undefined
   });
 
   const found = await request(`/api/assets/${assetId}`);

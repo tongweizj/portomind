@@ -3,9 +3,10 @@ import { Plus, Trash2 } from 'lucide-react';
 import { Link, useNavigate } from 'react-router';
 import { deleteAsset, getAssets } from '../../services/asset.service';
 import { getApiErrorMessage } from '../../services/api';
-import { ASSET_TYPES } from '../../constants/enums';
+import { ASSET_TYPES, ASSET_CLASSES } from '../../constants/enums';
 
 const typeLabels = Object.fromEntries(ASSET_TYPES.map(option => [option.value, option.label]));
+const assetClassLabels = Object.fromEntries(ASSET_CLASSES.map(option => [option.value, option.label]));
 
 export default function AssetList() {
   const navigate = useNavigate();
@@ -19,6 +20,7 @@ export default function AssetList() {
   const [search, setSearch] = useState('');
   const [sortBy, setSortBy] = useState('symbol');
   const [sortOrder, setSortOrder] = useState('asc');
+  const [assetClassFilter, setAssetClassFilter] = useState('');
 
   const totalPages = useMemo(() => Math.max(Math.ceil(total / pageSize), 1), [total, pageSize]);
 
@@ -26,7 +28,10 @@ export default function AssetList() {
     setLoading(true);
     setError('');
     try {
-      const result = await getAssets({ page, pageSize, search, sortBy, sortOrder });
+      const result = await getAssets({
+        page, pageSize, search, sortBy, sortOrder,
+        assetClass: assetClassFilter || undefined
+      });
       setAssets(result.data);
       setTotal(result.pagination.total);
     } catch (err) {
@@ -34,7 +39,7 @@ export default function AssetList() {
     } finally {
       setLoading(false);
     }
-  }, [page, pageSize, search, sortBy, sortOrder]);
+  }, [page, pageSize, search, sortBy, sortOrder, assetClassFilter]);
 
   useEffect(() => {
     loadAssets();
@@ -95,6 +100,20 @@ export default function AssetList() {
         </form>
 
         <label className="text-sm">
+          <span className="block mb-1 text-gray-600">大类</span>
+          <select
+            value={assetClassFilter}
+            onChange={event => { setAssetClassFilter(event.target.value); setPage(1); }}
+            className="border rounded px-3 py-2"
+          >
+            <option value="">全部</option>
+            {ASSET_CLASSES.map(option => (
+              <option key={option.value} value={option.value}>{option.label}</option>
+            ))}
+            <option value="unclassified">未分类</option>
+          </select>
+        </label>
+        <label className="text-sm">
           <span className="block mb-1 text-gray-600">排序字段</span>
           <select
             value={sortBy}
@@ -105,6 +124,7 @@ export default function AssetList() {
             <option value="name">名称</option>
             <option value="market">市场</option>
             <option value="type">类型</option>
+            <option value="assetClass">大类</option>
             <option value="active">启用状态</option>
             <option value="watchlist">关注状态</option>
             <option value="createdAt">创建时间</option>
@@ -138,6 +158,7 @@ export default function AssetList() {
                 <th className="px-4 py-2 text-left">市场</th>
                 <th className="px-4 py-2 text-left">币种</th>
                 <th className="px-4 py-2 text-left">类型</th>
+                <th className="px-4 py-2 text-left">大类</th>
                 <th className="px-4 py-2 text-left">标签</th>
                 <th className="px-4 py-2 text-center">启用</th>
                 <th className="px-4 py-2 text-center">关注</th>
@@ -156,6 +177,10 @@ export default function AssetList() {
                   <td className="px-4 py-2 whitespace-nowrap">{asset.market}</td>
                   <td className="px-4 py-2 whitespace-nowrap">{asset.currency}</td>
                   <td className="px-4 py-2 whitespace-nowrap">{typeLabels[asset.type] || asset.type}</td>
+                  <td className="px-4 py-2 whitespace-nowrap">
+                    {asset.assetClass ? (assetClassLabels[asset.assetClass] || asset.assetClass)
+                      : <span className="text-gray-400">未分类</span>}
+                  </td>
                   <td className="px-4 py-2">{asset.tags?.join(', ') || '—'}</td>
                   <td className="px-4 py-2 text-center">{asset.active ? '是' : '否'}</td>
                   <td className="px-4 py-2 text-center">{asset.watchlist ? '是' : '否'}</td>

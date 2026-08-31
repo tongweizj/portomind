@@ -172,7 +172,7 @@ Portfolio {
 | **T1 · CM-05 账户类型** ✅ **已完成（2026-08-31）** | model `accountType` enum 默认 other + PortfolioForm 下拉 + PortfolioCard 徽标 + API_CONTRACT 文档 + 2 条模型测试 | 与 type（风险定位）正交；存量组合读取侧按 other 兜底 | `npm test` 60/60 通过；`npm run lint` 清洁；`npm run build` 成功 |
 | **T2 · CM-12 卡片增强** ✅ **已完成（2026-08-31，提醒数待批次1）** | ① `GET /api/portfolios/summary`（`services/portfolio/summary.js`：buildPortfolioSummary 纯函数 + computeSummary 编排）② PortfolioCard 市值分桶/持仓数/漂移徽标 ③ usePortfolios 切换到 summary | 市值按币种分桶（不跨币种合计）；缺价币种桶为 null 显示「—」；drift 仅计绝对/相对偏离（timeInterval 不算漂移）；无 targets/无持仓/缺价 → drift null | `npm test` 70/70（新增 10 条）；lint 清洁；build 成功 |
 | **T3 · CM-20 归档** ✅ **已完成（2026-08-31）** | ① model `archived` 默认 false ② summary 默认过滤 + `?includeArchived=true` + List「显示已归档」开关 + 卡片「已归档」徽标（opacity 弱化）+ Form 归档复选框（仅编辑）③ initSchedules 查询过滤 + 循环防御 + cron 回调运行时守卫 | 归档不删除任何数据；运行时守卫以数据库当前状态为准（注册后归档也生效）；是批次2 家庭视图排除归档组合的前置 | `npm test` 80/80（新增 10 条：模型默认值/调度过滤/运行时守卫/summary 过滤/HTTP 契约）；lint 清洁；build 成功 |
-| **T4 · CM-08 大类层级** | 暂缓至批次4（前置 AS-09 assetClass 字段 + 存量补数据） | targets 需支持 level: asset_class；thresholdChecker/suggestionGenerator 均需扩展 | 见 PRD §4.5 RB-11 |
+| **T4 · CM-08 大类层级** | 批次4（前置 AS-09 已就绪，2026-08-31） | targets 需支持 level: asset_class；thresholdChecker/suggestionGenerator 均需扩展 | 见 PRD §4.5 RB-11 |
 
 **验证方式**：T1-T3 每任务完成即 `npm test`（58 用例 + 新增用例，无需 MongoDB）；端到端验证需本地 MongoDB（`npm run verify`，Windows 侧 MongoDB 可用性待确认）。
 
@@ -202,7 +202,7 @@ Portfolio {
 | AS-06 | 每日同步：默认 03:00（`PRICE_SYNC_CRON`）逐资产「开市校验 → fetcher 路由 → 幂等入库」，TaskRun 防重追踪，休市记 skip | ✅ | — | Price 以 symbol+timestamp 唯一索引幂等；逐资产故障隔离（单资产失败不影响其余） |
 | AS-07 | 完整性检查：默认 03:30（`HEALTH_CHECK_CRON`），按 launchDate 推断应有交易日数，缺口可选自动补全（`INTEGRITY_AUTO_REPAIR` 默认开） | ✅ | — | 未填 launchDate 的资产跳过并记 `SKIPPED_NO_LAUNCH_DATE` |
 | AS-08 | **港股支持**：market 增加 `HK`、currency 增加 `HKD`、路由 Yahoo（`XXXX.HK` 代码）、交易日历增加 HK 节假日 | ✅ | **P0（批次1）** | 已实测：`0700.HK`（腾讯 453 HKD）、`1211.HK`（比亚迪 87.2 HKD）实时+历史（2024 年 1 月 K 线）+ 开市判断全部通过；`.HK` 后缀与场外基金 `.CN` 推断互斥无冲突；HK 节假日静态表 2024/2025 官方 + 2026 推算（需逐年核对 HKEX 公告） |
-| AS-09 | assetClass 大类字段（equity/bond/gold/cash） | 🔲 | P2（批次4） | 为 CM-08 大类目标层与家庭视图大类分组铺垫；存量资产需补数据 |
+| AS-09 | assetClass 大类字段（equity/bond/gold/cash） | ✅ | P2（批次4） | 已实现：server/cron-worker 模型 + 常量三份同步；与 ASSET_TYPES 正交（黄金 ETF type=etf、assetClass=gold）；null = 未分类（mongoose enum 显式含 null），表单可编辑 + 列表筛选/排序；**为 CM-08 大类目标层与家庭视图大类分组铺垫就绪**；存量资产需逐条补分类 |
 | AS-10 | A股股票日线（非 ETF） | ✅ | — | 东方财富 fetcher 按 secid 路由：5/6/9 开头→上海 `1.x`，其余→深圳 `0.x`；实测个股后确认 |
 | AS-11 | 估值分位（A股宽基 PE/PB 历史分位） | 🔲 | P2 | 衔接 index-valuation-selfcalc 产出，作提醒规则输入（§4.4） |
 
@@ -242,7 +242,7 @@ Portfolio {
 | 项 | 优先级 | 批次 |
 |---|---|---|
 | ~~AS-08 港股（枚举+路由+日历+实测）~~ ✅ 已完成（2026-08-31） | P0 | 1 |
-| AS-09 assetClass 字段 | P2 | 4 |
+| ~~AS-09 assetClass 字段~~ ✅ 已完成（2026-08-31，CM-08 前置就绪） | P2 | 4 |
 | AS-11 估值分位接入 | P2 | — |
 
 ### 4.3 交易记录（已细化）
@@ -494,3 +494,4 @@ RebalanceRecord {
 | 2026-08-31 | **提醒中心完成（批次1，AL-01~08）**：AlertRule/AlertEvent 模型（scope/ruleType/params/direction/validUntil/cooldownDays；事件含 level/snapshot/status 审计不可删）；alertEngine 评估引擎（5 规则类型严格边界、逐规则故障隔离、cooldown 去重、同日幂等、signal 常显/过期归档、drift 复用组合徽标口径）；alertScheduler 04:00 跑批（ALERT_EVAL_CRON + runTrackedTask）；/api/alerts 六端点；alertCenter.notify 改造为写 AlertEvent（再平衡通知入库）；summary 补 unreadAlertCount（CM-12 落地）；客户端 Header 未读徽标（5s 轮询）+ Dashboard 通知中心（未读/全部/组合筛选/标读/忽略/跳转）+ 规则管理页 + PortfolioCard 未读提醒数。测试 server 102/102（新增 22：engine 11 + api 11），lint/build 清洁 |
 | 2026-08-31 | **PRD 状态勾选（批次1 收官核对）**：CM-12 ◐→✅（未读提醒数落地）、FAM-03 🔲→✅（通知中心即其落地形态）、§4.1.7 完成度 16/20→19/20（CM-05/12/20 划线标注 T1/T2/T3）、§4.1.4 增量注释更新、§4.2/§4.4 概述与数据模型标题更新、RB-08 验收标准更新（通知中心已接入）、里程碑批次1 标 ✅、批次2 交付列表移除已提前完成的 CM-05/CM-12 |
 | 2026-08-31 | **家庭层完成（批次2，FAM-01/02/04）**：FxRate 模型（currency/rateToCny/date/source，按 (currency,date) 幂等 upsert）+ fxRate.service（getLatestRates/upsertRate/syncLatestRates，er-api 免 key 公开源，失败降级可手动录入）+ fxScheduler 每日 09:30 采集；familySummary.service（buildCurrencyBuckets/buildFamilySummary 纯函数 + computeFamilySummary 编排：RMB 基准总资产、USD/CAD/CNY/HKD 分桶、组合贡献占比、缺价/缺汇率标 null 不误报、最近交易/再平衡动态）；/api/family 四端点；客户端家庭视图页（总资产卡片 + 分桶卡 + 贡献列表 + 动态流 + 汇率管理）。测试 server 114/114（新增 12：family.summary），lint/build 清洁 |
+| 2026-08-31 | **AS-09 assetClass 完成（CM-08 前置就绪）**：三份常量加 ASSET_CLASSES（equity/bond/gold/cash，与 ASSET_TYPES 正交）；server/cron-worker asset 模型加 assetClass（enum 显式含 null=未分类）；asset.service 白名单/规范化/筛选（unclassified→null 特例）；controller 校验 + 透传；客户端 AssetForm 下拉（含说明文案）+ AssetList 大类列/筛选/排序。测试 server 118/118（新增 4：规范化/非法拒绝/筛选/模型枚举）、cron-worker 69/69、lint/build 清洁。**注意**：mongoose enum 须显式含 null 才允许未分类（踩坑） |

@@ -1,8 +1,8 @@
 const Asset = require('../models/asset');
-const { ASSET_SORT_FIELDS } = require('../constants/asset.constants');
+const { ASSET_SORT_FIELDS, ASSET_CLASSES } = require('../constants/asset.constants');
 
 const WRITABLE_FIELDS = [
-  'symbol', 'name', 'market', 'currency', 'type', 'tags', 'active', 'watchlist'
+  'symbol', 'name', 'market', 'currency', 'type', 'assetClass', 'tags', 'active', 'watchlist'
 ];
 
 function escapeRegExp(value) {
@@ -50,6 +50,14 @@ function normalizeInput(input) {
       throw badRequest(`${field} must be a boolean`);
     }
   }
+  // assetClass（AS-09）：合法大类或 null/空串（= 未分类）
+  if (data.assetClass !== undefined) {
+    const value = data.assetClass === '' ? null : String(data.assetClass).toLowerCase();
+    if (value !== null && !ASSET_CLASSES.includes(value)) {
+      throw badRequest(`assetClass must be one of: ${ASSET_CLASSES.join(', ')} (or empty for unclassified)`);
+    }
+    data.assetClass = value;
+  }
   return data;
 }
 
@@ -60,7 +68,8 @@ async function getAllAssets({
   sortBy = 'symbol',
   sortOrder = 'asc',
   active,
-  watchlist
+  watchlist,
+  assetClass
 } = {}) {
   const term = String(search || '').trim();
   const regex = term ? new RegExp(escapeRegExp(term), 'i') : null;
@@ -68,6 +77,8 @@ async function getAllAssets({
   if (regex) query.$or = [{ symbol: regex }, { name: regex }, { tags: regex }];
   if (typeof active === 'boolean') query.active = active;
   if (typeof watchlist === 'boolean') query.watchlist = watchlist;
+  // AS-09：assetClass 筛选；'unclassified' 特例匹配未分类（null）
+  if (assetClass) query.assetClass = assetClass === 'unclassified' ? null : assetClass;
   const field = ASSET_SORT_FIELDS.includes(sortBy) ? sortBy : 'symbol';
   const direction = sortOrder === 'desc' ? -1 : 1;
 

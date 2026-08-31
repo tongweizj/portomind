@@ -3,7 +3,7 @@ import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router';
 import { createAsset, getAssetById, updateAsset } from '../../services/asset.service';
 import { getApiErrorMessage } from '../../services/api';
-import { ASSET_TYPES, ASSET_MARKETS, ASSET_CURRENCIES } from '../../constants/enums';
+import { ASSET_TYPES, ASSET_CLASSES, ASSET_MARKETS, ASSET_CURRENCIES } from '../../constants/enums';
 
 export default function AssetForm() {
   const navigate = useNavigate();
@@ -16,6 +16,7 @@ export default function AssetForm() {
     market: 'US',
     currency: 'USD',
     type: 'stock',
+    assetClass: '',
     tags: '',
     active: true,
     watchlist: false
@@ -123,6 +124,22 @@ export default function AssetForm() {
               <option key={option.value} value={option.value}>{option.label}</option>
             ))}
           </select>
+        </div>
+
+        <div>
+          <label className="block text-sm text-gray-700 mb-1">大类（用于大类配置层）</label>
+          <select
+            name="assetClass"
+            value={form.assetClass || ''}
+            onChange={handleChange}
+            className="w-full border px-3 py-2 rounded"
+          >
+            <option value="">未分类</option>
+            {ASSET_CLASSES.map(option => (
+              <option key={option.value} value={option.value}>{option.label}</option>
+            ))}
+          </select>
+          <p className="text-xs text-gray-400 mt-1">与证券类型正交：黄金 ETF 的证券类型是 ETF，大类选「黄金类」。</p>
         </div>
 
         <div>
