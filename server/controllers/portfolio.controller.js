@@ -1,7 +1,7 @@
 const mongoose = require('mongoose');
 const Portfolio = require('../models/portfolio');
 const PortfolioService = require('../services/portfolio');
-const { validateTargets } = require('../services/portfolio/validateTargets');
+const { validateTargets, normalizeTargets } = require('../services/portfolio/validateTargets');
 const { success, failure, pagination, parsePagination } = require('../utils/apiResponse');
 
 function validId(req, res, id) {
@@ -19,7 +19,9 @@ function forward(err, next, fallbackStatus) {
 exports.createPortfolio = async (req, res, next) => {
   try {
     validateTargets(req.body.targets);
-    return success(res, await new Portfolio(req.body).save(), { status: 201 });
+    // CM-08：按 level 规范化 symbol 大小写（asset 大写 / asset_class 小写）
+    const body = { ...req.body, targets: normalizeTargets(req.body.targets) };
+    return success(res, await new Portfolio(body).save(), { status: 201 });
   } catch (err) {
     forward(err, next, 400);
   }
@@ -64,7 +66,12 @@ exports.updatePortfolio = async (req, res, next) => {
   if (!validId(req, res, req.params.id)) return;
   try {
     validateTargets(req.body.targets);
-    const updated = await Portfolio.findByIdAndUpdate(req.params.id, req.body, {
+    // CM-08：按 level 规范化 symbol 大小写（asset 大写 / asset_class 小写）；
+    // 仅当请求携带 targets 时才规范化（未携带时保持原字段不动）
+    const body = req.body.targets === undefined
+      ? req.body
+      : { ...req.body, targets: normalizeTargets(req.body.targets) };
+    const updated = await Portfolio.findByIdAndUpdate(req.params.id, body, {
       new: true,
       runValidators: true
     });
@@ -96,7 +103,8 @@ exports.getPortfolioStats = async (req, res, next) => {
 
 exports.getActualRatios = async (req, res, next) => {
   try {
-    return success(res, await PortfolioService.computeActualRatios(req.params.id));
+    const level = req.query.level === 'asset_class' ? 'asset_class' : 'asset';
+    return success(res, await PortfolioService.computeActualRatios(req.params.id, { level }));
   } catch (err) {
     next(err);
   }

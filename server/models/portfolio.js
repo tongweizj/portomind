@@ -60,8 +60,14 @@ const PortfolioSchema = new mongoose.Schema({
     default: false
   },
   targets: [{
-    symbol: { type: String, required: true, trim: true, uppercase: true },
-    targetRatio: { type: Number, required: true, min: 0, max: 100 }
+    // level='asset'：symbol 为资产代码（业务层统一大写）；
+    // level='asset_class'（CM-08）：symbol 为大类代码（equity/bond/gold/cash，统一小写，
+    // 见 constants/asset.constants ASSET_CLASSES）。故此处不做 uppercase，由
+    // validateTargets.normalizeTargets 按 level 规范化大小写。
+    // 混合模式禁止：存在任一 asset_class 目标则全部必须为 asset_class（二选一）。
+    symbol: { type: String, required: true, trim: true },
+    targetRatio: { type: Number, required: true, min: 0, max: 100 },
+    level: { type: String, enum: ['asset', 'asset_class'], default: 'asset' }
   }],
   rebalanceSettings: {
     type: RebalanceSettingsSchema,

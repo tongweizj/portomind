@@ -1,6 +1,11 @@
 const Portfolio = require('../../models/portfolio');
 const RebalanceRecord = require('../../models/rebalanceRecord');
 const { aggregatePositions } = require('../portfolio');
+const {
+  getAssetClassMap,
+  buildClassPositions,
+  hasClassTargets
+} = require('../portfolio/assetClassAggregator');
 
 function businessError(status, code, message) {
   const error = new Error(message);
@@ -77,9 +82,20 @@ async function checkThresholds(portfolioId) {
     RebalanceRecord.findOne({ portfolioId, status: 'EXECUTED' }).sort({ executedAt: -1, timestamp: -1 }).lean()
   ]);
   if (!portfolio) throw businessError(404, 'PORTFOLIO_NOT_FOUND', 'Portfolio not found');
+
+  // CM-08 大类目标模式：把持仓按大类聚合为伪持仓后复用 evaluateThresholds
+  const classMode = hasClassTargets(portfolio.targets);
+  const targets = portfolio.targets;
+  let classPositions = positions;
+  if (classMode) {
+    const symbols = positions.map(position => position.symbol);
+    const assetClassBySymbol = await getAssetClassMap(symbols);
+    classPositions = buildClassPositions(positions, assetClassBySymbol);
+  }
+
   return evaluateThresholds({
-    targets: portfolio.targets,
-    positions,
+    targets,
+    positions: classPositions,
     settings: portfolio.rebalanceSettings,
     lastExecutedAt: lastRecord?.executedAt || lastRecord?.timestamp
   });

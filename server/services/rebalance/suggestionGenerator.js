@@ -4,6 +4,12 @@ const marketData = require('../marketData.service');
 const thresholdChecker = require('./thresholdChecker');
 const recorder = require('./recorder');
 const { estimateTradeCost, normalizeFeeModel } = require('./costEstimator');
+const {
+  getAssetClassMap,
+  hasClassTargets,
+  deriveSymbolTargets,
+  UNCLASSIFIED
+} = require('../portfolio/assetClassAggregator');
 
 const EPSILON = 1e-8;
 
@@ -158,22 +164,54 @@ async function getSuggestions(portfolioId, { feeModel = {}, cashBudget = 0, mode
   ]);
   if (!portfolio) throw businessError(404, 'PORTFOLIO_NOT_FOUND', 'Portfolio not found');
 
-  const targetSymbols = portfolio.targets.map(target => String(target.symbol).toUpperCase());
+  // CM-08 大类目标模式：大类目标按类内市值占比摊分到 symbol 级，复用 symbol 级建议流程；
+  // 建议标注 assetClass 便于前端按大类查看。
+  const classMode = hasClassTargets(portfolio.targets);
+  let targets = portfolio.targets;
+  let symbolClassMap = null;
+  const warnings = [];
+
+  if (classMode) {
+    const assetClassBySymbol = await getAssetClassMap(positions.map(position => position.symbol));
+    const derived = deriveSymbolTargets({ targets: portfolio.targets, positions, assetClassBySymbol });
+    targets = derived.targets;
+    symbolClassMap = derived.symbolClassMap;
+
+    // 大类缺口可观察性：目标大类但当前无持仓（无法摊分）；存在未分类持仓
+    const classTargets = new Set(portfolio.targets.map(target => target.symbol));
+    const heldClasses = new Set(Object.values(symbolClassMap));
+    for (const assetClass of classTargets) {
+      if (!heldClasses.has(assetClass)) warnings.push(`CLASS_NO_POSITIONS:${assetClass}`);
+    }
+    if (heldClasses.has(UNCLASSIFIED)) warnings.push('UNCLASSIFIED_POSITIONS');
+  }
+
+  const targetSymbols = targets.map(target => String(target.symbol).toUpperCase());
   const latestPrices = targetSymbols.length ? await marketData.getLatestPrices(targetSymbols) : {};
   const result = buildSuggestions({
-    targets: portfolio.targets,
+    targets,
     positions,
     latestPrices,
     feeModel,
     cashBudget
   });
+
+  if (classMode && symbolClassMap) {
+    result.suggestions = result.suggestions.map(suggestion => ({
+      ...suggestion,
+      assetClass: symbolClassMap[suggestion.symbol] || UNCLASSIFIED
+    }));
+  }
+  const mergedWarnings = [...new Set([...warnings, ...result.warnings])];
+
   const record = await recorder.createRecord(portfolioId, mode, result.suggestions, {
     feeModel: normalizeFeeModel(feeModel),
     cashBudget: Number(cashBudget),
     triggeredThresholds: thresholdResult.triggeredThresholds,
     thresholdDetails: thresholdResult.details,
-    warnings: result.warnings,
-    funding: result.funding
+    warnings: mergedWarnings,
+    funding: result.funding,
+    classMode
   });
   return {
     recordId: record._id,
@@ -181,8 +219,9 @@ async function getSuggestions(portfolioId, { feeModel = {}, cashBudget = 0, mode
     suggestions: result.suggestions,
     triggeredThresholds: thresholdResult.triggeredThresholds,
     thresholdDetails: thresholdResult.details,
-    warnings: result.warnings,
-    funding: result.funding
+    warnings: mergedWarnings,
+    funding: result.funding,
+    classMode
   };
 }
 

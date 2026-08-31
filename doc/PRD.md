@@ -88,7 +88,7 @@ PortoMind 是 Max 家庭的自托管投资组合管理平台：家庭拥有多�
 | CM-05 | **账户类型（账户载体）**：tiantian / xueqiu / tfsa / rrsp / resp / taxable / other | ✅ | — | 新增可选字段，默认 other；用于家庭视图按真实账户分组展示（CM-03 是风险定位，与账户类型正交） |
 | CM-06 | 目标配置：按 symbol 设置目标比例 | ✅ | — | 目标不可重复；非空合计精确 100% |
 | CM-07 | 目标配置校验反馈 | ✅ | — | 合计 ≠100% 时保存被拒并提示 |
-| CM-08 | 目标配置按大类（asset class）聚合视图 | 🔲 | P2 | equity/bond/gold/cash 大类漂移视图，与 symbol 级并存 |
+| CM-08 | 目标配置按大类（asset class）聚合视图 | ✅ | P2 | 已实现：targets 支持 `level: 'asset' | 'asset_class'`（二选一，混合禁止）；大类目标模式下 thresholdChecker 聚合为伪持仓复用 symbol 级口径、suggestionGenerator 按类内市值占比摊分到 symbol、actual-ratios 支持 `?level=asset_class`（币种内大类占比）、组合卡片 drift 徽标同口径；前端目标配置页大类/资产级切换与大类视图 |
 | CM-09 | 再平衡参数：绝对偏离阈值（默认 5%）、相对偏离阈值（默认 10%）、时间间隔（默认 60 天），三项可独立启停 | ✅ | — | 0–100% 范围校验；间隔 ≥1 天 |
 | CM-10 | 再平衡检查频率：daily / weekly / monthly | ✅ | — | enum，默认 daily |
 | CM-11 | 组合列表：卡片展示名称、描述、类型、币种 | ✅ | — | — |
@@ -156,14 +156,14 @@ Portfolio {
 
 #### 4.1.7 未实现项评估与开发计划（2026-08-31 实证核对）
 
-§4.1 共 20 条需求：**19 条已实现**（T1/T2/T3 落地后），**仅剩 1 条未实现**（CM-08，T4 批次4）：
+§4.1 共 20 条需求：**20 条全部实现**（T1/T2/T3/T4 落地后，2026-08-31）：
 
 | 项 | 证据 | 规模 |
 |---|---|---|
 | ~~CM-05 accountType~~ ✅ **T1 已完成** | `models/portfolio.js` 增加 accountType（默认 other）；表单下拉 + 卡片徽标 + API 文档 + 2 条模型测试 | 小 |
 | ~~CM-12 列表卡片增强~~ ✅ **T2 已完成** | `GET /api/portfolios/summary` + PortfolioCard 市值分桶/持仓数/漂移徽标；批次1 补充未读提醒数后全量落地 | 中 |
 | ~~CM-20 归档~~ ✅ **T3 已完成** | model `archived`（默认 false）+ 列表过滤/归档开关/卡片徽标 + 再平衡调度三层防护 + 10 条测试 | 小 |
-| CM-08 大类层级 | `models/asset.js` 无 assetClass 字段（受 AS-09 阻塞） | 大 |
+| ~~CM-08 大类层级~~ ✅ **T4 已完成** | targets `level: asset_class`（二选一）+ 聚合器 + threshold/suggestion/ratios 大类模式 + 前端大类视图（前置 AS-09 就绪后实施） | 大 |
 
 **开发计划（T1→T2→T3 顺序执行，T4 暂缓）**：
 
@@ -172,7 +172,7 @@ Portfolio {
 | **T1 · CM-05 账户类型** ✅ **已完成（2026-08-31）** | model `accountType` enum 默认 other + PortfolioForm 下拉 + PortfolioCard 徽标 + API_CONTRACT 文档 + 2 条模型测试 | 与 type（风险定位）正交；存量组合读取侧按 other 兜底 | `npm test` 60/60 通过；`npm run lint` 清洁；`npm run build` 成功 |
 | **T2 · CM-12 卡片增强** ✅ **已完成（2026-08-31，提醒数待批次1）** | ① `GET /api/portfolios/summary`（`services/portfolio/summary.js`：buildPortfolioSummary 纯函数 + computeSummary 编排）② PortfolioCard 市值分桶/持仓数/漂移徽标 ③ usePortfolios 切换到 summary | 市值按币种分桶（不跨币种合计）；缺价币种桶为 null 显示「—」；drift 仅计绝对/相对偏离（timeInterval 不算漂移）；无 targets/无持仓/缺价 → drift null | `npm test` 70/70（新增 10 条）；lint 清洁；build 成功 |
 | **T3 · CM-20 归档** ✅ **已完成（2026-08-31）** | ① model `archived` 默认 false ② summary 默认过滤 + `?includeArchived=true` + List「显示已归档」开关 + 卡片「已归档」徽标（opacity 弱化）+ Form 归档复选框（仅编辑）③ initSchedules 查询过滤 + 循环防御 + cron 回调运行时守卫 | 归档不删除任何数据；运行时守卫以数据库当前状态为准（注册后归档也生效）；是批次2 家庭视图排除归档组合的前置 | `npm test` 80/80（新增 10 条：模型默认值/调度过滤/运行时守卫/summary 过滤/HTTP 契约）；lint 清洁；build 成功 |
-| **T4 · CM-08 大类层级** | 批次4（前置 AS-09 已就绪，2026-08-31） | targets 需支持 level: asset_class；thresholdChecker/suggestionGenerator 均需扩展 | 见 PRD §4.5 RB-11 |
+| **T4 · CM-08 大类层级** ✅ **已完成（2026-08-31）** | targets 支持 `level: asset_class`（二选一，混合禁止）；thresholdChecker 大类聚合伪持仓复用 symbol 口径；suggestionGenerator 大类缺口按类内市值占比摊分；actual-ratios `?level=asset_class`；前端大类/资产级切换 | 大类目标与小类结构正交——按类内占比摊分保持大类内部结构；新大类无持仓/未分类持仓给 warning | `npm test` 133/133（新增 15 条）；lint 清洁；build 成功 |
 
 **验证方式**：T1-T3 每任务完成即 `npm test`（58 用例 + 新增用例，无需 MongoDB）；端到端验证需本地 MongoDB（`npm run verify`，Windows 侧 MongoDB 可用性待确认）。
 
@@ -431,7 +431,7 @@ AlertEvent {
 | RB-08 | AUTO 调度：按 rebalanceSchedule（daily/weekly/monthly）自动检查并生成建议（不自动执行） | ✅ | — | 触发 alertCenter.notify → 写入 AlertEvent（action 级），Dashboard 通知中心可见（已接入） |
 | RB-09 | 前端：待确认建议恢复展示、最近执行记录、双层饼图（当前 vs 执行后） | ✅ | — | — |
 | RB-10 | 建议费用模型与交易 fee 字段口径统一 | 🔲 | P1（批次3） | TR-06 落地后，建议预估费用与实际交易记录 fee 可对账 |
-| RB-11 | 大类层再平衡（equity/bond/gold/cash） | 🔲 | P2（批次4） | 依赖 AS-09 + CM-08 |
+| RB-11 | 大类层再平衡（equity/bond/gold/cash） | ✅ | P2（批次4） | 已实现：大类目标 → 类内市值占比摊分 symbol 级建议（保持大类内部结构）；新大类无持仓记 `CLASS_NO_POSITIONS`、未分类持仓记 `UNCLASSIFIED_POSITIONS`；建议标注 assetClass；RebalanceRecord 记 classMode |
 
 #### 4.5.4 数据模型（现状）
 
@@ -469,7 +469,7 @@ RebalanceRecord {
 | 项 | 优先级 | 批次 |
 |---|---|---|
 | RB-10 费用口径统一 | P1 | 3 |
-| RB-11 大类层再平衡 | P2 | 4 |
+| ~~RB-11 大类层再平衡~~ ✅ 已完成（2026-08-31，随 CM-08/T4） | P2 | 4 |
 
 ## 5. 里程碑（按裁决更新）
 
@@ -478,7 +478,7 @@ RebalanceRecord {
 | 1 | **提醒中心 + 港股接入** ✅ **已完成（2026-08-31）** | AlertRule/AlertEvent + 04:00 跑批 + Dashboard 通知中心 + 规则管理页（仅 Dashboard 显示）；HK market + HKD + Yahoo 港股实测（0700.HK/1211.HK） |
 | 2 | **汇率 + 家庭视图** ✅ **已完成（2026-08-31）** | FxRate 模型与每日采集（er-api 公开源 + 手动录入兜底）；`/api/family/summary`（RMB 基准 + 币种分桶 + 组合贡献 + 最近动态）；家庭视图页（总资产卡片/分桶卡/贡献列表/动态流/汇率管理）。注：CM-05 accountType / CM-12 卡片增强已在批次1 前完成（T1/T2） |
 | 3 | **交易增强** | fee / 分红 / A股整手 / CSV 导入 |
-| 4 | **大类配置层**（可选） | asset_class 聚合视图与再平衡 |
+| 4 | **大类配置层** ✅ **已完成（2026-08-31）** | assetClass 字段（AS-09）+ 大类目标聚合视图与再平衡（CM-08/RB-11，targets level 二选一 + 类内摊分） |
 
 ## 6. 更新记录
 
@@ -495,3 +495,4 @@ RebalanceRecord {
 | 2026-08-31 | **PRD 状态勾选（批次1 收官核对）**：CM-12 ◐→✅（未读提醒数落地）、FAM-03 🔲→✅（通知中心即其落地形态）、§4.1.7 完成度 16/20→19/20（CM-05/12/20 划线标注 T1/T2/T3）、§4.1.4 增量注释更新、§4.2/§4.4 概述与数据模型标题更新、RB-08 验收标准更新（通知中心已接入）、里程碑批次1 标 ✅、批次2 交付列表移除已提前完成的 CM-05/CM-12 |
 | 2026-08-31 | **家庭层完成（批次2，FAM-01/02/04）**：FxRate 模型（currency/rateToCny/date/source，按 (currency,date) 幂等 upsert）+ fxRate.service（getLatestRates/upsertRate/syncLatestRates，er-api 免 key 公开源，失败降级可手动录入）+ fxScheduler 每日 09:30 采集；familySummary.service（buildCurrencyBuckets/buildFamilySummary 纯函数 + computeFamilySummary 编排：RMB 基准总资产、USD/CAD/CNY/HKD 分桶、组合贡献占比、缺价/缺汇率标 null 不误报、最近交易/再平衡动态）；/api/family 四端点；客户端家庭视图页（总资产卡片 + 分桶卡 + 贡献列表 + 动态流 + 汇率管理）。测试 server 114/114（新增 12：family.summary），lint/build 清洁 |
 | 2026-08-31 | **AS-09 assetClass 完成（CM-08 前置就绪）**：三份常量加 ASSET_CLASSES（equity/bond/gold/cash，与 ASSET_TYPES 正交）；server/cron-worker asset 模型加 assetClass（enum 显式含 null=未分类）；asset.service 白名单/规范化/筛选（unclassified→null 特例）；controller 校验 + 透传；客户端 AssetForm 下拉（含说明文案）+ AssetList 大类列/筛选/排序。测试 server 118/118（新增 4：规范化/非法拒绝/筛选/模型枚举）、cron-worker 69/69、lint/build 清洁。**注意**：mongoose enum 须显式含 null 才允许未分类（踩坑） |
+| 2026-08-31 | **大类层级完成（批次4，CM-08/RB-11/T4）**：targets 支持 `level: 'asset'|'asset_class'`（二选一，混合禁止；model 去 uppercase 改由 normalizeTargets 按 level 规范化大小写）；assetClassAggregator（aggregateByAssetClass/buildClassPositions/hasClassTargets/deriveSymbolTargets 纯函数 + getAssetClassMap）；thresholdChecker 大类模式（聚合伪持仓复用 evaluateThresholds）；suggestionGenerator 大类摊分（类内市值占比 → symbol 目标；CLASS_NO_POSITIONS/UNCLASSIFIED_POSITIONS warning；建议标注 assetClass；RebalanceRecord.classMode）；actual-ratios `?level=asset_class`（币种内大类占比）；summary/alertEngine 组合漂移同口径兼容；前端 TargetAllocation 大类视图 + PortfolioForm 层级切换。测试 server 133/133（新增 15：targets 校验 4 + 聚合器 6 + threshold 1 + ratios 1 + HTTP 3），lint/build 清洁。§4.1 20/20 全部实现 |

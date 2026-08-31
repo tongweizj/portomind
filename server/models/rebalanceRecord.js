@@ -46,6 +46,8 @@ const RebalanceRecordSchema = new Schema({
   feeModel: { type: Schema.Types.Mixed, default: () => ({}) },
   cashBudget: { type: Number, default: 0, min: 0 },
   funding: { type: Schema.Types.Mixed, default: () => ({}) },
+  // CM-08：大类目标模式标记（建议由大类目标摊分生成）
+  classMode: { type: Boolean, default: false },
   executedTransactionIds: [{ type: Types.ObjectId, ref: 'Transaction' }],
   reversalTransactionIds: [{ type: Types.ObjectId, ref: 'Transaction' }],
   sourceRecordId: { type: Types.ObjectId, ref: 'RebalanceRecord', default: null },

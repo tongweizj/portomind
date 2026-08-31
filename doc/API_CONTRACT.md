@@ -65,19 +65,19 @@ Portfolio 枚举：`type`（风险定位）为 `活钱 | 稳健 | 长期`；`acc
 | `DELETE /api/prices/:id` | Path: `id` | 删除的 Price | `200`; `404` |
 | `GET /api/portfolios` | Query: `page,pageSize` | Portfolio 数组 + 分页 | `200` |
 | `GET /api/portfolios/summary` | `includeArchived`（可选，默认 `false`：CM-20 归档组合默认排除，传 `true` 包含） | Portfolio 数组（含 `stats: {positionCount, marketValueByCurrency, drift}`）。市值按币种分桶，不跨币种合计；某币种存在缺价持仓则该桶为 `null`。`drift` 仅反映绝对/相对偏离触发；无目标配置、无持仓或缺价时为 `null` | `200` |
-| `POST /api/portfolios` | Body: `{name,description?,type?,currency?,accountType?,archived?,targets?,rebalanceSettings?}` | 新 Portfolio | `201`; `400` |
+| `POST /api/portfolios` | Body: `{name,description?,type?,currency?,accountType?,archived?,targets?,rebalanceSettings?}`。targets 每项：`{symbol,targetRatio,level?:'asset'\|'asset_class'}`（CM-08：缺省 asset；大类代码 equity/bond/gold/cash 小写；混合模式 400） | 新 Portfolio | `201`; `400` |
 | `GET /api/portfolios/:id` | Path: `id` | Portfolio | `200`; ID 无效 `400`; `404` |
 | `PUT /api/portfolios/:id` | Path: `id`; Body: Portfolio 可更新字段 | 更新后 Portfolio | `200`; `400`; `404` |
 | `DELETE /api/portfolios/:id` | Path: `id` | `{portfolio,deletedTransactions,deletedRebalanceRecords}`；级联删除交易和再平衡记录 | `200`; `400`; `404` |
 | `GET /api/portfolios/:id/stats` | Path: `id` | 按 symbol 聚合的统计数组 | `200`; `500` |
-| `GET /api/portfolios/:id/stats/actual-ratios` | Path: `id` | `[{symbol,currency,ratio}]`；比例按原币种分别计算 | `200`; `500` |
+| `GET /api/portfolios/:id/stats/actual-ratios` | Path: `id`; Query: `level?`（`asset` 默认 / `asset_class`：按币种内大类占比返回，symbol 为大类代码） | `[{symbol,currency,ratio}]`；比例按原币种分别计算 | `200`; `500` |
 | `GET /api/portfolios/:pid/stats/positions` | Path: `pid`; Query: `page,pageSize,symbol?,sortBy?,sortOrder?` | 持仓数组 + 分页；缺价时估值字段为 null | `200`; 非法账本 `400`; `500` |
 | `GET /api/portfolios/:pid/positions/history` | Path: `pid`; Query: `symbol?`, `interval=day\|week\|month` | 按日期及原币种分行的持仓时间序列 | `200`; interval 或账本无效 `400` |
 | `GET /api/portfolios/:pid/transactions` | Path: `pid`; Query: `symbol?,page,pageSize` | Transaction 数组 + 分页 | `200`; `500` |
 | `GET /api/portfolios/:pid/rebalance-settings` | Path: `pid` | RebalanceSettings | `200`; `404` |
 | `PUT /api/portfolios/:pid/rebalance-settings` | Path: `pid`; Body: `{absoluteDeviation?,relativeDeviation?,timeInterval?,rebalanceSchedule?}` | 更新后 RebalanceSettings | `200`; `400`; `404` |
 | `POST /api/portfolios/:pid/rebalance/check` | Path: `pid`; 空 Body | `{needsRebalance,triggeredThresholds,totalValue,details,reasons}` | `200`; `404`; `500` |
-| `POST /api/portfolios/:pid/rebalance/suggestions` | Path: `pid`; Body: `{feeModel?: {fixedFee?,ratioFee?,taxRate?},cashBudget?: number}` | `{recordId,status:"PENDING",suggestions,triggeredThresholds,thresholdDetails,warnings,funding}` | `201`; 参数无效 `400`; `404` |
+| `POST /api/portfolios/:pid/rebalance/suggestions` | Path: `pid`; Body: `{feeModel?: {fixedFee?,ratioFee?,taxRate?},cashBudget?: number}` | `{recordId,status:"PENDING",suggestions,triggeredThresholds,thresholdDetails,warnings,funding,classMode?}`。CM-08：大类目标模式下建议按类内市值占比摊分并标注 `assetClass`；warnings 含 `CLASS_NO_POSITIONS:xx` / `UNCLASSIFIED_POSITIONS` | `201`; 参数无效 `400`; `404` |
 | `POST /api/portfolios/:pid/rebalance/execute` | Path: `pid`; Body: `{recordId,suggestions: object[],mode:"MANUAL"}` | `{recordId,status:"EXECUTED",transactionIds}` | `200`; 请求体/自动执行 `400`; 状态冲突 `409`; `404` |
 | `GET /api/portfolios/:pid/rebalance/history` | Path: `pid`; Query: `page,pageSize` | RebalanceRecord 数组 + 分页 | `200`; `500` |
 | `GET /api/transactions` | Query: `page,pageSize,portfolioId?,symbol?`；按 `date DESC,_id DESC` | Transaction 数组 + 分页 | `200` |

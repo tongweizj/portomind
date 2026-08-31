@@ -10,8 +10,8 @@ export const getPortfoliosSummary = async ({ includeArchived = false } = {}) =>
 export const getPortfolio = async (id) => (await api.get(`/portfolios/${id}`)).data;
 export const updatePortfolio = async (id, data) => (await api.put(`/portfolios/${id}`, data)).data;
 export const deletePortfolio = async (id) => (await api.delete(`/portfolios/${id}`)).data;
-export const getActualRatios = async (id) =>
-  (await api.get(`/portfolios/${id}/stats/actual-ratios`)).data;
+export const getActualRatios = async (id, { level = 'asset' } = {}) =>
+  (await api.get(`/portfolios/${id}/stats/actual-ratios`, { params: { level } })).data;
 export const getRebalanceSettings = async (id) =>
   (await api.get(`/portfolios/${id}/rebalance-settings`)).data;
 export const updateRebalanceSettings = async (id, settings) =>

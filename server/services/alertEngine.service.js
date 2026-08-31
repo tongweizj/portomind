@@ -16,6 +16,7 @@ const Portfolio = require('../models/portfolio');
 const RebalanceRecord = require('../models/rebalanceRecord');
 const marketData = require('./marketData.service');
 const tracker = require('./portfolio/positionTracker');
+const aggregator = require('./portfolio/assetClassAggregator');
 const { buildPortfolioSummary } = require('./portfolio/summary');
 const { todayString } = require('../utils/marketTime');
 const { logger } = require('../config/logger');
@@ -117,9 +118,18 @@ async function computeDrift(portfolioId) {
       .lean()
   ]);
   if (!portfolio) return null;
+  // CM-08：大类目标模式下按大类伪持仓计算漂移（drift_exceed 规则口径一致）
+  let classPositions = null;
+  if (aggregator.hasClassTargets(portfolio.targets)) {
+    const assetClassBySymbol = await aggregator.getAssetClassMap(
+      positions.map(position => position.symbol)
+    );
+    classPositions = aggregator.buildClassPositions(positions, assetClassBySymbol);
+  }
   return buildPortfolioSummary({
     portfolio,
     positions,
+    classPositions,
     lastExecutedAt: lastExecuted?.executedAt || lastExecuted?.timestamp || null
   }).drift;
 }

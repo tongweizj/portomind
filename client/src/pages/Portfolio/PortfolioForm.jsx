@@ -1,14 +1,14 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router';
 import { ErrorState, LoadingState } from '../../components/DataState';
-import { PORTFOLIO_ACCOUNT_TYPES } from '../../constants/enums';
+import { PORTFOLIO_ACCOUNT_TYPES, ASSET_CLASSES } from '../../constants/enums';
 import { ROUTES } from '../../constants/routes';
 import { getApiErrorMessage } from '../../services/api';
 import { getAssets } from '../../services/asset.service';
 import { createPortfolio, getPortfolio, updatePortfolio } from '../../services/portfolio.service';
 import { validatePortfolioTargets } from '../../utils/portfolioValidation';
 
-const emptyTarget = () => ({ symbol: '', targetRatio: 0 });
+const emptyTarget = (level = 'asset') => ({ symbol: '', targetRatio: 0, level });
 
 export default function PortfolioForm() {
   const navigate = useNavigate();
@@ -17,6 +17,7 @@ export default function PortfolioForm() {
   const [form, setForm] = useState({
     name: '', description: '', type: '稳健', currency: 'CAD', accountType: 'other', archived: false, targets: [emptyTarget()]
   });
+  const [targetLevel, setTargetLevel] = useState('asset'); // CM-08：asset / asset_class
   const [assets, setAssets] = useState([]);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState(false);
@@ -45,6 +46,8 @@ export default function PortfolioForm() {
             archived: portfolio.archived === true,
             targets: portfolio.targets?.length ? portfolio.targets : []
           });
+          const classMode = portfolio.targets?.some(target => target.level === 'asset_class');
+          if (classMode) setTargetLevel('asset_class');
         }
       })
       .catch(() => active && setLoadError(true))
@@ -81,7 +84,8 @@ export default function PortfolioForm() {
         ...form,
         targets: form.targets.map(target => ({
           symbol: target.symbol.trim().toUpperCase(),
-          targetRatio: Number(target.targetRatio)
+          targetRatio: Number(target.targetRatio),
+          level: targetLevel
         }))
       };
       const saved = isEdit
@@ -154,30 +158,56 @@ export default function PortfolioForm() {
           <div className="flex items-center justify-between">
             <h2 className="text-lg font-semibold">目标配置</h2>
             <div className="flex items-center gap-4">
+              {/* CM-08：目标层级切换（切换时重置目标，避免混合） */}
+              <div className="flex rounded-lg border border-gray-200 overflow-hidden text-sm">
+                {[{ key: 'asset', label: '资产级' }, { key: 'asset_class', label: '大类级' }].map(item => (
+                  <button key={item.key} type="button"
+                    onClick={() => {
+                      setTargetLevel(item.key);
+                      setForm(current => ({ ...current, targets: [emptyTarget(item.key)] }));
+                    }}
+                    className={`px-3 py-1 ${targetLevel === item.key ? 'bg-blue-600 text-white' : 'bg-white text-gray-600 hover:bg-gray-50'}`}>
+                    {item.label}
+                  </button>
+                ))}
+              </div>
               <span className={targetError ? 'text-sm text-red-700' : 'text-sm text-green-700'}>
                 合计 {targetTotal.toFixed(2)}%
               </span>
-              <button type="button" onClick={() => setForm(current => ({ ...current, targets: [...current.targets, emptyTarget()] }))}
-                className="text-sm text-blue-600">+ 添加资产</button>
+              <button type="button" onClick={() => setForm(current => ({ ...current, targets: [...current.targets, emptyTarget(targetLevel)] }))}
+                className="text-sm text-blue-600">{targetLevel === 'asset_class' ? '+ 添加大类' : '+ 添加资产'}</button>
             </div>
           </div>
-          {form.targets.length === 0 && <p className="text-sm text-gray-500">当前未配置目标资产。</p>}
+          {form.targets.length === 0 && <p className="text-sm text-gray-500">当前未配置目标{targetLevel === 'asset_class' ? '大类' : '资产'}。</p>}
           {form.targets.map((target, index) => (
             <div key={index} className="flex flex-wrap items-center gap-2">
-              <select value={target.symbol} required onChange={event => handleTargetChange(index, 'symbol', event.target.value)}
-                className="min-w-52 flex-1 rounded border px-3 py-2">
-                <option value="">请选择资产</option>
-                {assets.map(asset => <option key={asset._id} value={asset.symbol}>{asset.symbol} - {asset.name}</option>)}
-              </select>
+              {targetLevel === 'asset_class' ? (
+                <select value={target.symbol} required onChange={event => handleTargetChange(index, 'symbol', event.target.value)}
+                  className="min-w-52 flex-1 rounded border px-3 py-2">
+                  <option value="">请选择大类</option>
+                  {ASSET_CLASSES.map(option => <option key={option.value} value={option.value}>{option.label}</option>)}
+                </select>
+              ) : (
+                <select value={target.symbol} required onChange={event => handleTargetChange(index, 'symbol', event.target.value)}
+                  className="min-w-52 flex-1 rounded border px-3 py-2">
+                  <option value="">请选择资产</option>
+                  {assets.map(asset => <option key={asset._id} value={asset.symbol}>{asset.symbol} - {asset.name}</option>)}
+                </select>
+              )}
               <input type="number" value={target.targetRatio} min="0" max="100" step="any" required
                 onChange={event => handleTargetChange(index, 'targetRatio', event.target.value)}
-                className="w-28 rounded border px-3 py-2" aria-label={`${target.symbol || '资产'}目标比例`} />
+                className="w-28 rounded border px-3 py-2" aria-label={`${target.symbol || '目标'}比例`} />
               <span>%</span>
               <button type="button" onClick={() => setForm(current => ({
                 ...current, targets: current.targets.filter((_, targetIndex) => targetIndex !== index)
               }))} className="text-sm text-red-600">删除</button>
             </div>
           ))}
+          {targetLevel === 'asset_class' && (
+            <p className="text-xs text-gray-500">
+              大类目标模式下，再平衡建议会按类内持仓市值占比自动摊分到具体资产；未分类资产计入「未分类」偏离。
+            </p>
+          )}
           {targetError && <p className="text-sm text-red-700">{targetError}</p>}
         </section>
 

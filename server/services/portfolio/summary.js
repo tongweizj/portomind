@@ -12,13 +12,25 @@ const Portfolio = require('../../models/portfolio');
 const RebalanceRecord = require('../../models/rebalanceRecord');
 const AlertEvent = require('../../models/alertEvent');
 const tracker = require('./positionTracker');
+const aggregator = require('./assetClassAggregator');
 const { evaluateThresholds } = require('../rebalance/thresholdChecker');
 
 const DRIFT_THRESHOLDS = ['absoluteDeviation', 'relativeDeviation'];
 
-/** 纯函数：单组合统计。positions 为 calculatePositions 输出（含 marketValue/currency）。 */
-function buildPortfolioSummary({ portfolio, positions = [], lastExecutedAt = null, now = new Date() }) {
+/**
+ * 纯函数：单组合统计。positions 为 calculatePositions 输出（含 marketValue/currency）。
+ * CM-08 大类目标模式：调用方（computeSummary/alertEngine）检测大类目标后传入
+ * classPositions（大类伪持仓），drift 按大类口径计算；未传时按 symbol 级计算。
+ */
+function buildPortfolioSummary({
+  portfolio,
+  positions = [],
+  classPositions = null,
+  lastExecutedAt = null,
+  now = new Date()
+}) {
   const positionCount = positions.length;
+  const driftPositions = classPositions || positions;
 
   const currencyBuckets = new Map();
   for (const position of positions) {
@@ -38,10 +50,10 @@ function buildPortfolioSummary({ portfolio, positions = [], lastExecutedAt = nul
   const targets = Array.isArray(portfolio.targets) ? portfolio.targets : [];
   const hasMissingPrice = positions.some(position => position.marketValue == null);
   let drift = null;
-  if (targets.length > 0 && positionCount > 0 && !hasMissingPrice) {
+  if (targets.length > 0 && driftPositions.length > 0 && !hasMissingPrice) {
     const result = evaluateThresholds({
       targets,
-      positions,
+      positions: driftPositions,
       settings: portfolio.rebalanceSettings || {},
       lastExecutedAt,
       now
@@ -81,12 +93,21 @@ async function computeSummary({ includeArchived = false } = {}) {
         .sort({ executedAt: -1, timestamp: -1 })
         .lean()
     ]);
+    // CM-08：大类目标模式下，drift 按大类伪持仓计算（组合卡片徽标口径一致）
+    let classPositions = null;
+    if (aggregator.hasClassTargets(portfolio.targets)) {
+      const assetClassBySymbol = await aggregator.getAssetClassMap(
+        positions.map(position => position.symbol)
+      );
+      classPositions = aggregator.buildClassPositions(positions, assetClassBySymbol);
+    }
     return {
       ...portfolio,
       stats: {
         ...buildPortfolioSummary({
           portfolio,
           positions,
+          classPositions,
           lastExecutedAt: lastExecuted?.executedAt || lastExecuted?.timestamp || null
         }),
         unreadAlertCount: unreadByPortfolio.get(portfolio._id.toString()) || 0
