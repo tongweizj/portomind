@@ -8,6 +8,9 @@ const rebalanceController = require('../controllers/rebalance.controller');
 // 组合, 增删改查
 router.post('/', portfolioController.createPortfolio);
 router.get('/', portfolioController.getAllPortfolios);
+// 固定路径路由先于 /:id 注册。
+// 组合, 列表汇总（含市值分桶/持仓数/漂移徽标，CM-12）
+router.get('/summary', portfolioController.getPortfoliosSummary);
 // 更具体的子资源路由先于 /:id 注册。
 // 组合, 统计
 router.get('/:id/stats/actual-ratios', portfolioController.getActualRatios); // 实时持仓比例

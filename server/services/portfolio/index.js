@@ -4,6 +4,7 @@ const stats         = require('./stats');
 const actualRatios  = require('./actualRatios');
 const lister         = require('./listPositions');
 const deletion       = require('./deletePortfolio');
+const summary        = require('./summary');
 
 module.exports = {
   getRebalanceSettings: settings.getRebalanceSettings,
@@ -14,5 +15,7 @@ module.exports = {
   computeStats: stats.computeStats,
   computeActualRatios: actualRatios.computeActualRatios,
   listPositions: lister.listPositions,
-  deletePortfolioCascade: deletion.deletePortfolioCascade
+  deletePortfolioCascade: deletion.deletePortfolioCascade,
+  computeSummary: summary.computeSummary,
+  buildPortfolioSummary: summary.buildPortfolioSummary
 };

@@ -38,6 +38,15 @@ exports.getAllPortfolios = async (req, res, next) => {
   }
 };
 
+// 组合列表汇总（CM-12）：全部组合 + 每组合 { positionCount, marketValueByCurrency, drift }。
+exports.getPortfoliosSummary = async (req, res, next) => {
+  try {
+    return success(res, await PortfolioService.computeSummary());
+  } catch (err) {
+    next(err);
+  }
+};
+
 exports.getPortfolioById = async (req, res, next) => {
   if (!validId(req, res, req.params.id)) return;
   try {

@@ -92,7 +92,7 @@ PortoMind 是 Max 家庭的自托管投资组合管理平台：家庭拥有多�
 | CM-09 | 再平衡参数：绝对偏离阈值（默认 5%）、相对偏离阈值（默认 10%）、时间间隔（默认 60 天），三项可独立启停 | ✅ | — | 0–100% 范围校验；间隔 ≥1 天 |
 | CM-10 | 再平衡检查频率：daily / weekly / monthly | ✅ | — | enum，默认 daily |
 | CM-11 | 组合列表：卡片展示名称、描述、类型、币种 | ✅ | — | — |
-| CM-12 | 组合列表卡片增强：当前市值（组合币种）、持仓资产数、漂移状态徽标、待处理提醒数 | 🔲 | P1 | 市值 = 持仓市值合计（复用 positions 聚合）；无持仓时显示「—」 |
+| CM-12 | 组合列表卡片增强：当前市值（组合币种）、持仓资产数、漂移状态徽标、待处理提醒数 | ◐ | P1 | 市值/持仓数/漂移徽标已完成（`GET /api/portfolios/summary`，市值按币种分桶）；待处理提醒数待批次1 AlertEvent 落地后补 |
 | CM-13 | 组合详情 Tab：概览 / 持仓 / 交易 / 持仓历史 / 再平衡 | ✅ | — | 路由 `PORTFOLIO_TAB` 模式 |
 | CM-14 | 组合统计：实时持仓比例（目标 vs 实际） | ✅ | — | `GET /:id/stats/actual-ratios` |
 | CM-15 | 组合统计：汇总统计 | ✅ | — | `GET /:id/stats` |
@@ -167,7 +167,7 @@ Portfolio {
 | 任务 | 内容 | 关键设计决策 | 验收 |
 |---|---|---|---|
 | **T1 · CM-05 账户类型** ✅ **已完成（2026-08-31）** | model `accountType` enum 默认 other + PortfolioForm 下拉 + PortfolioCard 徽标 + API_CONTRACT 文档 + 2 条模型测试 | 与 type（风险定位）正交；存量组合读取侧按 other 兜底 | `npm test` 60/60 通过；`npm run lint` 清洁；`npm run build` 成功 |
-| **T2 · CM-12 卡片增强** | ① 新端点 `GET /api/portfolios/summary`：一次返回全部组合 + 每组合 `{ marketValueByCurrency, positionCount, drift }`（避免前端 N+1 逐个调 stats）② PortfolioCard 显示市值、资产数、漂移徽标 | **市值按币种分桶展示**（如 ¥120,000 + $3,500，沿用「不同币种不直接合计」全局原则）；drift 复用 `thresholdChecker.checkThresholds` 口径；无持仓/无 targets/缺价格显示「—」不误报 | 多币种组合卡片分桶正确；触发漂移显黄徽标；无 targets 组合不显示漂移 |
+| **T2 · CM-12 卡片增强** ✅ **已完成（2026-08-31，提醒数待批次1）** | ① `GET /api/portfolios/summary`（`services/portfolio/summary.js`：buildPortfolioSummary 纯函数 + computeSummary 编排）② PortfolioCard 市值分桶/持仓数/漂移徽标 ③ usePortfolios 切换到 summary | 市值按币种分桶（不跨币种合计）；缺价币种桶为 null 显示「—」；drift 仅计绝对/相对偏离（timeInterval 不算漂移）；无 targets/无持仓/缺价 → drift null | `npm test` 70/70（新增 10 条）；lint 清洁；build 成功 |
 | **T3 · CM-20 归档** | ① model 加 `archived` 默认 false ② 列表默认过滤 + 「显示已归档」开关 ③ rebalance AUTO 调度跳过归档组合 | 归档不删除任何数据；是批次2 家庭视图排除归档组合的前置 | 归档组合不出现在调度日志与默认列表；数据完整保留 |
 | **T4 · CM-08 大类层级** | 暂缓至批次4（前置 AS-09 assetClass 字段 + 存量补数据） | targets 需支持 level: asset_class；thresholdChecker/suggestionGenerator 均需扩展 | 见 PRD §4.5 RB-11 |
 
@@ -485,3 +485,4 @@ RebalanceRecord {
 | 2026-08-31 | 细化完成其余四章：4.2 资产管理与历史价格（AS-01~11，含港股设计与数据源路由表）、4.3 交易记录（TR-01~09，含 fee/分红/整手/CSV 增量）、4.4 提醒（AL-01~10 整体新建，含 AlertRule/AlertEvent 数据模型与 API 设计）、4.5 再平衡建议（RB-01~11）；五大模块 PRD 全部完成 |
 | 2026-08-31 | §4.1.7 改写为实证评估 + 开发计划：16/20 已实现，T1 accountType → T2 卡片增强（summary 端点 + 市值按币种分桶）→ T3 归档，T4 大类层级暂缓（AS-09 阻塞） |
 | 2026-08-31 | **T1 完成**：工作区已有未提交的 accountType 实现（模型/枚举/表单/卡片/API文档/测试），逐项核对符合规格后全量验证（npm test 60/60、lint 清洁、build 成功），CM-05 置 ✅ |
+| 2026-08-31 | **T2 完成**：新增 `GET /api/portfolios/summary`（summary.js 纯函数+编排，10 条新测试），PortfolioCard 市值按币种分桶/持仓数/漂移徽标，usePortfolios 切换 summary；CM-12 置 ◐（提醒数留批次1）。提交 49b4edb(T1)/6fc6846(PRD)/本次 T2 |
