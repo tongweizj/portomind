@@ -36,7 +36,7 @@ PortoMind 是 Max 家庭的自托管投资组合管理平台：家庭拥有多�
 |---|---|---|---|
 | 1 | 家庭基准币种 | **RMB**；家庭视图须同时展示 **CNY / USD / CAD 三种币种各自的资产金额**（分桶展示），RMB 为折算基准总额。港股（HKD）资产折算 RMB 计入基准总额，分桶中单独列出 | §3 家庭层、§4.2 |
 | 2 | 成本口径 | **平均成本法**（移动平均，已实现，保持不变） | §4.3 |
-| 3 | 港股 | **纳入 MVP**：需监控腾讯（0700.HK）、比亚迪（1211.HK）等港股 | §4.2（market 枚举 + Yahoo 适配器已天然支持） |
+| 3 | 港股 | **纳入 MVP**：需监控腾讯（0700.HK）、比亚迪（1211.HK）等港股 | §4.2 ✅ 已实现（AS-08，2026-08-31） |
 | 4 | 提醒推送渠道 | **仅 Dashboard 站内显示**（通知中心页面），不做邮件/Webhook | §4.4 |
 | 5 | 部署形态 | 家庭服务器，不部署公网 | §1 |
 | 6 | 旧 `canonical_schema.json` | 「建议操作/建议理由」并入提醒模块的 **signal 规则**，其余字段由现有模型覆盖 | §4.4 |
@@ -57,7 +57,7 @@ PortoMind 是 Max 家庭的自托管投资组合管理平台：家庭拥有多�
 |---|---|---|---|
 | FAM-01 | 家庭 Dashboard：以 RMB 折算的家庭总资产 + CNY/USD/CAD（及 HKD，如有持仓）各自金额分桶展示 | 🔲 | P0（批次2） |
 | FAM-02 | 按组合贡献分解（各组合市值、占家庭比例，RMB 基准） | 🔲 | P0（批次2） |
-| FAM-03 | 待处理提醒入口（§4.4 通知中心） | 🔲 | P0（批次1） |
+| FAM-03 | 待处理提醒入口（§4.4 通知中心） | ✅ | P0（批次1） |
 | FAM-04 | 最近交易与再平衡动态 | 🔲 | P1 |
 
 前置依赖：FxRate 汇率模型与每日采集（BOC 中间价 CAD/USD + 央行 CNY 中间价；含 HKD）。
@@ -92,7 +92,7 @@ PortoMind 是 Max 家庭的自托管投资组合管理平台：家庭拥有多�
 | CM-09 | 再平衡参数：绝对偏离阈值（默认 5%）、相对偏离阈值（默认 10%）、时间间隔（默认 60 天），三项可独立启停 | ✅ | — | 0–100% 范围校验；间隔 ≥1 天 |
 | CM-10 | 再平衡检查频率：daily / weekly / monthly | ✅ | — | enum，默认 daily |
 | CM-11 | 组合列表：卡片展示名称、描述、类型、币种 | ✅ | — | — |
-| CM-12 | 组合列表卡片增强：当前市值（组合币种）、持仓资产数、漂移状态徽标、待处理提醒数 | ◐ | P1 | 市值/持仓数/漂移徽标已完成（`GET /api/portfolios/summary`，市值按币种分桶）；待处理提醒数待批次1 AlertEvent 落地后补 |
+| CM-12 | 组合列表卡片增强：当前市值（组合币种）、持仓资产数、漂移状态徽标、待处理提醒数 | ✅ | P1 | 市值按币种分桶 + 持仓数 + 漂移徽标 + 未读提醒数（`GET /api/portfolios/summary` 返回 `stats.unreadAlertCount`，组合卡片显示「N 条未读提醒」）全部落地 |
 | CM-13 | 组合详情 Tab：概览 / 持仓 / 交易 / 持仓历史 / 再平衡 | ✅ | — | 路由 `PORTFOLIO_TAB` 模式 |
 | CM-14 | 组合统计：实时持仓比例（目标 vs 实际） | ✅ | — | `GET /:id/stats/actual-ratios` |
 | CM-15 | 组合统计：汇总统计 | ✅ | — | `GET /:id/stats` |
@@ -118,9 +118,9 @@ Portfolio {
     rebalanceSchedule  enum ['daily','weekly','monthly'] 默认 'daily'
   }
   createdAt       Date
+  // ✅ 已实现（T1，2026-08-31）：accountType enum ['tiantian','xueqiu','tfsa','rrsp','resp','taxable','other'] 默认 'other'
+  // ✅ 已实现（T3，2026-08-31）：archived Boolean 默认 false
 }
-// 🔲 P1 增量：accountType enum ['tiantian','xueqiu','tfsa','rrsp','resp','taxable','other'] 默认 'other'
-// 🔲 P2 增量：archived Boolean 默认 false
 ```
 
 #### 4.1.5 API 面（现状）
@@ -153,13 +153,13 @@ Portfolio {
 
 #### 4.1.7 未实现项评估与开发计划（2026-08-31 实证核对）
 
-§4.1 共 20 条需求：**16 条已实现**（代码证据核对完毕），**4 条未实现**：
+§4.1 共 20 条需求：**19 条已实现**（T1/T2/T3 落地后），**仅剩 1 条未实现**（CM-08，T4 批次4）：
 
 | 项 | 证据 | 规模 |
 |---|---|---|
-| CM-05 accountType | `models/portfolio.js` 无此字段；`PortfolioForm.jsx` 仅 name/description/type/currency/targets | 小 |
-| CM-12 列表卡片增强 | `PortfolioCard/index.jsx` 仅显示名称/描述/类型/币种；`getAllPortfolios` 返回裸文档无统计 | 中 |
-| CM-20 归档 | 模型无 archived 字段；调度器无过滤逻辑 | 小 |
+| ~~CM-05 accountType~~ ✅ **T1 已完成** | `models/portfolio.js` 增加 accountType（默认 other）；表单下拉 + 卡片徽标 + API 文档 + 2 条模型测试 | 小 |
+| ~~CM-12 列表卡片增强~~ ✅ **T2 已完成** | `GET /api/portfolios/summary` + PortfolioCard 市值分桶/持仓数/漂移徽标；批次1 补充未读提醒数后全量落地 | 中 |
+| ~~CM-20 归档~~ ✅ **T3 已完成** | model `archived`（默认 false）+ 列表过滤/归档开关/卡片徽标 + 再平衡调度三层防护 + 10 条测试 | 小 |
 | CM-08 大类层级 | `models/asset.js` 无 assetClass 字段（受 AS-09 阻塞） | 大 |
 
 **开发计划（T1→T2→T3 顺序执行，T4 暂缓）**：
@@ -173,13 +173,13 @@ Portfolio {
 
 **验证方式**：T1-T3 每任务完成即 `npm test`（58 用例 + 新增用例，无需 MongoDB）；端到端验证需本地 MongoDB（`npm run verify`，Windows 侧 MongoDB 可用性待确认）。
 
-**CM-12 特别说明**：待处理提醒数字段**本任务不做**，待批次1 AlertEvent 落地后一行补上（前端预留位置）。
+**CM-12 特别说明**：待处理提醒数字段已在批次1 落地（`stats.unreadAlertCount` + 组合卡片徽标），CM-12 全部完成。
 
 ### 4.2 资产管理与历史价格（已细化）
 
 #### 4.2.1 模块概述
 
-资产是全局主数据：同一 symbol 全系统唯一，可被多个组合的 targets 与交易引用。价格是资产行情时序（按日），由 cron-worker 自动采集，前端只读。资产市场覆盖美股、加股、A股（沪/深）、场外基金，**港股为当前增量（裁决 #3）**。
+资产是全局主数据：同一 symbol 全系统唯一，可被多个组合的 targets 与交易引用。价格是资产行情时序（按日），由 cron-worker 自动采集，前端只读。资产市场覆盖美股、加股、A股（沪/深）、场外基金、**港股（裁决 #3，AS-08 已实现并实测腾讯/比亚迪）**。
 
 #### 4.2.2 用户故事
 
@@ -311,7 +311,7 @@ Transaction {
 | TR-08 A股整手警告 | P1 | 3 |
 | TR-09 CSV 导入 | P1 | 3 |
 
-### 4.4 提醒（已细化——当前最大缺口）
+### 4.4 提醒（✅ 已实现——批次1，2026-08-31）
 
 #### 4.4.1 模块概述
 
@@ -322,7 +322,7 @@ Transaction {
 
 展示渠道：**仅 Dashboard 通知中心**（裁决 #4），不做邮件/Webhook/外部推送。
 
-现状：`alertCenter.service.js` 仅为再平衡事件的 EventEmitter 桩（42 行），无规则模型、无跑批、无通知中心——本模块为**整体新建**。
+实现情况（2026-08-31）：`alertRule.js` / `alertEvent.js` 模型、`alertEngine.service.js` 评估引擎（5 规则类型 + 逐规则故障隔离 + cooldown 去重 + 同日幂等）、`alertScheduler.js` 每日 04:00 跑批、`/api/alerts` 六端点、Dashboard 通知中心（Header 未读徽标 + 面板）与规则管理页全部落地；原 `alertCenter.service.js` 桩已改造为再平衡通知写入 AlertEvent（action 级）。
 
 #### 4.4.2 用户故事
 
@@ -346,7 +346,7 @@ Transaction {
 | AL-09 | 52 周新高/新低规则 | 🔲 | P2 | 批次1 后 |
 | AL-10 | 估值分位规则（A股宽基 PE/PB 分位，输入来自 AS-11） | 🔲 | P2 | 依赖 AS-11 |
 
-#### 4.4.4 数据模型（新建）
+#### 4.4.4 数据模型（✅ 已实现 2026-08-31）
 
 ```
 AlertRule {
@@ -375,7 +375,7 @@ AlertEvent {
 }
 ```
 
-#### 4.4.5 API 面（新建）
+#### 4.4.5 API 面（✅ 已实现 2026-08-31）
 
 | 方法 | 路径 | 用途 | 状态 |
 |---|---|---|---|
@@ -425,7 +425,7 @@ AlertEvent {
 | RB-05 | 执行：确认后按建议创建内部交易流水（不连券商）；RebalanceRecord PENDING→EXECUTED | ✅ | — | executedTransactionIds 关联生成交易 |
 | RB-06 | 撤销：对 EXECUTED 记录生成反向交易，状态→REVOKED | ✅ | — | reversalTransactionIds 关联；持仓与成本恢复 |
 | RB-07 | 重做：对 REVOKED 记录可重新生成待确认建议（sourceRecordId 链） | ✅ | — | — |
-| RB-08 | AUTO 调度：按 rebalanceSchedule（daily/weekly/monthly）自动检查并生成建议（不自动执行） | ✅ | — | 触发 alertCenter.notify（§4.4 通知中心接入后可见） |
+| RB-08 | AUTO 调度：按 rebalanceSchedule（daily/weekly/monthly）自动检查并生成建议（不自动执行） | ✅ | — | 触发 alertCenter.notify → 写入 AlertEvent（action 级），Dashboard 通知中心可见（已接入） |
 | RB-09 | 前端：待确认建议恢复展示、最近执行记录、双层饼图（当前 vs 执行后） | ✅ | — | — |
 | RB-10 | 建议费用模型与交易 fee 字段口径统一 | 🔲 | P1（批次3） | TR-06 落地后，建议预估费用与实际交易记录 fee 可对账 |
 | RB-11 | 大类层再平衡（equity/bond/gold/cash） | 🔲 | P2（批次4） | 依赖 AS-09 + CM-08 |
@@ -472,8 +472,8 @@ RebalanceRecord {
 
 | 批次 | 内容 | 关键交付 |
 |---|---|---|
-| 1 | **提醒中心 + 港股接入** | AlertRule/AlertEvent + 跑批 + 通知中心页（仅 Dashboard 显示）；HK market + HKD + Yahoo 港股验证 |
-| 2 | **汇率 + 家庭视图** | FxRate 模型与采集（CNY/USD/CAD/HKD）；`/api/family/summary`；家庭 Dashboard（RMB 基准 + 三币种分桶 + 组合贡献）；CM-05 accountType；CM-12 卡片增强 |
+| 1 | **提醒中心 + 港股接入** ✅ **已完成（2026-08-31）** | AlertRule/AlertEvent + 04:00 跑批 + Dashboard 通知中心 + 规则管理页（仅 Dashboard 显示）；HK market + HKD + Yahoo 港股实测（0700.HK/1211.HK） |
+| 2 | **汇率 + 家庭视图** | FxRate 模型与采集（CNY/USD/CAD/HKD）；`/api/family/summary`；家庭 Dashboard（RMB 基准 + 三币种分桶 + 组合贡献）。注：CM-05 accountType / CM-12 卡片增强已在批次1 前完成（T1/T2），不再属于本批次交付 |
 | 3 | **交易增强** | fee / 分红 / A股整手 / CSV 导入 |
 | 4 | **大类配置层**（可选） | asset_class 聚合视图与再平衡 |
 
@@ -489,3 +489,4 @@ RebalanceRecord {
 | 2026-08-31 | **T3 完成**：CM-20 组合归档落地——model `archived` 默认 false；summary 默认排除归档、`?includeArchived=true` 可选包含；List「显示已归档」开关 + 卡片徽标 + Form 归档复选框；再平衡调度三层防护（initSchedules 查询过滤 + 循环防御 + cron 回调运行时守卫）；CM-20 置 ✅，§4.1 待实现仅剩 CM-08（T4，批次4） |
 | 2026-08-31 | **AS-08 港股支持完成（批次1）**：server/cron-worker/client 三份枚举同步加 `HK`/`HKD`；fetcher 路由 market=HK 与 `.HK` 后缀 → Yahoo（`.CN` 互斥）；HK 交易日历（Asia/Hong_Kong 时区 + 2024/2025 官方节假日表 + 2026 推算，未维护年份告警 `HK_HOLIDAYS_YEAR_NOT_MAINTAINED`）；yahooFetcher `.HK` → market=HK。实测验收：0700.HK（腾讯 453 HKD）/1211.HK（比亚迪 87.2 HKD）实时+历史+开市判断通过。cron-worker 69/69、server 80/80、lint/build 清洁 |
 | 2026-08-31 | **提醒中心完成（批次1，AL-01~08）**：AlertRule/AlertEvent 模型（scope/ruleType/params/direction/validUntil/cooldownDays；事件含 level/snapshot/status 审计不可删）；alertEngine 评估引擎（5 规则类型严格边界、逐规则故障隔离、cooldown 去重、同日幂等、signal 常显/过期归档、drift 复用组合徽标口径）；alertScheduler 04:00 跑批（ALERT_EVAL_CRON + runTrackedTask）；/api/alerts 六端点；alertCenter.notify 改造为写 AlertEvent（再平衡通知入库）；summary 补 unreadAlertCount（CM-12 落地）；客户端 Header 未读徽标（5s 轮询）+ Dashboard 通知中心（未读/全部/组合筛选/标读/忽略/跳转）+ 规则管理页 + PortfolioCard 未读提醒数。测试 server 102/102（新增 22：engine 11 + api 11），lint/build 清洁 |
+| 2026-08-31 | **PRD 状态勾选（批次1 收官核对）**：CM-12 ◐→✅（未读提醒数落地）、FAM-03 🔲→✅（通知中心即其落地形态）、§4.1.7 完成度 16/20→19/20（CM-05/12/20 划线标注 T1/T2/T3）、§4.1.4 增量注释更新、§4.2/§4.4 概述与数据模型标题更新、RB-08 验收标准更新（通知中心已接入）、里程碑批次1 标 ✅、批次2 交付列表移除已提前完成的 CM-05/CM-12 |
