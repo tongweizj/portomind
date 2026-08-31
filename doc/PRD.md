@@ -49,18 +49,18 @@ PortoMind 是 Max 家庭的自托管投资组合管理平台：家庭拥有多�
 - 日价格按 `MARKET_TIMEZONE` 解释，数据库存 UTC；
 - 组合基础币种用于记账，跨币种折算仅在家庭视图发生（历史时点汇率，不用今日汇率重算历史市值——ROADMAP P3 原则）。
 
-## 3. 家庭层（新增层级）
+## 3. 家庭层（✅ 已实现——批次2，2026-08-31）
 
 家庭 = 组合的集合，无独立账号体系。家庭层提供：
 
 | 编号 | 需求 | 状态 | 优先级 |
 |---|---|---|---|
-| FAM-01 | 家庭 Dashboard：以 RMB 折算的家庭总资产 + CNY/USD/CAD（及 HKD，如有持仓）各自金额分桶展示 | 🔲 | P0（批次2） |
-| FAM-02 | 按组合贡献分解（各组合市值、占家庭比例，RMB 基准） | 🔲 | P0（批次2） |
+| FAM-01 | 家庭 Dashboard：以 RMB 折算的家庭总资产 + CNY/USD/CAD（及 HKD，如有持仓）各自金额分桶展示 | ✅ | P0（批次2） |
+| FAM-02 | 按组合贡献分解（各组合市值、占家庭比例，RMB 基准） | ✅ | P0（批次2） |
 | FAM-03 | 待处理提醒入口（§4.4 通知中心） | ✅ | P0（批次1） |
-| FAM-04 | 最近交易与再平衡动态 | 🔲 | P1 |
+| FAM-04 | 最近交易与再平衡动态 | ✅ | P1 |
 
-前置依赖：FxRate 汇率模型与每日采集（BOC 中间价 CAD/USD + 央行 CNY 中间价；含 HKD）。
+前置依赖：**FxRate 汇率模型与每日采集**——`models/fxRate.js`（currency/rateToCny/date/source）+ `services/fxRate.service.js`（最新汇率查询 / 每日 09:30 采集 / 手动录入）+ `tasks/fxScheduler.js`。数据源为 er-api 公开源（免 key，USD/CAD/HKD → CNY 对价）；**采集失败不阻塞服务，可手动录入兜底**（source='manual'）。注：原方案拟用 BOC/央行中间价，实现选用 er-api 免 key 公开源（家庭服务器网络环境更易生效），口径一致、可替换。
 
 ## 4. 五大功能模块
 
@@ -142,7 +142,10 @@ Portfolio {
 | POST | `/api/portfolios/:pid/rebalance/suggestions` | 生成建议 | ✅ |
 | POST | `/api/portfolios/:pid/rebalance/execute` | 执行（创建内部交易） | ✅ |
 | GET | `/api/portfolios/:pid/rebalance/history` | 再平衡历史 | ✅ |
-| GET | `/api/family/summary` | 家庭汇总（RMB 基准 + 三币种分桶） | 🔲 P0（批次2，依赖 FxRate） |
+| GET | `/api/family/summary` | 家庭汇总（RMB 基准 + 三币种分桶 + 组合贡献 + 最近动态） | ✅ 已实现（FAM-01/02/04） |
+| GET | `/api/family/fx/rates` | 最新汇率列表（含日期/来源） | ✅ |
+| PUT | `/api/family/fx/rates/:currency` | 手动录入汇率（source='manual'） | ✅ |
+| POST | `/api/family/fx/sync` | 手动触发汇率采集（失败 502） | ✅ |
 
 #### 4.1.6 测试要点
 
@@ -473,7 +476,7 @@ RebalanceRecord {
 | 批次 | 内容 | 关键交付 |
 |---|---|---|
 | 1 | **提醒中心 + 港股接入** ✅ **已完成（2026-08-31）** | AlertRule/AlertEvent + 04:00 跑批 + Dashboard 通知中心 + 规则管理页（仅 Dashboard 显示）；HK market + HKD + Yahoo 港股实测（0700.HK/1211.HK） |
-| 2 | **汇率 + 家庭视图** | FxRate 模型与采集（CNY/USD/CAD/HKD）；`/api/family/summary`；家庭 Dashboard（RMB 基准 + 三币种分桶 + 组合贡献）。注：CM-05 accountType / CM-12 卡片增强已在批次1 前完成（T1/T2），不再属于本批次交付 |
+| 2 | **汇率 + 家庭视图** ✅ **已完成（2026-08-31）** | FxRate 模型与每日采集（er-api 公开源 + 手动录入兜底）；`/api/family/summary`（RMB 基准 + 币种分桶 + 组合贡献 + 最近动态）；家庭视图页（总资产卡片/分桶卡/贡献列表/动态流/汇率管理）。注：CM-05 accountType / CM-12 卡片增强已在批次1 前完成（T1/T2） |
 | 3 | **交易增强** | fee / 分红 / A股整手 / CSV 导入 |
 | 4 | **大类配置层**（可选） | asset_class 聚合视图与再平衡 |
 
@@ -490,3 +493,4 @@ RebalanceRecord {
 | 2026-08-31 | **AS-08 港股支持完成（批次1）**：server/cron-worker/client 三份枚举同步加 `HK`/`HKD`；fetcher 路由 market=HK 与 `.HK` 后缀 → Yahoo（`.CN` 互斥）；HK 交易日历（Asia/Hong_Kong 时区 + 2024/2025 官方节假日表 + 2026 推算，未维护年份告警 `HK_HOLIDAYS_YEAR_NOT_MAINTAINED`）；yahooFetcher `.HK` → market=HK。实测验收：0700.HK（腾讯 453 HKD）/1211.HK（比亚迪 87.2 HKD）实时+历史+开市判断通过。cron-worker 69/69、server 80/80、lint/build 清洁 |
 | 2026-08-31 | **提醒中心完成（批次1，AL-01~08）**：AlertRule/AlertEvent 模型（scope/ruleType/params/direction/validUntil/cooldownDays；事件含 level/snapshot/status 审计不可删）；alertEngine 评估引擎（5 规则类型严格边界、逐规则故障隔离、cooldown 去重、同日幂等、signal 常显/过期归档、drift 复用组合徽标口径）；alertScheduler 04:00 跑批（ALERT_EVAL_CRON + runTrackedTask）；/api/alerts 六端点；alertCenter.notify 改造为写 AlertEvent（再平衡通知入库）；summary 补 unreadAlertCount（CM-12 落地）；客户端 Header 未读徽标（5s 轮询）+ Dashboard 通知中心（未读/全部/组合筛选/标读/忽略/跳转）+ 规则管理页 + PortfolioCard 未读提醒数。测试 server 102/102（新增 22：engine 11 + api 11），lint/build 清洁 |
 | 2026-08-31 | **PRD 状态勾选（批次1 收官核对）**：CM-12 ◐→✅（未读提醒数落地）、FAM-03 🔲→✅（通知中心即其落地形态）、§4.1.7 完成度 16/20→19/20（CM-05/12/20 划线标注 T1/T2/T3）、§4.1.4 增量注释更新、§4.2/§4.4 概述与数据模型标题更新、RB-08 验收标准更新（通知中心已接入）、里程碑批次1 标 ✅、批次2 交付列表移除已提前完成的 CM-05/CM-12 |
+| 2026-08-31 | **家庭层完成（批次2，FAM-01/02/04）**：FxRate 模型（currency/rateToCny/date/source，按 (currency,date) 幂等 upsert）+ fxRate.service（getLatestRates/upsertRate/syncLatestRates，er-api 免 key 公开源，失败降级可手动录入）+ fxScheduler 每日 09:30 采集；familySummary.service（buildCurrencyBuckets/buildFamilySummary 纯函数 + computeFamilySummary 编排：RMB 基准总资产、USD/CAD/CNY/HKD 分桶、组合贡献占比、缺价/缺汇率标 null 不误报、最近交易/再平衡动态）；/api/family 四端点；客户端家庭视图页（总资产卡片 + 分桶卡 + 贡献列表 + 动态流 + 汇率管理）。测试 server 114/114（新增 12：family.summary），lint/build 清洁 |

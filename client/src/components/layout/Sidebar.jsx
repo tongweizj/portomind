@@ -1,11 +1,12 @@
 // src/components/layout/Sidebar.jsx
 import { NavLink } from 'react-router';
 import {
-  LayoutDashboard, Folder, FileBarChart, ListOrdered, Coins, Bell, LogOut
+  LayoutDashboard, Folder, FileBarChart, ListOrdered, Coins, Bell, Landmark, LogOut
 } from 'lucide-react';
 
 const navItems = [
   { to: '/', icon: LayoutDashboard, label: 'Dashboard' },
+  { to: '/family', icon: Landmark, label: '家庭视图' },
   { to: '/alerts/rules', icon: Bell, label: '提醒规则' },
   { to: '/prices', icon: Folder, label: '价格' },
   { to: '/portfolios', icon: Folder, label: '组合管理' },

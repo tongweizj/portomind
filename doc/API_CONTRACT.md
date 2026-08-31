@@ -88,6 +88,10 @@ Portfolio 枚举：`type`（风险定位）为 `活钱 | 稳健 | 长期`；`acc
 | `PATCH /api/alerts/events/:id/read` | Path: `id`; Body: `{status:"read"\|"dismissed"}` | 更新后 AlertEvent | `200`; `400`; `404` |
 | `GET /api/alerts/events/unread-count` | 无 | `{count}`（Dashboard 徽标） | `200` |
 | `POST /api/alerts/evaluate` | 空 Body | 手动触发评估跑批：`{evaluated,created,archived,failed}` | `200` |
+| `GET /api/family/summary` | 无 | 家庭汇总：`{totalCny, buckets:{USD|CAD|CNY|HKD:{amount,cnyValue,rate}}, fxRates, portfolioContributions:[{portfolioId,name,currency,marketValueByCurrency,cnyValue,ratio}], recentTransactions, recentRebalanceRecords}`。RMB 基准折算（最新 FxRate）；币种桶内缺价或该币种无汇率 → cnyValue/ratio 为 null 且不计入总额（不误报）；归档组合排除 | `200` |
+| `GET /api/family/fx/rates` | 无 | 各外币对 CNY 最新汇率详情数组（含 date/source） | `200` |
+| `PUT /api/family/fx/rates/:currency` | Path: `currency`（USD/CAD/HKD）；Body: `{rateToCny,date?,note?}` | 按 (currency, date) 幂等写入（source='manual'） | `201`; `400` |
+| `POST /api/family/fx/sync` | 空 Body | 手动触发汇率采集（er-api）：`{count,records}`；采集失败 `502` | `200`; `502` |
 | `POST /api/transactions` | Body: `{portfolioId,symbol,action,quantity,price,date?,notes?}`；资产元数据由 Asset 派生 | 新 Transaction | `201`; 校验或超卖 `400`; 组合/资产不存在 `404` |
 | `GET /api/transactions/:id` | Path: `id` | Transaction | `200`; `400`; `404` |
 | `PUT /api/transactions/:id` | Path: `id`; Body: Transaction 可更新字段；更新后重放账本 | 更新后 Transaction | `200`; 校验或超卖 `400`; `404` |

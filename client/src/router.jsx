@@ -10,6 +10,7 @@ import { ROUTE_PATTERNS } from './constants/routes';
 import AssetForm from './pages/Asset/AssetForm';
 import AssetList from './pages/Asset/AssetList';
 import Dashboard from './pages/Dashboard';
+import Family from './pages/Family';
 import LogViewer from './pages/LogViewer';
 import AlertRules from './pages/Alerts/AlertRules';
 import Detail from './pages/Portfolio/Detail';
@@ -27,6 +28,8 @@ export default function AppRouter() {
       <Routes>
         <Route element={<AppLayout />}>
           <Route path="/" element={<Dashboard />} />
+
+          <Route path="/family" element={<Family />} />
 
           <Route path="/alerts/rules" element={<AlertRules />} />
 
