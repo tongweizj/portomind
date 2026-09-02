@@ -28,6 +28,10 @@ export const colors = {
   down: '#0E9F6E', // A 股 跌绿
   warn: '#F5A524',
   danger: '#E0254B',
+
+  // 资产类型色（对齐设计稿）
+  stock: '#0284C7', // 股票蓝
+  etfOnshore: '#0E9F6E', // ETF-场内绿
 };
 
 export const radii = {

@@ -1,13 +1,13 @@
 // client/src/pages/RebalanceHistory.jsx
-import { useCallback, useState, useEffect } from 'react';
-import { useNavigate, useParams } from 'react-router';
+import { useCallback, useContext, useState, useEffect } from 'react';
+import { useParams } from 'react-router';
 import { getHistory, revoke, reexecute } from '../../services/rebalance.service';
 import { EmptyState, ErrorState, LoadingState } from '../../components/DataState';
-import { ROUTES } from '../../constants/routes';
+import { RebalanceTabContext } from './rebalanceTabContext';
 
 export default function RebalanceHistory() {
   const { id: portfolioId } = useParams();
-  const navigate = useNavigate();
+  const { switchSubTab } = useContext(RebalanceTabContext);
   const [records, setRecords] = useState([]);
   const [page, setPage] = useState(1);
   const [pageSize] = useState(20);
@@ -54,7 +54,7 @@ export default function RebalanceHistory() {
     setLoading(true);
     try {
       await reexecute(recordId);
-      navigate(ROUTES.PORTFOLIO_TAB(portfolioId, 'rebalance-suggestions'));
+      switchSubTab('suggestions');
     } catch (e) {
       console.error(e);
       setError('重做失败');

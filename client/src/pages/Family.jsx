@@ -60,7 +60,7 @@ function ContributionList({ contributions, navigate }) {
         return (
           <div key={String(contribution.portfolioId)}
             className="rounded-xl bg-white p-4 shadow cursor-pointer hover:bg-gray-50"
-            onClick={() => navigate(`/portfolios/view/${contribution.portfolioId}/basic`)} role="button" tabIndex={0}>
+            onClick={() => navigate(`/portfolios/view/${contribution.portfolioId}/positions`)} role="button" tabIndex={0}>
             <div className="flex items-center justify-between">
               <div>
                 <p className="font-medium text-gray-800">{contribution.name}</p>

@@ -29,7 +29,7 @@ function EventCard({ event, onRead, onDismiss }) {
     if (event.symbol) {
       navigate(`/prices/${event.symbol}/history`);
     } else if (event.portfolioId) {
-      navigate(`/portfolios/view/${event.portfolioId}/rebalance-suggestions`);
+      navigate(`/portfolios/view/${event.portfolioId}/rebalance`);
     }
   };
 

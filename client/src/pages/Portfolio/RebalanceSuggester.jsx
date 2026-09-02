@@ -1,8 +1,7 @@
-import { useEffect, useState } from 'react';
-import { useNavigate, useParams } from 'react-router';
+import { useContext, useEffect, useState } from 'react';
+import { useParams } from 'react-router';
 import { Cell, Legend, Pie, PieChart, ResponsiveContainer, Tooltip } from 'recharts';
 import { EmptyState, ErrorState, LoadingState } from '../../components/DataState';
-import { ROUTES } from '../../constants/routes';
 import { getActualRatios } from '../../services/portfolio.service';
 import {
   checkRebalance,
@@ -10,10 +9,11 @@ import {
   getHistory,
   getSuggestions
 } from '../../services/rebalance.service';
+import { RebalanceTabContext } from './rebalanceTabContext';
 
 export default function RebalanceSuggester() {
   const { id } = useParams();
-  const navigate = useNavigate();
+  const { switchSubTab } = useContext(RebalanceTabContext);
   const [lastRun, setLastRun] = useState(null);
   const [actualRatios, setActualRatios] = useState([]);
   const [suggestions, setSuggestions] = useState([]);
@@ -86,7 +86,7 @@ export default function RebalanceSuggester() {
     if (!window.confirm('确认按“先卖后买”创建这些交易吗？')) return;
     run('execute', async () => {
       await executeSuggestions(id, recordId, suggestions, 'MANUAL');
-      navigate(ROUTES.PORTFOLIO_TAB(id, 'rebalance-history'));
+      switchSubTab('history');
     });
   };
 
