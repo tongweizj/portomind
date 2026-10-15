@@ -1,5 +1,5 @@
 const mongoose = require('mongoose');
-const transactionService = require('../services/transaction.service');
+const transactionService = require('@portomind/shared/services/transaction.service');
 const { success, failure, pagination, parsePagination } = require('../utils/apiResponse');
 
 function validId(req, res, id, label = 'transaction') {

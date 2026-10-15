@@ -1,17 +1,17 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
 
-const Transaction = require('../../models/transaction');
-const transactionService = require('../../services/transaction.service');
-const recorder = require('../../services/rebalance/recorder');
-const { evaluateThresholds } = require('../../services/rebalance/thresholdChecker');
-const { buildSuggestions } = require('../../services/rebalance/suggestionGenerator');
-const { calculatePositions } = require('../../services/transaction/positionCalculator');
+const Transaction = require('@portomind/shared/models/transaction');
+const transactionService = require('@portomind/shared/services/transaction.service');
+const recorder = require('@portomind/shared/services/rebalance/recorder');
+const { evaluateThresholds } = require('@portomind/shared/services/rebalance/thresholdChecker');
+const { buildSuggestions } = require('@portomind/shared/services/rebalance/suggestionGenerator');
+const { calculatePositions } = require('@portomind/shared/services/transaction/positionCalculator');
 const {
   executeRebalance,
   revokeExecution,
   prepareReexecution
-} = require('../../services/rebalance/executeRebalance');
+} = require('@portomind/shared/services/rebalance/executeRebalance');
 
 test('阈值检查包含零持仓目标并返回可解释偏离明细', () => {
   const result = evaluateThresholds({

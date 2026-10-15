@@ -23,12 +23,12 @@ const minimist = require('minimist');
 dayjs.extend(utc);
 dayjs.extend(timezone);
 
-const { taskLogger } = require('../config/logger');
-const { getActiveAssets, getAssetsBySymbols } = require('../services/asset.service');
-const { isMarketOpenToday, normalizeMarket } = require('../services/calendar.service');
-const { MARKETS } = require('../config/markets');
-const { dateBounds, marketDate, todayString, MARKET_TIMEZONE } = require('../utils/marketTime');
-const { runTrackedTask } = require('../services/taskRunner');
+const { taskLogger } = require('@portomind/shared/config/logger');
+const { getActiveAssets, getAssetsBySymbols } = require('@portomind/shared/services/asset.service');
+const { isMarketOpenToday, normalizeMarket } = require('@portomind/shared/services/calendar.service');
+const { MARKETS } = require('@portomind/shared/config/markets');
+const { dateBounds, marketDate, todayString, MARKET_TIMEZONE } = require('@portomind/shared/utils/marketTime');
+const { runTrackedTask } = require('@portomind/shared/services/taskRunner');
 const historySync = require('./historySync.cjs');
 
 const TASK_NAME = 'price-integrity-check';
@@ -74,7 +74,7 @@ function expectedBucketCandidates(market, dateStr) {
 }
 
 // 实际落库的 ET 桶日期列表（来自 Price 集合，按 MARKET_TIMEZONE 解释）。
-async function storedBucketDates(symbol, from, to, PriceModel = require('../models/price')) {
+async function storedBucketDates(symbol, from, to, PriceModel = require('@portomind/shared/models/price')) {
   const { start } = dateBounds(from);
   const { end } = dateBounds(to);
   const docs = await PriceModel.find(

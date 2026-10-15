@@ -1,6 +1,6 @@
 // server/controllers/valuation.controller.js
 // 估值分位 API（AS-11）：列表 / 手动录入（衔接 index-valuation-selfcalc 产出）。
-const valuationService = require('../services/valuation.service');
+const valuationService = require('@portomind/shared/services/valuation.service');
 const { success, failure } = require('../utils/apiResponse');
 
 exports.getValuations = async (req, res, next) => {

@@ -13,9 +13,9 @@
  *   app.use(errorHandler);
  */
 
-const {logger} = require('../config/logger');
+const {logger} = require('@portomind/shared/config/logger');
 const { failure } = require('../utils/apiResponse');
-const { sanitizeUrl } = require('../utils/logSanitizer');
+const { sanitizeUrl } = require('@portomind/shared/utils/logSanitizer');
 
 module.exports = function errorHandler(err, req, res, next) {
   // 1. 从请求中取出 traceId，如果中间件未注入也不会报错

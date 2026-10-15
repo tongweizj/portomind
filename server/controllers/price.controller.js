@@ -1,6 +1,6 @@
 const asyncHandler = require('express-async-handler');
-const priceService = require('../services/price.service');
-const { isDateString, MARKET_TIMEZONE } = require('../utils/marketTime');
+const priceService = require('@portomind/shared/services/price.service');
+const { isDateString, MARKET_TIMEZONE } = require('@portomind/shared/utils/marketTime');
 const { success, failure, pagination, parsePagination } = require('../utils/apiResponse');
 
 function validatePagination(req, res) {

@@ -1,67 +1,14 @@
+// server/tasks/dailySync.js
+// 手动价格同步的 CLI 入口（`npm run sync:prices`）。
+// 真正的同步逻辑在 @portomind/shared/tasks/dailySync.js（与 cron-worker 同一实现）。
+// 本文件只负责：加载 server/.env → 建立 MongoDB 连接 → 调用共享任务 → 断开连接。
+
 const path = require('path');
 require('dotenv').config({ path: path.resolve(__dirname, '../.env') });
 const mongoose = require('mongoose');
 mongoose.set('strictQuery', true);
-const { taskLogger } = require('../config/logger');
-const { getActiveAssets } = require('../services/asset.service');
-const { fetchLatest } = require('../services/priceFetch.service');
-const { saveLatest } = require('../services/priceStorage.service');
-const { runTrackedTask } = require('../services/taskRunner');
-
-function marketDate(date = new Date(), timeZone = process.env.SCHEDULER_TIMEZONE || process.env.MARKET_TIMEZONE || 'America/Toronto') {
-  return new Intl.DateTimeFormat('en-CA', {
-    timeZone,
-    year: 'numeric', month: '2-digit', day: '2-digit'
-  }).format(date);
-}
-
-async function syncActiveAssetPrices(dependencies = {}) {
-  const loadAssets = dependencies.getActiveAssets || getActiveAssets;
-  const loadPrice = dependencies.fetchLatest || fetchLatest;
-  const persistPrice = dependencies.saveLatest || saveLatest;
-  const assets = await loadAssets();
-  const summary = { totalCount: assets.length, successCount: 0, failureCount: 0, failures: [] };
-
-  taskLogger.info('PRICE_SYNC_ASSETS_LOADED', { totalCount: assets.length });
-  for (const asset of assets) {
-    try {
-      const priceData = await loadPrice(asset.symbol);
-      await persistPrice(priceData);
-      summary.successCount += 1;
-      taskLogger.info('PRICE_SYNC_ASSET_SUCCEEDED', {
-        symbol: asset.symbol,
-        timestamp: priceData.timestamp,
-        price: priceData.price
-      });
-    } catch (error) {
-      summary.failureCount += 1;
-      const failure = {
-        item: asset.symbol,
-        category: error.category || 'INTERNAL',
-        provider: error.provider,
-        retryable: Boolean(error.retryable),
-        message: error.message
-      };
-      summary.failures.push(failure);
-      taskLogger.error('PRICE_SYNC_ASSET_FAILED', failure);
-    }
-  }
-  return summary;
-}
-
-async function dailySync(options = {}) {
-  const trigger = options.trigger || 'SCHEDULED';
-  const runKey = options.runKey || (trigger === 'SCHEDULED'
-    ? marketDate()
-    : `manual:${new Date().toISOString()}`);
-
-  return runTrackedTask({
-    taskName: 'daily-price-sync',
-    runKey,
-    trigger,
-    execute: () => syncActiveAssetPrices(options.dependencies)
-  });
-}
+const { taskLogger } = require('@portomind/shared/config/logger');
+const dailySync = require('@portomind/shared/tasks/dailySync');
 
 async function runFromCommandLine() {
   if (!process.env.MONGO_URI) throw new Error('MONGO_URI is required');
@@ -82,5 +29,5 @@ if (require.main === module) {
 }
 
 module.exports = dailySync;
-module.exports.syncActiveAssetPrices = syncActiveAssetPrices;
-module.exports.marketDate = marketDate;
+module.exports.syncActiveAssetPrices = dailySync.syncActiveAssetPrices;
+module.exports.marketDate = dailySync.marketDate;

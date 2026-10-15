@@ -1,6 +1,6 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
-const Portfolio = require('../../models/portfolio');
+const Portfolio = require('@portomind/shared/models/portfolio');
 
 // CM-05 账户类型：enum 校验 + 默认值。
 // 存量组合无该字段时由业务侧按 'other' 兜底，模型层只负责新写入值的约束。

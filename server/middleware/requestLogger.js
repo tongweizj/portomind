@@ -13,8 +13,8 @@
  */
 
 const onFinished = require('on-finished');
-const {logger} = require('../config/logger');
-const { sanitizeUrl } = require('../utils/logSanitizer');
+const {logger} = require('@portomind/shared/config/logger');
+const { sanitizeUrl } = require('@portomind/shared/utils/logSanitizer');
 
 module.exports = function requestLogger(req, res, next) {
   // 1. 记录请求到达的时间戳

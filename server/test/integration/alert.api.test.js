@@ -4,9 +4,9 @@ const assert = require('node:assert/strict');
 process.env.LOG_DIR = '/tmp/portomind-alert-api-test-logs';
 
 const app = require('../../app');
-const AlertRule = require('../../models/alertRule');
-const AlertEvent = require('../../models/alertEvent');
-const alertEngine = require('../../services/alertEngine.service');
+const AlertRule = require('@portomind/shared/models/alertRule');
+const AlertEvent = require('@portomind/shared/models/alertEvent');
+const alertEngine = require('@portomind/shared/services/alertEngine.service');
 
 let server;
 let baseUrl;

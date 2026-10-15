@@ -1,6 +1,5 @@
-// cron-worker/src/utils/marketTime.js
-// 与 ../server/utils/marketTime.js 逐字节一致：价格日期的 MARKET_TIMEZONE 规范化，
-// 确保与 server 已写入的历史价格保持同一日期边界。
+// 价格日期的 MARKET_TIMEZONE 规范化。
+// 本文件是全仓唯一实现（server 与 cron-worker 共用），两进程共用同一日期边界口径。
 
 const dayjs = require('dayjs');
 const utc = require('dayjs/plugin/utc');

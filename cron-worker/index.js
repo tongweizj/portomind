@@ -3,7 +3,7 @@
 
 require('./src/config/env');
 
-const { logger } = require('./src/config/logger');
+const { logger } = require('@portomind/shared/config/logger');
 const { connect, disconnect } = require('./src/config/database');
 const { startSchedulers } = require('./src/tasks/scheduler');
 
@@ -15,7 +15,7 @@ async function start() {
   logger.info('DATABASE_CONNECTED');
 
   scheduler = await startSchedulers();
-  logger.info('WORKER_STARTED');
+  logger.info('WORKER_STARTED', { schedulerCount: scheduler.jobs ? scheduler.jobs.length : 0 });
 }
 
 async function shutdown(signal) {

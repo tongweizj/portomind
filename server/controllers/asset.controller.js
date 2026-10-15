@@ -1,6 +1,6 @@
 const mongoose = require('mongoose');
-const assetService = require('../services/asset.service');
-const { ASSET_SORT_FIELDS, ASSET_CLASSES } = require('../constants/asset.constants');
+const assetService = require('@portomind/shared/services/asset.service');
+const { ASSET_SORT_FIELDS, ASSET_CLASSES } = require('@portomind/shared/constants/asset.constants');
 const { success, failure, pagination, parsePagination } = require('../utils/apiResponse');
 
 function validateId(req, res) {

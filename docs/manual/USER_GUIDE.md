@@ -1,7 +1,7 @@
 # PortoMind 使用指南
 
-> 适用于普通使用者的操作手册（不含开发/部署细节，见 [DEVELOPMENT.md](./DEVELOPMENT.md)、[DEPLOY.md](./DEPLOY.md)）。
-> 需求与验收见 [PRD.md](./PRD.md)，接口契约见 [API_CONTRACT.md](./API_CONTRACT.md)。
+> **面向使用者的业务操作手册**：功能怎么用、业务口径、常见问题。
+> 本文不涉及环境变量、调度内部机制、部署与运维——这些主题的唯一归属见文末「相关文档」。
 
 ## 1. 这是什么
 
@@ -13,51 +13,40 @@ PortoMind 是自托管的个人/家庭投资组合管理工具，部署在自己
 - 用**提醒规则**在到价、浮亏、漂移、52 周新高新低、估值分位等条件下产生站内通知；
 - 以 **RMB 为基准**汇总全家庭资产（CNY/USD/CAD/HKD 分桶展示）。
 
-安全边界：无登录体系，仅限可信网络访问；再平衡只生成建议，永不自动下单。
+安全边界：无登录体系，仅限可信网络访问；再平衡只生成建议，永不自动下单。完整说明见 [DEPLOY.md](./DEPLOY.md) §「安全边界」。
 
 ---
 
 ## 2. 快速开始
 
-前置：Node.js、npm、MongoDB。
+前置：Node.js、npm、MongoDB。完整步骤（环境变量含义、依赖安装、基线数据、验证命令）的唯一归属是 [DEVELOPMENT.md](./DEVELOPMENT.md)。
 
 ```bash
-# 1) 配置（两个 .env 均被 Git 忽略，不要提交）
-cp server/.env.example server/.env
-cp client/.env.example client/.env
-
-# 2) 安装依赖
-cd server && npm ci
-cd ../client && npm ci
-
-# 3) 可选：灌入基线演示数据（VTI/BND.TO 资产、1 个组合、4 笔交易、6 条价格）
-cd server && npm run seed:baseline
-
-# 4) 启动后端（自动拉起全部定时任务）
-cd server && npm run dev
-
-# 5) 另开终端启动前端
-cd client && npm run dev
+cp server/.env.example server/.env && cp client/.env.example client/.env
+cd server && npm ci && npm run seed:baseline && npm run dev   # 后端 :8080
+# 另开终端
+cd client && npm ci && npm run dev                            # 前端 :5173
 ```
 
-- 前端：`http://localhost:5173`
-- 后端 API：`http://localhost:8080/api`
-- 后端连接 MongoDB 后数据页才可用；`npm run verify` 可做完整健康检查。
-
-> 生产环境（PM2/Nginx）见 [DEPLOY.md](./DEPLOY.md)。**调度所有权只有一个**：只有唯一进程设置 `SCHEDULER_ENABLED=true`。
+- 前端：`http://localhost:5173`；后端 API：`http://localhost:8080/api`。
+- 后端连接 MongoDB 后，数据页才可用。
+- **定时任务不在 API 进程内自动启动**：默认由 `cron-worker` 承载调度，且它目前只覆盖价格同步与完整性检查。哪些任务会自动跑、如何启动，见 [OPERATIONS.md](./OPERATIONS.md) §3；生产部署见 [DEPLOY.md](./DEPLOY.md)。
 
 ---
 
-## 3. 定时任务一览
+## 3. 自动任务时间表（使用者视角）
 
-| 时间（`SCHEDULER_TIMEZONE`，默认 America/Toronto） | 任务 | 说明 |
-|---|---|---|
-| 每日 03:00 | 价格同步 | 遍历 active 资产，休市跳过、单资产失败不影响其余；幂等入库 |
-| 每日 03:30 | 完整性检查 | 按 launchDate 推断应有交易日数，缺口自动回补（`INTEGRITY_AUTO_REPAIR` 可关） |
-| 每日 04:00 | 提醒评估 | 逐规则评估所有启用规则并产生事件（`ALERT_EVAL_CRON` 可调） |
-| 每日 09:30 | 汇率同步 | 拉取 USD/CAD/HKD → CNY 汇率（er-api）；失败不阻塞，可手动录入 |
+以下任务按 `SCHEDULER_TIMEZONE`（默认 America/Toronto）触发。**是否实际运行取决于哪个进程持有调度**——完整矩阵与取舍见 [OPERATIONS.md](./OPERATIONS.md) §3.1。
 
-手动入口（见第 6 节速查）。
+| 时间 | 任务 | 哪些进程会跑 | 说明 |
+|---|---|---|---|
+| 每日 03:00 | 价格同步 | server 或 cron-worker | 遍历 active 资产，休市跳过、单资产失败不影响其余；幂等入库 |
+| 每日 03:30 | 完整性检查 | **仅 cron-worker** | 按 launchDate 推断应有交易日数，缺口自动回补（`INTEGRITY_AUTO_REPAIR` 可关） |
+| 每日 04:00 | 提醒评估 | **仅 server** | 逐规则评估所有启用规则并产生事件（`ALERT_EVAL_CRON` 可调） |
+| 每日 09:30 | 汇率同步 | **仅 server** | 拉取 USD/CAD/HKD → CNY 汇率（er-api）；失败不阻塞，可手动录入 |
+| 按组合设置 | 再平衡 AUTO | **仅 server** | 生成待确认建议，**永不自动执行** |
+
+> 界面上可随时手动触发：见 §6。命令行入口见 [OPERATIONS.md](./OPERATIONS.md)。
 
 ---
 
@@ -68,7 +57,7 @@ cd client && npm run dev
 **登记资产**（`资产管理` → 添加资产）：代码唯一且大写（如 `0700.HK`、`600519.SS`、`VTI`、`005827`），必填市场/币种/证券类型。可选填：
 
 - **大类**（股票类/债券类/黄金类/现金类）：与证券类型正交（黄金 ETF 的证券类型是 ETF、大类是黄金类）。大类用于「大类级目标配置」与家庭视图分组，**新资产务必顺手分类**。
-- **上市日期 launchDate**：用于完整性检查推断应有交易日数，建议填写。
+- **上市日期 launchDate**：用于完整性检查推断应有交易日数，建议填写（当前只能直接改数据库，见 [OPERATIONS.md](./OPERATIONS.md) §2.3）。
 - 启用 active：控制可否用于交易与行情同步；关注 watchlist 仅展示偏好。
 
 **看行情**（`价格`）：今日价格页按资产看最近一条价格，可指定日期回查、手动刷新；点资产进历史页看折线图与每日价格表格（年月筛选）。
@@ -77,10 +66,12 @@ cd client && npm run dev
 
 **创建组合**（`组合管理` → 添加组合）：名称必填；类型（活钱/稳健/长期）是风险定位；账户类型（tiantian/xueqiu/tfsa/rrsp/resp/taxable/other）是真实账户载体——家庭视图按此分组展示。币种是记账币种，只在本组合内使用。
 
-**目标配置**（组合详情 → 目标配置，或表单内编辑）：二选一模式——
+**目标配置**（**`组合管理` → 编辑组合 → 表单内「目标配置」区**）：二选一模式——
 
 - **资产级**：为每个 symbol 设目标比例（合计必须精确 100%）；
 - **大类级**：为 equity/bond/gold/cash 设目标比例。再平衡建议会自动按「类内持仓市值占比」摊分到具体资产（保持大类内部结构）；某大类无持仓时给 `CLASS_NO_POSITIONS` 警告、未分类资产计 `UNCLASSIFIED` 偏离——**使用大类目标前请先把资产的大类补全**。
+
+> 目标配置目前**只在组合编辑表单内维护**；组合详情页只有 `持仓概览 / 持仓历史 / 再平衡 / 交易记录` 四个页签，没有独立的「目标配置」页。
 
 **归档**（编辑组合勾选）：归档 ≠ 删除，数据完整保留，仅从默认列表与自动再平衡调度中隐藏。
 
@@ -97,7 +88,7 @@ cd client && npm run dev
 
 ### 4.4 再平衡
 
-组合详情 → 再平衡建议：
+组合详情 → 再平衡页签：
 
 1. **阈值检查**：绝对偏离（默认 5%）、相对偏离（默认 10%）、时间间隔（默认 60 天）独立启停，任一触发即提示再平衡；
 2. **生成建议**：输入本次可投入现金与费率假设（固定费/比例费/卖出税率），系统给出先卖后买的清单（含费用与调整后比例）；
@@ -123,7 +114,9 @@ cd client && npm run dev
 
 通用：作用域（资产级=绑资产代码，组合级=绑组合）、静默天数 cooldown（默认 7 天，同规则触发后静默期内不重复）、启停开关。每规则可查看触发历史。
 
-**估值分位数据**：`valuation_percentile` 规则需要先有分位数据——用你的估值计算工具（如 index-valuation-selfcalc）算出后，通过家庭视图或 API 录入（`PUT /api/valuations/000300/pe`，body `{value, percentile}`）；没有数据时规则静默不触发。
+**估值分位数据**：`valuation_percentile` 规则需要先有分位数据——用你的估值计算工具（如 index-valuation-selfcalc）算出后，**通过 API 录入**（`PUT /api/valuations/000300/pe`，body `{value, percentile}`）；没有数据时规则静默不触发。
+
+> 注：家庭视图**没有**估值录入入口，估值分位只能走 API。命令示例见 [OPERATIONS.md](./OPERATIONS.md) §4「手动入口速查」。
 
 通知中心：未读/全部切换、按组合筛选、标记已读/忽略；signal 类事件常显直至过期或手动处理；点击事件直达资产历史页或再平衡页。`立即评估`按钮可随时手动跑一次评估。
 
@@ -131,13 +124,13 @@ cd client && npm run dev
 
 入口：左侧菜单「家庭视图」。以 **RMB 折算**展示家庭总资产与 CNY/USD/CAD/HKD 分桶（港股 HKD 单列），下方按组合列出贡献占比（点击直达组合）。
 
-- **汇率**：右下角汇率管理显示最新汇率（1 外币 = ¥）。每日 09:30 自动同步；同步失败或想手动修正时，选币种填汇率「录入」（手动数据以 `manual` 标记）。
+- **汇率**：右下角汇率管理显示最新汇率（1 外币 = ¥）。每日 09:30 自动同步（需 server 持有调度）；同步失败或想手动修正时，选币种填汇率「录入」（手动数据以 `manual` 标记）。
 - 折算口径：组合内保持原币种记账，折算只发生在家庭层；某币种缺最新价或无汇率时该组合标「折算不完整」且**不计入总额**（宁可少报不可错报）。
 - 最近动态：最近 10 笔交易与再平衡记录。
 
 ### 4.7 日志
 
-`日志`：按日期/级别查询服务日志与后台任务日志。任务（价格同步/提醒评估/汇率同步等）每次运行记录在 `taskruns` 集合（见第 6 节排障）。
+`日志`：按日期/级别查询服务日志与后台任务日志。任务（价格同步/提醒评估/汇率同步等）每次运行记录在 `taskruns` 集合——查询与排障方法见 [OPERATIONS.md](./OPERATIONS.md) §1.2。
 
 ---
 
@@ -150,35 +143,18 @@ cd client && npm run dev
 
 ---
 
-## 6. 日常操作速查
+## 6. 界面上的手动入口
 
-```bash
-# 手动触发当日价格同步
-cd server && npm run sync:prices
+| 位置 | 操作 | 作用 |
+|---|---|---|
+| Dashboard / 通知中心 | **立即评估** | 手动跑一次提醒规则评估 |
+| 价格 → 今日价格 | **刷新** / **查看历史** | 手动拉取当日价格 / 进入某资产历史页 |
+| 组合详情 → 再平衡 | 检查 / 生成建议 / 执行 / 撤销 / 重做 | 再平衡闭环 |
+| 家庭视图 → 汇率管理 | **同步汇率** / **录入** | 手动同步或录入汇率 |
+| 交易记录 | 导入 CSV | 批量导入交易 |
 
-# 完整性检查（cron-worker 侧；--no-repair 只出报告）
-cd cron-worker
-npm run check:integrity
-npm run check:integrity -- --no-repair
-
-# 手动跑一次提醒评估（或通知中心「立即评估」）
-curl -X POST http://localhost:8080/api/alerts/evaluate
-
-# 手动同步汇率（或家庭视图「同步汇率」按钮）
-curl -X POST http://localhost:8080/api/family/fx/sync
-
-# 手动录入汇率 / 估值分位
-curl -X PUT http://localhost:8080/api/family/fx/rates/USD -H 'Content-Type: application/json' -d '{"rateToCny":7.2}'
-curl -X PUT http://localhost:8080/api/valuations/000300/pe -H 'Content-Type: application/json' -d '{"value":12.5,"percentile":25}'
-
-# 查看最近一次任务结果
-mongosh 'mongodb://127.0.0.1:27017/portomind_dev' \
-  --eval 'db.taskruns.find({taskName:"daily-price-sync"}).sort({startedAt:-1}).limit(1)'
-```
-
-任务 `status` 含义：`SUCCEEDED` 全部成功；`PARTIAL` 存在失败项（看 `failures[]`）；`FAILED` 任务级异常；`SKIPPED` 重复运行（防重兜底，无需处理）。
-
-**备份**：至少备份 MongoDB（`portomind` 库）与 `server/logs/`。迁移服务器时直接拷库即可，前端是静态构建产物（`client/dist/`）。
+> 命令行入口（手动同步、完整性检查、历史回补、mongosh 排障查询）的唯一归属是 [OPERATIONS.md](./OPERATIONS.md) §4。
+> 数据备份与迁移的唯一归属是 [DEPLOY.md](./DEPLOY.md) §「备份与迁移」。
 
 ---
 
@@ -186,8 +162,21 @@ mongosh 'mongodb://127.0.0.1:27017/portomind_dev' \
 
 | 现象 | 原因与处理 |
 |---|---|
-| 某资产无最新价 | 休市日跳过属正常；若连跌多日，查 `taskruns` 的 `failures[]`（provider/timeout 分类） |
+| 某资产无最新价 | 休市日跳过属正常；若连跌多日，查 `taskruns` 的 `failures[]`（provider/timeout 分类，见 [OPERATIONS.md](./OPERATIONS.md) §1.2） |
 | 提醒规则不触发 | 检查是否启用；`valuation_percentile` 需先录入分位数据；52 周新高需该资产有 ≥1 条历史价 |
 | 家庭视图金额为「—」/折算不完整 | 某币种缺最新价或无汇率——同步价格/录入汇率即可 |
 | 导入 CSV 整批失败 | 先看预览中红字行；常见为日期格式或方向值无法识别（映射列可手动调整） |
-| 组合不参与自动再平衡 | 该组合已归档，或 `SCHEDULER_ENABLED=false`（多进程时只允许一个调度所有者） |
+| 组合不参与自动再平衡 | 该组合已归档，或持有调度的进程未运行 / `SCHEDULER_ENABLED=false`（见 [OPERATIONS.md](./OPERATIONS.md) §3.1） |
+
+---
+
+## 8. 相关文档
+
+| 主题 | 唯一归属文档 |
+|---|---|
+| 本地开发环境、依赖、验证命令 | [DEVELOPMENT.md](./DEVELOPMENT.md) |
+| 生产部署、环境变量（生产）、备份、安全边界 | [DEPLOY.md](./DEPLOY.md) |
+| 调度所有权、定时任务、价格同步、完整性检查、历史回补、排障 | [OPERATIONS.md](./OPERATIONS.md) |
+| 产品需求基线（需求编码 AS/TR/CM/RB/AL/FAM） | [PRD.md](../product/specs/PRD.md) |
+| REST API 契约 | [API_CONTRACT.md](../dev/API_CONTRACT.md) |
+| 功能全景与架构分层 | [产品线总览 PRODUCT_LINES](../product/PRODUCT_LINES.md) / [ARCHITECTURE.md](../architecture/ARCHITECTURE.md) |

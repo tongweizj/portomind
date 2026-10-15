@@ -6,7 +6,7 @@ process.env.MARKET_DATA_TIMEOUT_MS = '50';
 
 const { test } = require('node:test');
 const assert = require('node:assert');
-const { resolveFetcher } = require('../src/services/priceFetch.service');
+const { resolveFetcher } = require('@portomind/shared/services/priceFetch.service');
 
 test('market=CN-FUND 路由到 Tiantian 并剥离 .cn 后缀', () => {
   const resolved = resolveFetcher({ symbol: '000191.cn', market: 'CN-FUND' });

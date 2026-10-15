@@ -10,7 +10,8 @@ const startPriceScheduler = createCronScheduler({
   envKey: 'PRICE_SYNC_CRON',
   defaultCron: DEFAULT_PRICE_SYNC_CRON,
   taskName: 'price-sync',
-  run: () => require('../tasks/dailySync')({ trigger: 'SCHEDULED' })
+  // 任务实现来自 @portomind/shared（与 server 侧 `npm run sync:prices` 同一份代码）
+  run: () => require('@portomind/shared/tasks/dailySync')({ trigger: 'SCHEDULED' })
 });
 
 module.exports = { DEFAULT_PRICE_SYNC_CRON, startPriceScheduler };

@@ -1,5 +1,5 @@
-// cron-worker/src/fetchers/timeout.js
-// 行情请求超时保护：所有外部调用必须受 MARKET_DATA_TIMEOUT_MS 限制，与 ../server/services/fetchers/timeout.js 保持一致。
+// 行情请求超时保护：所有外部调用必须受 MARKET_DATA_TIMEOUT_MS 限制。
+// 本文件是全仓唯一实现（server 与 cron-worker 共用），不存在需要同步的第二份拷贝。
 
 const { MARKET_DATA_ERROR, MarketDataError, classifyMarketDataError } = require('./errors');
 

@@ -1,8 +1,8 @@
 // server/controllers/family.controller.js
 // 家庭层 API（PRD §3）：家庭汇总 + 汇率管理。
-const FxRate = require('../models/fxRate');
-const fxRateService = require('../services/fxRate.service');
-const familySummaryService = require('../services/familySummary.service');
+const FxRate = require('@portomind/shared/models/fxRate');
+const fxRateService = require('@portomind/shared/services/fxRate.service');
+const familySummaryService = require('@portomind/shared/services/familySummary.service');
 const { success, failure } = require('../utils/apiResponse');
 
 // ─────────────────────── 家庭汇总（FAM-01/02/04） ───────────────────────

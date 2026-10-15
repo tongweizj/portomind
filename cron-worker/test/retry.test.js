@@ -1,7 +1,7 @@
 "use strict";
 const { test } = require('node:test');
 const assert = require('node:assert');
-const { fetchWithRetry } = require('../src/utils/retry');
+const { fetchWithRetry } = require('@portomind/shared/utils/retry');
 
 test('成功时不重试', async () => {
   let calls = 0;

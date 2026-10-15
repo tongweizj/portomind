@@ -4,8 +4,8 @@ const fs = require('fs');
 const path = require('path');
 const readline = require('readline');
 const { success, pagination, parsePagination } = require('../utils/apiResponse');
-const { LOG_DIR } = require('../config/logger');
-const { sanitizeLogValue } = require('../utils/logSanitizer');
+const { LOG_DIR } = require('@portomind/shared/config/logger');
+const { sanitizeLogValue } = require('@portomind/shared/utils/logSanitizer');
 
 const LOG_LEVELS = new Set(['all', 'error', 'warn', 'info', 'verbose', 'debug', 'silly']);
 

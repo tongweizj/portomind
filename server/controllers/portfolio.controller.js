@@ -1,7 +1,7 @@
 const mongoose = require('mongoose');
-const Portfolio = require('../models/portfolio');
-const PortfolioService = require('../services/portfolio');
-const { validateTargets, normalizeTargets } = require('../services/portfolio/validateTargets');
+const Portfolio = require('@portomind/shared/models/portfolio');
+const PortfolioService = require('@portomind/shared/services/portfolio');
+const { validateTargets, normalizeTargets } = require('@portomind/shared/services/portfolio/validateTargets');
 const { success, failure, pagination, parsePagination } = require('../utils/apiResponse');
 
 function validId(req, res, id) {

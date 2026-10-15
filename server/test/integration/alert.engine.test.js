@@ -3,14 +3,14 @@ const assert = require('node:assert/strict');
 
 process.env.LOG_DIR = '/tmp/portomind-alert-engine-test-logs';
 
-const AlertRule = require('../../models/alertRule');
-const AlertEvent = require('../../models/alertEvent');
-const marketData = require('../../services/marketData.service');
+const AlertRule = require('@portomind/shared/models/alertRule');
+const AlertEvent = require('@portomind/shared/models/alertEvent');
+const marketData = require('@portomind/shared/services/marketData.service');
 const {
   evaluateRule,
   evaluateAll,
   shouldSuppress
-} = require('../../services/alertEngine.service');
+} = require('@portomind/shared/services/alertEngine.service');
 
 // 工具：stub AlertEvent.findOne 的链式 .sort().lean()
 function mockFindOneEvent(t, doc) {
@@ -276,7 +276,7 @@ test('evaluateAll：逐规则故障隔离——单规则异常不中断批次', 
 test('evaluateAll：组合级 drift 规则触发口径与组合卡片一致', () => {
   const now = new Date('2026-08-31T12:00:00.000Z');
   // 目标 50/50，当前 4000/1000 → 绝对偏离 30% > 5% → drift 触发（与组合卡片徽标同口径）
-  const { buildPortfolioSummary } = require('../../services/portfolio/summary');
+  const { buildPortfolioSummary } = require('@portomind/shared/services/portfolio/summary');
   const drift = buildPortfolioSummary({
     portfolio: {
       targets: [
@@ -309,8 +309,8 @@ test('evaluateAll：组合级 drift 规则触发口径与组合卡片一致', ()
 
 test('evaluateAll：52 周新高 + 估值分位规则聚合输入并触发生成事件', async (t) => {
   const now = new Date('2026-08-31T12:00:00.000Z');
-  const Price = require('../../models/price');
-  const valuationService = require('../../services/valuation.service');
+  const Price = require('@portomind/shared/models/price');
+  const valuationService = require('@portomind/shared/services/valuation.service');
   const rules = [
     makeRule({ _id: RULE_ID_A, ruleType: 'high_52w', params: { lookbackDays: 365 } }),
     makeRule({

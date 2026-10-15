@@ -1,0 +1,23 @@
+{
+  "name": "portomind",
+  "version": "1.0.0",
+  "private": true,
+  "description": "PortoMind — 自托管家庭投资组合管理（monorepo：client / server / cron-worker / shared）",
+  "license": "ISC",
+  "workspaces": [
+    "shared",
+    "server",
+    "cron-worker",
+    "client"
+  ],
+  "scripts": {
+    "test": "npm run test --workspaces --if-present",
+    "test:server": "npm run test --workspace server",
+    "test:worker": "npm run test --workspace cron-worker",
+    "dev:server": "npm run dev --workspace server",
+    "dev:worker": "npm run start --workspace cron-worker",
+    "dev:client": "npm run dev --workspace client",
+    "sync:prices": "npm run sync:prices --workspace cron-worker",
+    "check:integrity": "npm run check:integrity --workspace cron-worker"
+  }
+}

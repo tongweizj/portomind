@@ -1,8 +1,8 @@
 "use strict";
 const { test } = require('node:test');
 const assert = require('node:assert');
-const { isMarketOpenToday, easterSunday } = require('../src/services/calendar.service');
-const { logger } = require('../src/config/logger');
+const { isMarketOpenToday, easterSunday } = require('@portomind/shared/services/calendar.service');
+const { logger } = require('@portomind/shared/config/logger');
 
 test('复活节计算：已知年份', () => {
   assert.equal(easterSunday(2024).toISOString().slice(0, 10), '2024-03-31');

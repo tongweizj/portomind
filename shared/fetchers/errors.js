@@ -1,5 +1,5 @@
-// cron-worker/src/fetchers/errors.js
-// 行情错误规范化：统一 category / provider / retryable 字段，与 ../server/services/fetchers/errors.js 保持一致。
+// 行情错误规范化：统一 category / provider / retryable 字段。
+// 本文件是全仓唯一实现（server 与 cron-worker 共用），不存在需要同步的第二份拷贝。
 
 const MARKET_DATA_ERROR = Object.freeze({
   TIMEOUT: 'TIMEOUT',

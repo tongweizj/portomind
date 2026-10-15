@@ -1,13 +1,13 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
 
-const Transaction = require('../../models/transaction');
-const Portfolio = require('../../models/portfolio');
-const Asset = require('../../models/asset');
-const RebalanceRecord = require('../../models/rebalanceRecord');
-const transactionService = require('../../services/transaction.service');
-const { calculatePositions } = require('../../services/transaction/positionCalculator');
-const { deletePortfolioCascade } = require('../../services/portfolio/deletePortfolio');
+const Transaction = require('@portomind/shared/models/transaction');
+const Portfolio = require('@portomind/shared/models/portfolio');
+const Asset = require('@portomind/shared/models/asset');
+const RebalanceRecord = require('@portomind/shared/models/rebalanceRecord');
+const transactionService = require('@portomind/shared/services/transaction.service');
+const { calculatePositions } = require('@portomind/shared/services/transaction/positionCalculator');
+const { deletePortfolioCascade } = require('@portomind/shared/services/portfolio/deletePortfolio');
 
 const portfolioId = '64b000000000000000000010';
 const transactionId = '64b000000000000000000011';

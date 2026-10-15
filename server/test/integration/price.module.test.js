@@ -1,14 +1,14 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
 
-const Price = require('../../models/price');
-const storage = require('../../services/priceStorage.service');
-const priceService = require('../../services/price.service');
-const tiantianFetcher = require('../../services/fetchers/tiantianFetcher');
-const priceFetch = require('../../services/priceFetch.service');
-const { dateBounds } = require('../../utils/marketTime');
-const { withMarketDataTimeout } = require('../../services/fetchers/timeout');
-const { MARKET_DATA_ERROR, classifyMarketDataError } = require('../../services/fetchers/errors');
+const Price = require('@portomind/shared/models/price');
+const storage = require('@portomind/shared/services/priceStorage.service');
+const priceService = require('@portomind/shared/services/price.service');
+const tiantianFetcher = require('@portomind/shared/fetchers/tiantianFetcher');
+const priceFetch = require('@portomind/shared/services/priceFetch.service');
+const { dateBounds } = require('@portomind/shared/utils/marketTime');
+const { withMarketDataTimeout } = require('@portomind/shared/fetchers/timeout');
+const { MARKET_DATA_ERROR, classifyMarketDataError } = require('@portomind/shared/fetchers/errors');
 
 const originalFindOneAndUpdate = Price.findOneAndUpdate;
 const originalBulkWrite = Price.bulkWrite;

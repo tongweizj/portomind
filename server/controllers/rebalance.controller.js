@@ -1,9 +1,9 @@
-const { thresholdChecker, suggestionGenerator, recorder } = require('../services/rebalance');
+const { thresholdChecker, suggestionGenerator, recorder } = require('@portomind/shared/services/rebalance');
 const {
   executeRebalance,
   revokeExecution,
   prepareReexecution
-} = require('../services/rebalance/executeRebalance');
+} = require('@portomind/shared/services/rebalance/executeRebalance');
 const { success, failure, pagination, parsePagination } = require('../utils/apiResponse');
 
 exports.check = async (req, res, next) => {

@@ -1,13 +1,13 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
 
-const Transaction = require('../../models/transaction');
-const Price = require('../../models/price');
+const Transaction = require('@portomind/shared/models/transaction');
+const Price = require('@portomind/shared/models/price');
 const {
   calculatePositions,
   calculatePositionHistory
-} = require('../../services/transaction/positionCalculator');
-const { getHistory } = require('../../services/portfolio/positionTracker');
+} = require('@portomind/shared/services/transaction/positionCalculator');
+const { getHistory } = require('@portomind/shared/services/portfolio/positionTracker');
 
 let sequence = 0;
 function trade(overrides = {}) {

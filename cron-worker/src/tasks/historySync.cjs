@@ -11,10 +11,10 @@ mongoose.set('strictQuery', true);
 const minimist = require('minimist');
 const dayjs = require('dayjs');
 const pLimit = require('p-limit').default || require('p-limit');
-const { taskLogger } = require('../config/logger');
-const { getActiveAssets, getAssetsBySymbols } = require('../services/asset.service');
-const { fetchHistory } = require('../services/priceFetch.service');
-const { saveHistory } = require('../services/priceStorage.service');
+const { taskLogger } = require('@portomind/shared/config/logger');
+const { getActiveAssets, getAssetsBySymbols } = require('@portomind/shared/services/asset.service');
+const { fetchHistory } = require('@portomind/shared/services/priceFetch.service');
+const { saveHistory } = require('@portomind/shared/services/priceStorage.service');
 
 const DEFAULT_CONCURRENCY = 3;
 

@@ -3,7 +3,7 @@ const assert = require('node:assert/strict');
 
 process.env.LOG_DIR = '/tmp/portomind-family-summary-test-logs';
 
-const { buildFamilySummary, buildCurrencyBuckets } = require('../../services/familySummary.service');
+const { buildFamilySummary, buildCurrencyBuckets } = require('@portomind/shared/services/familySummary.service');
 
 // ───────────────────────── 纯函数：buildCurrencyBuckets ─────────────────────────
 
@@ -84,8 +84,8 @@ test('无组合与无持仓：总额 0，占比为空', () => {
 // ───────────────────────── HTTP 契约 ─────────────────────────
 
 const app = require('../../app');
-const familySummaryService = require('../../services/familySummary.service');
-const fxRateService = require('../../services/fxRate.service');
+const familySummaryService = require('@portomind/shared/services/familySummary.service');
+const fxRateService = require('@portomind/shared/services/fxRate.service');
 let server;
 let baseUrl;
 

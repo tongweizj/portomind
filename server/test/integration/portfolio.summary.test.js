@@ -3,8 +3,8 @@ const assert = require('node:assert/strict');
 
 process.env.LOG_DIR = '/tmp/portomind-portfolio-summary-test-logs';
 
-const { buildPortfolioSummary } = require('../../services/portfolio/summary');
-const PortfolioService = require('../../services/portfolio');
+const { buildPortfolioSummary } = require('@portomind/shared/services/portfolio/summary');
+const PortfolioService = require('@portomind/shared/services/portfolio');
 
 // ───────────────────────── 纯函数表驱动测试 ─────────────────────────
 

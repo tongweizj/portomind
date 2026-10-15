@@ -9,8 +9,8 @@ const {
   hasClassTargets,
   deriveSymbolTargets,
   UNCLASSIFIED
-} = require('../../services/portfolio/assetClassAggregator');
-const { evaluateThresholds } = require('../../services/rebalance/thresholdChecker');
+} = require('@portomind/shared/services/portfolio/assetClassAggregator');
+const { evaluateThresholds } = require('@portomind/shared/services/rebalance/thresholdChecker');
 
 // ───────────────────────── 聚合器纯函数 ─────────────────────────
 
@@ -143,9 +143,9 @@ test('evaluateThresholds 大类伪持仓：偏离触发与 symbol 级口径一�
 // ───────────────────────── actualRatios 大类模式 ─────────────────────────
 
 test('computeActualRatios level=asset_class：按币种内大类占比返回', async (t) => {
-  const { computeActualRatios } = require('../../services/portfolio/actualRatios');
-  const tracker = require('../../services/portfolio/positionTracker');
-  const aggregator = require('../../services/portfolio/assetClassAggregator');
+  const { computeActualRatios } = require('@portomind/shared/services/portfolio/actualRatios');
+  const tracker = require('@portomind/shared/services/portfolio/positionTracker');
+  const aggregator = require('@portomind/shared/services/portfolio/assetClassAggregator');
 
   t.mock.method(tracker, 'aggregate', async () => [
     { symbol: 'VOO', currency: 'USD', marketValue: 6000 },
@@ -167,8 +167,8 @@ test('computeActualRatios level=asset_class：按币种内大类占比返回', a
 // ───────────────────────── HTTP 契约 ─────────────────────────
 
 const app = require('../../app');
-const Portfolio = require('../../models/portfolio');
-const PortfolioService = require('../../services/portfolio');
+const Portfolio = require('@portomind/shared/models/portfolio');
+const PortfolioService = require('@portomind/shared/services/portfolio');
 let server;
 let baseUrl;
 

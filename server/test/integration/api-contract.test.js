@@ -3,10 +3,10 @@ const assert = require('node:assert/strict');
 
 process.env.LOG_DIR = '/tmp/portomind-api-contract-test-logs';
 
-const priceService = require('../../services/price.service');
-const assetService = require('../../services/asset.service');
-const executeService = require('../../services/rebalance/executeRebalance');
-const Asset = require('../../models/asset');
+const priceService = require('@portomind/shared/services/price.service');
+const assetService = require('@portomind/shared/services/asset.service');
+const executeService = require('@portomind/shared/services/rebalance/executeRebalance');
+const Asset = require('@portomind/shared/models/asset');
 
 let capturedPriceQuery;
 let capturedHistoryQuery;

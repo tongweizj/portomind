@@ -1,10 +1,10 @@
 // server/controllers/alert.controller.js
 // 提醒中心 API（PRD §4.4.5）：规则 CRUD + 事件列表/已读/未读数 + 手动跑批。
 const mongoose = require('mongoose');
-const AlertRule = require('../models/alertRule');
-const AlertEvent = require('../models/alertEvent');
+const AlertRule = require('@portomind/shared/models/alertRule');
+const AlertEvent = require('@portomind/shared/models/alertEvent');
 // 属性访问（而非解构），便于测试对 evaluateAll 做 stub
-const alertEngine = require('../services/alertEngine.service');
+const alertEngine = require('@portomind/shared/services/alertEngine.service');
 const { success, failure, pagination, parsePagination } = require('../utils/apiResponse');
 
 const RULE_TYPES = [

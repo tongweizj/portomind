@@ -3,12 +3,8 @@ const assert = require('node:assert/strict');
 
 process.env.LOG_DIR = '/tmp/portomind-portfolio-archived-test-logs';
 
-const Portfolio = require('../../models/portfolio');
-const TaskRun = require('../../models/taskRun');
-const scheduleManager = require('../../services/rebalance/scheduleManager');
-const ThresholdChecker = require('../../services/rebalance/thresholdChecker');
-const cron = require('node-cron');
-const { computeSummary } = require('../../services/portfolio/summary');
+const Portfolio = require('@portomind/shared/models/portfolio');
+const { computeSummary } = require('@portomind/shared/services/portfolio/summary');
 
 // ───────────────────────── Model 默认值 ─────────────────────────
 
@@ -26,82 +22,11 @@ test('Portfolio model：archived 可显式设为 true', () => {
 });
 
 // ───────────────────────── 再平衡调度（CM-20 验收）─────────────────────────
-
-const PID_A = '64b00000000000000000000a'; // 未归档
-const PID_B = '64b00000000000000000000b'; // 已归档
-
-test('initSchedules：查询过滤 archived != true，仅注册未归档组合', async (t) => {
-  const findMock = t.mock.method(Portfolio, 'find', () => ({
-    lean: async () => [
-      { _id: PID_A, archived: false, rebalanceSettings: { rebalanceSchedule: 'daily' } },
-      // 查询层本应过滤掉；放在返回值里验证循环不会为归档组合注册
-      { _id: PID_B, archived: true, rebalanceSettings: { rebalanceSchedule: 'daily' } }
-    ]
-  }));
-  const cronMock = t.mock.method(cron, 'schedule', () => ({ stop: () => {} }));
-
-  await scheduleManager.initSchedules();
-
-  assert.equal(findMock.mock.callCount(), 1);
-  assert.deepEqual(findMock.mock.calls[0].arguments[0], { archived: { $ne: true } });
-  // 仅 PID_A 注册（PID_B 依赖运行时守卫兜底，见下一条）
-  assert.equal(cronMock.mock.callCount(), 1);
-  scheduleManager.cancelAllSchedules();
-});
-
-test('cron 回调运行时守卫：注册后归档的组合跳过执行', async (t) => {
-  let cronCallback = null;
-  t.mock.method(cron, 'schedule', (expr, callback) => {
-    cronCallback = callback;
-    return { stop: () => {} };
-  });
-  // 执行时数据库中该组合已归档
-  t.mock.method(Portfolio, 'findById', () => ({
-    select: () => ({ lean: async () => ({ _id: PID_B, archived: true }) })
-  }));
-  const checkMock = t.mock.method(ThresholdChecker, 'checkThresholds', async () => ({
-    needsRebalance: true
-  }));
-
-  await scheduleManager.scheduleJobForPortfolio({
-    _id: PID_B,
-    archived: true,
-    rebalanceSettings: { rebalanceSchedule: 'daily' }
-  });
-  assert.ok(cronCallback, 'cron 任务已注册');
-
-  await cronCallback();
-
-  assert.equal(checkMock.mock.callCount(), 0, '已归档组合不触发阈值检查');
-  scheduleManager.cancelAllSchedules();
-});
-
-test('cron 回调运行时守卫：未归档组合正常执行阈值检查', async (t) => {
-  let cronCallback = null;
-  t.mock.method(cron, 'schedule', (expr, callback) => {
-    cronCallback = callback;
-    return { stop: () => {} };
-  });
-  // runTrackedTask 依赖 TaskRun（MongoDB）；mock 掉使 execute 正常执行
-  t.mock.method(TaskRun, 'create', async () => ({ _id: { toString: () => 'taskrun-fake-id' } }));
-  t.mock.method(TaskRun, 'updateOne', async () => ({}));
-  t.mock.method(Portfolio, 'findById', () => ({
-    select: () => ({ lean: async () => ({ _id: PID_A, archived: false }) })
-  }));
-  const checkMock = t.mock.method(ThresholdChecker, 'checkThresholds', async () => ({
-    needsRebalance: false
-  }));
-
-  await scheduleManager.scheduleJobForPortfolio({
-    _id: PID_A,
-    archived: false,
-    rebalanceSettings: { rebalanceSchedule: 'daily' }
-  });
-  await cronCallback();
-
-  assert.equal(checkMock.mock.callCount(), 1);
-  scheduleManager.cancelAllSchedules();
-});
+//
+// 说明（TASK-005 统一调度器）：再平衡的**调度触发权**已迁至 cron-worker
+// （src/schedulers/rebalanceScheduler.js，单日分发器）；server 侧不再有 scheduleManager。
+// 原先针对 scheduleManager.initSchedules / scheduleJobForPortfolio 的三条断言已移至
+// cron-worker/test/rebalanceScheduler.test.js（连同「归档组合不执行」的运行时守卫断言）。
 
 // ───────────────────────── 列表汇总过滤 ─────────────────────────
 
@@ -112,7 +37,7 @@ test('computeSummary：默认过滤 archived != true', async (t) => {
     return { sort: () => ({ lean: async () => [] }) };
   });
   // summary 现聚合未读提醒数（CM-12），stub 掉无 MongoDB 的 aggregate
-  const AlertEvent = require('../../models/alertEvent');
+  const AlertEvent = require('@portomind/shared/models/alertEvent');
   t.mock.method(AlertEvent, 'aggregate', async () => []);
 
   const result = await computeSummary();
@@ -127,7 +52,7 @@ test('computeSummary：includeArchived=true 时不过滤', async (t) => {
     filters.push(filter);
     return { sort: () => ({ lean: async () => [] }) };
   });
-  const AlertEvent = require('../../models/alertEvent');
+  const AlertEvent = require('@portomind/shared/models/alertEvent');
   t.mock.method(AlertEvent, 'aggregate', async () => []);
 
   await computeSummary({ includeArchived: true });
@@ -138,7 +63,7 @@ test('computeSummary：includeArchived=true 时不过滤', async (t) => {
 // ───────────────────────── HTTP 契约 ─────────────────────────
 
 const app = require('../../app');
-const PortfolioService = require('../../services/portfolio');
+const PortfolioService = require('@portomind/shared/services/portfolio');
 let server;
 let baseUrl;
 

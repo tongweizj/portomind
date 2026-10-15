@@ -1,11 +1,11 @@
 # PortoMind Client
 
-React + Vite 单页应用。所有网络请求通过 `src/services/api.js` 中的统一 Axios 实例访问后端。
+React + Vite 单页应用（`@portomind/client`）。所有网络请求通过 `src/services/api.js` 中的统一 Axios 实例访问后端。
 
 ```bash
-cp .env.example .env
-npm ci
-npm run dev
+cp client/.env.example client/.env
+npm ci                  # 在仓库根目录执行（npm workspaces）
+npm run dev:client      # 或在 client/ 下 npm run dev
 ```
 
 `VITE_API_URL` 应包含 `/api` 前缀，例如 `http://localhost:8080/api`；未配置时默认使用同源 `/api`，不会生成 `undefined/assets` 一类地址。

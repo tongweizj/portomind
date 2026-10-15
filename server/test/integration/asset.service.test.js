@@ -1,8 +1,8 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
 
-const Asset = require('../../models/asset');
-const assetService = require('../../services/asset.service');
+const Asset = require('@portomind/shared/models/asset');
+const assetService = require('@portomind/shared/services/asset.service');
 
 const original = {
   exists: Asset.exists,

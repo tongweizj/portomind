@@ -7,9 +7,9 @@ process.env.MARKET_DATA_TIMEOUT_MS = '50';
 
 const { test } = require('node:test');
 const assert = require('node:assert');
-const yahooFetcher = require('../src/fetchers/yahooFetcher');
-const eastmoneyFetcher = require('../src/fetchers/eastmoneyFetcher');
-const tiantianFetcher = require('../src/fetchers/tiantianFetcher');
+const yahooFetcher = require('@portomind/shared/fetchers/yahooFetcher');
+const eastmoneyFetcher = require('@portomind/shared/fetchers/eastmoneyFetcher');
+const tiantianFetcher = require('@portomind/shared/fetchers/tiantianFetcher');
 
 // 永不 resolve 的 Promise，模拟上游挂起（超时由 withMarketDataTimeout 的计时器触发）。
 const hang = () => new Promise(() => {});

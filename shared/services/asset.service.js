@@ -101,6 +101,18 @@ async function getActiveAssets() {
   return Asset.find({ active: true }).sort({ symbol: 1 });
 }
 
+// 按符号列表取 active 资产（顺序保持与传入符号一致）；不存在的符号会被忽略。
+// 供历史回补 / 完整性检查等按符号运行的任务使用（由 cron-worker 侧实现合并而来）。
+async function getAssetsBySymbols(symbols = []) {
+  const uniqueSymbols = [...new Set(symbols.map(s => String(s).trim().toUpperCase()).filter(Boolean))];
+  if (uniqueSymbols.length === 0) return [];
+  const assets = await Asset.find({ active: true, symbol: { $in: uniqueSymbols } });
+  const bySymbol = new Map(assets.map(asset => [asset.symbol, asset]));
+  return uniqueSymbols
+    .map(symbol => bySymbol.get(symbol))
+    .filter(Boolean);
+}
+
 async function createAsset(input) {
   const data = normalizeInput(input);
   if (data.symbol && await Asset.exists({ symbol: data.symbol })) {
@@ -138,6 +150,7 @@ async function deleteAsset(id) {
 module.exports = {
   getAllAssets,
   getActiveAssets,
+  getAssetsBySymbols,
   getAssetById,
   createAsset,
   updateAsset,

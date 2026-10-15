@@ -1,0 +1,16 @@
+{
+  "name": "@portomind/shared",
+  "version": "1.0.0",
+  "private": true,
+  "description": "PortoMind 共享内核：Mongoose 模型、业务引擎、行情适配器、交易日历与工具。server 与 cron-worker 的唯一实现来源。",
+  "license": "ISC",
+  "type": "commonjs",
+  "main": "index.js",
+  "dependencies": {
+    "axios": "^1.19.0",
+    "dayjs": "^1.11.23",
+    "mongoose": "^6.13.11",
+    "winston": "^3.19.0",
+    "winston-daily-rotate-file": "^5.0.0"
+  }
+}

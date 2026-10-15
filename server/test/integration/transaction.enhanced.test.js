@@ -3,13 +3,13 @@ const assert = require('node:assert/strict');
 
 process.env.LOG_DIR = '/tmp/portomind-transaction-enhanced-test-logs';
 
-const Transaction = require('../../models/transaction');
-const Portfolio = require('../../models/portfolio');
-const Asset = require('../../models/asset');
-const transactionService = require('../../services/transaction.service');
-const { calculatePositions } = require('../../services/transaction/positionCalculator');
-const { executeRebalance, revokeExecution } = require('../../services/rebalance/executeRebalance');
-const recorder = require('../../services/rebalance/recorder');
+const Transaction = require('@portomind/shared/models/transaction');
+const Portfolio = require('@portomind/shared/models/portfolio');
+const Asset = require('@portomind/shared/models/asset');
+const transactionService = require('@portomind/shared/services/transaction.service');
+const { calculatePositions } = require('@portomind/shared/services/transaction/positionCalculator');
+const { executeRebalance, revokeExecution } = require('@portomind/shared/services/rebalance/executeRebalance');
+const recorder = require('@portomind/shared/services/rebalance/recorder');
 
 const portfolioId = '64b000000000000000000010';
 

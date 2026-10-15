@@ -3,8 +3,8 @@ const assert = require('node:assert/strict');
 
 process.env.LOG_DIR = '/tmp/portomind-valuation-test-logs';
 
-const Valuation = require('../../models/valuation');
-const valuationService = require('../../services/valuation.service');
+const Valuation = require('@portomind/shared/models/valuation');
+const valuationService = require('@portomind/shared/services/valuation.service');
 
 // ───────────────────────── 服务：upsert / 查询 ─────────────────────────
 

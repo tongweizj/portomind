@@ -1,10 +1,13 @@
-// cron-worker/src/tasks/dailySync.js
-// 每日价格同步：获取全部激活资产 → 逐资产校验市场当日是否开市（休市跳过并记 info）→
+// shared/tasks/dailySync.js
+// 每日价格同步（业务能力，server 与 cron-worker 共用；本模块**不**加载 .env、不建立连接）：
+// 获取全部激活资产 → 逐资产校验市场当日是否开市（休市跳过并记 info）→
 // 经带重试的 Fetcher 抓取并入库；整体由 runTrackedTask 追踪（耗时、成功/失败明细）。
+//
+// 调用方约定：
+//  - 调度触发：cron-worker/src/schedulers/priceScheduler.js（进程已连接 MongoDB）
+//  - 手动触发：server/tasks/dailySync.js / cron-worker/src/tasks/dailySync.js（CLI 薄壳，负责
+//    加载 .env 与建连，再调用本模块）
 
-require('../config/env');
-const mongoose = require('mongoose');
-mongoose.set('strictQuery', true);
 const { taskLogger } = require('../config/logger');
 const { marketDate } = require('../utils/marketTime');
 const { getActiveAssets } = require('../services/asset.service');
@@ -75,24 +78,6 @@ async function dailySync(options = {}) {
     runKey,
     trigger,
     execute: () => syncActiveAssetPrices(options.dependencies)
-  });
-}
-
-async function runFromCommandLine() {
-  if (!process.env.MONGO_URI) throw new Error('MONGO_URI is required');
-  await mongoose.connect(process.env.MONGO_URI);
-  try {
-    const summary = await dailySync({ trigger: 'MANUAL' });
-    if (summary.status === 'PARTIAL' || summary.status === 'FAILED') process.exitCode = 1;
-  } finally {
-    await mongoose.disconnect();
-  }
-}
-
-if (require.main === module) {
-  runFromCommandLine().catch(error => {
-    taskLogger.error('PRICE_SYNC_COMMAND_FAILED', { message: error.message, stack: error.stack });
-    process.exitCode = 1;
   });
 }
 

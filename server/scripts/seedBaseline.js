@@ -3,10 +3,10 @@ require('dotenv').config({ path: path.resolve(__dirname, '../.env') });
 
 const mongoose = require('mongoose');
 mongoose.set('strictQuery', true);
-const Asset = require('../models/asset');
-const Portfolio = require('../models/portfolio');
-const Transaction = require('../models/transaction');
-const Price = require('../models/price');
+const Asset = require('@portomind/shared/models/asset');
+const Portfolio = require('@portomind/shared/models/portfolio');
+const Transaction = require('@portomind/shared/models/transaction');
+const Price = require('@portomind/shared/models/price');
 const { createBaselineData } = require('./baselineData');
 
 function requireMongoUri() {

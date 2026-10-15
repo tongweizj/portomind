@@ -3,7 +3,7 @@
 // 供 priceScheduler / healthScheduler 复用，消除重复。
 
 const cron = require('node-cron');
-const { taskLogger } = require('../config/logger');
+const { taskLogger } = require('@portomind/shared/config/logger');
 
 function resolveTimezone() {
   return process.env.SCHEDULER_TIMEZONE || process.env.MARKET_TIMEZONE || 'America/Toronto';
@@ -47,4 +47,4 @@ function createCronScheduler({ envKey, defaultCron, taskName, run }) {
   };
 }
 
-module.exports = { createCronScheduler };
+module.exports = { createCronScheduler, resolveTimezone, logCode };

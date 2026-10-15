@@ -1,6 +1,6 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
-const { validateTargets } = require('../../services/portfolio/validateTargets');
+const { validateTargets } = require('@portomind/shared/services/portfolio/validateTargets');
 
 test('组合目标比例允许空配置或精确合计 100%', () => {
   assert.doesNotThrow(() => validateTargets([]));

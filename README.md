@@ -2,9 +2,9 @@
 
 PortoMind 是一个自托管的个人/家庭投资组合管理应用，覆盖资产、行情、交易、持仓、目标配置、再平衡建议、站内提醒与家庭层 RMB 汇总。当前版本面向单用户本地部署；建议仅在可信网络中运行。
 
-![PortoMind Logo](./doc/logo.png)
+![PortoMind Logo](./docs/logo.png)
 
-> 📖 新手从这里开始：[使用指南](./doc/USER_GUIDE.md)
+> 📖 新手从这里开始：[使用指南](./docs/manual/USER_GUIDE.md)
 
 ## 当前能力
 
@@ -15,51 +15,74 @@ PortoMind 是一个自托管的个人/家庭投资组合管理应用，覆盖资
 - “生成建议 → 用户确认执行 → 撤销/重做”的再平衡闭环 + AUTO 调度（只生成建议，不自动交易）
 - 提醒中心：到价/盈亏/漂移/52 周新高新低/估值分位/人工信号 8 种规则，每日跑批产生站内事件
 - 家庭视图：以 RMB 折算家庭总资产，CNY/USD/CAD/HKD 分桶 + 组合贡献 + 最近动态（汇率自动采集 + 手动兜底）
-- Node 常驻调度（价格/完整性/提醒/汇率）、任务防重、逐资产故障隔离和可追踪日志
+- 单一常驻调度进程 `cron-worker`（价格同步/完整性检查/提醒评估/汇率同步/再平衡分发共 5 类任务）、TaskRun 防重、逐资产故障隔离和可追踪日志
 - 前后端统一 API 响应与 Axios 错误处理
 
 当前不支持登录、多用户或无人值守自动交易；不同币种在组合层不直接合计（仅家庭层按汇率折算）。
+
+## 仓库结构
+
+npm workspaces monorepo，四个 workspace：
+
+| 目录 | 说明 |
+|---|---|
+| `shared/` | 唯一业务内核（models / services / tasks / fetchers / constants / config / utils），被 `server` 与 `cron-worker` 共用 |
+| `server/` | REST API 进程。**不注册任何定时任务**，只提供接口与手动触发端点 |
+| `cron-worker/` | **全项目唯一的调度所有者**，注册全部 5 类定时任务 |
+| `client/` | React SPA 前端 |
 
 ## 技术栈
 
 - 前端：React 19、Vite 6、React Router 7、TanStack Query、Tailwind CSS
 - 后端：Node.js、Express 4、Mongoose 6、MongoDB
 - 任务：node-cron、Winston、MongoDB `TaskRun` 防重记录
+- 包管理：npm workspaces
 - 测试：Node.js test runner、HTTP 集成测试和表格驱动业务测试
 
 ## 快速开始
 
-要求 Node.js、npm 和 MongoDB。项目验证基线使用 Node.js 24。
+要求 Node.js 24、npm 和 MongoDB。完整步骤见 [开发与运行说明](./docs/manual/DEVELOPMENT.md)。
 
 ```bash
 cp server/.env.example server/.env
 cp client/.env.example client/.env
 
-cd server
-npm ci
-npm run seed:baseline
-npm run dev
+npm ci                      # 根目录一次安装（workspaces）
+npm run seed:baseline --workspace server
+npm run dev:server
 ```
 
 另开终端：
 
 ```bash
-cd client
-npm ci
-npm run dev
+npm run dev:client
+```
+
+需要跑定时任务时再开一个终端（可选）：
+
+```bash
+cp cron-worker/.env.example cron-worker/.env
+npm run dev:worker
 ```
 
 - 前端：`http://localhost:5173`
 - 后端：`http://localhost:8080`
 - API 前缀：`http://localhost:8080/api`
 
-生产部署必须保证只有一个 Node 进程设置 `SCHEDULER_ENABLED=true`。PM2 只负责保活，不要再通过系统 cron 调用价格或再平衡脚本。
+定时任务（价格同步/完整性检查/提醒评估/汇率同步/再平衡分发）**只在 `cron-worker` 中注册**，API 进程不跑任何定时任务。`SCHEDULER_ENABLED` 与全部 `*_CRON` 配置只存在于 `cron-worker/.env`。启动方式与自检见 [生产操作指南](./docs/manual/OPERATIONS.md) §3。
 
 ## 验证
 
 ```bash
+npm test                    # 根目录跑全部 workspace 测试
+npm run test:server
+npm run test:worker
+```
+
+单端验证：
+
+```bash
 cd server
-npm test
 npm run validate
 
 cd ../client
@@ -76,14 +99,17 @@ npm run verify
 
 ## 文档
 
-- [使用指南（新手从这里开始）](./doc/USER_GUIDE.md)
-- [产品需求文档 PRD](./doc/PRD.md)
-- [开发与运行说明](./doc/DEVELOPMENT.md)
-- [部署说明](./doc/DEPLOY.md)
-- [生产操作指南（行情与数据质量）](./doc/OPERATIONS.md)
-- [REST API 契约](./doc/API_CONTRACT.md)
-- [依赖升级评估](./doc/DEPENDENCY_UPGRADES.md)
-- [后续路线图](./doc/ROADMAP.md)
+- [使用指南（新手从这里开始）](./docs/manual/USER_GUIDE.md) — 功能怎么用、业务口径
+- [开发与运行说明](./docs/manual/DEVELOPMENT.md) — 本地环境、依赖、验证命令
+- [部署说明](./docs/manual/DEPLOY.md) — 构建、生产环境变量、PM2/Nginx、备份、安全边界
+- [生产操作指南（行情与数据质量）](./docs/manual/OPERATIONS.md) — 调度所有权、价格同步、完整性检查、排障
+- [产品线总览与功能评估](./docs/product/PRODUCT_LINES.md) — 产品线划分、功能全景与取舍建议（子文件 PL-0~PL-6）
+- [架构总览](./docs/architecture/ARCHITECTURE.md) — 分层与模块边界
+- [ADR-002 单一调度器与共享内核](./docs/architecture/adr/ADR-002-single-scheduler.md) — 调度所有权收敛决策
+- [REST API 契约](./docs/dev/API_CONTRACT.md)
+- [产品需求文档 PRD](./docs/product/specs/PRD.md) — 需求基线
+- [后续路线图](./docs/product/ROADMAP.md)
+- [文档索引](./docs/readme.md) — 全部文档入口
 
 ## 重要业务规则
 
@@ -96,7 +122,7 @@ npm run verify
 
 ## 安全边界
 
-当前没有认证与授权，API 不应直接暴露到公网。日志会脱敏常见 Token、密码、API Key 和连接字符串，但仍应限制日志文件和 MongoDB 的访问权限。
+当前没有认证与授权，API 不应直接暴露到公网。**CORS 当前也不校验来源**（任意来源都被接受，`CORS_ORIGINS` 尚未生效）。完整说明与上线前要求见 [部署说明 § 安全边界](./docs/manual/DEPLOY.md#6-安全边界)。
 
 ## License
 

@@ -1,58 +1,29 @@
+// server/test/integration/taskrun.logging.test.js
+//
+// 说明（TASK-005 统一调度器）：
+// 本文件原名 scheduler.module.test.js。server 进程已不再注册任何 cron（调度全部由
+// cron-worker 独占），因此原先针对 server/tasks/priceScheduler 的断言已迁至
+// cron-worker/test/scheduler.test.js；price 同步的任务级断言由 cron-worker/test/dailySync.test.js
+// 覆盖。这里保留与进程无关的部分：TaskRun 防重（@portomind/shared）、市场日期归一化与日志脱敏。
+
 const test = require('node:test');
 const assert = require('node:assert/strict');
 const fs = require('fs');
 const os = require('os');
 const path = require('path');
 
-const cron = require('node-cron');
-const TaskRun = require('../../models/taskRun');
-const { DEFAULT_PRICE_SYNC_CRON, startPriceScheduler } = require('../../tasks/priceScheduler');
-const { syncActiveAssetPrices, marketDate } = require('../../tasks/dailySync');
-const { runTrackedTask } = require('../../services/taskRunner');
+const TaskRun = require('@portomind/shared/models/taskRun');
+const { marketDate } = require('@portomind/shared/utils/marketTime');
+const { runTrackedTask } = require('@portomind/shared/services/taskRunner');
 const { paginateLogFile, parseLogQuery } = require('../../controllers/log.controller');
-const { sanitizeLogValue, sanitizeUrl } = require('../../utils/logSanitizer');
+const { sanitizeLogValue, sanitizeUrl } = require('@portomind/shared/utils/logSanitizer');
 
-const originalSchedule = cron.schedule;
 const originalCreate = TaskRun.create;
 const originalUpdateOne = TaskRun.updateOne;
 
 test.afterEach(() => {
-  cron.schedule = originalSchedule;
   TaskRun.create = originalCreate;
   TaskRun.updateOne = originalUpdateOne;
-});
-
-test('价格 cron 每天 03:00 只触发一次且使用统一时区', () => {
-  let captured;
-  cron.schedule = (expression, callback, options) => {
-    captured = { expression, callback, options };
-    return { stop() {} };
-  };
-  startPriceScheduler({ timezone: 'America/Toronto', dailySync: async () => {} });
-  assert.equal(DEFAULT_PRICE_SYNC_CRON, '0 3 * * *');
-  assert.equal(captured.expression, '0 3 * * *');
-  assert.equal(captured.options.timezone, 'America/Toronto');
-});
-
-test('价格同步隔离单资产失败并返回完整计数', async () => {
-  const saved = [];
-  const result = await syncActiveAssetPrices({
-    getActiveAssets: async () => [{ symbol: 'VTI' }, { symbol: 'FAIL' }, { symbol: 'BND.TO' }],
-    fetchLatest: async symbol => {
-      if (symbol === 'FAIL') throw Object.assign(new Error('provider timeout'), {
-        category: 'TIMEOUT', provider: 'TEST', retryable: true
-      });
-      return { symbol, price: 100, timestamp: new Date('2026-08-24T12:00:00Z') };
-    },
-    saveLatest: async record => { saved.push(record.symbol); }
-  });
-
-  assert.deepEqual(saved, ['VTI', 'BND.TO']);
-  assert.deepEqual(
-    { totalCount: result.totalCount, successCount: result.successCount, failureCount: result.failureCount },
-    { totalCount: 3, successCount: 2, failureCount: 1 }
-  );
-  assert.equal(result.failures[0].item, 'FAIL');
 });
 
 test('任务运行键同时提供进程内锁与数据库唯一键防重', async () => {

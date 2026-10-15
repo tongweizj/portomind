@@ -41,7 +41,7 @@ export const ASSET_CURRENCIES = Object.freeze([
 
 /**
  * 组合账户类型（账户载体）。与组合类型（风险定位：活钱/稳健/长期）正交。
- * 后端枚举见 server/models/portfolio.js 的 accountType。
+ * 后端枚举见 shared/models/portfolio.js 的 accountType。
  */
 export const PORTFOLIO_ACCOUNT_TYPES = Object.freeze([
   { value: 'tiantian', label: '天天基金' },
