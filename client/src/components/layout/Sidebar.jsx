@@ -2,21 +2,22 @@
 // 与 Ardot 设计稿 Component/Sidebar 对齐：
 //   - 宽 232px、底色 #F6F8FA、与主内容用 1px 右边框 #E3E8EE 分隔
 //   - 顶部：紫底白方块 logo + "PortoMind" 文字
-//   - 段标题「功能导航」灰小字
+//   - 段标题「总览」灰小字
 //   - 导航项：默认 #5E6B7E，激活态 #EEEDFF 底 + #635BFF 紫文，圆角 8
 //   - 底部：分隔线 + 「退出登录」+ 版本号 v0.9.2 · 自托管
+// 信息架构（FS-asset-price-consolidation）：顶层 8 → 7 项；
+//   原「资产管理」移出导航，收敛为「今日行情」屏内入口；「价格」→「今日行情」+「监控」badge。
 import { NavLink } from 'react-router';
 import {
-  LayoutDashboard, LineChart, ListOrdered, Coins, FileText, LogOut, Layers, Bell, Users
+  LayoutDashboard, LineChart, ListOrdered, FileText, LogOut, Layers, Bell, Users
 } from 'lucide-react';
 import { colors, layout, fontStack, radii } from '../../constants/design-tokens';
 
 const navItems = [
-  { to: '/', icon: LayoutDashboard, label: 'Dashboard', end: true },
-  { to: '/prices', icon: LineChart, label: '价格' },
+  { to: '/', icon: LayoutDashboard, label: 'Dashboard · 提醒', end: true },
   { to: '/portfolios', icon: Layers, label: '组合管理' },
+  { to: '/prices', icon: LineChart, label: '今日行情', badge: '监控' },
   { to: '/transactions', icon: ListOrdered, label: '交易记录' },
-  { to: '/assets', icon: Coins, label: '资产管理' },
   { to: '/family', icon: Users, label: '家庭视图' },
   { to: '/alerts/rules', icon: Bell, label: '提醒规则' },
   { to: '/logs', icon: FileText, label: '日志' },
@@ -71,7 +72,7 @@ export default function Sidebar() {
         </span>
       </div>
 
-      {/* 段标题 */}
+      {/* 段标题：总览 */}
       <div
         style={{
           color: colors.textMuted,
@@ -79,12 +80,12 @@ export default function Sidebar() {
           padding: '20px 24px 8px 24px',
         }}
       >
-        功能导航
+        总览
       </div>
 
-      {/* 导航项 */}
+      {/* 导航项（7 项） */}
       <nav className="flex-1 px-3 space-y-1">
-        {navItems.map(({ to, icon: Icon, label, end }) => (
+        {navItems.map(({ to, icon: Icon, label, end, badge }) => (
           <NavLink
             key={to}
             to={to}
@@ -109,6 +110,21 @@ export default function Sidebar() {
                   strokeWidth={isActive ? 2.2 : 1.8}
                 />
                 <span>{label}</span>
+                {badge && (
+                  <span
+                    style={{
+                      marginLeft: 'auto',
+                      fontSize: 10,
+                      lineHeight: 1.6,
+                      padding: '0 7px',
+                      borderRadius: radii.pill,
+                      backgroundColor: isActive ? colors.bgCard : colors.border,
+                      color: isActive ? colors.brand : colors.textSecondary,
+                    }}
+                  >
+                    {badge}
+                  </span>
+                )}
               </>
             )}
           </NavLink>

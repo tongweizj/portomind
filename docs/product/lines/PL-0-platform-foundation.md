@@ -9,7 +9,9 @@
 
 ## 1. 定位与价值主张
 
-**价值主张：调度、数据质量、可观测性、设计一致性——决定上面六条线的可信度。**
+**价值主张：**
+
+**调度、数据质量、可观测性、设计一致性——决定上面六条线的可信度。**
 
 本线不产生「功能」，而产生「信任」：数据是否按时到位、失败是否可见、日志能否追溯、界面是否一致。它被提升为产品级信任项而非纯技术项，因为上述任一环节出问题，都会以**用户可见的不可信**形式外化。
 
@@ -27,7 +29,15 @@
 | 用户体验 | — | 面向自持运维者而非终端用户 |
 | 数据可信 | 中 | ✅ 双份调度已收口（TASK-005）；✅ 枚举降为两份；余：无认证、CORS 过宽 |
 
-**主要短板**：① 无认证授权 + CORS 开放（P0，公网前必须闭环）；② 缺数据质量看板；③ 双轨样式与前端数据层不统一；④ 节假日表需逐年维护。
+**主要短板**：
+
+① 无认证授权 + CORS 开放（P0，公网前必须闭环）；
+
+② 缺数据质量看板；
+
+③ 双轨样式与前端数据层不统一；
+
+④ 节假日表需逐年维护。
 
 ---
 
@@ -68,8 +78,8 @@
 
 | 编号 | 功能点 | 功能描述 | 入口 |
 |---|---|---|---|
-| — | 唯一调度所有者 | **`cron-worker` 是全项目唯一会注册 cron 的进程**；`server` 侧无任何调度启动路径；`shared/` 承载业务能力、worker 只持「触发权」，API 手动端点与定时触发走**同一函数** | TASK-005 / ADR-002 |
-| — | 调度清单（5 类） | 价格同步 `0 3 * * *`、完整性检查 `30 3 * * *`、提醒评估 `0 4 * * *`、汇率采集 `30 9 * * *`、自动再平衡 `0 0 * * *` | cron-worker |
+| — | 唯一调度所有者 | **`cron-worker` 是全项目唯一会注册 cron 的进程**；<br />`server` 侧无任何调度启动路径；<br />`shared/` 承载业务能力、worker 只持「触发权」，API 手动端点与定时触发走**同一函数** | TASK-005 / ADR-002 |
+| — | 调度清单（5 类） | 价格同步 `0 3 * * *`、<br />完整性检查 `30 3 * * *`、提醒评估 `0 4 * * *`、汇率采集 `30 9 * * *`、自动再平衡 `0 0 * * *` | cron-worker |
 | — | 统一调度工厂 | 5 个调度器统一由 `createCronScheduler()` 创建，共用 `SCHEDULER_TIMEZONE`（回落 `MARKET_TIMEZONE` → `America/Toronto`） | `schedulers/cronScheduler.js` |
 | — | 全局总开关 | `SCHEDULER_ENABLED=false` 时 worker 不注册任何调度器（仅 worker 读取） | 环境变量 |
 | — | 启动自检 | worker 启动打印 `SCHEDULERS_STARTED {"count":5,"owner":"cron-worker"}`，`count` 不足 5 说明有调度器注册失败或被关停 | 启动日志 |
@@ -144,7 +154,7 @@
 
 > **启动约束（TASK-005 后已收敛）**：`cron-worker` 是**唯一**会注册 cron 的进程，`server` 侧不存在调度启动路径，`SCHEDULER_ENABLED` 只由 worker 读取。生产环境由 PM2 分别保活 `portomind-api` 与 `portomind-worker`，不再使用系统 crontab。`server` 与 `cron-worker` **共享同一个 MongoDB**，也共享 `shared/` 同一份业务实现——业务逻辑不存在第二份拷贝。
 >
-> **职责边界**：`shared/` 承载「业务能力」，`cron-worker` 只持有「触发权」。因此「API 手动触发端点」与「worker 定时触发」走的是**同一函数**，行为一致。详见 §6.5 与 [OPERATIONS.md](../../manual/OPERATIONS.md) §3。
+> **职责边界**：`shared/` 承载「业务能力」，`cron-worker` 只持有「触发权」。因此「API 手动触发端点」与「worker 定时触发」走的是**同一函数**，行为一致。详见 §6.5 与 [CRON_WORKER.md](../../manual/CRON_WORKER.md) §3。
 
 **技术栈**
 
@@ -234,7 +244,7 @@
 
 全局总开关：`SCHEDULER_ENABLED=false` 时 worker 不注册任何调度器（`server` 不读取该变量）。调度时区 `SCHEDULER_TIMEZONE`（回落 `MARKET_TIMEZONE` → `America/Toronto`）。
 
-> ✅ **覆盖完整性（TASK-005 已收口）**：单一所有者下**全部 5 类任务都会自动运行**。迁移前「`cron-worker` 缺提醒/汇率/再平衡、`server` 缺完整性检查」的覆盖缺口已消除。决策依据见 [ADR-002](../../architecture/adr/ADR-002-single-scheduler.md)，运维操作见 [OPERATIONS.md](../../manual/OPERATIONS.md) §3。
+> ✅ **覆盖完整性（TASK-005 已收口）**：单一所有者下**全部 5 类任务都会自动运行**。迁移前「`cron-worker` 缺提醒/汇率/再平衡、`server` 缺完整性检查」的覆盖缺口已消除。决策依据见 [ADR-002](../../architecture/adr/ADR-002-single-scheduler.md)，运维操作见 [CRON_WORKER.md](../../manual/CRON_WORKER.md) §3。
 >
 > **启动自检**：worker 启动日志会打印 `SCHEDULERS_STARTED {"count":5,"owner":"cron-worker"}`。`count` 不足 5 说明有调度器注册失败或被环境变量关停。
 
@@ -454,7 +464,7 @@
 **其余已知技术债**：
 
 - **两份枚举复制**：`ASSET_*` 常量在 `shared/constants`（server + worker 共用）与 `client/src/constants/enums.js` 各存一份，改动需**双向同步**（原为三份，已收敛）。
-- **CORS 开放（已确认为现状）**：`server/app.js` 用 `cors({ origin: true })` 允许任意来源，白名单实现被整段注释、`CORS_ORIGINS` **未被读取**。上线前需二选一收口：恢复白名单生效，或在网络层确保不对外暴露（见 [DEPLOY.md](../../manual/DEPLOY.md) §安全边界）。
+- **CORS 开放（已确认为现状）**：`server/app.js` 用 `cors({ origin: true })` 允许任意来源，白名单实现被整段注释、`CORS_ORIGINS` **未被读取**。上线前需二选一收口：恢复白名单生效，或在网络层确保不对外暴露（见 [DEPLOYMENT.md](../../manual/DEPLOYMENT.md) §安全边界）。
 - **完整性检查截断无提示**：缺失区间超 `maxRepairRanges=50` 时静默截断。
 - **`integrityCheck.js` 偏大**（约 386 行），待拆分。
 - **再平衡单日分发的隐式契约**：`rebalanceScheduler` 的到期规则（周一 / 每月 1 日）是硬编码的 `SCHEDULE_DUE_RULES`，新增 `rebalanceSchedule` 取值时必须同步补充规则，否则该频率**静默永不触发**。
@@ -488,9 +498,9 @@
 - [PL-1 投资账本线](./PL-1-ledger.md) · [PL-2 行情数据线](./PL-2-market-data.md) · [PL-3 组合与配置线](./PL-3-portfolio.md) · [PL-4 再平衡决策线](./PL-4-rebalancing.md) · [PL-5 提醒与通知线](./PL-5-alerting.md) · [PL-6 家庭总览线](./PL-6-household.md)
 - [ARCHITECTURE.md](../../architecture/ARCHITECTURE.md) — 架构分层、模块边界、依赖规则
 - [API_CONTRACT.md](../../dev/API_CONTRACT.md) — REST API 契约
-- [OPERATIONS.md](../../manual/OPERATIONS.md) — 调度所有权、定时任务、排障
-- [DEPLOY.md](../../manual/DEPLOY.md) — 部署与安全边界
-- [DEVELOPMENT.md](../../manual/DEVELOPMENT.md) — 本地环境与验证命令
+- [CRON_WORKER.md](../../manual/CRON_WORKER.md) — 调度所有权、定时任务、排障
+- [DEPLOYMENT.md](../../manual/DEPLOYMENT.md) — 部署与安全边界
+- [DEPLOYMENT.md](../../manual/DEPLOYMENT.md) — 本地环境与验证命令
 - [PRD.md](../specs/PRD.md) — 需求基线（功能编码来源）
 - [ROADMAP.md](../ROADMAP.md) — 路线图
 - [standards/DOCS.md](../../standards/DOCS.md) — 文档结构规范与单一归属规则

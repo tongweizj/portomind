@@ -8,6 +8,7 @@ import { Bell, Search, User } from 'lucide-react';
 import Sidebar from './Sidebar';
 import { useUnreadAlertCount } from '../../hooks/useAlerts';
 import { colors, layout, fontStack } from '../../constants/design-tokens';
+import { GAP_THRESHOLD_DAYS } from '../../utils/priceDisplay';
 
 export default function AppLayout() {
   const navigate = useNavigate();
@@ -35,14 +36,29 @@ export default function AppLayout() {
             borderBottom: `1px solid ${colors.border}`,
           }}
         >
-          {/* 左侧：面包屑占位（保持与设计稿一致的高度与留白） */}
-          <div
-            style={{
-              color: colors.textSecondary,
-              fontSize: 13,
-            }}
-          >
-            {/* 后续可接入 useMatches 渲染面包屑 */}
+          {/* 左侧：面包屑占位 + 数据告警 pill（FS R3：标红阈值） */}
+          <div className="flex items-center gap-3">
+            <div
+              style={{
+                color: colors.textSecondary,
+                fontSize: 13,
+              }}
+            >
+              {/* 后续可接入 useMatches 渲染面包屑 */}
+            </div>
+            <div
+              style={{
+                fontSize: 12,
+                color: colors.textSecondary,
+                backgroundColor: colors.bgPage,
+                border: `1px solid ${colors.border}`,
+                borderRadius: 999,
+                padding: '4px 12px',
+              }}
+              title={`价格缺口告警：某标的落后同市场其他标的工作日 ${GAP_THRESHOLD_DAYS} 天以上即标红（同组一致停更不计为缺口）`}
+            >
+              标红阈值 <b style={{ color: colors.brand }}>落后同市场 {GAP_THRESHOLD_DAYS} 个工作日</b>
+            </div>
           </div>
 
           {/* 右侧：搜索 + 铃铛 + 用户 */}

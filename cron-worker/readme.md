@@ -69,7 +69,7 @@
   - 现状：注释已更新为「基于通用工厂创建，按 PRICE_SYNC_CRON 触发 dailySync」，不再声称 services 未移植。
 
 - [ ] **`package.json` 缺 `engines` 字段**
-  - 现状：`docs/manual/DEVELOPMENT.md` 记录基线为 Node 24，但 package.json 未声明。
+  - 现状：`docs/manual/DEPLOYMENT.md` 记录基线为 Node 24，但 package.json 未声明。
   - 建议：补充 `"engines": { "node": ">=18" }`（或按实际基线）。
 
 - [x] **`.env.example` 缺 `MARKET_DATA_TIMEOUT_MS`（已补）**

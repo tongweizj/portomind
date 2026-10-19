@@ -26,7 +26,7 @@
 
 ### Why
 
-`SCHEDULER_ENABLED=true` 的「唯一所有者」约束与两侧调度器的**任务覆盖不重合**直接冲突，导致无论选哪个所有者都必然有任务静默停跑。详见 `docs/exec-plans/complete/DOCS-DEDUP-2026-10-15.md` §3（Q10）与 `docs/manual/OPERATIONS.md` §3.1。
+`SCHEDULER_ENABLED=true` 的「唯一所有者」约束与两侧调度器的**任务覆盖不重合**直接冲突，导致无论选哪个所有者都必然有任务静默停跑。详见 `docs/exec-plans/complete/DOCS-DEDUP-2026-10-15.md` §3（Q10）与 `docs/manual/CRON_WORKER.md` §3.1。
 
 ### Scope
 
@@ -84,8 +84,8 @@
 
 ### 2.4 相关文档
 
-- `docs/manual/OPERATIONS.md` §3.1（覆盖矩阵与当前缺口）
-- `docs/manual/DEPLOY.md` §2 / §3（生产环境变量与进程拓扑）
+- `docs/manual/CRON_WORKER.md` §3.1（覆盖矩阵与当前缺口）
+- `docs/manual/DEPLOYMENT.md` §2 / §3（生产环境变量与进程拓扑）
 - `docs/architecture/functions.md` §2.2 / §4.10 / §9.2
 
 ---
@@ -261,8 +261,8 @@ cron-worker/src/schedulers/
 - [x] P4.2 移除 `server/services/rebalance/scheduleManager.js` 的调度启动路径（文件整体删除）
 - [x] P4.3 移除 server 启动链中对 `startSchedulers()` 的调用
 - [x] P4.4 `server/.env.example` 移除 `SCHEDULER_ENABLED` / `*_CRON`（迁移至 worker）
-- [x] P5.1 更新 `OPERATIONS.md` §3（覆盖矩阵 → 单调度器全覆盖）、§4（手动入口）
-- [x] P5.2 更新 `DEPLOY.md` §2 / §3（PM2 只部署 worker 调度）、`DEVELOPMENT.md`
+- [x] P5.1 更新 `CRON_WORKER.md` §3（覆盖矩阵 → 单调度器全覆盖）、§4（手动入口）
+- [x] P5.2 更新 `DEPLOYMENT.md` §2 / §3（PM2 只部署 worker 调度）、`DEPLOYMENT.md`
 - [x] P5.3 更新 `functions.md` §2.2 / §4.10.1 / §9.2
 - [x] P5.4 创建 `docs/architecture/adr/ADR-002-single-scheduler.md`
 - [x] P5.5 更新 `docs/readme.md` 索引与 `TASKS.md` 状态
@@ -323,7 +323,7 @@ cron-worker/src/schedulers/
 ### 7.3 文档
 
 - 全量相对链接校验 0 失效（脚本见 `docs/standards/DOCS.md` §5）。
-- `OPERATIONS.md` §3.1 不再出现「二选一拓扑 / 已知缺口」表述。
+- `CRON_WORKER.md` §3.1 不再出现「二选一拓扑 / 已知缺口」表述。
 
 ---
 

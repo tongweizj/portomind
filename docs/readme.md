@@ -2,14 +2,16 @@
 
 > 本文件是 `docs/` 的**唯一索引入口**。目录职责与「单一归属」规则见 [standards/DOCS.md](./standards/DOCS.md)。
 
-## 手册（manual/）— 按读者角色划分
+## 手册（manual/）— 按组件 / 部署划分
+
+> 四份手册**单一归属、互不重复、互相交叉引用**。同一主题只在一处详述，其余只写一句话 + 链接。
 
 | 文档 | 读者 | 唯一负责的主题 |
 |---|---|---|
-| [使用指南 USER_GUIDE](./manual/USER_GUIDE.md) | 使用者 | 功能怎么用、业务口径、常见问题 |
-| [开发与运行 DEVELOPMENT](./manual/DEVELOPMENT.md) | 开发者 | 本地环境、依赖、基线数据、验证命令 |
-| [部署说明 DEPLOY](./manual/DEPLOY.md) | 部署者 | 构建、生产环境变量、PM2/Nginx、备份、安全边界 |
-| [生产操作 OPERATIONS](./manual/OPERATIONS.md) | 运维 | 调度所有权、定时任务、价格同步、完整性检查、排障 |
+| [客户端使用手册 CLIENT](./manual/CLIENT.md) | 使用者 | 界面业务操作、界面手动入口、业务数据口径、常见问题 |
+| [服务端使用手册 SERVER](./manual/SERVER.md) | 开发者/运维 | server 进程运行、端口与日志、手动 API 端点、专属排障 |
+| [调度进程手册 CRON_WORKER](./manual/CRON_WORKER.md) | 运维/使用者 | cron-worker 进程、5 类调度机制、数据质量程序、CLI、监控排障 |
+| [系统部署手册 DEPLOYMENT](./manual/DEPLOYMENT.md) | 部署者/开发者 | 系统架构、本地开发、生产部署、环境变量全表、验证命令、安全边界、备份 |
 
 ## 产品（product/）
 
@@ -26,6 +28,7 @@
 - [用户研究 USER_RESEARCH](./product/USER_RESEARCH.md)
 - [后续路线图 ROADMAP](./product/ROADMAP.md)
 - [认证需求（草稿）](./product/specs/authentication.md)
+- [投资品频道合并 Feature Spec（草稿·待评审）](./product/specs/FS-asset-price-consolidation.md) — 资产管理 + 价格 重组为「以投资品为中心」的信息架构（PL-1/PL-2）
 
 ## 架构（architecture/）
 

@@ -4,19 +4,23 @@
 
 | ID | Task | Priority | Status | Owner | ExecPlan |
 |---|---|---|---|---|---|
-| TASK-001 | User Login | High | IMPLEMENTING | Agent-A | — |
-| TASK-002 | Fix Profile Avatar | Medium | READY | Unassigned | — |
-| TASK-003 | GitHub Login | High | PLANNING | Planner-A | — |
+| TASK-043 | 标的频道合并（资产管理 + 价格） | High | REVIEWING | Planner | docs/exec-plans/active/TASK-043-asset-price-consolidation.md |
+|      |      |          |        |       |          |
+|      |      |          |        |       |          |
 
 ## Blocked
 
 | ID | Task | Reason |
 |---|---|---|
-| TASK-004 | Email Provider | Waiting for provider decision |
+|      |      |        |
 
 ## Done
 
 | ID | Task | Completed | 产出 |
 |---|---|---|---|
-| TASK-000 | Project Bootstrap | 2026-10-06 | — |
-| [TASK-005](./complete/TASK-005-unify-scheduler.md) | 统一调度器：全部定时任务迁移至 cron-worker | 2026-10-15 | [ExecPlan](../exec-plans/complete/TASK-005-unify-scheduler.md) · [ADR-002](../architecture/adr/ADR-002-single-scheduler.md) |
+|      |      |           |      |
+|      |      |           |      |
+
+1. 将资产管理和价格，合并。
+2. 将交易记录，收拢进组合管理
+3. 家庭试图，融入进dashboard

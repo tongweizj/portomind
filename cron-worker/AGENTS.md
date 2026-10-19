@@ -60,7 +60,7 @@ node src/tasks/integrityCheck.js [--symbols ...] [--from ...] [--to ...] [--no-r
 
 ## 文档
 
-- 调度所有权、定时任务、排障：`../docs/manual/OPERATIONS.md`
-- 部署与 PM2：`../docs/manual/DEPLOY.md`
-- 本地环境与验证命令：`../docs/manual/DEVELOPMENT.md`
+- 调度进程手册（cron-worker）：`../docs/manual/CRON_WORKER.md`
+- 系统部署手册（部署 / PM2 / 环境变量 / 安全边界）：`../docs/manual/DEPLOYMENT.md`
+- 系统部署手册（本地环境与验证命令）：`../docs/manual/DEPLOYMENT.md`
 - 功能全景（调度与数据质量）：`../docs/product/lines/PL-0-platform-foundation.md` §6.4

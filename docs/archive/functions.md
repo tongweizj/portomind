@@ -72,7 +72,7 @@ PortoMind 是**自托管的个人 / 家庭投资组合管理应用**，面向单
 
 > **启动约束（TASK-005 后已收敛）**：`cron-worker` 是**唯一**会注册 cron 的进程，`server` 侧不存在调度启动路径，`SCHEDULER_ENABLED` 只由 worker 读取。生产环境由 PM2 分别保活 `portomind-api` 与 `portomind-worker`，不再使用系统 crontab。`server` 与 `cron-worker` **共享同一个 MongoDB**，也共享 `shared/` 同一份业务实现——业务逻辑不存在第二份拷贝。
 >
-> **职责边界**：`shared/` 承载「业务能力」，`cron-worker` 只持有「触发权」。因此 「API 手动触发端点」与「worker 定时触发」走的是**同一函数**，行为一致。详见 §4.10.1 与 [OPERATIONS.md](../manual/OPERATIONS.md) §3。
+> **职责边界**：`shared/` 承载「业务能力」，`cron-worker` 只持有「触发权」。因此 「API 手动触发端点」与「worker 定时触发」走的是**同一函数**，行为一致。详见 §4.10.1 与 [CRON_WORKER.md](../manual/CRON_WORKER.md) §3。
 
 ### 2.3 技术栈
 
@@ -602,7 +602,7 @@ PortoMind 是**自托管的个人 / 家庭投资组合管理应用**，面向单
 
 全局总开关：`SCHEDULER_ENABLED=false` 时 worker 不注册任何调度器（`server` 不读取该变量）。调度时区 `SCHEDULER_TIMEZONE`（回落 `MARKET_TIMEZONE` → `America/Toronto`）。
 
-> ✅ **覆盖完整性（TASK-005 已收口）**：单一所有者下**全部 5 类任务都会自动运行**。迁移前「`cron-worker` 缺提醒/汇率/再平衡、`server` 缺完整性检查」的覆盖缺口已消除——这正是本次架构收敛要解决的核心问题。决策依据见 [ADR-002](../architecture/adr/ADR-002-single-scheduler.md)，运维操作见 [OPERATIONS.md](../manual/OPERATIONS.md) §3。
+> ✅ **覆盖完整性（TASK-005 已收口）**：单一所有者下**全部 5 类任务都会自动运行**。迁移前「`cron-worker` 缺提醒/汇率/再平衡、`server` 缺完整性检查」的覆盖缺口已消除——这正是本次架构收敛要解决的核心问题。决策依据见 [ADR-002](../architecture/adr/ADR-002-single-scheduler.md)，运维操作见 [CRON_WORKER.md](../manual/CRON_WORKER.md) §3。
 >
 > **启动自检**：worker 启动日志会打印 `SCHEDULERS_STARTED {"count":5,"owner":"cron-worker"}`。`count` 不足 5 说明有调度器注册失败或被环境变量关停。
 
@@ -843,7 +843,7 @@ PortoMind 是**自托管的个人 / 家庭投资组合管理应用**，面向单
 
 - **两份枚举复制**：`ASSET_*` 常量在 `shared/constants`（server + worker 共用）与 `client/src/constants/enums.js` 各存一份，改动需**双向同步**（原为三份，已收敛）。
 - **无认证授权**：API 不可暴露公网（ADR-001 为认证模板，尚未实施）。
-- **CORS 开放（已确认为现状，非缺陷隐瞒）**：`server/app.js` 用 `cors({ origin: true })` 允许任意来源，白名单实现被整段注释、`CORS_ORIGINS` **未被读取**。已按「承认开放 + 文档如实说明」处理（见 [DEPLOY.md](../manual/DEPLOY.md) §安全边界）；上线前需二选一收口：恢复白名单生效，或在网络层确保不对外暴露。
+- **CORS 开放（已确认为现状，非缺陷隐瞒）**：`server/app.js` 用 `cors({ origin: true })` 允许任意来源，白名单实现被整段注释、`CORS_ORIGINS` **未被读取**。已按「承认开放 + 文档如实说明」处理（见 [DEPLOYMENT.md](../manual/DEPLOYMENT.md) §安全边界）；上线前需二选一收口：恢复白名单生效，或在网络层确保不对外暴露。
 - **前端数据层不统一**：Query hooks 与手写 `useEffect` 两套并存；`formatters/helpers/chartConfig` 为空文件。
 - **节假日表需逐年维护**：CN/HK `2027+` 未维护，未维护年份按空表处理（已加 warn）。
 - **完整性检查截断无提示**：缺失区间超 `maxRepairRanges=50` 时静默截断。
@@ -893,8 +893,8 @@ PortoMind 是**自托管的个人 / 家庭投资组合管理应用**，面向单
 - [ARCHITECTURE.md](../architecture/ARCHITECTURE.md) — 架构分层、模块边界、依赖规则
 - [API_CONTRACT.md](../dev/API_CONTRACT.md) — REST API 契约
 - [PRD.md](../product/specs/PRD.md) — 产品需求基线（功能编码来源）
-- [USER_GUIDE.md](../manual/USER_GUIDE.md) — 使用指南
-- [DEVELOPMENT.md](../manual/DEVELOPMENT.md) / [DEPLOY.md](../manual/DEPLOY.md) / [OPERATIONS.md](../manual/OPERATIONS.md) — 开发 / 部署 / 生产操作
+- [CLIENT.md](../manual/CLIENT.md) — 使用指南
+- [DEPLOYMENT.md](../manual/DEPLOYMENT.md) / [DEPLOYMENT.md](../manual/DEPLOYMENT.md) / [CRON_WORKER.md](../manual/CRON_WORKER.md) — 开发 / 部署 / 生产操作
 - [ROADMAP.md](../product/ROADMAP.md) — 路线图
 - [standards/DOCS.md](../standards/DOCS.md) — 文档结构规范与单一归属规则
 - [adr/ADR-001-authentication.md](../architecture/adr/ADR-001-authentication.md) / [adr/ADR-002-single-scheduler.md](../architecture/adr/ADR-002-single-scheduler.md) — 架构决策记录（认证模板 / 单一调度器与 shared 内核）

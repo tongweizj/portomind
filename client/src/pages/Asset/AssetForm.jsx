@@ -29,7 +29,7 @@ export default function AssetForm() {
           ...asset,
           tags: asset.tags?.join(', ') || ''
         });
-      }).catch(err => setError(getApiErrorMessage(err, '加载资产失败')));
+      }).catch(err => setError(getApiErrorMessage(err, '加载标的失败')));
     }
   }, [id, isEdit]);
 
@@ -49,16 +49,16 @@ export default function AssetForm() {
     try {
       if (isEdit) await updateAsset(id, submitData);
       else await createAsset(submitData);
-      navigate('/assets');
+      navigate('/instruments');
     } catch (err) {
       console.error('Error saving asset:', err);
-      setError(getApiErrorMessage(err, '保存资产失败'));
+      setError(getApiErrorMessage(err, '保存标的失败'));
     }
   };
 
   return (
     <div className="max-w-xl mx-auto space-y-6">
-      <h1 className="text-2xl font-bold text-gray-800">{isEdit ? '编辑资产' : '添加资产'}</h1>
+      <h1 className="text-2xl font-bold text-gray-800">{isEdit ? '编辑标的' : '添加标的'}</h1>
       <form onSubmit={handleSubmit} className="space-y-4 bg-white p-6 rounded shadow">
         <div>
           <label className="block text-sm text-gray-700 mb-1">代码</label>

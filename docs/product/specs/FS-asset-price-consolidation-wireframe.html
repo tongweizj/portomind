@@ -1,0 +1,563 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>线框稿 · 标的频道合并（资产管理 + 价格）— PortoMind</title>
+<style>
+  :root{
+    --primary:#635BFF;
+    --primary-soft:#EEEDFF;
+    --border:#E3E8EE;
+    --up:#DF1B41;      /* 涨·红 */
+    --down:#0E9F6E;    /* 跌·绿 */
+    --ink:#1A1C2E;
+    --ink-2:#5A5F73;
+    --ink-3:#9AA0B4;
+    --bg:#F6F7FB;
+    --card:#FFFFFF;
+    --gap-warn:#DF1B41;
+    --radius:14px;
+    --shadow:0 1px 2px rgba(20,24,60,.04), 0 8px 24px rgba(20,24,60,.06);
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;height:100%;}
+  body{
+    font-family:"PingFang SC","Microsoft YaHei",-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    background:var(--bg); color:var(--ink); font-size:14px; line-height:1.5;
+    -webkit-font-smoothing:antialiased;
+  }
+  /* ---------- 布局 ---------- */
+  .app{display:flex; min-height:100vh;}
+  .sidebar{
+    width:228px; flex:0 0 228px; background:var(--card); border-right:1px solid var(--border);
+    padding:18px 12px; position:sticky; top:0; height:100vh; overflow:auto;
+  }
+  .brand{display:flex;align-items:center;gap:10px;padding:6px 10px 16px;}
+  .brand .logo{width:30px;height:30px;border-radius:9px;background:linear-gradient(135deg,#635BFF,#8B85FF);display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700;}
+  .brand .name{font-weight:700;font-size:15px;letter-spacing:.3px;}
+  .brand .sub{font-size:11px;color:var(--ink-3);}
+  .nav{display:flex;flex-direction:column;gap:2px;}
+  .nav .group-label{font-size:11px;color:var(--ink-3);padding:14px 12px 6px;letter-spacing:.5px;}
+  .nav-item{
+    display:flex;align-items:center;gap:11px;padding:10px 12px;border-radius:10px;color:var(--ink-2);
+    cursor:pointer;transition:all .2s; font-weight:500;
+  }
+  .nav-item:hover{background:var(--bg);color:var(--ink);}
+  .nav-item.active{background:var(--primary-soft);color:var(--primary);font-weight:600;}
+  .nav-item .ic{width:18px;height:18px;flex:0 0 18px;opacity:.85;}
+  .nav-item .badge{margin-left:auto;font-size:10px;background:var(--border);color:var(--ink-2);border-radius:20px;padding:1px 7px;}
+  .nav-item.active .badge{background:#fff;color:var(--primary);}
+  .removed-note{margin-top:14px;padding:10px 12px;background:#FFF5F6;border:1px dashed #F3C4CC;border-radius:10px;color:#B23A4B;font-size:11px;line-height:1.6;}
+
+  .main{flex:1;min-width:0;display:flex;flex-direction:column;}
+  .topbar{
+    height:56px;flex:0 0 56px;background:var(--card);border-bottom:1px solid var(--border);
+    display:flex;align-items:center;gap:14px;padding:0 22px;position:sticky;top:0;z-index:20;
+  }
+  .topbar .crumb{font-size:13px;color:var(--ink-2);}
+  .topbar .crumb b{color:var(--ink);}
+  .topbar .spacer{flex:1;}
+  .topbar .pill{font-size:12px;color:var(--ink-2);background:var(--bg);border:1px solid var(--border);border-radius:20px;padding:5px 12px;}
+  .topbar .pill b{color:var(--primary);}
+
+  /* ---------- 原型导览 tabs ---------- */
+  .tour{display:flex;gap:8px;padding:14px 22px 0;}
+  .tour .tag{font-size:11px;color:var(--ink-3);align-self:center;margin-right:4px;}
+  .tour-btn{
+    border:1px solid var(--border);background:var(--card);color:var(--ink-2);
+    padding:7px 14px;border-radius:9px;cursor:pointer;font-size:13px;transition:all .2s;font-weight:500;
+  }
+  .tour-btn:hover{border-color:var(--primary);color:var(--primary);}
+  .tour-btn.active{background:var(--primary);color:#fff;border-color:var(--primary);box-shadow:0 4px 12px rgba(99,91,255,.3);}
+
+  .content{padding:20px 22px 60px;flex:1;}
+  .screen{display:none;animation:fade .28s ease;}
+  .screen.active{display:block;}
+  @keyframes fade{from{opacity:0;transform:translateY(6px);}to{opacity:1;transform:none;}}
+
+  /* ---------- 通用卡片/标题 ---------- */
+  .page-head{display:flex;align-items:flex-end;gap:14px;margin-bottom:16px;flex-wrap:wrap;}
+  .page-head h1{font-size:21px;margin:0;font-weight:700;letter-spacing:.2px;}
+  .page-head .desc{color:var(--ink-2);font-size:13px;max-width:560px;}
+  .page-head .spacer{flex:1;}
+  .btn{
+    border:1px solid var(--border);background:var(--card);color:var(--ink);border-radius:10px;
+    padding:9px 14px;cursor:pointer;font-size:13px;font-weight:500;transition:all .2s;display:inline-flex;align-items:center;gap:7px;
+  }
+  .btn:hover{border-color:var(--primary);color:var(--primary);}
+  .btn.primary{background:var(--primary);color:#fff;border-color:var(--primary);}
+  .btn.primary:hover{background:#524bdb;color:#fff;}
+  .btn.ghost{background:transparent;}
+  .btn.sm{padding:6px 10px;font-size:12px;border-radius:8px;}
+
+  /* ---------- 今日行情 ---------- */
+  .entry-card{
+    display:flex;align-items:center;gap:14px;background:linear-gradient(120deg,#EEEDFF,#F5F4FF);
+    border:1px solid #D9D5FF;border-radius:var(--radius);padding:14px 18px;margin-bottom:16px;
+  }
+  .entry-card .ic{width:38px;height:38px;border-radius:10px;background:#fff;display:flex;align-items:center;justify-content:center;color:var(--primary);font-size:18px;box-shadow:var(--shadow);}
+  .entry-card .t{font-weight:600;}
+  .entry-card .d{font-size:12px;color:var(--ink-2);}
+  .entry-card .spacer{flex:1;}
+
+  .toolbar{display:flex;gap:10px;align-items:center;margin-bottom:14px;flex-wrap:wrap;}
+  .search{flex:1;min-width:200px;display:flex;align-items:center;gap:8px;background:var(--card);border:1px solid var(--border);border-radius:10px;padding:9px 12px;}
+  .search input{border:none;outline:none;flex:1;font-size:13px;background:transparent;color:var(--ink);}
+  .select{border:1px solid var(--border);background:var(--card);border-radius:10px;padding:9px 12px;font-size:13px;color:var(--ink-2);cursor:pointer;}
+  .count{font-size:12px;color:var(--ink-3);}
+
+  .table{width:100%;border-collapse:separate;border-spacing:0;background:var(--card);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;}
+  .table th{text-align:left;font-size:12px;color:var(--ink-3);font-weight:600;padding:12px 16px;background:#FBFBFD;border-bottom:1px solid var(--border);}
+  .table td{padding:13px 16px;border-bottom:1px solid var(--border);font-size:13px;vertical-align:middle;}
+  .table tr:last-child td{border-bottom:none;}
+  .table tbody tr{cursor:pointer;transition:background .15s;}
+  .table tbody tr:hover{background:var(--bg);}
+  .sym{font-weight:600;}
+  .nm{color:var(--ink-2);font-size:12px;}
+  .up{color:var(--up);font-weight:600;}
+  .down{color:var(--down);font-weight:600;}
+  .chip{display:inline-block;font-size:11px;padding:2px 9px;border-radius:20px;background:var(--bg);color:var(--ink-2);border:1px solid var(--border);}
+  .chip.watch{background:#FFF8E6;border-color:#F3E2B0;color:#9A7415;}
+  .gap{color:var(--gap-warn);font-weight:600;font-size:12px;}
+  .gap-ok{color:var(--ink-3);font-size:12px;}
+  .row-actions{display:flex;gap:6px;}
+  .row-actions .btn{padding:5px 9px;font-size:12px;}
+
+  /* ---------- 标的列表 ---------- */
+  .toolbar2{display:flex;gap:10px;align-items:center;margin-bottom:14px;}
+  .chk{width:16px;height:16px;accent-color:var(--primary);cursor:pointer;}
+  .muted{color:var(--ink-3);}
+  .status-dot{display:inline-flex;align-items:center;gap:6px;font-size:12px;}
+  .status-dot::before{content:"";width:7px;height:7px;border-radius:50%;background:var(--down);}
+  .status-dot.off::before{background:#C9CDDA;}
+  .status-dot.watch::before{background:#F0A500;}
+
+  /* ---------- 标的详情 ---------- */
+  .detail-head{display:flex;align-items:center;gap:14px;margin-bottom:18px;}
+  .detail-head .back{cursor:pointer;color:var(--ink-2);display:flex;align-items:center;gap:6px;font-size:13px;}
+  .detail-head .back:hover{color:var(--primary);}
+  .detail-head h1{font-size:22px;margin:0;}
+  .detail-head .meta{color:var(--ink-3);font-size:12px;}
+  .split{display:grid;grid-template-columns:1fr;gap:18px;align-items:start;}
+  @media(max-width:900px){.split{grid-template-columns:1fr;}}
+  .panel{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:18px;box-shadow:var(--shadow);}
+  .panel h2{font-size:14px;margin:0 0 14px;display:flex;align-items:center;gap:8px;}
+  .panel h2 .bar{width:4px;height:15px;background:var(--primary);border-radius:3px;}
+  .panel h2 .spacer{flex:1;}
+  .kv{display:grid;grid-template-columns:96px 1fr;gap:11px 12px;margin-bottom:6px;}
+  .kv .k{color:var(--ink-3);font-size:12px;padding-top:1px;}
+  .kv .v{font-size:13px;font-weight:500;}
+  .price-big{font-size:34px;font-weight:800;letter-spacing:.5px;}
+  .price-sub{font-size:13px;margin-top:2px;}
+  .spark{margin:14px 0 6px;background:#FBFBFD;border:1px solid var(--border);border-radius:10px;padding:12px;}
+  .spark .lbl{font-size:11px;color:var(--ink-3);margin-bottom:6px;}
+  .full-chart{margin-top:14px;}
+  .full-chart .lbl{font-size:11px;color:var(--ink-3);margin-bottom:6px;display:flex;justify-content:space-between;}
+  .empty{text-align:center;color:var(--ink-3);padding:40px 20px;font-size:13px;}
+  .empty .em-ic{font-size:30px;display:block;margin-bottom:8px;opacity:.5;}
+
+  /* ---------- toast ---------- */
+  .toast{
+    position:fixed;right:22px;bottom:22px;background:var(--ink);color:#fff;padding:12px 18px;border-radius:11px;
+    font-size:13px;box-shadow:0 10px 30px rgba(0,0,0,.25);opacity:0;transform:translateY(12px);transition:all .3s;z-index:99;pointer-events:none;
+  }
+  .toast.show{opacity:1;transform:none;}
+
+  /* ---------- 导航对比 footer ---------- */
+  .ia-note{
+    margin:24px 22px 30px;background:var(--card);border:1px solid var(--border);border-radius:var(--radius);
+    padding:16px 20px;box-shadow:var(--shadow);
+  }
+  .ia-note h3{margin:0 0 12px;font-size:14px;}
+  .ia-cols{display:flex;gap:24px;flex-wrap:wrap;}
+  .ia-col{flex:1;min-width:240px;}
+  .ia-col .h{font-size:12px;color:var(--ink-3);margin-bottom:8px;}
+  .ia-col ul{margin:0;padding:0;list-style:none;display:flex;flex-direction:column;gap:6px;}
+  .ia-col li{padding:7px 12px;border-radius:8px;background:var(--bg);font-size:13px;border:1px solid var(--border);}
+  .ia-col li.removed{text-decoration:line-through;color:var(--ink-3);background:#FFF5F6;border-color:#F3C4CC;}
+  .ia-col li.moved{background:#EEEDFF;border-color:#D9D5FF;color:var(--primary);}
+  .ia-col li.added{background:#EAFBF2;border-color:#C7EED8;color:#0E7A52;}
+  .legend{font-size:11px;color:var(--ink-3);margin-top:12px;display:flex;gap:16px;flex-wrap:wrap;}
+  .legend span{display:inline-flex;align-items:center;gap:6px;}
+  .legend i{width:11px;height:11px;border-radius:3px;display:inline-block;}
+</style>
+</head>
+<body>
+<div class="app">
+  <!-- ===== Sidebar（7 项导航） ===== -->
+  <aside class="sidebar">
+    <div class="brand">
+      <div class="logo">P</div>
+      <div>
+        <div class="name">PortoMind</div>
+        <div class="sub">家庭投资组合</div>
+      </div>
+    </div>
+    <nav class="nav">
+      <div class="group-label">总览</div>
+      <div class="nav-item" data-screen="today"><span class="ic">◎</span>Dashboard · 提醒</div>
+      <div class="nav-item" data-screen="today"><span class="ic">▦</span>组合管理</div>
+      <div class="nav-item active" data-screen="today"><span class="ic">📈</span>今日行情<span class="badge">监控</span></div>
+      <div class="nav-item" data-screen="today"><span class="ic">🧾</span>交易记录</div>
+      <div class="nav-item" data-screen="today"><span class="ic">👨‍👩‍👧</span>家庭视图</div>
+      <div class="nav-item" data-screen="today"><span class="ic">🔔</span>提醒规则</div>
+      <div class="nav-item" data-screen="today"><span class="ic">📜</span>日志</div>
+      <div class="removed-note">⚠ 原顶层「资产管理」已移出导航，收敛为「今日行情」屏内的「标的列表」入口（低频配置）。</div>
+    </nav>
+  </aside>
+
+  <!-- ===== Main ===== -->
+  <div class="main">
+    <div class="topbar">
+      <div class="crumb">投资账本线 · 行情数据线 / <b id="crumbScreen">今日行情</b></div>
+      <div class="spacer"></div>
+      <div class="pill">标红阈值 <b>≥3 天未更新</b></div>
+    </div>
+
+    <!-- 原型导览：用于在 3 屏间切换评审 -->
+    <div class="tour">
+      <span class="tag">原型导览 ▸</span>
+      <button class="tour-btn active" data-tour="today">① 今日行情（富化）</button>
+      <button class="tour-btn" data-tour="list">② 标的列表（原资产管理）</button>
+      <button class="tour-btn" data-tour="detail">③ 标的详情（左右水平）</button>
+    </div>
+
+    <div class="content">
+
+      <!-- ============ 屏 ① 今日行情 ============ -->
+      <section class="screen active" id="screen-today">
+        <div class="page-head">
+          <div>
+            <h1>今日行情</h1>
+            <div class="desc">跨资产每日监控 · 只读快视图。一眼扫完全部持仓的今日价与涨跌幅，点击任一行下钻到「标的详情」。</div>
+          </div>
+          <div class="spacer"></div>
+        </div>
+
+        <!-- 工具栏 -->
+        <div class="toolbar">
+          <div class="search">
+            <span>🔍</span>
+            <input id="searchInput" placeholder="按名称 / 代码搜索…" oninput="applyFilter()" />
+          </div>
+          <select class="select" id="filterWatch" onchange="applyFilter()">
+            <option value="">全部关注</option>
+            <option value="watch">仅关注</option>
+            <option value="all">含未关注</option>
+          </select>
+          <select class="select" id="filterClass" onchange="applyFilter()">
+            <option value="">全部大类</option>
+            <option value="股票">股票</option>
+            <option value="债券">债券</option>
+            <option value="商品">商品</option>
+            <option value="现金">现金</option>
+          </select>
+          <span class="count" id="todayCount"></span>
+        </div>
+
+        <!-- 行情表 -->
+        <table class="table">
+          <thead>
+            <tr>
+              <th>名称 / 代码</th>
+              <th>今日价</th>
+              <th>当日涨跌幅</th>
+              <th>大类</th>
+              <th>最近更新</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody id="todayBody"></tbody>
+        </table>
+
+        <div style="margin-top:16px;display:flex;justify-content:flex-end;">
+          <button class="btn" onclick="goTour('list')">查看所有标的 →</button>
+        </div>
+      </section>
+
+      <!-- ============ 屏 ② 标的列表 ============ -->
+      <section class="screen" id="screen-list">
+        <div class="page-head">
+          <div>
+            <h1>标的列表</h1>
+            <div class="desc">全部投资标的的主数据。支持增删改与多选（为 P2 批量分类预留）。从「今日行情」屏内进入，不占顶层导航。</div>
+          </div>
+          <div class="spacer"></div>
+          <button class="btn primary" onclick="toast('打开 AssetForm · 新增标的（复用 /instruments/new）')">＋ 添加标的</button>
+        </div>
+        <div class="toolbar2">
+          <span class="count" id="listCount"></span>
+          <div class="spacer" style="flex:1"></div>
+          <span class="muted" style="font-size:12px">☑ 多选为 P2 批量分类（R10）预留</span>
+        </div>
+        <table class="table">
+          <thead>
+            <tr>
+              <th style="width:36px"><input class="chk" title="全选" /></th>
+              <th>代码</th>
+              <th>名称</th>
+              <th>市场</th>
+              <th>币种</th>
+              <th>类型</th>
+              <th>大类</th>
+              <th>标签</th>
+              <th>状态</th>
+              <th>操作</th>
+            </tr>
+          </thead>
+          <tbody id="listBody"></tbody>
+        </table>
+      </section>
+
+      <!-- ============ 屏 ③ 标的详情 ============ -->
+      <section class="screen" id="screen-detail">
+        <div class="detail-head">
+          <span class="back" onclick="goTour('today')">← 返回今日行情</span>
+        </div>
+        <div class="detail-head">
+          <div>
+            <h1 id="dName">—</h1>
+            <div class="meta" id="dMeta">—</div>
+          </div>
+          <div class="spacer" style="flex:1"></div>
+          <button class="btn" onclick="toast('跳转 AssetForm 编辑属性（/instruments/edit/:id）')">✎ 编辑属性</button>
+        </div>
+
+        <!-- 价格表现（基本属性已收进 header，编辑入口在标题右侧） -->
+        <div class="split">
+          <!-- 价格表现 -->
+          <div class="panel">
+            <h2><span class="bar"></span>价格表现</h2>
+            <div class="price-big" id="dPrice">—</div>
+            <div class="price-sub" id="dChange">—</div>
+
+            <div class="spark">
+              <div class="lbl">近 30 日迷你走势（sparkline · R6）</div>
+              <div id="dSpark"></div>
+            </div>
+
+            <div class="full-chart">
+              <div class="lbl"><span>完整历史走势（复用 History 组件）</span><a href="#" onclick="toast('进入 /prices/:symbol/history');return false;" style="color:var(--primary)">查看完整历史 →</a></div>
+              <div id="dChart"></div>
+            </div>
+            <div class="empty" id="dEmpty" style="display:none">
+              <span class="em-ic">📭</span>暂无价格记录（刚添加 / 缺口）<br/>遵循「缺价不按零价」原则，不显示 0 价误算。
+            </div>
+          </div>
+        </div>
+      </section>
+
+    </div>
+
+    <!-- 导航变更对比 -->
+    <div class="ia-note">
+      <h3>信息架构变更（8 → 7 顶层项）</h3>
+      <div class="ia-cols">
+        <div class="ia-col">
+          <div class="h">现状</div>
+          <ul>
+            <li>Dashboard · 提醒</li>
+            <li>组合管理</li>
+            <li>价格（独立顶层）</li>
+            <li class="removed">资产管理（独立顶层）</li>
+            <li>交易记录</li>
+            <li>家庭视图</li>
+            <li>提醒规则</li>
+            <li>日志</li>
+          </ul>
+        </div>
+        <div class="ia-col">
+          <div class="h">建议</div>
+          <ul>
+            <li>Dashboard · 提醒</li>
+            <li>组合管理</li>
+            <li class="added">今日行情（监控面·含标的列表入口）</li>
+            <li class="moved">→ 标的列表（今日行情内入口）</li>
+            <li>交易记录</li>
+            <li>家庭视图</li>
+            <li>提醒规则</li>
+            <li>日志</li>
+          </ul>
+        </div>
+      </div>
+      <div class="legend">
+        <span><i style="background:#FFF5F6;border:1px solid #F3C4CC"></i>移出顶层</span>
+        <span><i style="background:#EEEDFF;border:1px solid #D9D5FF"></i>收敛为子入口</span>
+        <span><i style="background:#EAFBF2;border:1px solid #C7EED8"></i>监控面重命名</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+/* ---------- Mock 数据 ---------- */
+const INSTRUMENTS = [
+  {id:'i1', symbol:'510300', name:'沪深300ETF', market:'CN', ccy:'CNY', type:'ETF', assetClass:'股票', tags:['核心','宽基'], watch:true, active:true, created:'2025-03-12',
+   price:3.92, change:1.83, updatedDays:0, hist:[3.7,3.72,3.69,3.75,3.8,3.78,3.85,3.88,3.84,3.9,3.93,3.91,3.89,3.95,3.98,3.94,3.9,3.96,3.99,4.01,3.97,3.93,3.95,3.9,3.92,3.94,3.9,3.93,3.95,3.92]},
+  {id:'i2', symbol:'518880', name:'黄金ETF', market:'CN', ccy:'CNY', type:'ETF', assetClass:'商品', tags:['避险'], watch:true, active:true, created:'2025-03-12',
+   price:5.61, change:-0.42, updatedDays:0, hist:[5.4,5.42,5.45,5.5,5.48,5.52,5.55,5.53,5.58,5.6,5.57,5.62,5.59,5.55,5.5,5.48,5.51,5.54,5.57,5.6,5.63,5.6,5.58,5.62,5.65,5.61,5.59,5.62,5.6,5.61]},
+  {id:'i3', symbol:'VOO', name:'标普500ETF', market:'US', ccy:'USD', type:'ETF', assetClass:'股票', tags:['海外','核心'], watch:true, active:true, created:'2025-06-01',
+   price:512.3, change:0.95, updatedDays:1, hist:[480,485,482,490,495,492,500,505,502,508,512,509,505,510,515,512,508,514,518,515,510,513,516,512,509,514,511,508,513,512.3]},
+  {id:'i4', symbol:'000216', name:'华安黄金债A', market:'CN', ccy:'CNY', type:'债券基金', assetClass:'债券', tags:['稳健'], watch:false, active:true, created:'2025-09-20',
+   price:1.048, change:0.12, updatedDays:3, hist:[1.03,1.032,1.035,1.038,1.04,1.039,1.041,1.043,1.042,1.044,1.045,1.044,1.046,1.045,1.047,1.046,1.045,1.047,1.048,1.047,1.046,1.048,1.047,1.049,1.048,1.047,1.049,1.048,1.047,1.048]},
+  {id:'i5', symbol:'161226', name:'国证钢铁LOF', market:'CN', ccy:'CNY', type:'LOF', assetClass:'股票', tags:['卫星'], watch:false, active:false, created:'2026-01-08',
+   price:1.21, change:-2.10, updatedDays:5, hist:[1.3,1.28,1.27,1.25,1.26,1.24,1.22,1.23,1.21,1.2,1.22,1.19,1.21,1.2,1.18,1.2,1.19,1.21,1.2,1.18,1.2,1.19,1.17,1.2,1.19,1.21,1.2,1.18,1.2,1.21]}
+];
+
+/* ---------- 工具 ---------- */
+function fmtPrice(v, ccy){ return (ccy==='USD'?'$':'¥') + v.toFixed(ccy==='USD'?2:3); }
+function changeCls(v){ return v>=0?'up':'down'; }
+function arrow(v){ return v>=0?'▲':'▼'; }
+function gapLabel(d){
+  if(d<=0) return {txt:'今天', cls:'gap-ok'};
+  if(d>=3) return {txt:d+' 天前 · 缺口', cls:'gap'};
+  return {txt:d+' 天前', cls:'gap-ok'};
+}
+
+/* ---------- 渲染：今日行情 ---------- */
+function renderToday(list){
+  const body = document.getElementById('todayBody');
+  body.innerHTML='';
+  if(list.length===0){
+    body.innerHTML = `<tr><td colspan="6"><div class="empty"><span class="em-ic">📭</span>暂无持仓行情<br/><button class="btn primary sm" data-tour-go="list" style="margin-top:10px">去添加标的</button></div></td></tr>`;
+    bindTourGo();
+    return;
+  }
+  list.forEach(it=>{
+    const g = gapLabel(it.updatedDays);
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td><div class="sym">${it.name}</div><div class="nm">${it.symbol} · ${it.market}</div></td>
+      <td>${fmtPrice(it.price,it.ccy)}</td>
+      <td class="${changeCls(it.change)}">${arrow(it.change)} ${Math.abs(it.change).toFixed(2)}%</td>
+      <td><span class="chip">${it.assetClass}</span></td>
+      <td class="${g.cls}">${g.txt}</td>
+      <td><div class="row-actions"><button class="btn sm" onclick="event.stopPropagation();goTour('detail','${it.id}')">详情 →</button></div></td>`;
+    tr.onclick = ()=>goTour('detail', it.id);
+    body.appendChild(tr);
+  });
+  document.getElementById('todayCount').textContent = `共 ${list.length} 个标的`;
+}
+
+/* ---------- 渲染：标的列表 ---------- */
+function renderList(){
+  const body = document.getElementById('listBody');
+  body.innerHTML='';
+  INSTRUMENTS.forEach(it=>{
+    const st = !it.active ? '<span class="status-dot off">已停用</span>'
+            : it.watch ? '<span class="status-dot watch">关注</span>'
+            : '<span class="status-dot">启用</span>';
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td><input class="chk" /></td>
+      <td class="sym">${it.symbol}</td>
+      <td>${it.name}</td>
+      <td>${it.market}</td>
+      <td>${it.ccy}</td>
+      <td>${it.type}</td>
+      <td><span class="chip">${it.assetClass}</span></td>
+      <td class="nm">${it.tags.join('、')||'—'}</td>
+      <td>${st}</td>
+      <td><div class="row-actions">
+        <button class="btn sm" onclick="toast('编辑 ${it.name}')">编辑</button>
+        <button class="btn sm" onclick="toast('删除 ${it.name}（deleteAsset）')">删除</button>
+      </div></td>`;
+    body.appendChild(tr);
+  });
+  document.getElementById('listCount').textContent = `共 ${INSTRUMENTS.length} 个标的`;
+}
+
+/* ---------- 渲染：标的详情（左右水平） ---------- */
+function renderDetail(id){
+  const it = INSTRUMENTS.find(x=>x.id===id);
+  if(!it) return;
+  document.getElementById('dName').textContent = it.name;
+  const metaBits = [it.symbol, it.market, it.ccy, it.type, it.assetClass];
+  if(it.tags.length) metaBits.push(it.tags.join('/'));
+  if(!it.active) metaBits.push('已停用');
+  document.getElementById('dMeta').textContent = metaBits.join(' · ');
+  document.getElementById('crumbScreen').textContent = '标的详情';
+
+  // 价格表现
+  const hasPrice = it.hist && it.hist.length>0;
+  document.getElementById('dPrice').textContent = fmtPrice(it.price,it.ccy);
+  const c = document.getElementById('dChange');
+  c.className = 'price-sub ' + changeCls(it.change);
+  c.innerHTML = `${arrow(it.change)} ${Math.abs(it.change).toFixed(2)}% <span class="muted">（当日 · 按${it.ccy}计，不跨币汇总）</span>`;
+
+  document.getElementById('dEmpty').style.display = hasPrice?'none':'block';
+  document.getElementById('dSpark').innerHTML = hasPrice?sparklineSVG(it.hist,120,34):'';
+  document.getElementById('dChart').innerHTML = hasPrice?chartSVG(it.hist,640,180):'';
+}
+
+/* ---------- SVG 绘制 ---------- */
+function sparklineSVG(data,w,h){
+  const min=Math.min(...data), max=Math.max(...data), rng=(max-min)||1;
+  const pts=data.map((v,i)=>`${(i/(data.length-1)*w).toFixed(1)},${(h-((v-min)/rng)*h).toFixed(1)}`).join(' ');
+  const up = data[data.length-1]>=data[0];
+  const col = up?'#DF1B41':'#0E9F6E';
+  return `<svg viewBox="0 0 ${w} ${h}" width="100%" height="${h}"><polyline points="${pts}" fill="none" stroke="${col}" stroke-width="2" stroke-linejoin="round"/></svg>`;
+}
+function chartSVG(data,w,h){
+  const min=Math.min(...data), max=Math.max(...data), rng=(max-min)||1;
+  const pts=data.map((v,i)=>`${(i/(data.length-1)*w).toFixed(1)},${(h-10-((v-min)/rng)*(h-20)).toFixed(1)}`).join(' ');
+  const up = data[data.length-1]>=data[0];
+  const col = up?'#DF1B41':'#0E9F6E';
+  const area = `0,${h} ${pts} ${w},${h}`;
+  return `<svg viewBox="0 0 ${w} ${h}" width="100%" height="${h}">
+    <polygon points="${area}" fill="${col}18"/>
+    <polyline points="${pts}" fill="none" stroke="${col}" stroke-width="2.2" stroke-linejoin="round"/>
+  </svg>`;
+}
+
+/* ---------- 筛选 ---------- */
+function applyFilter(){
+  const q = document.getElementById('searchInput').value.trim().toLowerCase();
+  const fw = document.getElementById('filterWatch').value;
+  const fc = document.getElementById('filterClass').value;
+  const list = INSTRUMENTS.filter(it=>{
+    if(q && !(it.name.toLowerCase().includes(q) || it.symbol.toLowerCase().includes(q))) return false;
+    if(fw==='watch' && !it.watch) return false;
+    if(fc && it.assetClass!==fc) return false;
+    return true;
+  });
+  renderToday(list);
+}
+
+/* ---------- 导览切换 ---------- */
+function goTour(screen, id){
+  document.querySelectorAll('.tour-btn').forEach(b=>b.classList.toggle('active', b.dataset.tour===screen));
+  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+  document.getElementById('screen-'+screen).classList.add('active');
+  const label = {today:'今日行情', list:'标的列表', detail:'标的详情'}[screen];
+  document.getElementById('crumbScreen').textContent = label;
+  if(screen==='detail') renderDetail(id || INSTRUMENTS[0].id);
+  if(screen==='list') renderList();
+  window.scrollTo({top:0,behavior:'smooth'});
+}
+function bindTourGo(){
+  document.querySelectorAll('[data-tour-go]').forEach(b=>{
+    b.onclick = ()=>goTour(b.dataset.tourGo);
+  });
+}
+document.querySelectorAll('.tour-btn').forEach(b=> b.onclick=()=>goTour(b.dataset.tour));
+document.querySelectorAll('.nav-item').forEach(n=> n.onclick=()=>goTour('today'));
+
+/* ---------- toast ---------- */
+let toastTimer;
+function toast(msg){
+  const t=document.getElementById('toast');
+  t.textContent=msg; t.classList.add('show');
+  clearTimeout(toastTimer); toastTimer=setTimeout(()=>t.classList.remove('show'),2200);
+}
+
+/* ---------- 初始化 ---------- */
+renderToday(INSTRUMENTS);
+renderList();
+bindTourGo();
+</script>
+</body>
+</html>

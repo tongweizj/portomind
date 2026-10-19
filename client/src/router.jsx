@@ -3,10 +3,12 @@ import {
   Navigate,
   Route,
   Routes,
+  useParams,
 } from 'react-router';
 
 import AppLayout from './components/layout/AppLayout';
 import { ROUTE_PATTERNS } from './constants/routes';
+import AssetDetail from './pages/Asset/AssetDetail';
 import AssetForm from './pages/Asset/AssetForm';
 import AssetList from './pages/Asset/AssetList';
 import Dashboard from './pages/Dashboard';
@@ -22,6 +24,12 @@ import AddTransaction from './pages/Transaction/AddTransaction';
 import EditTransaction from './pages/Transaction/EditTransaction';
 import ImportTransactions from './pages/Transaction/ImportTransactions';
 import TransactionList from './pages/Transaction/TransactionList';
+
+// 旧路由兼容（OQ5）：/assets/edit/:id → /instruments/edit/:id，保留 id
+function LegacyAssetEditRedirect() {
+  const { id } = useParams();
+  return <Navigate to={`/instruments/edit/${id}`} replace />;
+}
 
 export default function AppRouter() {
   return (
@@ -39,9 +47,16 @@ export default function AppRouter() {
           <Route path="/transactions/import" element={<ImportTransactions />} />
           <Route path="/transactions/edit/:id" element={<EditTransaction />} />
 
-          <Route path="/assets" element={<AssetList />} />
-          <Route path="/assets/new" element={<AssetForm />} />
-          <Route path="/assets/edit/:id" element={<AssetForm />} />
+          {/* 标的：列表从「今日行情」屏底进入，不占顶层导航 */}
+          <Route path="/instruments" element={<AssetList />} />
+          <Route path="/instruments/new" element={<AssetForm />} />
+          <Route path="/instruments/edit/:id" element={<AssetForm />} />
+          <Route path="/instruments/:id" element={<AssetDetail />} />
+
+          {/* 旧 /assets 路由兼容重定向（避免书签/历史失效） */}
+          <Route path="/assets" element={<Navigate to="/instruments" replace />} />
+          <Route path="/assets/new" element={<Navigate to="/instruments/new" replace />} />
+          <Route path="/assets/edit/:id" element={<LegacyAssetEditRedirect />} />
 
           <Route path="/prices" element={<Today />} />
           <Route path="/prices/:symbol/history" element={<History />} />

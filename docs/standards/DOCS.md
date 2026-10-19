@@ -34,27 +34,32 @@
 
 | 文档 | 唯一负责 | 不再涉及 |
 |---|---|---|
-| `manual/USER_GUIDE.md` | 面向使用者的业务操作、业务口径、常见问题 | 环境变量、调度内部机制、PM2/Nginx、mongosh 排障 |
-| `manual/DEVELOPMENT.md` | 本地开发环境：依赖、`.env` 本地默认值、基线数据、启动、**测试与验证命令** | 生产部署细节、运维排障、完整性检查原理 |
-| `manual/DEPLOY.md` | 生产部署：构建、生产环境变量、PM2、Nginx、上线检查、**备份与迁移**、**安全边界** | 业务操作、完整性检查原理 |
-| `manual/OPERATIONS.md` | **调度所有权（cron-worker 唯一所有者）与 5 类任务清单**、价格同步、**完整性检查**、历史回补、TaskRun、**命令行手动入口**、排障、市场时区 | 业务操作、本地环境搭建、部署步骤 |
+| `manual/CLIENT.md` | 面向使用者的**界面业务操作**、界面手动入口、业务数据口径、常见问题 | 环境变量、安装步骤、调度内部机制、API 端点、安全边界 |
+| `manual/SERVER.md` | **server 进程**：运行/端口/日志、手动 API 端点、专属排障 | 界面操作、调度机制、环境变量全表、安全边界细则 |
+| `manual/CRON_WORKER.md` | **cron-worker 进程**：调度所有权与 5 类任务清单、调度引擎、再平衡分发、防重、数据质量程序（价格同步/完整性检查/历史回补）、CLI 手动入口、TaskRun/监控/排障、新增调度器 | 业务操作、本地环境搭建、部署步骤 |
+| `manual/DEPLOYMENT.md` | **系统部署与运行**：系统架构、本地开发搭建、生产部署（构建/PM2/Nginx/上线检查）、**环境变量全表**、**验证与测试命令**、**安全边界**、**备份与迁移** | 业务操作、完整性检查原理、调度内部机制 |
 
 ### 2.2 主题归属速查
 
 | 主题 | 唯一归属 | 其他文档的做法 |
 |---|---|---|
-| 本地环境搭建（`.env` / `npm ci` / 基线数据 / 启动 / 端口） | `manual/DEVELOPMENT.md` | 一句话 + 链接 |
-| 验证与测试命令（`test`/`validate`/`verify`/`lint`/`build`） | `manual/DEVELOPMENT.md` §验证命令 | 引用，不复制命令 |
-| 调度所有权与 5 类定时任务清单 | `manual/OPERATIONS.md` §3.1 | 一句话 + 链接 |
-| 定时任务时间表 | `manual/OPERATIONS.md` §3 | USER_GUIDE 可保留精简表 + 链接 |
-| 价格同步行为（休市跳过 / 故障隔离 / 幂等） | `manual/OPERATIONS.md` §1.1 | 链接 |
-| 完整性检查（命令 / 流程 / 开关 / 状态表） | `manual/OPERATIONS.md` §2.2 | 链接 |
-| TaskRun 防重与任务 `status` 含义 | `manual/OPERATIONS.md` §1.2 | USER_GUIDE 只按需引用 |
-| 命令行手动入口 | `manual/OPERATIONS.md` §4 | USER_GUIDE §6 只列界面按钮 |
-| 环境变量 | **三分不重叠**：DEV=本地默认 / DEPLOY=生产必需 / OPERATIONS=调度与数据质量 | 各加「完整清单见 X」 |
-| 业务口径（成本法 / 分红 / 整手 / 目标 100% / 跨币种） | `manual/USER_GUIDE.md` §5（PRD 为需求基线，不重复） | 链接 |
-| 安全边界（无认证 / CORS / 日志脱敏） | `manual/DEPLOY.md` §安全边界 | README 与 USER_GUIDE 一句话 + 链接 |
-| 备份与迁移 | `manual/DEPLOY.md` §7 | 链接 |
+| 系统总览 / 三进程+shared 架构 | `manual/DEPLOYMENT.md` §1 | 一句话 + 链接 |
+| 本地环境搭建（`.env` / `npm ci` / 基线数据 / 启动 / 端口） | `manual/DEPLOYMENT.md` §3/§5 | 一句话 + 链接 |
+| 验证与测试命令（`test`/`validate`/`verify`/`lint`/`build`） | `manual/DEPLOYMENT.md` §7 | 引用，不复制命令 |
+| 生产部署（构建 / PM2 / Nginx / 上线检查） | `manual/DEPLOYMENT.md` §6 | 一句话 + 链接 |
+| 环境变量（三份 `.env` 全表） | `manual/DEPLOYMENT.md` §4 | 各组件手册只列必需项 + 链接 |
+| 安全边界（无认证 / CORS / 日志脱敏） | `manual/DEPLOYMENT.md` §9 | README 与 CLIENT 一句话 + 链接 |
+| 备份与迁移 | `manual/DEPLOYMENT.md` §10 | 链接 |
+| 调度所有权与 5 类定时任务清单 | `manual/CRON_WORKER.md` §3 | 一句话 + 链接 |
+| 定时任务时间表 | `manual/CRON_WORKER.md` §3 | CLIENT 可保留一句话 + 链接 |
+| 再平衡单日分发规则 | `manual/CRON_WORKER.md` §3.2 | 一句话 + 链接 |
+| 价格同步 / 完整性检查 / 历史回补（数据质量程序） | `manual/CRON_WORKER.md` §5 | 链接 |
+| TaskRun 防重与任务 `status` 含义 | `manual/CRON_WORKER.md` §4 | 链接 |
+| 命令行手动入口（sync:prices / sync:history / check:integrity） | `manual/CRON_WORKER.md` §6 | 链接 |
+| 界面业务操作（资产/组合/交易/再平衡/提醒/家庭视图/日志） | `manual/CLIENT.md` §3 | 链接 |
+| 界面手动入口（按钮） | `manual/CLIENT.md` §4 | SERVER/CRON_WORKER 只列各自端点 |
+| 业务口径（成本法 / 分红 / 整手 / 目标 100% / 跨币种） | `manual/CLIENT.md` §5（PRD 为需求基线，不重复） | 链接 |
+| server 手动 API 端点（curl） | `manual/SERVER.md` §5 | 链接 |
 | 功能全景与能力边界 | `product/lines/`（各产品线子文件）；总览 `product/PRODUCT_LINES.md` | 其他文档链接 |
 
 ## 3. 写作规则

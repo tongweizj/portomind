@@ -24,10 +24,10 @@
 |---|---|
 | `server/.env.example` | `SCHEDULER_ENABLED` → `false`（worker 为默认所有者）；新增 `ALERT_EVAL_CRON` / `FX_SYNC_CRON`；CORS 注释如实标注「不生效」 |
 | `cron-worker/.env.example` | 明确标注为**默认调度所有者**，并警示覆盖范围只有价格同步 + 完整性检查 |
-| `docs/manual/USER_GUIDE.md` | 重定位为「业务操作」唯一归属：删除环境搭建细节、命令行排障、status 表、备份段，改为链接；§6 改为「界面手动入口」；修正目标配置路径与估值录入入口；定时任务表补「哪些进程会跑」列 |
-| `docs/manual/DEVELOPMENT.md` | 重定位为「本地环境 + 验证命令」唯一归属：删除「定时任务所有权」整节与完整性检查原理段，改为链接；CORS 说明改为「不校验来源」；删除硬编码测试数字 |
-| `docs/manual/DEPLOY.md` | 重定位为「生产部署 + 安全边界 + 备份」唯一归属：新增 §6 安全边界、§7 备份与迁移；PM2 段补 worker 进程与覆盖警示 |
-| `docs/manual/OPERATIONS.md` | 重定位为「调度与数据质量」唯一归属：§3.1 改为 worker 默认 + **新增任务覆盖矩阵**；新增 §4 命令行手动入口速查 |
+| `docs/manual/CLIENT.md` | 重定位为「业务操作」唯一归属：删除环境搭建细节、命令行排障、status 表、备份段，改为链接；§6 改为「界面手动入口」；修正目标配置路径与估值录入入口；定时任务表补「哪些进程会跑」列 |
+| `docs/manual/DEPLOYMENT.md` | 重定位为「本地环境 + 验证命令」唯一归属：删除「定时任务所有权」整节与完整性检查原理段，改为链接；CORS 说明改为「不校验来源」；删除硬编码测试数字 |
+| `docs/manual/DEPLOYMENT.md` | 重定位为「生产部署 + 安全边界 + 备份」唯一归属：新增 §6 安全边界、§7 备份与迁移；PM2 段补 worker 进程与覆盖警示 |
+| `docs/manual/CRON_WORKER.md` | 重定位为「调度与数据质量」唯一归属：§3.1 改为 worker 默认 + **新增任务覆盖矩阵**；新增 §4 命令行手动入口速查 |
 | `README.md`（根） | `./doc/` → `./docs/`；文档清单指向新目录；快速开始补「调度不在 API 进程内」；安全边界补 CORS |
 | `docs/readme.md` | 重写为**唯一索引入口**，覆盖全部 9 个子目录 |
 | `docs/README.zh-CN.md` | 降级为旧入口指针 |
@@ -53,7 +53,7 @@
 - 默认拓扑（`cron-worker` 持调度）→ 提醒评估 / 汇率同步 / 再平衡 AUTO **不会自动运行**；
 - 若改回 `server` 持调度 → 完整性检查**不会自动运行**。
 
-**当前处理**：按裁决执行 worker 为默认所有者，并在 `OPERATIONS.md` §3.1、`DEPLOY.md` §3、`functions.md` §2.2/§4.10.1/§9.2 与两份 `.env.example` 中**如实写明覆盖矩阵与后果**，同时给出两种拓扑的切换步骤与手动触发方式（`OPERATIONS.md` §4）。
+**当前处理**：按裁决执行 worker 为默认所有者，并在 `CRON_WORKER.md` §3.1、`DEPLOYMENT.md` §3、`functions.md` §2.2/§4.10.1/§9.2 与两份 `.env.example` 中**如实写明覆盖矩阵与后果**，同时给出两种拓扑的切换步骤与手动触发方式（`CRON_WORKER.md` §4）。
 
 **收口建议（待定，属代码改动）**：把 alert / fx / rebalance 三个调度器补进 `cron-worker/src/schedulers/`（或在 `server/tasks/` 补 `healthScheduler`），使「单一所有者 = 全覆盖」成立。在补齐前，部署方需按实际需求选拓扑并接受缺口。
 

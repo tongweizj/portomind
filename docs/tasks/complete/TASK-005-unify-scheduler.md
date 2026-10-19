@@ -70,7 +70,7 @@
 - 从 `server` 移除全部调度启动路径（`server/tasks/{priceScheduler,alertScheduler,fxScheduler,scheduler}.js` 与 `server/services/rebalance/scheduleManager.js` 已删除），`server` 不再读取 `SCHEDULER_ENABLED`。
 - **保留** `server` 侧全部 API 手动触发端点（前端按钮的后端）：`POST /api/alerts/evaluate`、`POST /api/family/fx/sync`、`POST /api/portfolios/:pid/rebalance/{check,suggestions,execute}` 等继续可用。
 - **扩大项（方案 A 连带）**：新建 `shared/` workspace，把 `models` / `services` / `tasks` / `fetchers` / `constants` / `config` / `utils` 全部收敛为唯一实现；引入根 `package.json` + npm workspaces；合并 `dailySync` 为「一个内核 + 两处 CLI 薄壳」；`calendar.service` 与 `markets`（原 worker 独有）迁入 `shared` 供两侧共用。
-- 更新文档：`OPERATIONS.md` §3、`DEPLOY.md` §1/§2/§3/§5/§7、`DEVELOPMENT.md` §环境配置/§安装依赖/§启动项目/§已知环境说明、`functions.md` §2/§3/§4/§6/§9/§10、两份 `.env.example`、根 `README.md`。
+- 更新文档：`CRON_WORKER.md` §3、`DEPLOYMENT.md` §1/§2/§3/§5/§7、`DEPLOYMENT.md` §环境配置/§安装依赖/§启动项目/§已知环境说明、`functions.md` §2/§3/§4/§6/§9/§10、两份 `.env.example`、根 `README.md`。
 - 创建 ADR-002 记录「单调度器 + 共享内核」架构决策。
 
 ---
@@ -82,7 +82,7 @@
 - 不改动 API 契约与数据模型字段。
 - 不引入容器化 / PM2 之外的新部署形态。
 - 不做认证授权（ADR-001 议题）。
-- 不顺手修 CORS（已在 DEPLOY.md §6 如实记录，独立议题）。
+- 不顺手修 CORS（已在 DEPLOYMENT.md §6 如实记录，独立议题）。
 
 ---
 
@@ -107,7 +107,7 @@
 - [x] 前端「立即评估」「同步汇率」按钮与再平衡「检查/生成建议/执行」流程在调度迁移后**功能不变**（`server` 侧 API 端点与 `shared` 内核均保留）。
 - [x] `SCHEDULER_ENABLED` 不再是「二选一」开关：仅 `cron-worker/.env.example` 保留，`server/.env.example` 已移除；两份文件不再给出互相矛盾的所有者默认值。
 - [x] `server` 与 `cron-worker` 测试全部通过（152/152 与 77/77）；新增「单调度器注册 5 类任务」与「再平衡到期规则」测试。
-- [x] `OPERATIONS.md` §3.1 的「覆盖矩阵 + 已知缺口」章节改为「cron-worker 是唯一调度所有者，全任务覆盖」，不再有「二选一拓扑」说明。
+- [x] `CRON_WORKER.md` §3.1 的「覆盖矩阵 + 已知缺口」章节改为「cron-worker 是唯一调度所有者，全任务覆盖」，不再有「二选一拓扑」说明。
 - [x] ADR-002 已创建并记录决策与备选方案。
 - [x] 全量文档相对链接校验 0 失效。
 
@@ -134,9 +134,9 @@
 - Architecture: `docs/architecture/functions.md` §2.2 / §4.2.2 / §4.6.5 / §4.10 / §9.2
 - Architecture: `docs/architecture/adr/ADR-002-single-scheduler.md`
 - Architecture: `docs/architecture/ARCHITECTURE.md`
-- Manual: `docs/manual/OPERATIONS.md` §3（调度所有权）
-- Manual: `docs/manual/DEPLOY.md` §2 / §3（进程与调度所有权）
-- Manual: `docs/manual/DEVELOPMENT.md`（本地环境配置与安装）
+- Manual: `docs/manual/CRON_WORKER.md` §3（调度所有权）
+- Manual: `docs/manual/DEPLOYMENT.md` §2 / §3（进程与调度所有权）
+- Manual: `docs/manual/DEPLOYMENT.md`（本地环境配置与安装）
 - Standards: `docs/standards/CODING.md`、`docs/standards/TESTING.md`、`docs/standards/DOCS.md`
 - Process: `docs/process/EXECUTION_PLANS.md`
 - 背景记录：`docs/exec-plans/complete/DOCS-DEDUP-2026-10-15.md` §3（Q10 发现过程）
@@ -194,7 +194,7 @@ ExecPlan 路径：[`docs/exec-plans/complete/TASK-005-unify-scheduler.md`](../..
 
 **未闭合项（交付给运维）**
 
-- **真实运行时冒烟未做**：本机未启动 MongoDB，因此「只启动 `server` 确认无调度日志」「`mongosh` 查询 `taskruns` 五类任务」「PM2 双进程保活」三项需在具备 Mongo 的环境补做。建议首次上线时按 `OPERATIONS.md` §3.1 的启动自检项确认 `SCHEDULERS_STARTED {"count":5}`。
+- **真实运行时冒烟未做**：本机未启动 MongoDB，因此「只启动 `server` 确认无调度日志」「`mongosh` 查询 `taskruns` 五类任务」「PM2 双进程保活」三项需在具备 Mongo 的环境补做。建议首次上线时按 `CRON_WORKER.md` §3.1 的启动自检项确认 `SCHEDULERS_STARTED {"count":5}`。
 - **`git mv` 未复核**：本次文件搬迁量大，提交前应执行 `git status` 确认无目录嵌套或意外删除。
 
 **后续建议**

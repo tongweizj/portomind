@@ -4,7 +4,7 @@ PortoMind 是一个自托管的个人/家庭投资组合管理应用，覆盖资
 
 ![PortoMind Logo](./docs/logo.png)
 
-> 📖 新手从这里开始：[使用指南](./docs/manual/USER_GUIDE.md)
+> 📖 新手从这里开始：[客户端使用手册](./docs/manual/CLIENT.md)
 
 ## 当前能力
 
@@ -41,7 +41,7 @@ npm workspaces monorepo，四个 workspace：
 
 ## 快速开始
 
-要求 Node.js 24、npm 和 MongoDB。完整步骤见 [开发与运行说明](./docs/manual/DEVELOPMENT.md)。
+要求 Node.js 24、npm 和 MongoDB。完整步骤见 [系统部署手册](./docs/manual/DEPLOYMENT.md) §5。
 
 ```bash
 cp server/.env.example server/.env
@@ -69,7 +69,7 @@ npm run dev:worker
 - 后端：`http://localhost:8080`
 - API 前缀：`http://localhost:8080/api`
 
-定时任务（价格同步/完整性检查/提醒评估/汇率同步/再平衡分发）**只在 `cron-worker` 中注册**，API 进程不跑任何定时任务。`SCHEDULER_ENABLED` 与全部 `*_CRON` 配置只存在于 `cron-worker/.env`。启动方式与自检见 [生产操作指南](./docs/manual/OPERATIONS.md) §3。
+定时任务（价格同步/完整性检查/提醒评估/汇率同步/再平衡分发）**只在 `cron-worker` 中注册**，API 进程不跑任何定时任务。`SCHEDULER_ENABLED` 与全部 `*_CRON` 配置只存在于 `cron-worker/.env`。启动方式与自检见 [调度进程手册](./docs/manual/CRON_WORKER.md) §2.5。
 
 ## 验证
 
@@ -99,10 +99,10 @@ npm run verify
 
 ## 文档
 
-- [使用指南（新手从这里开始）](./docs/manual/USER_GUIDE.md) — 功能怎么用、业务口径
-- [开发与运行说明](./docs/manual/DEVELOPMENT.md) — 本地环境、依赖、验证命令
-- [部署说明](./docs/manual/DEPLOY.md) — 构建、生产环境变量、PM2/Nginx、备份、安全边界
-- [生产操作指南（行情与数据质量）](./docs/manual/OPERATIONS.md) — 调度所有权、价格同步、完整性检查、排障
+- [客户端使用手册](./docs/manual/CLIENT.md) — 界面业务操作、业务口径、常见问题
+- [服务端使用手册](./docs/manual/SERVER.md) — server 进程、手动 API 端点、排障
+- [调度进程手册](./docs/manual/CRON_WORKER.md) — 调度机制、数据质量程序、CLI、监控排障
+- [系统部署手册](./docs/manual/DEPLOYMENT.md) — 本地开发、生产部署、环境变量全表、安全边界、备份
 - [产品线总览与功能评估](./docs/product/PRODUCT_LINES.md) — 产品线划分、功能全景与取舍建议（子文件 PL-0~PL-6）
 - [架构总览](./docs/architecture/ARCHITECTURE.md) — 分层与模块边界
 - [ADR-002 单一调度器与共享内核](./docs/architecture/adr/ADR-002-single-scheduler.md) — 调度所有权收敛决策
@@ -122,7 +122,7 @@ npm run verify
 
 ## 安全边界
 
-当前没有认证与授权，API 不应直接暴露到公网。**CORS 当前也不校验来源**（任意来源都被接受，`CORS_ORIGINS` 尚未生效）。完整说明与上线前要求见 [部署说明 § 安全边界](./docs/manual/DEPLOY.md#6-安全边界)。
+当前没有认证与授权，API 不应直接暴露到公网。**CORS 当前也不校验来源**（任意来源都被接受，`CORS_ORIGINS` 尚未生效）。完整说明与上线前要求见 [系统部署手册 § 安全边界](./docs/manual/DEPLOYMENT.md#9-安全边界)。
 
 ## License
 

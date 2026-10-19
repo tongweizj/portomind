@@ -211,5 +211,5 @@
 - [PL-0 平台基座线](./PL-0-platform-foundation.md) — 调度清单 / 交易日历 / 数据模型总表
 - [PL-5 提醒与通知线](./PL-5-alerting.md) — AS-11 的消费方（AL-10 估值分位规则）
 - [PL-6 家庭总览线](./PL-6-household.md) — 价格是家庭折算的输入
-- [OPERATIONS.md](../../manual/OPERATIONS.md) — 调度所有权、价格同步、完整性检查、历史回补
+- [CRON_WORKER.md](../../manual/CRON_WORKER.md) — 调度所有权、价格同步、完整性检查、历史回补
 - [functions.md（已归档）](../../archive/functions.md) — 本文 §6 的原始来源

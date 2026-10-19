@@ -1,7 +1,7 @@
 # PortoMind 产品线总览与 INDEX
 
 > 版本：v2.0 · 日期：2026-10-15 · 视角：产品管理（Product Management）
-> 输入依据：[PRD.md](./specs/PRD.md)（需求基线）、[USER_GUIDE.md](../manual/USER_GUIDE.md)（用户手册）、[ROADMAP.md](./ROADMAP.md)（路线图）、原 `architecture/functions.md`（源码级功能清单，已[归档](../archive/functions.md)）
+> 输入依据：[PRD.md](./specs/PRD.md)（需求基线）、[CLIENT.md](../manual/CLIENT.md)（用户手册）、[ROADMAP.md](./ROADMAP.md)（路线图）、原 `architecture/functions.md`（源码级功能清单，已[归档](../archive/functions.md)）
 > 本文件定位：**产品线的总览与索引**——只保留跨线共用的结构与判断（定位、划分原则、总表、依赖图、评估框架、路线图），**每条产品线的明细下沉到独立子文件**。
 > 边界声明：本文档组只做「产品结构 + 取舍判断」，不含技术实现方案；字段级、接口级细节以 [API_CONTRACT.md](../dev/API_CONTRACT.md) 与代码为准。功能编号（AS/TR/CM/RB/AL/FAM）沿用 PRD 编码以便双向追溯。
 
@@ -80,7 +80,13 @@ PL-2 行情数据 + 汇率 ─────────────┘
 PL-0 平台基座 ──横切驱动──> PL-1 / PL-2 / PL-3 / PL-4 / PL-5 / PL-6
 ```
 
-**读法**：上游是下游的前置条件。典型断链后果——PL-2 缺价 → PL-1 市值/盈亏为 `null` → PL-3 漂移为 `null` → PL-4 无法生成建议（`MISSING_MARKET_PRICE`）→ PL-6 该组合不计入总额。这解释了为什么「数据质量」被提升为**产品级信任项**而非纯技术项。
+**读法**：
+
+上游是下游的前置条件。
+
+典型断链后果——PL-2 缺价 → PL-1 市值/盈亏为 `null` → PL-3 漂移为 `null` → PL-4 无法生成建议（`MISSING_MARKET_PRICE`）→ PL-6 该组合不计入总额。
+
+这解释了为什么「数据质量」被提升为**产品级信任项**而非纯技术项。
 
 ---
 

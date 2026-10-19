@@ -165,7 +165,7 @@ Affected areas:
 - `cron-worker` 的调度器集合（2 → 5）与其任务实现来源。
 - `server` 的模块边界（业务实现外移）与启动路径（移除调度）。
 - 部署拓扑与环境变量归属。
-- 文档：`OPERATIONS.md` §3、`DEPLOY.md` §1–§3、`DEVELOPMENT.md`、`functions.md`、两份 `.env.example`。
+- 文档：`CRON_WORKER.md` §3、`DEPLOYMENT.md` §1–§3、`DEPLOYMENT.md`、`functions.md`、两份 `.env.example`。
 
 Unaffected areas:
 
@@ -226,7 +226,7 @@ Unaffected areas:
 ## 12. Follow-up Actions
 
 - [x] 更新 `functions.md` §2 / §4.10 / §9
-- [x] 更新 `OPERATIONS.md` §3、`DEPLOY.md` §1–§3、`DEVELOPMENT.md`
+- [x] 更新 `CRON_WORKER.md` §3、`DEPLOYMENT.md` §1–§3、`DEPLOYMENT.md`
 - [x] 更新两份 `.env.example`
 - [x] 更新 `README.md` 与 `docs/readme.md` 索引
 - [x] 新增/迁移调度相关测试
@@ -241,8 +241,8 @@ Related documentation:
 
 - `docs/exec-plans/complete/TASK-005-unify-scheduler.md` — 实施计划与分阶段方案
 - `docs/exec-plans/complete/DOCS-DEDUP-2026-10-15.md` §3 — Q10 缺口发现过程
-- `docs/manual/OPERATIONS.md` §3 — 调度与数据质量运维
-- `docs/manual/DEPLOY.md` §2 / §3 — 进程拓扑与环境变量
+- `docs/manual/CRON_WORKER.md` §3 — 调度与数据质量运维
+- `docs/manual/DEPLOYMENT.md` §2 / §3 — 进程拓扑与环境变量
 - [`docs/product/lines/`](../../product/lines/) — 功能全景与能力边界（原 `docs/architecture/functions.md`，已归档于 [`docs/archive/functions.md`](../../archive/functions.md)）
 - `docs/standards/DOCS.md` — 文档结构与「单一归属」规则
 
