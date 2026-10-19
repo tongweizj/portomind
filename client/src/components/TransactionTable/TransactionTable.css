@@ -1,15 +1,45 @@
+/* TASK-044 R6：交易表格唯一实现的样式，对齐设计 token（边框 #E3E8EE / 表头底 #F6F8FA） */
 .transaction-table {
-    width: 100%;
-    border-collapse: collapse;
-  }
-  .transaction-table th,
-  .transaction-table td {
-    padding: 0.5rem;
-    border: 1px solid #eee;
-    text-align: left;
-  }
-  .transaction-table th {
-    background-color: #fafafa;
-    font-weight: bold;
-  }
-  
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+.transaction-table th,
+.transaction-table td {
+  padding: 8px 12px;
+  border-bottom: 1px solid #E3E8EE;
+  text-align: left;
+  white-space: nowrap;
+}
+.transaction-table th {
+  background-color: #F6F8FA;
+  font-weight: 600;
+  color: #5E6B7E;
+}
+.transaction-table tbody tr:hover {
+  background-color: #FAFBFC;
+}
+
+.transaction-table__link {
+  color: #635BFF;
+  text-decoration: none;
+}
+.transaction-table__link:hover {
+  text-decoration: underline;
+}
+
+.transaction-table__actions {
+  display: inline-flex;
+  gap: 12px;
+}
+.transaction-table__action {
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  font-size: 13px;
+  color: #635BFF;
+}
+.transaction-table__action:hover {
+  text-decoration: underline;
+}

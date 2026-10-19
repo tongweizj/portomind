@@ -42,10 +42,17 @@ export default function AppRouter() {
 
           <Route path="/alerts/rules" element={<AlertRules />} />
 
-          <Route path="/transactions" element={<TransactionList />} />
-          <Route path="/transactions/new" element={<AddTransaction />} />
-          <Route path="/transactions/import" element={<ImportTransactions />} />
-          <Route path="/transactions/edit/:id" element={<EditTransaction />} />
+          {/*
+            交易已收拢为组合子资源（TASK-044）：
+            - `/portfolios/transactions` = 跨组合「全部交易」聚合页（只读，2 段字面量）
+            - 写操作一律 `/portfolios/:id/transactions/*`，portfolioId 取自路径
+            - 旧 `/transactions` 路由族已删除，不做重定向（OQ3：命中 `*` 通配落 /portfolios）
+            ⚠️ 字面量路由需先于动态路由声明：将来若新增 2 段 `/portfolios/:id`，聚合页会被吞掉。
+          */}
+          <Route path={ROUTE_PATTERNS.PORTFOLIO_TX_ALL} element={<TransactionList />} />
+          <Route path={ROUTE_PATTERNS.PORTFOLIO_TX_NEW} element={<AddTransaction />} />
+          <Route path={ROUTE_PATTERNS.PORTFOLIO_TX_EDIT} element={<EditTransaction />} />
+          <Route path={ROUTE_PATTERNS.PORTFOLIO_TX_IMPORT} element={<ImportTransactions />} />
 
           {/* 标的：列表从「今日行情」屏底进入，不占顶层导航 */}
           <Route path="/instruments" element={<AssetList />} />

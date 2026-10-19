@@ -6,6 +6,18 @@ export const ACTION_TYPE = Object.freeze({
   SELL: 'SELL',
 });
 
+/**
+ * 交易类型（TASK-044 R8）。
+ * 取值来自 shared/models/transaction.js 的 action 枚举，两处使用点（组合内交易 Tab、
+ * 「全部交易」聚合页）共用本表，杜绝再次出现「分红显示为卖出」的二元判断。
+ */
+export const TRANSACTION_ACTIONS = Object.freeze([
+  { value: 'buy', label: '买入' },
+  { value: 'sell', label: '卖出' },
+  { value: 'div_cash', label: '现金分红' },
+  { value: 'div_reinvest', label: '分红再投' },
+]);
+
 export const ASSET_TYPES = Object.freeze([
   { value: 'stock', label: '股票' },
   { value: 'etf', label: 'ETF' },

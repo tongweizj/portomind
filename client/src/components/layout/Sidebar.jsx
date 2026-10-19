@@ -7,23 +7,51 @@
 //   - 底部：分隔线 + 「退出登录」+ 版本号 v0.9.2 · 自托管
 // 信息架构（FS-asset-price-consolidation）：顶层 8 → 7 项；
 //   原「资产管理」移出导航，收敛为「今日行情」屏内入口；「价格」→「今日行情」+「监控」badge。
-import { NavLink } from 'react-router';
+// 信息架构（TASK-044）：顶层 7 → 6 项，交易收拢为组合子资源 ——
+//   「组合管理」改为可展开父项，下挂「组合列表」与「全部交易」；原顶层「交易记录」移除。
+import { useState } from 'react';
+import { Link, useLocation } from 'react-router';
 import {
-  LayoutDashboard, LineChart, ListOrdered, FileText, LogOut, Layers, Bell, Users
+  LayoutDashboard, LineChart, LogOut, Layers, Bell, Users, FileText, ChevronRight
 } from 'lucide-react';
+import { ROUTES } from '../../constants/routes';
 import { colors, layout, fontStack, radii } from '../../constants/design-tokens';
 
+// 「组合列表」族：组合增删改查与详情 Tab 都算它的落点。
+// 注意排除 `/portfolios/transactions`（那属于「全部交易」子项）。
+const isPortfolioListPath = (pathname) =>
+  pathname === ROUTES.PORTFOLIO_LIST
+  || pathname.startsWith('/portfolios/new')
+  || pathname.startsWith('/portfolios/edit')
+  || pathname.startsWith('/portfolios/view');
+
+// 顶层 6 项。`active` 为显式判定函数，不用 NavLink 的前缀匹配 ——
+// 否则父项 `/portfolios` 会同时高亮「全部交易」等所有子路径。
 const navItems = [
-  { to: '/', icon: LayoutDashboard, label: 'Dashboard · 提醒', end: true },
-  { to: '/portfolios', icon: Layers, label: '组合管理' },
-  { to: '/prices', icon: LineChart, label: '今日行情', badge: '监控' },
-  { to: '/transactions', icon: ListOrdered, label: '交易记录' },
-  { to: '/family', icon: Users, label: '家庭视图' },
-  { to: '/alerts/rules', icon: Bell, label: '提醒规则' },
-  { to: '/logs', icon: FileText, label: '日志' },
+  { to: '/', icon: LayoutDashboard, label: 'Dashboard · 提醒', active: (p) => p === '/' },
+  {
+    to: ROUTES.PORTFOLIO_LIST,
+    icon: Layers,
+    label: '组合管理',
+    children: [
+      { to: ROUTES.PORTFOLIO_LIST, label: '组合列表', active: isPortfolioListPath },
+      { to: ROUTES.PORTFOLIO_TX_ALL, label: '全部交易', active: (p) => p === ROUTES.PORTFOLIO_TX_ALL },
+    ],
+  },
+  { to: '/prices', icon: LineChart, label: '今日行情', badge: '监控', active: (p) => p.startsWith('/prices') },
+  { to: '/family', icon: Users, label: '家庭视图', active: (p) => p === '/family' },
+  { to: '/alerts/rules', icon: Bell, label: '提醒规则', active: (p) => p === '/alerts/rules' },
+  { to: '/logs', icon: FileText, label: '日志', active: (p) => p === '/logs' },
 ];
 
+const itemClass = 'flex items-center gap-3 px-3 py-2 text-sm transition-colors';
+
 export default function Sidebar() {
+  const { pathname } = useLocation();
+  // OQ4 / AC11：展开态**不持久化** —— 仅组件内 useState，不写 localStorage/sessionStorage，
+  // 刷新即回到默认收起态。
+  const [expanded, setExpanded] = useState(false);
+
   return (
     <aside
       style={{
@@ -83,52 +111,122 @@ export default function Sidebar() {
         总览
       </div>
 
-      {/* 导航项（7 项） */}
+      {/* 导航项（6 项，「组合管理」含二级） */}
       <nav className="flex-1 px-3 space-y-1">
-        {navItems.map(({ to, icon: Icon, label, end, badge }) => (
-          <NavLink
-            key={to}
-            to={to}
-            end={end}
-            className={({ isActive }) =>
-              [
-                'flex items-center gap-3 px-3 py-2 text-sm transition-colors',
-                isActive ? 'font-semibold' : 'font-medium',
-              ].join(' ')
-            }
-            style={({ isActive }) => ({
-              borderRadius: radii.md,
-              color: isActive ? colors.brand : colors.textSecondary,
-              backgroundColor: isActive ? colors.brandSurface : 'transparent',
-            })}
-          >
-            {({ isActive }) => (
-              <>
-                <Icon
-                  size={18}
-                  color={isActive ? colors.brand : colors.textSecondary}
-                  strokeWidth={isActive ? 2.2 : 1.8}
-                />
-                <span>{label}</span>
-                {badge && (
-                  <span
+        {navItems.map(({ to, icon: Icon, label, badge, active, children }) => {
+          const childActive = Boolean(children?.some(child => child.active(pathname)));
+          const isActive = childActive || Boolean(active?.(pathname));
+
+          // 含二级子项的父项：文本区跳落点，右侧 chevron 单独切换展开（设计见 FS §4.1）
+          if (children) {
+            return (
+              <div key={label}>
+                <div
+                  className="flex items-center"
+                  style={{
+                    borderRadius: radii.md,
+                    backgroundColor: isActive ? colors.brandSurface : 'transparent',
+                  }}
+                >
+                  <Link
+                    to={to}
+                    aria-current={isActive ? 'page' : undefined}
+                    className={`${itemClass} flex-1 min-w-0 ${isActive ? 'font-semibold' : 'font-medium'}`}
+                    style={{ color: isActive ? colors.brand : colors.textSecondary }}
+                  >
+                    <Icon
+                      size={18}
+                      color={isActive ? colors.brand : colors.textSecondary}
+                      strokeWidth={isActive ? 2.2 : 1.8}
+                    />
+                    <span>{label}</span>
+                  </Link>
+                  <button
+                    type="button"
+                    onClick={() => setExpanded(value => !value)}
+                    aria-expanded={expanded}
+                    aria-label={expanded ? '收起组合管理' : '展开组合管理'}
                     style={{
-                      marginLeft: 'auto',
-                      fontSize: 10,
-                      lineHeight: 1.6,
-                      padding: '0 7px',
-                      borderRadius: radii.pill,
-                      backgroundColor: isActive ? colors.bgCard : colors.border,
-                      color: isActive ? colors.brand : colors.textSecondary,
+                      background: 'none',
+                      border: 'none',
+                      cursor: 'pointer',
+                      padding: '8px 10px 8px 2px',
+                      display: 'flex',
+                      alignItems: 'center',
                     }}
                   >
-                    {badge}
-                  </span>
+                    <ChevronRight
+                      size={16}
+                      color={isActive ? colors.brand : colors.textMuted}
+                      strokeWidth={2}
+                      style={{
+                        transform: expanded ? 'rotate(90deg)' : 'none',
+                        transition: 'transform 0.15s ease',
+                      }}
+                    />
+                  </button>
+                </div>
+
+                {expanded && (
+                  <div className="mt-1 space-y-1">
+                    {children.map(child => (
+                      <Link
+                        key={child.to}
+                        to={child.to}
+                        aria-current={child.active(pathname) ? 'page' : undefined}
+                        className={`flex items-center px-3 py-1.5 text-sm transition-colors ${child.active(pathname) ? 'font-semibold' : 'font-medium'}`}
+                        style={{
+                          borderRadius: radii.md,
+                          paddingLeft: 44,
+                          color: child.active(pathname) ? colors.brand : colors.textSecondary,
+                          backgroundColor: child.active(pathname) ? colors.brandSurface : 'transparent',
+                        }}
+                      >
+                        {child.label}
+                      </Link>
+                    ))}
+                  </div>
                 )}
-              </>
-            )}
-          </NavLink>
-        ))}
+              </div>
+            );
+          }
+
+          return (
+            <Link
+              key={to}
+              to={to}
+              aria-current={isActive ? 'page' : undefined}
+              className={`${itemClass} ${isActive ? 'font-semibold' : 'font-medium'}`}
+              style={{
+                borderRadius: radii.md,
+                color: isActive ? colors.brand : colors.textSecondary,
+                backgroundColor: isActive ? colors.brandSurface : 'transparent',
+              }}
+            >
+              <Icon
+                size={18}
+                color={isActive ? colors.brand : colors.textSecondary}
+                strokeWidth={isActive ? 2.2 : 1.8}
+              />
+              <span>{label}</span>
+              {badge && (
+                <span
+                  style={{
+                    marginLeft: 'auto',
+                    fontSize: 10,
+                    lineHeight: 1.6,
+                    padding: '0 7px',
+                    borderRadius: radii.pill,
+                    backgroundColor: isActive ? colors.bgCard : colors.border,
+                    color: isActive ? colors.brand : colors.textSecondary,
+                  }}
+                >
+                  {badge}
+                </span>
+              )}
+            </Link>
+          );
+        })}
       </nav>
 
       {/* 底部：分隔线 + 退出 + 版本号 */}

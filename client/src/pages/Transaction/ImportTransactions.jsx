@@ -1,7 +1,12 @@
+// src/pages/Transaction/ImportTransactions.jsx
+// TASK-044 R4 / R7：CSV 导入仅在组合内发起 —— 路由 /portfolios/:id/transactions/import。
+// 目标组合由路径锁定，页内不再有组合下拉选择器，也不存在「未选择组合」的提交路径。
 import { useMemo, useRef, useState } from 'react';
-import { useNavigate } from 'react-router';
+import { Link, useNavigate, useParams } from 'react-router';
 import { Upload, ArrowLeft } from 'lucide-react';
-import { getPortfolios } from '../../services/portfolio.service';
+import { usePortfolio } from '../../hooks/usePortfolio';
+import { TRANSACTION_ACTIONS } from '../../constants/enums';
+import { ROUTES } from '../../constants/routes';
 import { importTransactions } from '../../services/transaction.service';
 import { getApiErrorMessage } from '../../services/api';
 import { parseCsv, mapColumns, rowToTransaction } from '../../utils/csvImport';
@@ -11,11 +16,13 @@ const FIELD_LABELS = {
   fee: '费用', date: '日期', notes: '备注', name: '名称',
 };
 
+const ACTION_LABELS = Object.fromEntries(TRANSACTION_ACTIONS.map(o => [o.value, o.label]));
+
 export default function ImportTransactions() {
+  const { id: portfolioId } = useParams();
   const navigate = useNavigate();
+  const { data: portfolio } = usePortfolio(portfolioId);
   const fileRef = useRef(null);
-  const [portfolios, setPortfolios] = useState([]);
-  const [portfolioId, setPortfolioId] = useState('');
   const [fileName, setFileName] = useState('');
   const [headers, setHeaders] = useState([]);
   const [rows, setRows] = useState([]);
@@ -24,13 +31,7 @@ export default function ImportTransactions() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
-  // 加载组合（惰性，页面首次打开时）
-  useMemo(() => {
-    getPortfolios().then(data => {
-      setPortfolios(data);
-      if (data.length > 0) setPortfolioId(data[0]._id);
-    });
-  }, []);
+  const backToTransactions = () => navigate(ROUTES.PORTFOLIO_TX_TAB(portfolioId));
 
   const handleFile = (event) => {
     const file = event.target.files?.[0];
@@ -53,14 +54,13 @@ export default function ImportTransactions() {
     reader.readAsText(file, 'utf-8');
   };
 
-  // 按当前映射生成预览
   const buildPreview = () => rows.map((row, index) => {
     const { transaction, error: rowError } = rowToTransaction(row, mapping);
     return { index: index + 2, transaction, error: rowError };
   });
 
   const handleSubmit = async () => {
-    if (!portfolioId) { setError('请选择目标组合'); return; }
+    if (!portfolioId) { setError('缺少目标组合，请返回组合的交易记录重新发起导入'); return; }
     const items = buildPreview();
     const invalid = items.filter(item => item.error);
     if (invalid.length > 0) {
@@ -70,6 +70,7 @@ export default function ImportTransactions() {
     setLoading(true);
     setError('');
     try {
+      // 导入仍走服务端批量端点，逐行校验（重复检测 / 超卖 / 语义）不下移到前端（AC10）
       const data = await importTransactions({
         portfolioId,
         transactions: items.map(item => item.transaction)
@@ -103,28 +104,25 @@ export default function ImportTransactions() {
   return (
     <div className="max-w-3xl mx-auto space-y-6">
       <div className="flex items-center gap-3">
-        <button type="button" onClick={() => navigate('/transactions')}
+        <Link to={ROUTES.PORTFOLIO_TX_TAB(portfolioId)}
           className="flex items-center gap-1 text-sm text-gray-500 hover:text-gray-800">
           <ArrowLeft className="w-4 h-4" /> 返回
-        </button>
+        </Link>
         <h1 className="text-2xl font-bold text-gray-800">导入交易（CSV）</h1>
       </div>
 
-      {/* 文件与组合选择 */}
+      {/* 目标组合（锁定）+ 文件选择。R7：无组合下拉选择器 */}
       <div className="rounded-xl bg-white p-6 shadow space-y-4">
-        <div className="flex flex-wrap items-end gap-4">
-          <div className="flex-1 min-w-52">
-            <label className="mb-1 block text-sm text-gray-700">目标组合</label>
-            <select value={portfolioId} onChange={event => setPortfolioId(event.target.value)}
-              className="w-full rounded border px-3 py-2 bg-white">
-              {portfolios.map(pf => <option key={pf._id} value={pf._id}>{pf.name}</option>)}
-            </select>
+        <div>
+          <label className="mb-1 block text-sm text-gray-700">目标组合</label>
+          <div className="rounded border bg-gray-50 px-3 py-2 text-sm text-gray-800">
+            {portfolio?.name || '加载中…'}
           </div>
-          <div className="flex-1 min-w-52">
-            <label className="mb-1 block text-sm text-gray-700">CSV 文件（天天基金/雪球导出）</label>
-            <input ref={fileRef} type="file" accept=".csv,text/csv" onChange={handleFile}
-              className="w-full rounded border px-3 py-2 text-sm" />
-          </div>
+        </div>
+        <div>
+          <label className="mb-1 block text-sm text-gray-700">CSV 文件（天天基金/雪球导出）</label>
+          <input ref={fileRef} type="file" accept=".csv,text/csv" onChange={handleFile}
+            className="w-full rounded border px-3 py-2 text-sm" />
         </div>
         {fileName && <p className="text-xs text-gray-500">已读取：{fileName}</p>}
       </div>
@@ -168,7 +166,8 @@ export default function ImportTransactions() {
                   <tr key={item.index} className={`border-b ${item.error ? 'bg-red-50' : ''}`}>
                     <td className="px-2 py-2">{item.index}</td>
                     <td className="px-2 py-2">{item.transaction.symbol}</td>
-                    <td className="px-2 py-2">{item.transaction.action}</td>
+                    {/* 与表格共用同一份中文映射，避免出现第三套显示口径（R8） */}
+                    <td className="px-2 py-2">{ACTION_LABELS[item.transaction.action] || item.transaction.action}</td>
                     <td className="px-2 py-2 text-right">{item.transaction.quantity}</td>
                     <td className="px-2 py-2 text-right">{item.transaction.price}</td>
                     <td className="px-2 py-2 text-right">{item.transaction.fee}</td>
@@ -200,9 +199,9 @@ export default function ImportTransactions() {
                   ))}
                 </ul>
               )}
-              <button type="button" onClick={() => navigate('/transactions')}
+              <button type="button" onClick={backToTransactions}
                 className="mt-2 text-blue-600 hover:underline">
-                查看交易记录 →
+                查看本组合交易记录 →
               </button>
             </div>
           )}
