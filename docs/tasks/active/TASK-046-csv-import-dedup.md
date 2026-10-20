@@ -31,7 +31,7 @@
 待创建（须在本任务卡经 Human 确认后由 Planner 产出）
 
 **来源：**  
-TASK-044 真实浏览器走查副产品，记录于 `docs/exec-plans/active/TASK-044-transaction-consolidation.md` §10.4 与 `docs/tasks/active/TASK-044-transaction-consolidation.md` §8。TASK-044 判定其为既有缺口、未擅自修复。
+TASK-044 真实浏览器走查副产品，记录于 `docs/exec-plans/complete/TASK-044-transaction-consolidation.md` §10.4 与 `docs/tasks/complete/TASK-044-transaction-consolidation.md` §8。TASK-044 判定其为既有缺口、未擅自修复。
 
 ---
 

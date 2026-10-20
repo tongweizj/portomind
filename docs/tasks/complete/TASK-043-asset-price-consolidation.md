@@ -3,19 +3,19 @@
 ## Metadata
 
 **Status:**  
-`REVIEWING`（四轮独立审查完毕，第四轮无硬阻塞；待 Human 运行验收并确认 3 项已知限制）
+`COMPLETED` — **2026-10-19 由 Human 指令结案**（提交 `891d0f7`，2026-10-18）。四轮独立审查完毕、第四轮无硬阻塞；§11 记录验收结果与三项已知限制的去向。
 
 **Priority:**  
 `High`
 
 **Owner:**  
-`Planner`
+`Human`（最终验收，2026-10-19）→ 已关闭
 
 **Created:**  
 `2026-10-18`
 
 **Updated:**  
-`2026-10-18`
+`2026-10-19`（`REVIEWING` → `COMPLETED`，见 §11）
 
 **Related Product Spec:**  
 `docs/product/specs/FS-asset-price-consolidation.md`
@@ -24,7 +24,7 @@
 `None`
 
 **Execution Plan:**  
-`docs/exec-plans/active/TASK-043-asset-price-consolidation.md`
+`docs/exec-plans/complete/TASK-043-asset-price-consolidation.md`（**✅ Completed 2026-10-19**）
 
 ---
 
@@ -116,18 +116,31 @@
 - **第四轮独立复审 `Pass with issues`、无硬阻塞**（ExecPlan §10.8）：相对基准法落地正确；三个 bug 已修；验证不再自证循环；打包产物与源码逐字节一致；`expectedSyncLagDays` 全仓 0 引用。复审同时纠正我两处不实陈述——断言实为 33 项（我称 31 项）、`§10.8` 被我引用时并不存在（已补）。
 - **可复跑验证**：`node client/scripts/verify-price-display.cjs` —— 18 个场景组 / 42 项断言，当前全通过。
 - **待 Human 验收时明示接受的 3 点**（ExecPlan §10.8.5 / §10.8.8）：① 详情页收窄为「不标红 + 90 天全无数据才红」（单标的无法建基准、长假必误报）；② 全市场同时停更不告警（相对基准法固有盲点，依赖服务端完整性检查）；③ FS 的 R6 与验收标准措辞需由 PM/Human 同步为新口径。
+  - **2026-10-19 处置**：Human 指令「置 Completed」→ ①② 作为**已知限制随本任务一并接受并关闭**（技术口径不再变更，兜底方式见 ExecPlan §10.8.5）；③ 属**需求文档措辞**，未随代码关闭，转为遗留文档事项（见 §11）。
 - 纪律记录：四轮审查全部由独立 Reviewer 子代理执行，Orchestrator 未自审、未自行结案。
 
 ## 11. Completion
 
 ### Acceptance Result
 
-`Pending`
+`Passed`（Human，2026-10-19）
+
+| 项 | 内容 |
+|---|---|
+| 结案指令 | Human 于 2026-10-19 指出「TASK-043 状态不一致」（已在 `complete/` 目录与 Done 表，卡内仍写 `REVIEWING`），并指令「置 Completed」 |
+| 提交 | `891d0f7` — `TASK-043-asset-price-consolidation`（2026-10-18，Human 执行） |
+| 审查依据 | 四轮独立审查：`Fail` → `Pass with issues` → `Fail` → **`Pass with issues`、无硬阻塞**（ExecPlan §9 / §10 / §10.7 / §10.8） |
+| 可复跑证据 | `node client/scripts/verify-price-display.cjs` → 18 场景组 / 42 断言全通过 |
+| 验收人 | Human（`EXECUTION_PLANS.md §7 Ownership`：final acceptance 属 Human） |
 
 ### Completed Date
 
-`Pending`
+`2026-10-19`
 
 ### Final Notes
 
-`None`
+- **已知限制随本任务接受**（ExecPlan §10.8.5）：全市场同时停更不告警（依赖 `integrityCheck` 兜底，UI 无横幅）；单数据源市场漏报；`loadFailed` 可能过度抑制；工作日数不含节假日；分页硬上限（已用 `pagination.total` 提示）。以上属**口径设计取舍**，不视为缺陷。
+- **详情页口径收窄已接受**：单标的无法建基准 → 有数据只中性显示「N 天前」，仅 90 天全无价格才标红。缺口告警职责归列表页。
+- **遗留（未随本任务关闭）**：`docs/product/specs/FS-asset-price-consolidation.md` 的 **R6 与验收标准仍写「≥3 天未更新标红」**，与实现口径（落后同市场 3 个工作日）不一致，且「详情页也标红」已被有意收窄。FS 属 Human Intent，Orchestrator 不擅自改措辞，**待 PM/Human 同步**。
+- **流程偏离已追认**：本任务曾由 Orchestrator 代行 Implementer 并跳过 Plan Review（ExecPlan §8），Human 于 2026-10-18 追认（仅限本任务、不构成先例）。该事件直接促成 `docs/agents/PLANNER.md` / `IMPLEMENTER.md` 补全与后续「实现与审查分离」纪律。
+- 归档位置：任务卡 `docs/tasks/complete/TASK-043-asset-price-consolidation.md`；ExecPlan `docs/exec-plans/complete/TASK-043-asset-price-consolidation.md`。本卡归档后不再变更。

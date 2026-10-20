@@ -3,19 +3,19 @@
 ## Metadata
 
 **Status:**  
-`INTEGRATING` — 第二轮评审通过（2026-10-19）→ **Orchestrator 已完成全系统验证**（build / lint / 路由脚本 13-13 / `npm test` 229-229 全绿 / AC12 零服务端改动，见 ExecPlan §11.10）。**剩余两步均为 Human 职权**：① 授权或亲自执行 git 提交合并；② 最终验收。
+`COMPLETED` — **2026-10-19**。全链路闭环：`Approved`（2026-10-18）→ 实现 → 两轮独立评审（§9 / ExecPlan §11.9）→ R-1/R-2 整改（§10）→ 全系统验证 build / lint / 路由 13-13 / `npm test` 229-229（ExecPlan §11.10）→ **Human 提交 `30dc525`** → **Human 最终验收通过**（§11 Completion Record）。
 
 **Priority:**  
 `High`
 
 **Owner:**  
-`Orchestrator`（`Integrating` 验证已完成 2026-10-19）→ `Human`（授权提交 + 最终验收）
+`Human`（提交合并 + 最终验收，2026-10-19）→ 已关闭；遗留项移交 `TASK-046` / `TASK-047` / `TASK-048`
 
 **Created:**  
 `2026-10-18`
 
 **Updated:**  
-`2026-10-19`（R-1/R-2 整改完成 → 第二轮评审通过，见 §10 与 ExecPlan §11.9）
+`2026-10-19`（`Completed`，归档记录见 §11）
 
 **Related Product Spec:**  
 `docs/product/specs/FS-transaction-consolidation.md`（**✅ 已批准 2026-10-18**）
@@ -24,7 +24,7 @@
 `None`
 
 **Execution Plan:**  
-`docs/exec-plans/active/TASK-044-transaction-consolidation.md`（**✅ Approved 2026-10-18**）
+`docs/exec-plans/complete/TASK-044-transaction-consolidation.md`（**✅ Approved 2026-10-18 → Completed 2026-10-19**）
 
 ---
 
@@ -83,7 +83,7 @@
 - 由 Orchestrator 于 2026-10-18 登记。**七项 Human 裁决**已固化于 FS §11：方案甲 / 二级导航 + `/portfolios/transactions` / 导入仅组合内 / 旧路由删除不重定向 / OQ1 拆出独立需求 / 写操作路由带组合 id / 展开态不持久化 / 旧列表页改造复用。
 - **2026-10-18 FS 获批**（Human 口头指令「请设置为已批准」）→ B1 解除，本任务进入 `PLANNING`，交接 Planner。
 - **范围已确定收敛为「仅前端」**：交易查询筛选拆至 TASK-045（Backlog），本任务不新增服务端参数（AC12 可验证）。
-- **2026-10-18 ExecPlan 已产出并获批**：`docs/exec-plans/active/TASK-044-transaction-consolidation.md` 经 Human 完成 Plan Review，状态 `Plan Review` → **`Approved`**。批准范围 R1–R8（P0）+ Bug-1/2/3，零服务端改动不变；§6 声明无待决项，批准无遗留未决。
+- **2026-10-18 ExecPlan 已产出并获批**：`docs/exec-plans/complete/TASK-044-transaction-consolidation.md`（原在 `active/`，2026-10-19 归档）经 Human 完成 Plan Review，状态 `Plan Review` → **`Approved`**。批准范围 R1–R8（P0）+ Bug-1/2/3，零服务端改动不变；§6 声明无待决项，批准无遗留未决。
 - 下一步：派 **Implementer** 按 ExecPlan §4 设计 / §5 拆解实施 → 自查构建与 lint → 交**独立 Reviewer** 审查（禁止 Implementer/Orchestrator 自判通过，见 TASK-043 四轮审查教训）→ 通过后 Integrator 收口。
 
 ---
@@ -139,3 +139,21 @@
 > 为何判定应改而非「口径不同可并存」：该行位于 `PL-1` §6「**架构实现明细**」→ `TR-09 CSV 导入功能细节` → 「后端：… 2. **幂等去重** …」，描述的是**代码实际行为**，不是需求意图。文档声称「已实现幂等」而实现失效，属事实错误。仅加标注，未改需求语义；TASK-046 修复后由 PM 删除该标注。详见 ExecPlan §11.8。
 >
 > ~~原记录曾写「未擅改，提请 Human 裁决」~~ → 已按上述判断执行，见 ExecPlan §11.9 **N-2**（记录与事实不符，现已更正）。
+
+---
+
+## 11. Completion Record（2026-10-19）
+
+| 项 | 内容 |
+|---|---|
+| 状态流转 | `Approved`（2026-10-18 Plan Review）→ `Implementing` → `Verifying` → `Reviewing`（两轮独立评审）→ `Integrating`（全系统验证）→ **`Completed`（2026-10-19）** |
+| 提交 | `30dc525` — `TASK-044 交易记录收拢进组合管理`（Human 执行） |
+| 提交后工作区 | `git status --short` 空输出 |
+| 最终验收 | Human 于 2026-10-19 声明已提交并指令置 `Completed`；依 `EXECUTION_PLANS.md §7 Ownership`，最终验收属 Human，此为一次有效表达 |
+| 归档位置 | 任务卡 `docs/tasks/complete/TASK-044-transaction-consolidation.md`；ExecPlan `docs/exec-plans/complete/TASK-044-transaction-consolidation.md` |
+| 验收结果 | AC1–AC12 全部满足；AC12「零服务端改动」由 `git status server shared cron-worker` 空输出确认 |
+| 用户可见结果 | 侧边栏顶层 7 → 6 项（「组合管理」下挂「组合列表」/「全部交易」）；`/portfolios/transactions` 跨组合聚合；写操作走 `/portfolios/:id/transactions/{new,edit/:txId,import}`；旧 `/transactions` 族删除且无重定向；交易表格收敛为 `components/TransactionTable` 单一实现（1 定义 2 使用）；顺带修复分红显示为卖出、`$` 硬编码、`assetType` 显示英文三个既有缺陷 |
+| 遗留移交 | `TASK-046` CSV 幂等失效（P0 数据风险）· `TASK-047` M-1/M-2/M-5/M-6 · `TASK-048` M-3 分红标签 · `TASK-045` OQ1 筛选查询（Backlog） |
+| 未做 | Orchestrator 未执行任何 `git` 写操作（无合并授权）；未改验收标准；未动 `server/` `shared/` `cron-worker/` |
+
+> 本卡归档后不再变更。后续问题一律在对应任务卡内跟踪，不回写本文。

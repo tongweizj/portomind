@@ -1,7 +1,7 @@
 # TASK-044 — 交易记录收拢进组合管理
 
 > 本文由 **Planner** 依据已批准的 Human Intent（FS）起草，**已于 2026-10-18 经 Human 完成 Plan Review 并批准**，状态 `Approved`。
-> 关联任务：`docs/tasks/active/TASK-044-transaction-consolidation.md`
+> 关联任务：`docs/tasks/complete/TASK-044-transaction-consolidation.md`
 > 产品需求（Human Intent）：`docs/product/specs/FS-transaction-consolidation.md` ✅ 已批准 2026-10-18（范围 R1–R8 / P0）
 > 配套裁决记录：FS §8（OQ1–OQ5 全部收敛）/ §11（七项 Human Decisions）
 > 流程纪律：本任务严禁 Orchestrator/Planner 代行 Implementer 或 Reviewer（TASK-043 越权教训）。生命周期：~~Plan Review~~ → **Approved** → Implementer → 独立 Reviewer → Integrator。
@@ -10,11 +10,11 @@
 
 ## Status
 
-`Integrating` — 第二轮独立评审**通过（2026-10-19，§11.9）**：12/12 验收标准满足，R-1/R-2 已闭环，无阻塞项。Orchestrator 已完成**全系统验证**（§11.10）。剩余：**提交合并（待 Human 授权）** + **Human 最终验收**。
+`Completed` — **2026-10-19**。全链路闭环：`Approved`（2026-10-18 Plan Review）→ 实现（2026-10-18）→ 两轮独立评审（2026-10-19，§11 / §11.9）→ R-1/R-2 整改（§11.8）→ 全系统验证 229/229（§11.10）→ **Human 提交合并 `30dc525`**（2026-10-19）→ **Human 最终验收通过**（2026-10-19，见 §11.11）。归档位置：`docs/exec-plans/complete/TASK-044-transaction-consolidation.md`。
 
 Owner:
 
-`Planner`（起草）/ `Human`（Plan Review 已批准 2026-10-18 + 最终验收）/ `Implementer`（已实现 2026-10-18）/ `Reviewer`（两轮独立评审 2026-10-19）/ `Orchestrator`（`Integrating`）
+`Planner`（起草）/ `Human`（Plan Review 已批准 2026-10-18 + 提交合并 + 最终验收 2026-10-19）/ `Implementer`（已实现 2026-10-18）/ `Reviewer`（两轮独立评审 2026-10-19）/ `Orchestrator`（`Integrating` 验证 + `Completed` 归档）
 
 Priority:
 
@@ -538,12 +538,27 @@ AC1 ✅（`navItems` 6 项，「组合管理」含 2 子项，顶层无「交易
 
 > 若拆成两个 commit：① `TASK-044 交易记录收拢进组合管理`；② `docs: 交易线后续需求与任务登记（TASK-045~048）`。
 
+---### 11.11 Completion Record（2026-10-19）
+
+| 项 | 内容 |
+|---|---|
+| 提交 | `30dc525` — `TASK-044 交易记录收拢进组合管理`（Human 执行） |
+| 提交范围 | 与 §11.10-D 建议边界一致：`client/src/**`（12 文件）+ `client/scripts/{e2e-task-044,verify-transaction-routes}.mjs` + `client/vite.config.js` + ExecPlan/任务卡/`CLIENT.md`/`PL-0`/`PL-1`/`readme.md`/`TASKS.md` + `.workbuddy/memory/*` |
+| 提交后工作区 | `git status --short` 空输出（无未申报残留） |
+| 最终验收 | **Human 于 2026-10-19 声明「已经提交 git」并指令置 `Completed`** → 依 §7 Ownership 视为最终验收通过 |
+| 归档动作 | ExecPlan → `docs/exec-plans/complete/`；任务卡 → `docs/tasks/complete/`；`TASKS.md` 移入 Done；`docs/readme.md` 索引同步 |
+| 验收标准 | AC1–AC12 全部满足（§11.3）；AC12「零服务端改动」经 `git status server shared cron-worker` 空输出二次确认 |
+| 遗留移交 | M-1/M-2/M-5/M-6 → `TASK-047`；M-3 → `TASK-048`；M-4 → 已闭环；CSV 幂等缺陷 → `TASK-046`；OQ1（筛选查询）→ `TASK-045` |
+| 未做 | 未执行任何 `git` 写操作（Orchestrator 无合并授权）；未修改验收标准；未改动 `server/` `shared/` `cron-worker/` |
+
+> 归档后本文为**历史记录**，不再变更。后续问题按上表「遗留移交」在对应任务卡内跟踪。
+
 ---
 
 ## Lifecycle Note
 
-`~~Plan Review~~` → **`Approved`（2026-10-18）** → **Implemented（2026-10-18，见 §10）** → Verifying → **Reviewing（独立评审完成 2026-10-19，有条件通过，见 §11）** → **R-1/R-2 整改完成（2026-10-19，见 §11.8）** → **第二轮评审通过（2026-10-19，见 §11.9）** → **`Integrating`（2026-10-19，全系统验证 229/229 通过，见 §11.10）** → ⏳ **提交合并（待 Human 授权）** → ⏳ **Human 最终验收** → `Completed`
+`~~Plan Review~~` → **`Approved`（2026-10-18）** → **Implemented（2026-10-18，见 §10）** → Verifying → **Reviewing（独立评审完成 2026-10-19，有条件通过，见 §11）** → **R-1/R-2 整改完成（2026-10-19，见 §11.8）** → **第二轮评审通过（2026-10-19，见 §11.9）** → **`Integrating`（2026-10-19，全系统验证 229/229 通过，见 §11.10）** → **Human 提交合并 `30dc525`（2026-10-19）** → **Human 最终验收通过（2026-10-19，见 §11.11）** → **`Completed`**
 - 本文由 Planner 起草，**2026-10-18 经 Human 在 Plan Review 阶段批准**，自本日起可作为 Implementer 的实施依据。
 - 批准范围以 FS R1–R8（P0）为界；任何 Scope / 验收 / 架构变更须回 Human 复批。
 - **实现者与审查者必须分离**：Implementer 完成后交独立 Reviewer；不得由 Implementer 或 Orchestrator 自判通过（TASK-043 四轮审查、两次 Fail 的教训）。
-- **`Integrating` 的「合并」半环未由 Orchestrator 执行**：`ORCHESTRATOR.md §3` 的允许项未包含合并入库，故仅完成「全系统验证」并提交 Human 授权。`Completed` 亦须待 Human 最终验收。
+- **`Integrating` 的「合并」半环由 Human 执行（`30dc525`）**：`ORCHESTRATOR.md §3` 的允许项不含合并入库，Orchestrator 仅完成「全系统验证」并提交授权；最终验收同样由 Human 作出（§11.11）。此分工为后续任务的既定做法。

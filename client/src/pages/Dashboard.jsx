@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router';
 import { Bell, Check, EyeOff, RefreshCw } from 'lucide-react';
 import { EmptyState, ErrorState, LoadingState } from '../components/DataState';
+import TotalAssetsCard from '../components/Household/TotalAssetsCard';
 import { usePortfolios } from '../hooks/usePortfolios';
 import { useAlertEvents, useMarkAlertEventRead, useEvaluateAlerts } from '../hooks/useAlerts';
 
@@ -88,7 +89,7 @@ export default function Dashboard() {
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold text-gray-800 flex items-center gap-2">
           <Bell className="w-6 h-6 text-blue-600" />
-          提醒中心
+          家庭总览
         </h1>
         <div className="flex items-center gap-3">
           <button type="button" onClick={() => evaluate.mutate()}
@@ -103,6 +104,12 @@ export default function Dashboard() {
           </button>
         </div>
       </div>
+
+      {/* 家庭总资产卡（TASK-049：从 /family 搬入，点击进入组合管理） */}
+      <TotalAssetsCard />
+
+      {/* 待处理提醒（原「提醒中心」主体，行为不变） */}
+      <h2 className="text-lg font-semibold text-gray-800">待处理提醒</h2>
 
       {/* 筛选栏 */}
       <div className="flex items-center gap-3">

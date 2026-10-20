@@ -30,7 +30,7 @@
 待创建
 
 **来源：**  
-`docs/exec-plans/active/TASK-044-transaction-consolidation.md` §11 独立审查 **M-3**。原计划并入 TASK-047，Human 于 2026-10-19 裁决**拆出独立立项**（M-3 与 TASK-047 的路由/归属守卫无文件交叠）。
+`docs/exec-plans/complete/TASK-044-transaction-consolidation.md` §11 独立审查 **M-3**。原计划并入 TASK-047，Human 于 2026-10-19 裁决**拆出独立立项**（M-3 与 TASK-047 的路由/归属守卫无文件交叠）。
 
 ---
 

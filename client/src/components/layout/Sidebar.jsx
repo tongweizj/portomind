@@ -28,7 +28,8 @@ const isPortfolioListPath = (pathname) =>
 // 顶层 6 项。`active` 为显式判定函数，不用 NavLink 的前缀匹配 ——
 // 否则父项 `/portfolios` 会同时高亮「全部交易」等所有子路径。
 const navItems = [
-  { to: '/', icon: LayoutDashboard, label: 'Dashboard · 提醒', active: (p) => p === '/' },
+  // TASK-049：首页承接家庭总资产卡，标签由「Dashboard · 提醒」改为「Dashboard」
+  { to: '/', icon: LayoutDashboard, label: 'Dashboard', active: (p) => p === '/' },
   {
     to: ROUTES.PORTFOLIO_LIST,
     icon: Layers,
