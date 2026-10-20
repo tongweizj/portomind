@@ -7,7 +7,7 @@
 > 起草：Orchestrator 依 Human 裁决代拟（裁决记录见 §11）
 > 关联产品线：PL-1 投资账本线（M1.2 交易流水）、PL-3 组合与配置线
 > 关联文档：`product/PRODUCT_LINES.md`、`product/lines/PL-1-ledger.md`、`process/EXECUTION_PLANS.md`
-> 关联任务：TASK-044（`tasks/active/TASK-044-transaction-consolidation.md`）
+> 关联任务：TASK-044（`tasks/complete/TASK-044-transaction-consolidation.md`）
 
 ---
 
@@ -190,7 +190,7 @@
 
 | 编号 | 风险 / 依赖 | 说明 | 应对 |
 |---|---|---|---|
-| **D1** | **与 TASK-043 的文件交叉（已解除）** | TASK-043 改过 `Sidebar.jsx`（8→7）与 `router.jsx`（新增 `/instruments` 族），本任务要再改同两文件（7→6 + 二级导航 + 删 `/transactions`）。**已核实**：其改动固化于 commit `891d0f7`，工作区干净，且已在 `TASKS.md` 标记 Done | 无阻塞。**唯一遗留**：`TASK-043` 任务卡内部状态仍写 `REVIEWING`（文件已在 `complete/`），归档时建议一并更新，避免后人误读 |
+| **D1** | **与 TASK-043 的文件交叉（已解除）** | TASK-043 改过 `Sidebar.jsx`（8→7）与 `router.jsx`（新增 `/instruments` 族），本任务要再改同两文件（7→6 + 二级导航 + 删 `/transactions`）。**已核实**：其改动固化于 commit `891d0f7`，工作区干净，且已在 `TASKS.md` 标记 Done | 无阻塞。**唯一遗留**：`TASK-043` 任务卡内部状态仍写 `REVIEWING`（文件已在 `complete/`），归档时建议一并更新，避免后人误读 —— ✅ **2026-10-19 已闭环**：TASK-043 置 `Completed`（任务卡 §11 / ExecPlan §10.9） |
 | **D2** | PL-1 判定与本方案冲突 | `docs/product/lines/PL-1-ledger.md` §4 将 TR-01 判定为「保留」，理由「全局 + 组合内双视图，分页齐全」 | 本 FS 批准后同步修订 PL-1 §4 / §5 的 TR-01 条目与入口描述 |
 | **D3** | 与「再平衡→记账」闭环的边界 | 本任务只做收拢，不做闭环；但收拢后闭环才在架构上可行 | 闭环单列 P1 独立 FS，不在本任务内扩张 |
 | **D4** | 旧路由硬删除 | 无重定向意味着外部书签直接失效 | Human 已裁决接受 |

@@ -188,3 +188,15 @@ export function localDateStr(offsetDays = 0) {
   d.setDate(d.getDate() - offsetDays);
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 }
+
+/**
+ * RMB 金额展示：`¥` + 千分位 + 最多 2 位小数；`null`/`undefined` 显示「—」。
+ *
+ * TASK-049：从 `pages/Family.jsx` 的本地实现抽为唯一源头，供首页总资产卡与
+ * `/family` 共用（AC2「同源同格式」）。`Family.jsx` 的本地副本按 R7 暂留，
+ * 去重随 TASK-050 删除该页时一并处理。
+ */
+export function formatCny(value) {
+  if (value == null) return '—';
+  return `¥${Number(value).toLocaleString('zh-CN', { maximumFractionDigits: 2 })}`;
+}

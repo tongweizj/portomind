@@ -1,16 +1,16 @@
 # TASK-043 — 标的频道合并（资产管理 + 价格）
 
 > 本文由 Orchestrator 登记并起草「已核实的仓库发现」与「待 Planner 决策项」；§4 Proposed Design / §5 Work Breakdown / §7 Verification 由 Planner 补全。
-> 关联任务：`docs/tasks/active/TASK-043-asset-price-consolidation.md`
+> 关联任务：`docs/tasks/complete/TASK-043-asset-price-consolidation.md`
 > 产品需求：`docs/product/specs/FS-asset-price-consolidation.md`
 
 ## Status
 
-`Reviewing`（相对基准法已落地，第四轮复审 `Pass with issues`、无硬阻塞；待 Human 验收）
+`Completed` — **2026-10-19**（Human 指令结案）。实现于 2026-10-18 提交 `891d0f7`；四轮独立复审以 `Pass with issues`、无硬阻塞收口（§10.8）。归档位置：`docs/exec-plans/complete/TASK-043-asset-price-consolidation.md`。
 
 Owner:
 
-`Planner`（计划） / `Implementer`（实现，本次由 Orchestrator 代行，见 §8） / `Reviewer`（四轮独立审查）
+`Planner`（计划） / `Implementer`（实现，本次由 Orchestrator 代行，见 §8） / `Reviewer`（四轮独立审查） / `Human`（最终验收 2026-10-19）
 
 > **2026-10-18 Human 批准 FS** → 本计划从 Draft 经 Approved 进入 Implementing。
 >
@@ -22,10 +22,10 @@ Owner:
 > 🔴 第三轮（§10.7）`Fail` — 星期几常量模型缺时刻/节假日/市场维度；并判定我的验证为**自证循环**
 > 🟢 第四轮（§10.8）`Pass with issues`、无硬阻塞 — 相对基准法落地，验证改为业务事实驱动的可复跑脚本（42 项断言）
 >
-> ⏳ 待 Human 验收时明示接受的三点（详见 §10.8.5 / §10.8.8）：
-> 1. 详情页不再标红（收窄 FS R6，理由：单标的无法建基准、长假必误报）
-> 2. 全市场同时停更不告警（相对基准法固有盲点，依赖服务端完整性检查）
-> 3. FS 的 R6 / 验收标准措辞需由 PM/Human 同步为新口径
+> ✅ **三项验收关注点已于 2026-10-19 处置**（详见 §10.8.5 / §10.8.8 / §10.9）：
+> 1. 详情页不再标红（收窄 FS R6）—— **已接受为口径**（技术理由：单标的无法建基准、长假必误报）
+> 2. 全市场同时停更不告警（相对基准法固有盲点）—— **已接受为已知限制**，兜底依赖服务端 `integrityCheck`
+> 3. FS 的 R6 / 验收标准措辞需同步为新口径 —— **未关闭**，属需求文档事项，待 PM/Human 处理（属 Human Intent，Orchestrator 不擅自改措辞）
 
 Priority:
 
@@ -495,14 +495,29 @@ node client/scripts/verify-price-display.cjs
 
 ---
 
+### 10.9 Completion Record（2026-10-19）
+
+| 项 | 内容 |
+|---|---|
+| 状态流转 | `Draft` → `Approved`（2026-10-18 Human 批准 FS）→ `Implementing` → `Verifying` → `Reviewing`（四轮独立审查）→ **`Completed`（2026-10-19，Human 指令结案）** |
+| 提交 | `891d0f7` — `TASK-043-asset-price-consolidation`（2026-10-18，Human 执行） |
+| 结案触发 | Human 于 2026-10-19 指出「TASK-043 已在 `complete/` 目录与 Done 表，卡内仍写 `REVIEWING`」的状态不一致，并指令置 `Completed` |
+| 验收结果 | `Passed`（Human）。四轮复审最终为 `Pass with issues`、无硬阻塞；可复跑证据 `verify-price-display.cjs` 42 断言全通过 |
+| 已知限制 | §10.8.5 六项随任务接受，不再变更；详情页口径收窄（单标的只显示「N 天前」、90 天全无才红）一并接受 |
+| 遗留（未关闭） | §10.8.8：`FS-asset-price-consolidation.md` 的 R6 与验收标准措辞仍为旧口径，待 PM/Human 同步 |
+| 归档动作 | 任务卡与 ExecPlan 均位于 `complete/` 目录；`TASKS.md` Done 行、`docs/readme.md` 索引同步，移除「状态标注仍为 REVIEWING」的 ⚠️ 备注 |
+| 未做 | 未改任何代码；未改 FS 需求措辞；未动 `server/` `shared/` `cron-worker/` |
+
+---
+
 ## Lifecycle Note
 
-`Draft → Approved → Implementing → Verifying → Reviewing → Integrating → Completed`
+`Draft` → `Approved`（2026-10-18）→ `Implementing` → `Verifying` → `Reviewing` → **`Completed`（2026-10-19）**
 
 - 第一轮：Orchestrator 自查通过 → 独立 Reviewer `Fail`（§9）。
 - 第二轮：返工 B-1/B-2 → 复审 `Pass with issues`（§10）。
 - 第三轮：口径模型被否 → `Fail`（§10.7），并判定验证为自证循环。
 - Human 裁定相对基准法 → 实现 + 落地可复跑脚本（42 项断言全通过）。
 - 第四轮：复审 `Pass with issues`、无硬阻塞（§10.8）。
-- 当前 `Reviewing`：**代码层面已完成**，剩余为 Human 运行验收 + 对 §10.8.5 已知限制与 §10.8.8 文档同步的确认。通过后方可进入 `Integrating`。
+- **结案**：Human 于 2026-10-19 指令置 `Completed`（§10.9）。三项验收关注点中 ①② 作为口径/已知限制接受，③（FS 措辞同步）转为遗留文档事项。
 - 纪律：四轮审查全部由独立 Reviewer 子代理执行，Orchestrator 未自审、未自行结案；两次「自评数字不实」均已记录在案。

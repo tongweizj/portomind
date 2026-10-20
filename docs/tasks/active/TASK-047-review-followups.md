@@ -30,7 +30,7 @@
 待创建
 
 **来源：**  
-`docs/exec-plans/active/TASK-044-transaction-consolidation.md` §11（独立审查报告）M-1~M-6。本轮 Implementer **未采纳**（未获授权），由 Orchestrator 于 2026-10-19 立项。
+`docs/exec-plans/complete/TASK-044-transaction-consolidation.md` §11（独立审查报告）M-1~M-6。本轮 Implementer **未采纳**（未获授权），由 Orchestrator 于 2026-10-19 立项。
 
 ---
 

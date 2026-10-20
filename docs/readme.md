@@ -31,6 +31,7 @@
 - [投资品频道合并 FS（已实施 2026-10-18 / TASK-043）](./product/specs/FS-asset-price-consolidation.md) — 资产管理 + 价格 重组为「以投资品为中心」的信息架构（PL-1/PL-2）
 - [交易记录收拢进组合管理 FS（✅ 已批准 2026-10-18 / TASK-044）](./product/specs/FS-transaction-consolidation.md) — 交易降为组合子资源、二级导航、单一表格实现
 - [交易流水查询与筛选 FS（Backlog / TASK-045）](./product/specs/FS-transaction-query-filters.md) — 时间范围与交易类型筛选，需动 `server/`+`shared/`
+- [家庭视图拆分 FS（✅ 已批准 2026-10-19 / TASK-049 + TASK-050）](./product/specs/FS-household-view-split.md) — 总资产卡进 Dashboard，其余五块并入组合管理，`/family` 下线
 
 ## 架构（architecture/）
 
@@ -55,9 +56,10 @@
 
 - [执行计划流程 EXECUTION_PLANS](./process/EXECUTION_PLANS.md)
 - [任务清单 TASKS](./tasks/TASKS.md)
-  - 活跃任务：[TASK-044 交易记录收拢进组合管理](./tasks/active/TASK-044-transaction-consolidation.md)（VERIFYING · 待独立审查）
+  - 活跃任务：[TASK-049 Dashboard 承接家庭总资产卡](./tasks/active/TASK-049-dashboard-household-total.md)（`INTEGRATING` · 独立评审已通过 2026-10-19 · 待 Human 最终验收）
+  - 阻塞中：[TASK-050 组合列表页承接家庭五区块](./tasks/active/TASK-050-portfolio-list-household-blocks.md)（blockedBy TASK-049 + TASK-048）
   - 待立项/待排期：[TASK-045 交易流水查询与筛选](./tasks/active/TASK-045-transaction-query-filters.md) · [TASK-046 CSV 二次导入未去重](./tasks/active/TASK-046-csv-import-dedup.md) · [TASK-047 TASK-044 审查遗留整改（M-1/M-2/M-5/M-6）](./tasks/active/TASK-047-review-followups.md) · [TASK-048 Family 分红标签](./tasks/active/TASK-048-family-dividend-label.md)
-  - 已完成任务：[TASK-005 统一调度器](./tasks/complete/TASK-005-unify-scheduler.md)（2026-10-15）
+  - 已完成任务：[TASK-044 交易记录收拢进组合管理](./tasks/complete/TASK-044-transaction-consolidation.md)（2026-10-19）· [TASK-043 标的频道合并](./tasks/complete/TASK-043-asset-price-consolidation.md)（2026-10-18）· [TASK-005 统一调度器](./tasks/complete/TASK-005-unify-scheduler.md)（2026-10-15）
 - [执行计划模板](./templates/EXEC_PLAN_TEMPLATE.md) · [任务模板](./templates/TASK_TEMPLATE.md)
 - Agent 角色：[Orchestrator](./agents/ORCHESTRATOR.md) · [Planner](./agents/PLANNER.md) · [Implementer](./agents/IMPLEMENTER.md) · [Reviewer](./agents/REVIEWER.md)
 
@@ -67,7 +69,7 @@
 - [TASK-005 统一调度器 ExecPlan（已完成 2026-10-15）](./exec-plans/complete/TASK-005-unify-scheduler.md)
 - [docs/manual 重复与一致性整改记录（2026-10-15）](./exec-plans/complete/DOCS-DEDUP-2026-10-15.md)
 - [依赖升级评估 DEPENDENCY_UPGRADES](./exec-plans/complete/DEPENDENCY_UPGRADES.md)
-- [执行计划归档](./exec-plans/complete/) · [活跃执行计划](./exec-plans/active/TASK-044-transaction-consolidation.md)
+- [执行计划归档](./exec-plans/complete/)（含 TASK-044 交易记录收拢 / TASK-043 标的频道合并 / TASK-005 统一调度器）· [活跃执行计划目录](./exec-plans/active/)（TASK-049 Dashboard 承接家庭总资产卡 — `Integrating`）
 
 ## 项目根
 
