@@ -113,7 +113,7 @@
 | — | Design token | 品牌紫 `#635BFF`、品牌浅紫 `#EEEDFF`、页面底 `#F6F8FA`、卡片 `#FFFFFF`、边框 `#E3E8EE`、文本 `#0A2540/#5E6B7E/#8A95A5`、**涨 `#DF1B41` / 跌 `#0E9F6E`**（A 股约定）、警告 `#F5A524` | `design-tokens.js` |
 | — | 布局 token | `sidebarWidth 232`、`topbarHeight 64`、`contentPaddingX 32`、`contentPaddingY 24` | `design-tokens.js` |
 | — | 字体 | 中文 Noto Sans SC 优先，数字 Inter（`fontStack.numeric`） | `design-tokens.js` |
-| — | 布局框架 | `AppLayout`：Sidebar（232px，8 项导航，激活态紫底紫字）+ 顶栏（64px，含未读铃铛）+ `<Outlet/>`；底部版本 `v0.9.2 · 自托管` | `layout/AppLayout` |
+| — | 布局框架 | `AppLayout`：Sidebar（232px，6 项顶层导航，含「组合管理」二级；激活态紫底紫字）+ 顶栏（64px，含未读铃铛）+ `<Outlet/>`；底部版本 `v0.9.2 · 自托管` | `layout/AppLayout` |
 | — | 通用状态组件 | `DataState`：`LoadingState` / `EmptyState` / `ErrorState` 三态占位（全站复用） | `DataState` |
 | — | 通用按钮组 | `ButtonGroup`：按 `type`（default / primary / danger）渲染按钮组 | `ButtonGroup` |
 | — | 组合卡片组件 | `PortfolioCard`：市值分桶 / 持仓数 / `DriftBadge` / 未读提醒数 | `PortfolioCard` |
@@ -342,10 +342,10 @@
 | `/` | `Dashboard` | 提醒中心（事件流/筛选/立即评估/规则入口） | [PL-5](./PL-5-alerting.md) |
 | `/family` | `Family` | 家庭视图 | [PL-6](./PL-6-household.md) |
 | `/alerts/rules` | `AlertRules` | 提醒规则管理 | [PL-5](./PL-5-alerting.md) |
-| `/transactions` | `TransactionList` | 全局交易列表 | [PL-1](./PL-1-ledger.md) |
-| `/transactions/new` | `AddTransaction` | 新增交易 | [PL-1](./PL-1-ledger.md) |
-| `/transactions/import` | `ImportTransactions` | CSV 导入向导 | [PL-1](./PL-1-ledger.md) |
-| `/transactions/edit/:id` | `EditTransaction` | 编辑交易 | [PL-1](./PL-1-ledger.md) |
+| `/portfolios/transactions` | `TransactionList` | 全部交易（跨组合聚合页，只读，含组合/标的筛选） | [PL-1](./PL-1-ledger.md) |
+| `/portfolios/:id/transactions/new` | `AddTransaction` | 新增交易（组合由路径锁定） | [PL-1](./PL-1-ledger.md) |
+| `/portfolios/:id/transactions/import` | `ImportTransactions` | CSV 导入向导（仅组合内发起） | [PL-1](./PL-1-ledger.md) |
+| `/portfolios/:id/transactions/edit/:txId` | `EditTransaction` | 编辑交易（组合由路径锁定） | [PL-1](./PL-1-ledger.md) |
 | `/assets` | `AssetList` | 资产列表 | [PL-1](./PL-1-ledger.md) |
 | `/assets/new`、`/assets/edit/:id` | `AssetForm` | 资产表单 | [PL-1](./PL-1-ledger.md) |
 | `/prices` | `Prices/Today` | 今日/指定日价格 | [PL-2](./PL-2-market-data.md) |
@@ -363,7 +363,8 @@
 | 组件 | 职责 |
 |---|---|
 | `layout/AppLayout` | 主框架：Sidebar(232px) + 顶栏(64px，含未读铃铛) + `<Outlet/>` |
-| `layout/Sidebar` | 8 项导航（激活态紫底紫字）+ 底部版本 `v0.9.2 · 自托管` |
+| `layout/Sidebar` | 6 项导航（含「组合管理」二级：组合列表 / 全部交易；激活态紫底紫字；展开态不持久化）+ 底部版本 `v0.9.2 · 自托管` |
+| `TransactionTable` | 交易表格**唯一实现**：中文表头 + `action`/`assetType` 中文映射 + 按币种价格；可选组合列与操作列 |
 | `DataState` | `LoadingState` / `EmptyState` / `ErrorState` 三态占位（全站复用） |
 | `ButtonGroup` | 按 `type`（default/primary/danger）渲染按钮组 |
 | `PortfolioCard` | 组合卡片：市值分桶 / 持仓数 / DriftBadge / 未读提醒数 |

@@ -1,18 +1,24 @@
-// ✅ 文件：src/pages/AddTransaction.jsx
+// src/pages/Transaction/AddTransaction.jsx
+// TASK-044 R4 / OQ2：写操作迁入组合上下文 —— 路由 /portfolios/:id/transactions/new。
+// portfolioId 取自路径并锁定（不再有「所属组合」下拉），保存后回到本组合的交易记录 Tab。
 import { useEffect, useState } from 'react';
-import { useNavigate, useSearchParams } from 'react-router';
+import { Link, useNavigate, useParams } from 'react-router';
+import { ChevronLeft } from 'lucide-react';
+import { usePortfolio } from '../../hooks/usePortfolio';
+import { ROUTES } from '../../constants/routes';
+import { colors, radii } from '../../constants/design-tokens';
 import { createTransaction } from '../../services/transaction.service';
-import { getPortfolios } from '../../services/portfolio.service';
 import { getAssets } from '../../services/asset.service';
 import { getApiErrorMessage } from '../../services/api';
 
 export default function AddTransaction() {
+  const { id: portfolioId } = useParams();
   const navigate = useNavigate();
-  const [searchParams] = useSearchParams();
-  const presetPortfolioId = searchParams.get('portfolioId');
+  const { data: portfolio } = usePortfolio(portfolioId);
 
   const [form, setForm] = useState({
-    portfolioId: '',
+    // 组合由路由锁定：不存在「未指定组合」的写入路径
+    portfolioId,
     assetType: 'stock',
     symbol: '',
     market: '',
@@ -25,24 +31,14 @@ export default function AddTransaction() {
     notes: '',
   });
 
-  const [portfolios, setPortfolios] = useState([]);
   const [assets, setAssets] = useState([]);
   const [error, setError] = useState('');
 
   useEffect(() => {
-    getPortfolios().then(data => {
-      
-      setPortfolios(data);
-      if (presetPortfolioId) {
-        setForm(prev => ({ ...prev, portfolioId: presetPortfolioId }));
-      } else if (data.length > 0) {
-        setForm(prev => ({ ...prev, portfolioId: data[0]._id }));
-      }
+    getAssets({ pageSize: 100, active: true }).then(data => {
+      setAssets(data.data);
     });
-    getAssets({ pageSize: 100, active: true }).then(data =>{
-      setAssets(data.data)
-    });
-  }, [presetPortfolioId]);
+  }, []);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -73,8 +69,9 @@ export default function AddTransaction() {
       if (!ok) return;
     }
     try {
-      await createTransaction(form);
-      navigate('/transactions');
+      // 写路径经服务端校验（超卖 / fee / 分红语义），前端不复制业务规则（AC10）
+      await createTransaction({ ...form, portfolioId });
+      navigate(ROUTES.PORTFOLIO_TX_TAB(portfolioId));
     } catch (err) {
       setError(getApiErrorMessage(err, '创建交易失败'));
     }
@@ -82,21 +79,26 @@ export default function AddTransaction() {
 
   return (
     <div className="max-w-xl mx-auto space-y-6">
-      <h1 className="text-2xl font-bold text-gray-800">添加交易记录</h1>
+      <Link
+        to={ROUTES.PORTFOLIO_TX_TAB(portfolioId)}
+        className="flex items-center gap-1 text-sm"
+        style={{ color: colors.brand, textDecoration: 'none' }}
+      >
+        <ChevronLeft size={14} color={colors.brand} /> 返回交易记录
+      </Link>
 
-      <form onSubmit={handleSubmit} className="space-y-4 bg-white p-6 rounded shadow">
+      <h1 className="text-2xl font-bold" style={{ color: colors.textPrimary }}>添加交易记录</h1>
+
+      <form onSubmit={handleSubmit} className="space-y-4 p-6" style={{ backgroundColor: colors.bgCard, borderRadius: radii.lg }}>
         <div>
           <label className="block text-sm mb-1">所属组合</label>
-          <select
-            name="portfolioId"
-            value={form.portfolioId}
-            onChange={handleChange}
-            className="w-full border px-3 py-2 rounded"
+          {/* 组合锁定：静态展示，不可手选（AC2） */}
+          <div
+            className="px-3 py-2 text-sm"
+            style={{ border: `1px solid ${colors.border}`, borderRadius: radii.sm, color: colors.textPrimary, backgroundColor: colors.bgPage }}
           >
-            {portfolios.map(p => (
-              <option key={p._id} value={p._id}>{p.name}</option>
-            ))}
-          </select>
+            {portfolio?.name || '加载中…'}
+          </div>
         </div>
 
         <div>

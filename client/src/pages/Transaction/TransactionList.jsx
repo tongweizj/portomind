@@ -1,133 +1,164 @@
-// src/pages/TransactionList.jsx
+// src/pages/Transaction/TransactionList.jsx
+// TASK-044 R3 / OQ5：「全部交易」跨组合聚合页（**只读**）。
+// 由原顶层「交易记录」列表改造复用（文件名保留）：删内联 <table>、删「导入/创建」入口，
+// 渲染收敛到唯一实现 TransactionTable，并补上组合/标的筛选（AC3）。
+// 写操作一律回到所属组合上下文（组合详情 → 交易记录 Tab）。
 import { useEffect, useState } from 'react';
-import { getTransactions, deleteTransaction } from '../../services/transaction.service';
 import { useNavigate } from 'react-router';
-import { getPortfolios } from '../../services/portfolio.service';
+import { TransactionTable } from '../../components/TransactionTable';
+import { ROUTES } from '../../constants/routes';
+import { colors, radii } from '../../constants/design-tokens';
 import { getApiErrorMessage } from '../../services/api';
+import { getPortfolios } from '../../services/portfolio.service';
+import { getTransactions } from '../../services/transaction.service';
+
+const EMPTY_FILTERS = { portfolioId: '', symbol: '' };
+const PAGE_SIZE = 20;
 
 export default function TransactionList() {
+  const navigate = useNavigate();
   const [transactions, setTransactions] = useState([]);
   const [portfolios, setPortfolios] = useState([]);
+  const [pagination, setPagination] = useState({ page: 1, pageSize: PAGE_SIZE, total: 0 });
   const [page, setPage] = useState(1);
-  const [pagination, setPagination] = useState({ page: 1, pageSize: 20, total: 0 });
+  // draft = 输入中的筛选条件；filters = 已生效的条件（提交后才查询，避免逐字请求）
+  const [draft, setDraft] = useState(EMPTY_FILTERS);
+  const [filters, setFilters] = useState(EMPTY_FILTERS);
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const navigate = useNavigate();
 
   useEffect(() => {
-    async function fetchData() {
-      try {
-        setError('');
-        const [txResult, pfData] = await Promise.all([
-          getTransactions({ page, pageSize: 20 }),
-          getPortfolios()
-        ]);
-        setTransactions(txResult.data);
-        setPagination(txResult.pagination);
-        setPortfolios(pfData);
-      } catch (err) {
-        setError(getApiErrorMessage(err, '加载交易失败'));
-      }
-    }
-    fetchData();
-  }, [page]);
+    let active = true;
+    getPortfolios()
+      .then(data => { if (active) setPortfolios(data); })
+      .catch(() => { if (active) setPortfolios([]); });
+    return () => { active = false; };
+  }, []);
 
-  const findPortfolioName = (id) => {
-    const pf = portfolios.find(p => p._id === id);
-    return pf ? pf.name : '未知组合';
-  };
-
-  const handleDelete = async (txId) => {
-    try {
-      setError('');
-      await deleteTransaction(txId);
-      const result = await getTransactions({ page, pageSize: 20 });
-      if (result.data.length === 0 && page > 1) {
-        setPage(page - 1);
-      } else {
+  useEffect(() => {
+    let active = true;
+    setLoading(true);
+    setError('');
+    getTransactions({
+      page,
+      pageSize: PAGE_SIZE,
+      portfolioId: filters.portfolioId || undefined,
+      symbol: filters.symbol || undefined,
+    })
+      .then(result => {
+        if (!active) return;
         setTransactions(result.data);
-        setPagination(result.pagination);
-      }
-    } catch (err) {
-      setError(getApiErrorMessage(err, '删除交易失败'));
-    }
+        setPagination(result.pagination || { page, pageSize: PAGE_SIZE, total: result.data.length });
+      })
+      .catch(err => { if (active) setError(getApiErrorMessage(err, '加载交易失败')); })
+      .finally(() => { if (active) setLoading(false); });
+    return () => { active = false; };
+  }, [page, filters]);
+
+  const applyFilters = (event) => {
+    event.preventDefault();
+    setPage(1);
+    setFilters({ portfolioId: draft.portfolioId, symbol: draft.symbol.trim() });
   };
+
+  const resetFilters = () => {
+    setDraft(EMPTY_FILTERS);
+    setPage(1);
+    setFilters(EMPTY_FILTERS);
+  };
+
+  const pageSize = pagination.pageSize || PAGE_SIZE;
+  const totalPages = Math.max(1, Math.ceil((pagination.total || 0) / pageSize));
+  const filtered = Boolean(filters.portfolioId || filters.symbol);
 
   return (
-    <div className="space-y-6">
-    
-    <div className="flex items-center justify-between">
-  <h2 className="text-xl font-semibold text-gray-800">交易记录</h2>
-  <div className="flex items-center gap-2">
-    <button
-      onClick={() => navigate('/transactions/import')}
-      className="text-sm px-3 py-1 bg-white border border-gray-200 text-gray-700 rounded hover:bg-gray-100"
-    >
-      导入 CSV
-    </button>
-    <button
-      onClick={() => navigate('/transactions/new')}
-      className="text-sm px-3 py-1 bg-blue-600 text-white rounded hover:bg-blue-700"
-    >
-      创建交易记录
-    </button>
-  </div>
-</div>
-    {error && <div className="rounded bg-red-50 p-3 text-red-700">{error}</div>}
-    {transactions.length === 0 ? (
-      <p className="text-gray-500">暂无交易记录。</p>
-    ) : (
-      <div className="overflow-x-auto">
-        <table className="min-w-full border bg-white shadow-sm rounded">
-          <thead className="bg-gray-100 text-sm text-gray-600">
-            <tr>
-              <th className="px-4 py-2 text-left">日期</th>
-              <th className="px-4 py-2 text-left">资产代码</th>
-              <th className="px-4 py-2 text-left">类型</th>
-              <th className="px-4 py-2 text-left">操作</th>
-              <th className="px-4 py-2 text-left">份额</th>
-              <th className="px-4 py-2 text-left">价格</th>
-              <th className="px-4 py-2 text-left">组合</th>
-              <th className="px-4 py-2 text-left">操作</th>
-            </tr>
-          </thead>
-          <tbody className="text-sm text-gray-700 divide-y">
-            {transactions.map((tx) => (
-              <tr key={tx._id} className="hover:bg-gray-50">
-                <td className="px-4 py-2 whitespace-nowrap">{tx.date?.slice(0, 10)}</td>
-                <td className="px-4 py-2 whitespace-nowrap">{tx.symbol}</td>
-                <td className="px-4 py-2 whitespace-nowrap">{tx.assetType}</td>
-                <td className="px-4 py-2 whitespace-nowrap">{tx.action === 'buy' ? '买入' : '卖出'}</td>
-                <td className="px-4 py-2 whitespace-nowrap">{tx.quantity}</td>
-                <td className="px-4 py-2 whitespace-nowrap">${tx.price}</td>
-                <td className="px-4 py-2 whitespace-nowrap">{findPortfolioName(tx.portfolioId)}</td>
-                <td className="px-4 py-2">
-                  <button
-                    onClick={() => navigate(`/transactions/edit/${tx._id}`)}
-                    className="text-blue-600 hover:underline text-sm"
-                  >
-                    编辑
-                  </button>
+    <section className="space-y-4">
+      <div>
+        <h1 style={{ fontSize: 24, fontWeight: 600, color: colors.textPrimary, margin: 0 }}>全部交易</h1>
+        <p style={{ fontSize: 13, color: colors.textMuted, margin: '4px 0 0' }}>
+          跨组合查阅交易流水。新增、编辑、删除与 CSV 导入请进入所属组合的「交易记录」Tab。
+        </p>
+      </div>
 
-                    <button
-                    onClick={() => handleDelete(tx._id)}
-                    className="text-blue-600 hover:underline text-sm  ml-3"
-                  >
-                    删除
-                  </button>
-                </td>
-              </tr>
+      {/* 筛选栏：组合 + 标的（AC3）。服务端已支持 portfolioId/symbol，本任务零服务端改动。 */}
+      <form
+        onSubmit={applyFilters}
+        className="flex flex-wrap items-end gap-3 p-4"
+        style={{ backgroundColor: colors.bgCard, border: `1px solid ${colors.border}`, borderRadius: radii.lg }}
+      >
+        <div>
+          <label htmlFor="filter-portfolio" className="mb-1 block text-xs" style={{ color: colors.textSecondary }}>组合</label>
+          <select
+            id="filter-portfolio"
+            value={draft.portfolioId}
+            onChange={event => setDraft(prev => ({ ...prev, portfolioId: event.target.value }))}
+            className="rounded px-3 py-2 text-sm"
+            style={{ border: `1px solid ${colors.border}`, backgroundColor: colors.bgCard, minWidth: 200 }}
+          >
+            <option value="">全部组合</option>
+            {portfolios.map(pf => (
+              <option key={pf._id} value={pf._id}>{pf.name}</option>
             ))}
-          </tbody>
-        </table>
-      </div>
-    )}
-    {pagination.total > pagination.pageSize && (
-      <div className="flex items-center justify-end gap-3 text-sm">
-        <button disabled={page <= 1} onClick={() => setPage(value => value - 1)} className="disabled:opacity-40">上一页</button>
-        <span>第 {page} 页，共 {Math.ceil(pagination.total / pagination.pageSize)} 页</span>
-        <button disabled={page * pagination.pageSize >= pagination.total} onClick={() => setPage(value => value + 1)} className="disabled:opacity-40">下一页</button>
-      </div>
-    )}
-  </div>
+          </select>
+        </div>
+        <div>
+          <label htmlFor="filter-symbol" className="mb-1 block text-xs" style={{ color: colors.textSecondary }}>资产代码</label>
+          <input
+            id="filter-symbol"
+            value={draft.symbol}
+            onChange={event => setDraft(prev => ({ ...prev, symbol: event.target.value }))}
+            placeholder="如 VOO / 000001"
+            className="rounded px-3 py-2 text-sm"
+            style={{ border: `1px solid ${colors.border}`, minWidth: 180 }}
+          />
+        </div>
+        <button
+          type="submit"
+          className="px-4 py-2 text-sm font-medium"
+          style={{ backgroundColor: colors.brand, color: colors.textInverse, borderRadius: radii.md, border: 'none', cursor: 'pointer' }}
+        >
+          查询
+        </button>
+        {filtered && (
+          <button
+            type="button"
+            onClick={resetFilters}
+            className="px-4 py-2 text-sm"
+            style={{ backgroundColor: colors.bgCard, color: colors.textSecondary, border: `1px solid ${colors.border}`, borderRadius: radii.md, cursor: 'pointer' }}
+          >
+            重置
+          </button>
+        )}
+      </form>
+
+      {error && <div className="rounded bg-red-50 p-3 text-sm text-red-700">{error}</div>}
+
+      {loading ? (
+        <div className="rounded p-6 text-center text-sm" style={{ backgroundColor: colors.bgCard, color: colors.textMuted }}>
+          数据加载中…
+        </div>
+      ) : transactions.length === 0 ? (
+        <div className="rounded p-6 text-center text-sm" style={{ border: `1px dashed ${colors.border}`, color: colors.textMuted }}>
+          {filtered ? '当前筛选条件下没有交易记录。' : '暂无交易记录。'}
+        </div>
+      ) : (
+        <div className="overflow-x-auto" style={{ backgroundColor: colors.bgCard, border: `1px solid ${colors.border}`, borderRadius: radii.lg }}>
+          <TransactionTable
+            transactions={transactions}
+            showPortfolio
+            portfolios={portfolios}
+            onViewPortfolio={tx => navigate(ROUTES.PORTFOLIO_TX_TAB(tx.portfolioId))}
+          />
+        </div>
+      )}
+
+      {totalPages > 1 && (
+        <div className="flex items-center justify-end gap-3 text-sm">
+          <button disabled={page <= 1} onClick={() => setPage(value => value - 1)} className="disabled:opacity-40">上一页</button>
+          <span>第 {page} / {totalPages} 页</span>
+          <button disabled={page >= totalPages} onClick={() => setPage(value => value + 1)} className="disabled:opacity-40">下一页</button>
+        </div>
+      )}
+    </section>
   );
 }

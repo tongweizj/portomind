@@ -45,6 +45,7 @@
 - **数字类自评不可作为证据**：同一任务内两次报错断言数量（24→实为 27、31→实为 33），必须实测统计（如 `grep -c "^PASS"`）。
 - **不得引用尚不存在的章节**：曾在代码注释写「详见 ExecPlan §10.8」而该章当时不存在。
 - **验证必须可复现**：一次性脚本落在临时目录等于没有验证，应落地到仓库并提供运行命令。
+- **mock 比真实更宽松 = 假阳性**（TASK-046 发现）：单元测试的 mock 无视 Mongoose `select()` 投影，把真实查询拿不到的字段也返回，导致「幂等去重」缺陷在 **12/12 全绿**的测试下存活。凡 mock 数据库查询，必须使 mock 返回值 ⊆ 真实投影字段；关键行为需「先在旧实现上验红，再在新实现上验绿」。
 - 已知角色文件缺口：`docs/agents/REVIEWER.md` 仍为空（审查依据暂取 `EXECUTION_PLANS.md` §6/§7）。
 
 ## 行情数据关键事实（TASK-043 核实）
@@ -54,7 +55,7 @@
 - 价格 cron `0 3 * * *`（时区 `America/Toronto`）；`dailySync` **只同步 `active` 资产**（停用标的永不更新，会永久显示缺口）；fetcher 存的是**行情自身日期**（Yahoo `regularMarketTime` / Eastmoney `f86`），`saveLatest` 按市场日归桶；**休市直接跳过不写价**。
 - 由此产生一个易被误判为缺口的正常现象：US/CA 标的在**周一 00:00–周二 03:00**（约 27h）最新记录仍是上周五，自然日差 3–4 天。
 - 分页硬上限：assets `pageSize ≤ 100`；prices history/byDate `≤ 200`；`from/to` 为 `YYYY-MM-DD`。
-- 客户端 eslint **必须用 `./node_modules/.bin/eslint`（本地 v9.39.5）**；`npx eslint` 会拉 v10 并与 `eslint-plugin-react` 不兼容而崩溃。
+- 客户端 eslint **不能 `npx eslint`**（会拉 v10 与 `eslint-plugin-react` 不兼容崩溃）。正确调用：**`cd client && ../node_modules/.bin/eslint "src/**/*.{js,jsx}"`** —— 二进制被 npm workspaces 提升到**根** `node_modules/.bin/`（`client/node_modules/.bin/eslint` 不存在），而配置 `client/eslint.config.js` 要求在 client 目录下执行；在仓库根直接跑会报 "couldn't find eslint.config.js"。（2026-10-19 评审实测修正，原记录误写为本地路径）
 - **数据缺口判定的最终方案 = 相对基准法**（TASK-043 四轮审查后由 Human 裁定）：同市场标的由同一次 cron 同步，正常应停在同一天 → 按 market 分组取「有价标的中最新的日期」为基准，只判个别标的落后 ≥3 个**工作日**。这样周末/法定假日/春节国庆长假（全组一致停更）天然不误报，**无需在客户端复制 `shared/services/calendar.service.js`**（客户端也引用不了，R5 又禁止新增接口）。
   - 实现：`client/src/utils/priceDisplay.js`（`annotateGapFields` / `weekdaysBetween` / `describeGap`）。
   - **固有盲点**：全市场同时停更（cron 整体故障）时无人落后 → 不告警，依赖服务端 `integrityCheck`；单数据源市场（仅 1 个有价标的）不判缺口。
@@ -62,9 +63,30 @@
   - 可复跑验证：`node client/scripts/verify-price-display.cjs`（18 场景组 / 42 断言）。
   - 曾走过的弯路：先按「自然日差 ≥3」（周一必误报）→ 再按「星期几常量」推算正常滞后（周二凌晨/节假日仍误报）→ 最终相对基准法。
 
+## 交易导入幂等（TASK-046 发现，未修复）
+
+- `shared/services/transaction.service.js#importTransactions` 的幂等键 = `portfolioId|symbol|action|quantity|price|yyyy-mm-dd(date)|fee`（`dayKey` 按日，规避时刻差异）。
+- **已知缺陷**：`:233` 的 `select('symbol action quantity price date fee')` **漏 `portfolioId`**，而 `:238` 拼键读 `String(tx.portfolioId)` → 恒为 `"undefined"`；因 `portfolioId` 是键的第一段，库内键与待导入键**永不相等** → `skipped` 恒 0，二次导入同一 CSV 会整份重复写入（静默污染成本/持仓）。
+- 批次内去重（`seen` Set）仍有效——两侧都来自 `normalized`，字段完整。故「跳过重复 0 条」不代表去重没实现。
+- **测试假阳性**：`server/test/integration/transaction.enhanced.test.js:111-118` 的 mock 返回了投影外的 `portfolioId`，断言 `skipped===1` 照样通过（实测 12/12 绿）。修复时必须同时修 mock，并加「连续导入两次」用例且先在旧实现上验红。
+- 导入上限 500 行/批；非法行整批回滚（不写入任何记录）；成功批次**不可撤销**（TR-09 的 P1 缺口，独立任务）。
+
 ## ⚠️ 未决问题
 
 - **`docs/architecture/ARCHITECTURE.md` 是未填充的英文模板**（627 行占位符，含 PostgreSQL/Prisma/OAuth/Teams 等本项目不存在的示例），却被 `docs/readme.md`、`functions.md`、任务单多处引用为「架构总览 — 分层、模块边界、依赖规则」。**待用户裁决是否补齐**（需按 shared/server/cron-worker/client 四模块 + 「跨包引用规则」重写）。
 - **`docs/agents/REVIEWER.md` 仍为空文件**（2026-10-18 未获授权补全）。补齐前，Reviewer 的审查依据取自 `docs/process/EXECUTION_PLANS.md` §6 `Reviewing` 与 §7 `Ownership`。
 - **TASK-043 待 Human 裁定 2 项高优先级**（见 ExecPlan §10.4）：① 缺口阈值按**自然日差**还是「超出正常同步节奏的额外天数」——前者会让 US/CA 标的每周一整表误标红；② 最新记录 >13 天会掉出 14 日窗口，长尾断更退化为灰色「无数据」而非标红。
 - **`EXECUTION_PLANS.md §3` 写 `docs/exec-plans/completed/`，实际仓库用 `complete/`**（历史目录名），文档与目录名不一致，后续可统一。
+- **交易「归属不可变」已裁定（2026-10-19，TASK-047）**：`PUT /api/transactions/:id` 当前**接受任意 `portfolioId` 改写**（`transaction.service.js:128` 入参优先 + `:137` 直接写回），配合前端 `EditTransaction.jsx:42-47` 用 URL 的 id 覆盖真实归属 → URL 不符即静默迁移组合、两侧持仓重算。**Human 选方案②：后端拒绝改写，归属由数据层保证**；TASK-047 因此放开「零服务端改动」（仅限 `updateTransaction` 归属守卫，AC7）。
+  - **实现陷阱**：`EditTransaction.jsx:82` 提交恒带 `portfolioId`（值来自路由）→ 守卫必须判「**值是否变化**」，不可判「字段是否存在」；也不可从 `WRITABLE_FIELDS` 删该字段（`createTransaction` 共用该表）。校验插在 `transaction.service.js:128` 之前。
+- **`docs/readme.md` 有两条既有死链**（2026-10-19 发现）：`product/ROADMAP.md`、`product/specs/authentication.md` 均不存在。待决定补文件还是摘链接。
+
+## 本机开发环境事实（2026-10-19 实测）
+
+- **Mongo 真实库 = `portomind`**（4 组合 / 44 资产 / 50 交易 / 79828 价格），主机 `192.168.2.140:27017`。`portomind_dev` 是**空库**；`server/.env` 的 MONGO_URI 指向 `192.168.1.140`，**该主机已不可达**（启动 server 需用环境变量覆盖 MONGO_URI）。
+- **客户端 API 通路**：`client/src/services/api.js` 优先读 `VITE_API_URL`；空则同源 `/api` 走 `client/vite.config.js` 的 proxy。仓库内现有 `client/.env`（`VITE_API_URL=http://localhost:8080/api`）+ proxy target `http://127.0.0.1:8080`。
+- **坑 ①**：环境里有 `HTTP_PROXY=http://127.0.0.1:59155`，`curl http://localhost:8080/...` 会被劫持返回 502「upstream connect failed」，易误判「后端挂了」→ 必须 `curl --noproxy '*'`。
+- **坑 ②**：vite dev server 只监听 `[::1]:5173`（IPv6），`127.0.0.1:5173` 不通，要用 `localhost`。
+- **坑 ③**：改 `vite.config.js` 或新增 `client/.env` 后**必须重启** dev server，否则仍走旧 proxy。
+- **坑 ④**：`client/vite.config.js` 里 `process.env.VITE_API_PROXY_TARGET` **只读真实 shell 环境变量，不读 `client/.env`**（2026-10-19 用隔离探针实测：`.env` 里写该变量，target 仍为默认 8080）。要让 `.env` 生效必须在配置里用 `loadEnv(mode, process.cwd(), '')`。当前是「shell 导出」语义。
+- **E2E 走查做法（可复用）**：复制真实库 → `portomind_e2e`，API 指向副本；浏览器驱动用 `npm i playwright-core --no-save` + 本机 Chrome（`chromium.launch({executablePath})`，不下载浏览器）。脚本示例：`client/scripts/e2e-task-044.mjs`（38 断言）。

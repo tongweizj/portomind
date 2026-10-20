@@ -63,7 +63,7 @@
 | AS-02 | 资产属性 | 保留 | 字段够用，`active` 与 `watchlist` 语义已清晰区分 | 后续可选加「费率 / 分红率」等投资属性 | P3 |
 | AS-03 | 资产列表 | **强化** | 缺批量操作；存量资产需逐条补大类，是 CM-08 大类目标的前置痛点 | 增加批量分类 / 批量启用停用、「未分类」快捷筛选与一键补全 | **P1** |
 | AS-09 | 大类字段 | **强化** | 字段与正交语义到位，但**存量补分类缺工具**（与 AS-03 同一问题） | 与 AS-03 合并解决；提供「未分类资产」专列表 | P1 |
-| TR-01 | 交易 CRUD | 保留 | 全局 + 组合内双视图，分页齐全 | — | — |
+| TR-01 | 交易 CRUD | 保留 | 交易已收拢为**组合子资源**：组合详情「交易记录」Tab 内可增 / 改 / 删 / 导入（portfolioId 由路径锁定），跨组合查阅走「组合管理 → 全部交易」聚合页；业务口径不变 | — | — |
 | TR-02 | 交易字段 | **修改** | `fee` 单一字段无法区分佣金 / 税费；长期记账需要分列 | 评估拆分 `fee`（佣金）与 `tax`（税费），或增加可选备注字段 | P2 |
 | TR-03 | 超卖校验 | **强化** | 后端强校验已足够；前端缺少提交前的即时提示，报错才反查 | 表单侧实时计算「当日可用持仓」并提示；错误文案附可用数量 | P2 |
 | TR-06 | fee 字段 | 保留 | 成本含费、净得扣费、与再平衡费用口径统一，逻辑自洽 | — | — |
@@ -93,13 +93,13 @@
 
 | 编号 | 功能点 | 功能描述 | 入口 |
 |---|---|---|---|
-| TR-01 | 交易 CRUD | 全局交易列表 + 组合内流水视图，均分页；按 `date DESC, _id DESC` 排序 | `/transactions`、组合详情「交易记录」Tab |
+| TR-01 | 交易 CRUD | 组合内流水视图（增 / 改 / 删）+ 跨组合「全部交易」聚合页（只读、含组合与标的筛选），均分页；按 `date DESC, _id DESC` 排序；写操作路由一律携带组合 id | 组合详情「交易记录」Tab、`/portfolios/transactions` |
 | TR-02 | 交易字段 | `portfolioId` / `symbol` / `market` / `currency` / `assetType` / `action` / `quantity` / `price` / `fee` / `date` / `notes`；资产元数据由后端按资产回填 | `AddTransaction` / `EditTransaction` |
 | TR-03 | 超卖校验 | 账本重放时抛 `INSUFFICIENT_POSITION`（消息含 symbol 与发生日期）；**新增 / 修改 / 删除 / 导入全部校验**，禁止做空 | 前端错误提示 |
 | TR-06 | fee 费用字段 | 买入与分红再投**成本含费**；卖出所得**扣费**、已实现盈亏口径同步；不回溯漂移 | 交易表单 fee 输入 |
 | TR-07 | 分红类型 | `div_cash` 现金分红（不进持仓，数量/成本/已实现盈亏均不变）；`div_reinvest` 分红再投（等价买入，转增持仓、成本含费） | 表单 action 选择 + 动态提示 |
 | TR-08 | A 股整手提示 | CN-SH / CN-SZ **买入**非 100 股整数倍 → **软警告不阻断**（前端 `confirm` + 后端 `warnings:['CN_LOT_SIZE:symbol']`）；卖出与基金不受限 | 提交时提示 |
-| TR-09 | CSV 批量导入 | 上传 → 解析 → 自动列映射 → 人工校正 → 预览校验 → 提交 → 结果报告；失败**整批回滚**（`422`）、幂等去重、超卖重放、≤500 行 / 批 | `/transactions/import` |
+| TR-09 | CSV 批量导入 | 上传 → 解析 → 自动列映射 → 人工校正 → 预览校验 → 提交 → 结果报告；失败**整批回滚**（`422`）、幂等去重、超卖重放、≤500 行 / 批；**入口仅在组合内** | `/portfolios/:id/transactions/import` |
 | — | CSV 前端工具集 | `parseCsv`（引号/转义/`\n`/`\r\n` 兼容）、`mapColumns`（内置天天基金 / 雪球常见列名，宽松匹配）、`normalizeAction`（买入/申购/赎回…→ 枚举）、`normalizeDate`（多格式 → `YYYY-MM-DD`）、预览前 50 行错误标红 | `utils/csvImport.js` |
 
 ### M1.3 持仓与成本引擎
@@ -155,13 +155,13 @@
 
 | 功能 | 说明 | 前端入口 |
 |---|---|---|
-| TR-01 交易 CRUD | 全局交易列表 + 组合内流水视图，均分页；查询按 `date DESC, _id DESC` | `/transactions`、组合详情「交易记录」Tab |
+| TR-01 交易 CRUD | 组合内流水视图（增 / 改 / 删 / 导入，portfolioId 由路径锁定）+ 跨组合「全部交易」聚合页（只读，含组合/标的筛选与分页）；查询按 `date DESC, _id DESC`；表格为单一实现 | 组合详情「交易记录」Tab、`/portfolios/transactions` |
 | TR-02 交易字段 | `portfolioId` / `symbol` / `market` / `currency` / `assetType` / `action` / `quantity` / `price` / `fee` / `date` / `notes` | `AddTransaction`、`EditTransaction` |
 | TR-03 超卖校验 | 重放时 `INSUFFICIENT_POSITION` 报错（消息含 symbol 与发生日期）；新增/修改/删除/导入**全部**校验 | 前端错误提示 |
 | TR-06 fee 字段 | 买入 / 分红再投成本**含费**；卖出所得**扣费**、已实现盈亏口径同步 | 表单 fee 输入 |
 | TR-07 分红类型 | `div_cash`（现金分红，不进持仓）/ `div_reinvest`（分红再投，等价买入转增） | 表单 action 选择 + 动态提示 |
 | TR-08 A 股整手 | `CN-SH` / `CN-SZ` **买入**非 100 股整数倍 → **软警告不阻断**（前端 `confirm`，后端 `warnings:['CN_LOT_SIZE:symbol']`）；卖出与基金不受限 | 表单提交时提示 |
-| TR-09 CSV 批量导入 | 上传 → 解析 → 自动列映射 → 人工校正 → 预览校验 → 提交 → 结果报告；≤500 行/批 | `/transactions/import` |
+| TR-09 CSV 批量导入 | 上传 → 解析 → 自动列映射 → 人工校正 → 预览校验 → 提交 → 结果报告；≤500 行/批；仅组合内发起，目标组合由路径锁定（无组合下拉） | `/portfolios/:id/transactions/import` |
 
 **action 枚举**：`buy | sell | div_cash | div_reinvest`（小写）。
 
@@ -177,6 +177,7 @@
 
 1. 逐条字段校验 → 任一失败则**整批回滚**（`imported:0`，返回 `422` + `errors[]`）。
 2. **幂等去重**：批次内去重 + 与库中按 `(portfolioId, symbol, action, quantity, price, 日, fee)` 比对 → `skipped`。
+   > ⚠️ **当前实现失效**（2026-10-19 核实）：库内比对因 `select()` 投影漏 `portfolioId` 而**永不命中**，`skipped` 恒为 0（批次内去重仍有效）。缺陷跟踪 **TASK-046**，修复后删除本注。
 3. **超卖重放**：含批次内新增，按 symbol 分组重放，任意时点不足即整批回滚。
 4. `insertMany` 批量写入（上限 **500** 行）。
 

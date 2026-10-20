@@ -1,17 +1,24 @@
-// ✅ 文件：src/pages/EditTransaction.jsx
+// src/pages/Transaction/EditTransaction.jsx
+// TASK-044 R4 / OQ2：编辑页迁入组合上下文 —— 路由 /portfolios/:id/transactions/edit/:txId。
+// ⚠️ 参数语义变更（高危点）：原 `/transactions/edit/:id` 的 `id` 是**交易 id**；
+// 新路由中 `id` = 组合 id、`txId` = 交易 id，必须显式重命名，否则会把交易 id 当组合 id。
 import { useEffect, useState } from 'react';
-import { useNavigate, useParams } from 'react-router';
+import { Link, useNavigate, useParams } from 'react-router';
+import { ChevronLeft } from 'lucide-react';
+import { usePortfolio } from '../../hooks/usePortfolio';
+import { ROUTES } from '../../constants/routes';
+import { colors, radii } from '../../constants/design-tokens';
 import { getTransaction, updateTransaction } from '../../services/transaction.service';
-import { getPortfolios } from '../../services/portfolio.service';
 import { getAssets } from '../../services/asset.service';
 import { getApiErrorMessage } from '../../services/api';
 
 export default function EditTransaction() {
-  const { id } = useParams();
+  const { id: portfolioId, txId } = useParams();
   const navigate = useNavigate();
+  const { data: portfolio } = usePortfolio(portfolioId);
 
   const [form, setForm] = useState({
-    portfolioId: '',
+    portfolioId,
     assetType: 'stock',
     symbol: '',
     market: '',
@@ -24,24 +31,24 @@ export default function EditTransaction() {
     notes: '',
   });
 
-  const [portfolios, setPortfolios] = useState([]);
   const [assets, setAssets] = useState([]);
   const [error, setError] = useState('');
 
   useEffect(() => {
-    getPortfolios().then(data =>{
-      setPortfolios(data)
+    getAssets({ pageSize: 100, active: true }).then(data => {
+      setAssets(data.data);
     });
-    getAssets({ pageSize: 100, active: true }).then(data =>{
-      setAssets(data.data)
-    });
-    getTransaction(id).then(tx => {
+    getTransaction(txId).then(tx => {
       setForm({
         ...tx,
-        date: tx.date.slice(0, 10),
+        // 组合以路由为准锁定，避免历史数据或被篡改的响应把交易挪到别的组合
+        portfolioId,
+        date: String(tx.date).slice(0, 10),
       });
+    }).catch(err => {
+      setError(getApiErrorMessage(err, '加载交易失败'));
     });
-  }, [id]);
+  }, [portfolioId, txId]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -71,8 +78,9 @@ export default function EditTransaction() {
       if (!ok) return;
     }
     try {
-      await updateTransaction(id, form);
-      navigate('/transactions');
+      // 写路径经服务端校验（AC10）
+      await updateTransaction(txId, { ...form, portfolioId });
+      navigate(ROUTES.PORTFOLIO_TX_TAB(portfolioId));
     } catch (err) {
       setError(getApiErrorMessage(err, '更新交易失败'));
     }
@@ -80,21 +88,26 @@ export default function EditTransaction() {
 
   return (
     <div className="max-w-xl mx-auto space-y-6">
-      <h1 className="text-2xl font-bold text-gray-800">编辑交易记录</h1>
+      <Link
+        to={ROUTES.PORTFOLIO_TX_TAB(portfolioId)}
+        className="flex items-center gap-1 text-sm"
+        style={{ color: colors.brand, textDecoration: 'none' }}
+      >
+        <ChevronLeft size={14} color={colors.brand} /> 返回交易记录
+      </Link>
 
-      <form onSubmit={handleSubmit} className="space-y-4 bg-white p-6 rounded shadow">
+      <h1 className="text-2xl font-bold" style={{ color: colors.textPrimary }}>编辑交易记录</h1>
+
+      <form onSubmit={handleSubmit} className="space-y-4 p-6" style={{ backgroundColor: colors.bgCard, borderRadius: radii.lg }}>
         <div>
           <label className="block text-sm mb-1">所属组合</label>
-          <select
-            name="portfolioId"
-            value={form.portfolioId}
-            onChange={handleChange}
-            className="w-full border px-3 py-2 rounded"
+          {/* 组合锁定：静态展示，不可手选（AC2） */}
+          <div
+            className="px-3 py-2 text-sm"
+            style={{ border: `1px solid ${colors.border}`, borderRadius: radii.sm, color: colors.textPrimary, backgroundColor: colors.bgPage }}
           >
-            {portfolios.map(p => (
-              <option key={p._id} value={p._id}>{p.name}</option>
-            ))}
-          </select>
+            {portfolio?.name || '加载中…'}
+          </div>
         </div>
 
         <div>
