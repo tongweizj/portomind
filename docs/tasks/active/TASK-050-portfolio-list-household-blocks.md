@@ -54,7 +54,7 @@ Human 于 2026-10-19 裁决「家庭视图拆分式搬迁」，并要求拆成�
 | `/portfolios` 现状：标题行 + 两列卡片 | `pages/Portfolio/List.jsx:19-53` |
 | `PortfolioCard` 已显示市值/持仓数/漂移/未读 | `components/PortfolioCard/index.jsx:69-84` |
 | 贡献点击落 `/portfolios/view/:id/positions` | `Family.jsx:63`（该路由仍有效） |
-| 交易类型中文映射缺陷 | `Family.jsx:17` 手写 `{buy, sell}`；`:237` 二元染色；`:238` 无兜底 → 分红渲染 `undefined`（见 `TASK-048`） |
+| 交易类型中文映射缺陷 | `Family.jsx:17` 手写 `{buy, sell}`；`:237` 二元染色；`:238` 无兜底 → 分红渲染为**空白 badge + 跌绿底**（非页面出现 `undefined` 字样）。✅ **已由 `TASK-048` 修复（2026-10-20）**，现该页 import `TRANSACTION_ACTION_LABELS` |
 | `/family` 引用仅 2 处 | `Sidebar.jsx:42`、`router.jsx:41`（router 另有 `import Family from './pages/Family'`） |
 | `*` 通配已重定向 `/portfolios` | `router.jsx` 末尾 |
 
@@ -109,7 +109,7 @@ Human 于 2026-10-19 裁决「家庭视图拆分式搬迁」，并要求拆成�
 | R-2 | **重复实现**：贡献列表与 `PortfolioCard` 重复、最近交易与 `/portfolios/transactions` 重复 | 贡献改占比条（AC10）、最近交易只留 5 条预览（AC12） |
 | R-3 | **分红标签缺陷被搬过来**：`Family.jsx:17` 的 `{buy, sell}` 若照搬，组合页会渲染 `undefined` | **前置依赖 TASK-048**；AC16 用 grep 计数验证走 `enums.js` |
 | R-4 | **删除残留**：import / 路由 / 导航 / 文档多处不一致 | AC15 用 grep 验证，不靠目视 |
-| R-5 | **`/family` 删除后总资产丢失** | 前置依赖 TASK-049 已交付；本任务 `blockedBy TASK-049` |
+| R-5 | **`/family` 删除后总资产丢失** | 前置依赖 TASK-049 **已于 2026-10-19 `Completed`**；本任务开工前仍须确认基线包含 TASK-049 改动（见下方 B1 备注） |
 | R-6 | **汇率面板语义错位**（家庭层基础设施塞进组合语义） | 折叠 + 默认收起，标题写「家庭汇率」 |
 | R-7 | **页面过长**：五块叠加后组合列表页信息密度过高 | 分桶与占比条**同行或紧邻**（不占整屏）；最近动态两栏并排（沿用 `Family.jsx:212` 的 `lg:grid-cols-2`）；汇率必须默认收起 |
 | R-8 | 首屏卡片被推得太低 | 占比条压成单行（高度 ≤ 48px 含图例），必要时图例折行 |
@@ -120,16 +120,86 @@ Human 于 2026-10-19 裁决「家庭视图拆分式搬迁」，并要求拆成�
 
 | 编号 | 依赖 | 状态 |
 |---|---|---|
-| **B1** | `TASK-049` 完成（总资产卡已在 `/`） | ⏳ **硬前置**——否则删除 `/family` 后总资产消失 |
-| **B2** | `TASK-048` 完成（分红标签） | ⏳ **硬前置**——否则缺陷被搬到组合页 |
+| **B1** | `TASK-049` 完成（总资产卡已在 `/`） | ✅ **已解除**（2026-10-19 `Completed`，归档 `complete/`） |
+| **B2** | `TASK-048` 完成（分红标签） | ✅ **已解除**（2026-10-20 `Completed`，归档 `complete/`）。产出 `client/src/constants/enums.js` 的 `TRANSACTION_ACTION_LABELS` 单一导出，本任务的 `RECENT-TX` 可直接 import（对应 AC16）。⚠️ 改动**未提交**，尚在 `feature/TASK-048-family-dividend-label` 工作树 |
 | B3 | Human 批准 `FS-household-view-split.md` | ✅ **已解除**（2026-10-19） |
-| B4 | Planner 产出 ExecPlan 并经 Plan Review | ⏳ 未开始 |
+| B4 | Planner 产出 ExecPlan 并经 Plan Review | ⏳ 未开始（**当前唯一实质阻塞**） |
 | B5 | 独立 Reviewer 复核 | ⏳ 交付时 |
+
+> **B1 基线备注（2026-10-19 核实，2026-10-20 更新）**：`TASK-049` 与 `TASK-048` 的产出分别在 `feature/TASK-049-dashboard-household-total`（`56c6507`）与 `feature/TASK-048-family-dividend-label`（未提交）分支，`main` 仍停在 `891d0f7`（不含 TASK-044 / 048 / 049）。现有 `feature/TASK-050` 是从 `main` 拉出的**空基线**（`git log feature/TASK-049..feature/TASK-050` 为空，反向差 3 个提交），直接开工会在缺少前置的状态下改 `Portfolio/List.jsx`。**开工前必须先重建分支**：把 `feature/TASK-050` rebase 到 `feature/TASK-048-family-dividend-label`（该分支已含 044 + 049 + 048 全部前置），或由 Human 先按 044 → 048 → 049 顺序合并入 `main` 再从 `main` 拉出。
 
 ---
 
 ## 7. Coordination Notes
 
 - 与 `TASK-049` 文件集不重叠，但**合并顺序必须 049 在前**（见 B1）。
-- 与 `TASK-048` 的文件集**会重叠**：`TASK-048` 改 `pages/Family.jsx:17/237-238`，本任务删除整个文件。若 048 先完成，本任务直接复用 `enums.js` 的单一导出即可；**若两任务并行，本任务不得自行复制映射表**，须等 048 落地或由 Orchestrator 重新排序。
+- 与 `TASK-048` 的文件集**会重叠**：`TASK-048` 改了 `pages/Family.jsx:17/237-238`（2026-10-20 已完成），本任务删除整个文件 → 合并时此文件冲突，**正确处置是删除优先**，保留 `enums.js` 的 `TRANSACTION_ACTION_LABELS` 单一导出。本任务**不得自行复制映射表**，必须 import 该导出（AC16）。
 - 本卡只登记问题与验收标准，**技术方案由 Planner 在 ExecPlan 中定**。
+
+---
+
+## 8. 开工前置核查（Orchestrator，2026-10-19）
+
+> 接到「开始 TASK-050」后所做的事实核查。**以下三项均未擅自处置**，等 Human 裁决。
+
+### 8.1 分支基线不成立（阻塞）
+
+| 事实 | 证据 |
+|---|---|
+| `feature/TASK-050` 从 `main` 拉出，基线为 `891d0f7`（TASK-043） | `git rev-parse feature/TASK-050` = `891d0f7` |
+| 该分支**没有任何独有提交**，可安全删除重建 | `git log --oneline feature/TASK-049..feature/TASK-050` 空输出 |
+| 距目标基线差 3 个提交 | `git log --oneline feature/TASK-050..feature/TASK-049` = `30dc525` / `69576ad` / `56c6507` |
+| 未见远端同名分支 | `git branch -a` 无 `remotes/origin/feature/TASK-050`（远端查询因本机 SSH 权限未成功，以本地分支列表为据） |
+
+**后果**：在此分支改 `Portfolio/List.jsx`，会基于一个**缺少 TASK-044 交易收拢与 TASK-049 总资产卡**的代码库；本任务 AC15（`grep pages/Family` 无结果）与 AC16 都在改「不存在的现状」。
+
+**建议的处置（需 Human 执行，属 git 写操作）**：
+
+```
+# 1) 先把 TASK-049 结案文档提交（当前分支 feature/TASK-049 有 7 项未提交）
+git add -A && git commit -m "docs: TASK-049 结案归档，TASKS/readme/FS 索引同步"
+
+# 2) 丢弃空基线分支，从 049 分支重建
+git branch -D feature/TASK-050
+git checkout -b feature/TASK-050
+```
+
+### 8.2 `B2`（TASK-048 前置）的前提**已部分失效**（需裁决）
+
+原 `R-3` 写的是「`Family.jsx:17` 的 `{buy, sell}` 若照搬会被搬到组合页」。但本任务 **In Scope 已包含删除 `client/src/pages/Family.jsx`**。所以：
+
+| TASK-048 条目 | 在 TASK-050 下的实际价值 |
+|---|---|
+| AC1（分红显示「现金分红/分红再投」） | ❌ **归零**——该页被本任务删除 |
+| AC2（分红不得用跌绿染色） | ❌ **归零**——同上 |
+| AC3（买/卖显示不回归） | ❌ **归零**——同上 |
+| AC4（中文映射收敛为 `enums.js` 单一导出） | ✅ **仍有效**，且本任务新组件正好要用 |
+| AC5/AC6/AC7/AC8（边界与构建） | 部分仍适用 |
+
+**结论**：先做完整 TASK-048 = 写一段随后被本任务删掉的代码。B2 想防的风险（缺陷被复制到新页面）**不需要靠修 `Family.jsx` 来防**——本任务 AC16 已要求「无 `ACTION_LABELS = {` 手写表」，只要新组件 import `constants/enums.js` 即可。
+
+**另需注意**：AC16 的 grep 模式 `ACTION_LABELS = {` **只能抓到手写字面量**，抓不到 `const ACTION_LABELS = Object.fromEntries(TRANSACTION_ACTIONS.map(...))` 这种派生式重复。现存这种重复 2 处：`components/TransactionTable/index.jsx:12`、`pages/Transaction/ImportTransactions.jsx:19`。若真要做到「单一来源」，验收模式需改成能覆盖 `Object.fromEntries(TRANSACTION_ACTIONS` 的写法。
+
+**三个可选处置**（供 Human 裁决，未执行）：
+
+| 方案 | 内容 | 代价 |
+|---|---|---|
+| **甲** | TASK-048 缩为「只做 AC4」：`enums.js` 导出标签映射，`TransactionTable` / `ImportTransactions` 改引用；删掉 AC1–AC3（对象将被删）。完成后再启动本任务 | 小改动、零浪费；B2 真正满足 |
+| 乙 | 关闭 TASK-048，把「单一来源」并入本任务的 AC16 扩写 | 少一个任务；但 `TransactionTable`/`ImportTransactions` 的重复仍留在本任务范围外 |
+| **丙 ✅ 已采纳**（2026-10-19 Human 裁决） | 照原样先完整做 TASK-048，完成验收后再启动本任务 | 明确接受 AC1–AC3 的短期性质（`/family` 在 `TASK-050` 落地前仍可用）；本任务的 B2 保持不变 |
+
+> **方案丙已执行完毕（2026-10-20 更新）**：`TASK-048` 已于 2026-10-20 评审通过并结案，`Completed`。
+> - 本任务唯一要继承的产出是 `enums.js` 的 `TRANSACTION_ACTION_LABELS`；
+> - **上面提到的 AC16 grep 盲区已被顺带关闭**：`components/TransactionTable/index.jsx:12` 与 `pages/Transaction/ImportTransactions.jsx:19` 两处派生式重复已删除，全仓 `Object.fromEntries(TRANSACTION_ACTIONS` 现**恰好 1 处**（`enums.js:29`）。故 AC16 的检测式可直接改为 `grep -rn "Object.fromEntries(TRANSACTION_ACTIONS\b" client/src` 期望 = 1，比原 `ACTION_LABELS = {` 模式更强；
+> - AC1–AC3（`Family.jsx` 分红显示/染色）确实是短期产出，随本任务删页归零，属 Human 已明示接受的成本。
+
+### 8.3 ExecPlan 未产出（阻塞）
+
+`B4` 未开始。按纪律（业务代码改动前必须有 `Approved` ExecPlan），本任务在 8.1 / 8.2 裁决、且 Planner 产出 ExecPlan 并经 Human Plan Review 之前，**不得改动任何代码**。
+
+### 8.4 本次未做的事
+
+- 未修改任何业务代码、未创建 ExecPlan（属 Planner）。
+- 未执行 `git commit` / `branch -D` / `checkout -b`（属 Human）。
+- 未改动 `TASK-048` 的验收标准（属需求变更，需 Human 裁定）。
+- 顺带修正：本节之前 `§6` 的 B1 备注曾插在表格中间导致 B5 行断表，已移出表格。

@@ -1,5 +1,5 @@
 import { Link } from 'react-router';
-import { ASSET_TYPES, TRANSACTION_ACTIONS } from '../../constants/enums';
+import { ASSET_TYPES, TRANSACTION_ACTION_LABELS } from '../../constants/enums';
 import { ROUTES } from '../../constants/routes';
 import { fmtPrice } from '../../utils/priceDisplay';
 import './TransactionTable.css';
@@ -9,7 +9,6 @@ import './TransactionTable.css';
 //   ② 「全部交易」聚合页（showPortfolio=true + onViewPortfolio，只读）
 // 本组件只负责展示，不承载任何写校验——写路径始终经 transaction.service → 服务端（AC10）。
 
-const ACTION_LABELS = Object.fromEntries(TRANSACTION_ACTIONS.map(o => [o.value, o.label]));
 const ASSET_TYPE_LABELS = Object.fromEntries(ASSET_TYPES.map(o => [o.value, o.label]));
 
 const DEFAULT_COLUMNS = ['date', 'symbol', 'action', 'assetType', 'quantity', 'price'];
@@ -64,7 +63,7 @@ export function TransactionTable({
         return tx.date ? String(tx.date).slice(0, 10) : '—';
       case 'action':
         // Bug-1：四值映射，分红两类不再被误显为「卖出」
-        return ACTION_LABELS[tx.action] || tx.action || '—';
+        return TRANSACTION_ACTION_LABELS[tx.action] || tx.action || '—';
       case 'assetType':
         // Bug-3：枚举中文，不再直出 stock/etf
         return ASSET_TYPE_LABELS[tx.assetType] || tx.assetType || '—';

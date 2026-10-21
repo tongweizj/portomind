@@ -5,7 +5,7 @@ import { useMemo, useRef, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router';
 import { Upload, ArrowLeft } from 'lucide-react';
 import { usePortfolio } from '../../hooks/usePortfolio';
-import { TRANSACTION_ACTIONS } from '../../constants/enums';
+import { TRANSACTION_ACTION_LABELS } from '../../constants/enums';
 import { ROUTES } from '../../constants/routes';
 import { importTransactions } from '../../services/transaction.service';
 import { getApiErrorMessage } from '../../services/api';
@@ -16,7 +16,6 @@ const FIELD_LABELS = {
   fee: '费用', date: '日期', notes: '备注', name: '名称',
 };
 
-const ACTION_LABELS = Object.fromEntries(TRANSACTION_ACTIONS.map(o => [o.value, o.label]));
 
 export default function ImportTransactions() {
   const { id: portfolioId } = useParams();
@@ -167,7 +166,7 @@ export default function ImportTransactions() {
                     <td className="px-2 py-2">{item.index}</td>
                     <td className="px-2 py-2">{item.transaction.symbol}</td>
                     {/* 与表格共用同一份中文映射，避免出现第三套显示口径（R8） */}
-                    <td className="px-2 py-2">{ACTION_LABELS[item.transaction.action] || item.transaction.action}</td>
+                    <td className="px-2 py-2">{TRANSACTION_ACTION_LABELS[item.transaction.action] || item.transaction.action}</td>
                     <td className="px-2 py-2 text-right">{item.transaction.quantity}</td>
                     <td className="px-2 py-2 text-right">{item.transaction.price}</td>
                     <td className="px-2 py-2 text-right">{item.transaction.fee}</td>

@@ -4,11 +4,11 @@
 
 Current status:
 
-`Approved`（2026-10-19 Human 批准方案）→ **Implemented（2026-10-19，见 §10）** → **Reviewing 通过（2026-10-19，独立 Reviewer，见 §11）** → **`Integrating`（2026-10-19，Orchestrator 全系统验证通过，见 §12）** → ⏳ 提交合并（待 Human 授权）→ ⏳ Human 最终验收 → `Completed`
+`Approved`（2026-10-19 Human 批准方案）→ **Implemented（2026-10-19，见 §10）** → **Reviewing 通过（2026-10-19，独立 Reviewer，见 §11）** → **`Integrating`（2026-10-19，Orchestrator 全系统验证通过，见 §12）** → **`Completed`（2026-10-19，Human 提交并验收，见 §13）**
 
 Owner:
 
-`Planner`（起草）/ `Human`（2026-10-19 批准方案 + 待最终验收）/ `Implementer`（2026-10-19 实施完成）/ `Reviewer`（2026-10-19 评审通过，见 §11）/ `Orchestrator`（`Integrating` 验证已完成，见 §12）
+`Planner`（起草）/ `Human`（2026-10-19 批准方案 + 提交 + 最终验收）/ `Implementer`（2026-10-19 实施完成）/ `Reviewer`（2026-10-19 评审通过，见 §11）/ `Orchestrator`（`Integrating` 验证 + 结案归档，见 §12/§13）
 
 Priority:
 
@@ -16,7 +16,7 @@ Priority:
 
 Related task:
 
-`TASK-049`
+`docs/tasks/complete/TASK-049-dashboard-household-total.md`
 
 ---
 
@@ -70,7 +70,7 @@ Related task:
 ## 2. Context
 
 - 产品需求：`docs/product/specs/FS-household-view-split.md`（**状态已 Approved 2026-10-19**；G1 对应 R1–R7 / AC1–AC8；OQ-1~3 已采纳推荐）
-- 任务卡：`docs/tasks/active/TASK-049-dashboard-household-total.md`
+- 任务卡：`docs/tasks/complete/TASK-049-dashboard-household-total.md`（归档后路径；起草时为 `tasks/active/`）
 - 关联任务：`TASK-050`（G2，阶段 2，删除 `/family`）+ `TASK-048`（分红标签，非本任务前置）
 - 前置依赖 `B1`（FS 批准）已解除；`B2`（本 ExecPlan）即本文档
 
@@ -376,3 +376,45 @@ D-1～D-4 四项我逐条比对版式与源码，**均在 §1 Constraints / §4 
 | 上一批（TASK-043/044 归档） | `docs/exec-plans/complete/TASK-043|044-*` · `docs/tasks/complete/TASK-043|044-*` · `docs/product/specs/FS-transaction-consolidation.md` · `docs/tasks/active/TASK-046|047|048-*` |
 
 > 工作区里混有**两批**未提交改动（TASK-043/044 归档 + TASK-049 实施）。建议拆两个 commit，避免把「上一轮归档」与「本轮功能」混在一个提交里。
+
+---
+
+## 13. Completion Record（Orchestrator，2026-10-19）
+
+### 13.1 结案依据
+
+| 项 | 内容 |
+|---|---|
+| Human 指令 | 2026-10-19「TASK-049 已经完成」 |
+| 提交 | `69576ad` + `56c6507`，均在 `feature/TASK-049-dashboard-household-total`，已推送 `origin` |
+| 工作区 | `git status --short` 空输出（提交后无未申报残留） |
+| 归档前复跑 | 在**本分支**（非 `main`）重新执行：`npm run build --workspace client` → `BUILD_EXIT=0`；`cd client && ../node_modules/.bin/eslint "src/**/*.{js,jsx}"` → `ESLINT_EXIT=0`；`npm run test:server` → `152 pass / 0 fail`；`npm run test:worker` → `77 pass / 0 fail`（合计 **229 / 0**） |
+| 边界复验 | `git status --short server shared cron-worker` 空输出，AC6「零服务端改动」成立 |
+
+> 复跑是在 `feature/TASK-049-dashboard-household-total` 的工作区进行的，与 §12.1 的 `Integrating` 复核结果一致；`main` 分支不含本次改动，在 `main` 上跑出的绿灯不能代表本任务，故不作为依据。
+
+### 13.2 归档动作
+
+| 对象 | 动作 |
+|---|---|
+| 本 ExecPlan | `git mv` `exec-plans/active/` → `exec-plans/complete/`；Status → `Completed`；关联任务指向 `tasks/complete/` |
+| 任务卡 | `git mv` `tasks/active/` → `tasks/complete/`；Status → `COMPLETED`；补 §12 Completion Record |
+| `docs/tasks/TASKS.md` | Active 清空（写「无活跃任务」）；Done 新增 TASK-049 行；`TASK-050` 的 B1 硬前置解除 |
+| `docs/readme.md` | 活跃任务 → 无；已完成任务补 TASK-049；归档段活跃执行计划目录改为「当前为空」 |
+| 交叉引用 | `FS-household-view-split.md`（D-2、阶段 1）、`TASK-050` 卡（B1）路径与状态同步 |
+
+### 13.3 遗留与移交
+
+| # | 内容 | 去向 |
+|---|---|---|
+| R-2 | `AppLayout.jsx:87,91` 顶栏铃铛 `title="提醒中心"` 名实不符（实际跳 `/alerts/rules`） | 移交 `TASK-047`（同类展示层小修）或 `TASK-050`；本任务超 Scope 未改 |
+| N-1/N-2/N-3 | 加载态高度抖动 / `formatCny` 双份 / E2E 弱断言 | 不处理。N-2 随 `TASK-050` 删 `Family.jsx` 自然消除 |
+| 分支状态 | `main` 停在 `891d0f7`，`feature/TASK-044`、`feature/TASK-049-*` 均未合并；`feature/TASK-050` 从 `main` 拉出，缺 044/049 全部前置 | **Human 决策**：合并顺序（044 → 049 → 050）与 `feature/TASK-050` 是否 rebase 到 049 分支 |
+
+### 13.4 未做
+
+- 未执行任何 `git` 写操作（含 `commit`、`merge`、`rebase`）：`ORCHESTRATOR.md §3` 授权只覆盖文档归档与验证，不含合并入库。
+- 未修改 `R-2` 相关业务代码（超 Scope）。
+- 未改任何验收标准或 AC 结论。
+
+> 本文件归档后不再变更。

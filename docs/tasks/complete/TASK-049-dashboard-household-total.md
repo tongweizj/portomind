@@ -3,21 +3,23 @@
 ## Metadata
 
 **Status:**  
-`INTEGRATING`（2026-10-19）—— 独立 Reviewer 评审通过（ExecPlan §11，AC1–AC8 无阻塞）；Orchestrator **全系统验证通过**（ExecPlan §12：`build` exit 0 / `eslint` 0 error / server 152 + worker 77 = **229 pass 0 fail** / 零服务端改动），审查遗留 **R-1（索引两处不实）已闭环**。**剩余两步均属 Human**：① 授权或亲自执行 git 提交；② 最终验收。通过后归档 `complete/` 并置 `COMPLETED`。
+`COMPLETED`（2026-10-19）—— 独立 Reviewer 评审通过（AC1–AC8 无阻塞）→ Orchestrator 全系统验证通过（**229 pass 0 fail**，零服务端改动）→ **Human 于 `feature/TASK-049-dashboard-household-total` 分支提交并验收**。已归档至 `tasks/complete/`，ExecPlan 归档至 `exec-plans/complete/`。
 
-> 未闭环项：**R-2**（`AppLayout.jsx:87,91` 顶栏铃铛 `title="提醒中心"` 名实不符）**超出本任务 Scope**，已移交 Human 决定并入 `TASK-047` 或 `TASK-050`。
+> 提交落点：`feature/TASK-049-dashboard-household-total`（`69576ad` + `56c6507`，均已推送 `origin`）。**尚未合入 `main`**（`main` 仍停在 `891d0f7`）——合并属 Human 职权，不在本卡结案范围内。
+>
+> 移交项：**R-2**（`AppLayout.jsx:87,91` 顶栏铃铛 `title="提醒中心"` 名实不符）超出本任务 Scope，转 `TASK-047` 或 `TASK-050` 处理（见 §12.3）。
 
 **Priority:**  
 `High`（首页首屏，交付后用户打开应用即可看到家庭总资产）
 
 **Owner:**  
-`Implementer`（2026-10-19 实施完成）→ `Reviewer`（2026-10-19 评审通过）→ `Orchestrator`（2026-10-19 置 `Integrating` 并完成全系统验证）→ `Human`（提交 + 最终验收）
+`Implementer`（2026-10-19 实施）→ `Reviewer`（2026-10-19 评审通过）→ `Orchestrator`（2026-10-19 验证与归档）→ `Human`（2026-10-19 提交 + 最终验收）— **已关闭**
 
 **Created:**  
 `2026-10-19`
 
 **Updated:**  
-`2026-10-19`（`Integrating`：全系统验证 229/229 通过，见 §11）
+`2026-10-19`（置 `COMPLETED` 并归档，见 §12）
 
 **Type:**  
 `Feature`（信息架构 / 组件搬迁，纯客户端）
@@ -29,7 +31,7 @@
 `None`
 
 **Execution Plan:**  
-`docs/exec-plans/active/TASK-049-dashboard-household-total.md`（`Approved` 2026-10-19 → 已实施 §10 → 评审通过 §11 → **`Integrating`** §12）
+`docs/exec-plans/complete/TASK-049-dashboard-household-total.md`（`Approved` 2026-10-19 → 已实施 §10 → 评审通过 §11 → `Integrating` §12 → **`Completed` §13**）
 
 **来源：**  
 Human 于 2026-10-19 裁决「家庭视图拆分式搬迁」，并要求拆成两个任务：本任务负责 Dashboard 部分。
@@ -115,7 +117,7 @@ Human 于 2026-10-19 裁决「家庭视图拆分式搬迁」，并要求拆成�
 | B2 | Planner 产出 ExecPlan 并经 Plan Review | ✅ **已解除**（2026-10-19 Human 批准 → `Approved`） |
 | B3 | 独立 Reviewer 复核 | ✅ **已解除**（2026-10-19 评审通过，见 ExecPlan §11） |
 | B4 | Orchestrator 全系统验证 | ✅ **已完成**（2026-10-19，229/229 通过，见 §11） |
-| B5 | Human 提交 + 最终验收 | ⏳ **当前唯一未完成项** |
+| B5 | Human 提交 + 最终验收 | ✅ **已完成**（2026-10-19，提交 `69576ad` + `56c6507`；工作区 `git status` 空） |
 
 > 本任务**不**依赖 `TASK-048`（不搬交易列表）。
 
@@ -139,6 +141,7 @@ Human 于 2026-10-19 裁决「家庭视图拆分式搬迁」，并要求拆成�
 | 2026-10-19 | Implementer 实施完成 → `REVIEWING`（ExecPlan §10） |
 | 2026-10-19 | 独立 Reviewer 评审通过（ExecPlan §11，AC1–AC8 无阻塞；Human 两项「不改」裁决见 §11.6） |
 | 2026-10-19 | **Orchestrator 置 `INTEGRATING`**：全系统验证 229/229 通过、R-1 索引已闭环；R-2 超出 Scope 移交 Human（见 §11） |
+| 2026-10-19 | **Human 提交并验收 → `COMPLETED`**；归档 `tasks/complete/` + `exec-plans/complete/`（见 §12） |
 
 ---
 
@@ -197,3 +200,36 @@ Human 于 2026-10-19 裁决「家庭视图拆分式搬迁」，并要求拆成�
 - **未提交 git**：`ORCHESTRATOR.md §3` 授权不含合并入库；沿用 TASK-044 分工，由 Human 提交。
 - **未置 `COMPLETED`**：最终验收属 Human。Human 提交并确认验收后，Orchestrator 再归档至 `tasks/complete/` + `exec-plans/complete/` 并置 `COMPLETED`（结案三处同步）。
 - **工作区混有两批改动**（TASK-043/044 归档 + 本任务实施）。建议拆两个 commit：① 归档批；② TASK-049 功能批。
+
+---
+
+## 12. Completion Record（2026-10-19）
+
+| 项 | 内容 |
+|---|---|
+| 状态流转 | `Approved`（2026-10-19 Plan Review）→ `Implementing` → `Reviewing`（独立评审通过）→ `Integrating`（Orchestrator 全系统验证）→ **`COMPLETED`（2026-10-19）** |
+| 提交 | `69576ad`（`完成TASK-049-dashboard-household-total`，实为 TASK-044 归档搬迁）+ `56c6507`（`代码验证`，含本任务全部代码与文档）—— **均在 `feature/TASK-049-dashboard-household-total` 分支**，已推送 `origin` |
+| 提交后工作区 | `git status --short` 空输出 |
+| 最终验收 | Human 于 2026-10-19 声明 TASK-049 已完成并指令结案；依 `EXECUTION_PLANS.md §7 Ownership`，最终验收属 Human，此为一次有效表达 |
+| 归档位置 | 任务卡 `docs/tasks/complete/TASK-049-dashboard-household-total.md`；ExecPlan `docs/exec-plans/complete/TASK-049-dashboard-household-total.md`（均 `git mv`，保留历史） |
+| 验收结果 | AC1–AC8 全部满足。Orchestrator 在**归档前于本分支重新复跑**：`build` exit 0 · `eslint` 0 error · `test:server` 152 pass · `test:worker` 77 pass（**229 / 0**）；`git status server shared cron-worker` 空 |
+| 用户可见结果 | `/` 首屏出现家庭总资产卡（金额 + 数据时点 + 折算不完整提示），点击跳 `/portfolios`；`h1` 由「提醒中心」改为「家庭总览」，其下新增「待处理提醒」区块标题；侧边栏标签 `Dashboard · 提醒` → `Dashboard`；`/family` **仍可访问**（属计划内过渡态，留给 TASK-050 下线） |
+| 遗留移交 | `R-2` 顶栏铃铛 `title="提醒中心"` 名实不符（`AppLayout.jsx:87,91`，超 Scope）→ `TASK-047` 或 `TASK-050`；`N-1/N-2/N-3` 非阻塞建议不处理，理由见 ExecPlan §12.2 |
+| 未做 | Orchestrator 未执行任何 `git` 写操作（无合并授权）；未改验收标准；未动 `Family.jsx` / `router.jsx` / `useFamily.js` / `server/` / `shared/` / `cron-worker/` |
+
+### 12.1 分支落点提示（重要）
+
+本任务的产出**只存在于 `feature/TASK-049-dashboard-household-total` 分支**：
+
+```
+56c6507 (feature/TASK-049-dashboard-household-total, origin/同) 代码验证
+69576ad 完成TASK-049-dashboard-household-total
+30dc525 (feature/TASK-044) TASK-044 交易记录收拢进组合管理
+891d0f7 (main, origin/main) TASK-043-asset-price-consolidation
+```
+
+- `main` 仍停在 `891d0f7`，**不含 TASK-044 与 TASK-049 的任何工作**。
+- `feature/TASK-050` 实际从 `main`（`891d0f7`）拉出，**既无 TASK-044 也无 TASK-049**；若要继续 TASK-050，需先 rebase 到本分支，否则是在缺前置的基线上开发。
+- 合并入库（049 → main，或 044 + 049 一并）属 Human 职权，本卡不做。
+
+> 本卡归档后不再变更。后续问题一律在对应任务卡内跟踪，不回写本文。

@@ -3,19 +3,23 @@
 ## Metadata
 
 **Status:**  
-`PLANNING`（由 TASK-047 拆出；范围已明确，待 Planner 产出 ExecPlan）
+`COMPLETED`（2026-10-20）—— 独立 Reviewer 评审通过（2026-10-20，AC1–AC8 全满足、边界清单 9/10 成立、无阻塞项，见 ExecPlan §13）→ Orchestrator 归档前复跑（`build` 0 / `eslint` 0-0 / AC4 检测式 1 行 / `test:server` 152 + `test:worker` 77 = **229 pass 0 fail**）→ **Human 于 2026-10-20 验收并指令结案**。已归档至 `tasks/complete/`，ExecPlan 归档至 `exec-plans/complete/`。
+
+> ⚠️ 改动**仍在工作区，未提交 git**：代码 4 个文件与本次归档文档均位于 `feature/TASK-048-family-dividend-label` 分支工作树。提交属 Human 职权，不在本卡范围内。
+>
+> 移交项：**F-6 / R-2**（任务卡 §1 症状描述与 AC1 口径为恒真断言，需按「空白 badge + 跌绿底」改写）属 Human Intent 侧文档，未擅改；详见 §10 与 ExecPlan §13.4、§14。
 
 **Priority:**  
 `Medium`（用户可见的错误文案，但仅影响 Family 页展示，不涉及数据写入）
 
 **Owner:**  
-待指派（Planner → Implementer → 独立 Reviewer）
+`Implementer`（2026-10-19 实施完成）→ `Reviewer`（2026-10-20 独立评审通过）→ `Orchestrator`（2026-10-20 归档前复跑与三处同步）→ `Human`（2026-10-20 验收并指令结案）— **已关闭**
 
 **Created:**  
 `2026-10-19`
 
 **Updated:**  
-`2026-10-19`
+`2026-10-20`（置 `COMPLETED` 并归档，见 §11）
 
 **Type:**  
 `Bug`（展示层 / 口径重复）
@@ -27,7 +31,7 @@
 `None`
 
 **Execution Plan:**  
-待创建
+`docs/exec-plans/complete/TASK-048-family-dividend-label.md`（`Approved` 2026-10-19 → 已实施 §12 → 评审通过 §13 → **`Completed` §14）
 
 **来源：**  
 `docs/exec-plans/complete/TASK-044-transaction-consolidation.md` §11 独立审查 **M-3**。原计划并入 TASK-047，Human 于 2026-10-19 裁决**拆出独立立项**（M-3 与 TASK-047 的路由/归属守卫无文件交叠）。
@@ -116,7 +120,7 @@
 
 | 编号 | 依赖 | 状态 | 说明 |
 |---|---|---|---|
-| **B1** | Planner 产出 ExecPlan | ⏳ 未开始 | 按纪律，改 `client/` 亦需 `Approved` ExecPlan |
+| **B1** | Planner 产出 ExecPlan | ✅ **已解除**（2026-10-19，已进入 `Plan Review`） | ExecPlan 已落盘并进入 Plan Review；批准后将派独立 Implementer |
 | **B2** | ~~Human 确认是否拆出~~ | ✅ **已解除**（2026-10-19） | 裁定拆出独立立项，即本任务 |
 
 ---
@@ -126,3 +130,93 @@
 - 由 Orchestrator 于 2026-10-19 从 `TASK-047` 拆出，并完成代码事实核实（见 §1，含全仓重复实现 grep 实测）。
 - 本任务与 `TASK-047` 无依赖关系，可并行规划；两者文件集不重叠。
 - 本卡只登记问题与验收标准，**技术方案由 Planner 在 ExecPlan 中定**。
+
+---
+
+## 8. 裁决记录（2026-10-19）
+
+### 8.1 Human 裁决：**先做 TASK-048**（全量范围，不缩水）
+
+Orchestrator 曾提交三个处置方案（见 `TASK-050` 卡 §8.2），Human 于 2026-10-19 裁决：**TASK-048 按原范围先做**（对应原「方案丙」），而非缩为只做 AC4。
+
+### 8.2 计划方必须知道的一条事实（不影响范围，但影响取舍）
+
+`TASK-050` 的 In Scope 明确包含**删除 `client/src/pages/Family.jsx`**，而本任务 AC1–AC3 的验证对象正是该文件。
+
+- 这**不构成不做本任务的理由**：在 `TASK-050` 落地之前，`/family` 仍是线上可达页面，分红显示 `undefined` 是**当下真实可见的缺陷**，先修有价值。
+- 但 Planner 在写 ExecPlan 时**不要为 AC1–AC3 设计长期机制**（如为 Family 页新建可复用组件、加测试桩），按「就地改到正确」即可；**真正要沉淀的是 AC4 的 `enums.js` 单一导出**，它是 `TASK-050` 新组件的直接依赖。
+- Reviewer 复核 AC1–AC3 时应指出其**短期性质**，不要因此判为设计不当。
+
+### 8.3 依赖与状态
+
+| 项 | 状态 |
+|---|---|
+| B1（Planner 产出 ExecPlan） | ✅ **已完成**（2026-10-19，已转 **Plan Review**） |
+| B2（是否拆出） | ✅ 已解除 |
+| 分支 | `feature/TASK-048-family-dividend-label`（自 `feature/TASK-049-dashboard-household-total` 顶端拉出） |
+| 与 `TASK-050` 的关系 | 仍为其硬前置 `B2`，本任务完成并验收后解除 |
+
+---
+
+## 9. Implementation Record（Implementer，2026-10-19）
+
+完整记录（文件清单 / 差异 D-1~D-4 / 静态与运行时验证 / 负向对照）见 ExecPlan **§12**。要点：
+
+- **改动 4 个文件**：`constants/enums.js`（新增 `TRANSACTION_ACTION_LABELS` 唯一派生）、`components/TransactionTable/index.jsx`、`pages/Transaction/ImportTransactions.jsx`、`pages/Family.jsx`（标签 + 染色）。
+- **未改**：`Alerts/AlertRules.jsx`（`hold` 保留）、`Add/EditTransaction` 表单 `<option>`、`AddTransactionForm.jsx`、`Family.jsx` 其他区块、`server/`、`shared/`、`cron-worker/`（均 `git diff` 实测空）。
+- **AC4 实测**：组合检测式改动前 3 行 → 改动后**恰好 1 行**且位于 `enums.js`；排除 enums 后 0 行。
+- **自测**：build 2404 modules / eslint 0 error / 运行时 11 条行级断言 11 PASS（卖绿 · 分红紫 #EEEDFF/#635BFF · 买红并存）。
+- **负向对照**：切回旧版 `Family.jsx` 后同一套断言在「空 badge / 分红行底色 / 无现金分红」三项失败，还原后恢复 11/11 —— 断言可证伪。
+- **⚠️ 发现任务卡 §1 描述不准确（F-6）**：旧版页面**并不会出现 `undefined` 字面量**（React 渲染 `{undefined}` 为空），真实症状是**空白 badge + 跌绿底**。故 AC1 应以「badge 文本非空且 ∈ 中文四值」验收，「页面不含 undefined」是恒真断言。详见 ExecPlan §12.5。
+- **差异提示**：计划写「任务卡零改动」，但按交接惯例更新了 Status/Owner 并追加本节，**未动 AC 与 Scope 文字**（ExecPlan D-1，提请 Reviewer/Human 裁定）。
+- 改动**未提交**，位于分支 `feature/TASK-048-family-dividend-label` 工作树。
+
+---
+
+## 10. Review Record（独立 Reviewer，2026-10-20）
+
+完整记录（我的实测命令/输出、逐条 AC 证据、边界清单打勾）见 ExecPlan **§13**。要点：
+
+- **结论：通过**，AC1–AC8 全满足，无阻塞项。
+- **独立复跑**：`BUILD_EXIT=0`（2404 modules）· eslint 0-0 · AC4 检测式恰好 1 行（`enums.js:29`）、排除 enums 后 0 行 · `client` 改动**恰好 4 个文件** · `AlertRules.jsx`/`server/shared/cron-worker` 空。
+- **运行时验证我不插库**：用 `page.route` 拦截接口喂构造数据，一次覆盖 `buy`/`sell`/`div_cash`/`div_reinvest`/**未知枚举**/**null** 六种情形，**23/23 PASS**。分红底 `rgb(238,237,255)`、字 `rgb(99,91,255)`；买/卖与改动前 class 的计算色**逐字相等**；未知与 null 退灰、不再误染跌绿。
+- **确认实现者的 F-6 成立**：React 对 `{undefined}` 输出空串，故旧版页面真实症状是**空白 badge + 跌绿底**，而非页面出现 `undefined` 字样。本卡 §1（`:46`）与 AC1（`:75`）的表述不准确 —— 见下方「须处理」。
+- **须处理（不阻塞验收）**：
+  1. `readme.md:59` 仍写「`PLAN_REVIEW` · ExecPlan `Draft` 待审」，与 `TASKS.md` 的 VERIFYING 矛盾 —— **连续第二个任务踩同一坑**，建议让 readme 活跃任务行不再写状态词，状态唯一来源放 `TASKS.md`。
+  2. 本卡 §1 症状描述与 AC1 口径需按 F-6 修正（属 Human Intent 侧文档，Reviewer 未擅改）。
+- **§12.2 D-1 裁定（任务卡被改）**：**接受**。Status/Owner 若冻结在旧值即为状态失真；未动 AC/Scope，与 TASK-044/049 惯例一致。建议计划模板把「任务卡零改动」改写为「不改 AC 与 Scope 文字」。
+
+---
+
+## 11. Completion Record（2026-10-20）
+
+| 项 | 内容 |
+|---|---|
+| 状态流转 | `PLANNING` → `PLAN_REVIEW` → `Approved`（2026-10-19 Human 批准，OD-2 方案 A 浅紫 / OD-3 表单选项不改）→ `Implementing` → `Reviewing`（2026-10-20 独立评审通过）→ **`COMPLETED`（2026-10-20）** —— 本卡未单独落 `Integrating` 状态，归档前复跑并入本节 |
+| 最终验收 | Human 于 2026-10-20 明确「TASK-048 已经评审通过，请改为 done」；依 `EXECUTION_PLANS.md §7 Ownership`，最终验收属 Human，此为一次有效表达 |
+| 归档位置 | 任务卡 `docs/tasks/complete/TASK-048-family-dividend-label.md`（`git mv`，保留历史）；ExecPlan `docs/exec-plans/complete/TASK-048-family-dividend-label.md`（该文件原为**未跟踪**状态，故用 `mv`；提交时须一并纳入） |
+| 归档前复跑（Orchestrator，本分支） | `npm run build --workspace client` → `BUILD_EXIT=0`（5.57s）；`cd client && ../node_modules/.bin/eslint "src/**/*.{js,jsx}"` → `ESLINT_EXIT=0`、输出 0 行；`npm run test:server` → **152 pass / 0 fail**；`npm run test:worker` → **77 pass / 0 fail**（合计 **229 / 0**，与 TASK-049 一致，零服务端改动之预期） |
+| AC 复验 | AC4 `grep -rn "Object.fromEntries(TRANSACTION_ACTIONS\b" client/src` → **恰好 1 行**（`constants/enums.js:29`），排除 enums 后 **0 行**；`ACTION_LABELS = {` 就地映射 **0 处**；AC5 `AlertRules.jsx` diff 空；AC7 `git status --short server shared cron-worker` 空；AC6 见上一行 |
+| 改动白名单 | `git status --short client` → **恰好 4 个文件**（`constants/enums.js` · `components/TransactionTable/index.jsx` · `pages/Transaction/ImportTransactions.jsx` · `pages/Family.jsx`），无新增文件 |
+| 用户可见结果 | Family 页「最近交易」：`div_cash` → 「现金分红」、`div_reinvest` → 「分红再投」，底色改为品牌浅紫 `#EEEDFF` / 字色 `#635BFF`（**不再是跌绿**）；买红 / 卖绿逐字不变；未知枚举与 `null` 退灰且不再误染跌绿。 `/portfolios/transactions` 同表同步收敛到单一映射，四值均正确显示 |
+| 沉淀（对 `TASK-050` 的直接价值） | `client/src/constants/enums.js` 新增 `TRANSACTION_ACTION_LABELS`（`Object.freeze` 的唯一派生），删除 `TransactionTable:12` 与 `ImportTransactions:19` 两处就地派生 —— 全仓同类派生由 3 处降为 **1 处**。`TASK-050` 的 AC16 直接复用该导出，**不得**再自建标签表 |
+| 遗留移交 | ① **F-6 / R-2**（§10）：本卡 §1 症状描述（`:46`）与 AC1 原文（`:75`）为恒真断言，实际症状是「空白 badge + 跌绿底」；属 Human Intent 侧文档，**未擅改**，待 Human 裁决是否改写为「badge 文本非空且 ∈ 中文四值」。② **N-1** `ImportTransactions.jsx` 删常量后留有两个连续空行（eslint 未拦）。③ **N-2** `AddTransaction.jsx:130` / `EditTransaction.jsx:139` 的 `<option>` 仍硬编码中文（OD-3 既定）→ 新增第五种交易类型需改 3 处，建议 `TASK-050` 之后一并收敛 |
+| 未做 | 未执行任何 `git` 写操作（无 `commit` / `merge` / `rebase` 授权）；未改 AC 与 Scope 文字；未动 `Alerts/AlertRules.jsx`（`hold` 属另一套语义）、表单 `<option>`、`Family.jsx` 其他区块、`server/`、`shared/`、`cron-worker/` |
+| 与 `TASK-050` 的关系 | 本卡是其硬前置 **B2**，**已于本次结案解除**（`TASK-050` 卡 §6 与 `TASKS.md` 的 Blocked 行已同步） |
+
+### 11.1 分支落点提示（重要）
+
+本任务产出**只存在于 `feature/TASK-048-family-dividend-label` 分支工作树，尚未提交**：
+
+```
+feature/TASK-048-family-dividend-label  ← 本任务（基 56c6507，未提交）
+56c6507 (feature/TASK-049, origin/同) 代码验证
+30dc525 (feature/TASK-044) TASK-044 交易记录收拢进组合管理
+891d0f7 (main, origin/main) TASK-043-asset-price-consolidation
+```
+
+- `main` 仍停在 `891d0f7`，**不含 TASK-044 / TASK-048 / TASK-049 的任何工作**。
+- **本任务与 TASK-050 文件集重叠**：本任务改 `pages/Family.jsx:17/237-238`，`TASK-050` 将**删除整个文件**。合并 TASK-050 时此处会冲突，正确处置是「删除优先」，保留 `enums.js` 的单一导出。
+- 合并入库（044 → 048 → 049 → 050）属 Human 职权，本卡不做。
+
+> 本卡归档后不再变更。后续问题一律在对应任务卡内跟踪，不回写本文。

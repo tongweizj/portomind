@@ -4,6 +4,8 @@ import { Landmark, RefreshCw, Wallet, ArrowLeftRight, Scale } from 'lucide-react
 import { EmptyState, ErrorState, LoadingState } from '../components/DataState';
 import { useFamilySummary, useFxRates, useSyncFxRates, useUpsertFxRate } from '../hooks/useFamily';
 import { getApiErrorMessage } from '../services/api';
+import { TRANSACTION_ACTION_LABELS } from '../constants/enums';
+import { colors } from '../constants/design-tokens';
 
 const CURRENCY_META = {
   CNY: { label: '人民币', symbol: '¥' },
@@ -14,7 +16,17 @@ const CURRENCY_META = {
 
 const BUCKET_ORDER = ['USD', 'CAD', 'CNY', 'HKD'];
 
-const ACTION_LABELS = { buy: '买入', sell: '卖出' };
+// 买/卖沿用既有配色语义（买入红、卖出绿）；标签文字统一来自 enums 的
+// TRANSACTION_ACTION_LABELS（TASK-048 AC4：唯一派生，禁止就地再写一份映射）。
+const ACTION_BADGE_CLASSES = {
+  buy: 'bg-red-50 text-red-700',
+  sell: 'bg-emerald-50 text-emerald-700',
+};
+// 分红是收益事件、没有涨跌方向：既不该用跌绿，也没理由用涨红。
+// 取设计系统的 tag 色（浅紫底 + 品牌紫字），与买红、卖绿、未知灰均可区分。
+const DIVIDEND_BADGE_STYLE = { backgroundColor: colors.brandSurface, color: colors.brand };
+const isDividendAction = (action) => action === 'div_cash' || action === 'div_reinvest';
+
 const STATUS_LABELS = { PENDING: '待确认', EXECUTED: '已执行', REVOKED: '已撤销' };
 
 function formatCny(value) {
@@ -234,8 +246,10 @@ export default function Family() {
                       <div>
                         <span className="font-medium text-gray-800">{tx.portfolioName}</span>
                         <span className="ml-2 text-gray-600">{tx.symbol}</span>
-                        <span className={`ml-2 text-xs px-1.5 py-0.5 rounded ${tx.action === 'buy' ? 'bg-red-50 text-red-700' : 'bg-emerald-50 text-emerald-700'}`}>
-                          {ACTION_LABELS[tx.action]}
+                        <span
+                          className={`ml-2 text-xs px-1.5 py-0.5 rounded ${ACTION_BADGE_CLASSES[tx.action] || 'bg-gray-100 text-gray-500'}`}
+                          style={isDividendAction(tx.action) ? DIVIDEND_BADGE_STYLE : undefined}>
+                          {TRANSACTION_ACTION_LABELS[tx.action] || tx.action || '—'}
                         </span>
                       </div>
                       <div className="text-right">

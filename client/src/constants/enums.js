@@ -18,6 +18,17 @@ export const TRANSACTION_ACTIONS = Object.freeze([
   { value: 'div_reinvest', label: '分红再投' },
 ]);
 
+/**
+ * 交易类型 → 中文标签的唯一派生（TASK-048 AC4）。
+ *
+ * 唯一权威来源是上面的 TRANSACTION_ACTIONS。任何展示点都必须引用本导出，
+ * **不得**在各自模块内重新用 `Object.fromEntries` 就地派生此表 ——
+ * TASK-044 的 Bug-1 / M-3 正是因为同一口径被多处就地派生，导致分红被二元映射误显。
+ */
+export const TRANSACTION_ACTION_LABELS = Object.freeze(
+  Object.fromEntries(TRANSACTION_ACTIONS.map(({ value, label }) => [value, label]))
+);
+
 export const ASSET_TYPES = Object.freeze([
   { value: 'stock', label: '股票' },
   { value: 'etf', label: 'ETF' },

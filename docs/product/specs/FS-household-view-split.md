@@ -151,7 +151,7 @@
 | R12 | **汇率管理**改为 `/portfolios` **底部折叠面板，默认收起**；展开后含：当前汇率列表（币种 / 汇率 / 日期 / 手动或自动）、**同步汇率**按钮、手动录入表单 | `Family.jsx:88-160, 282-283` 与 `:191-195` 的同步按钮一并迁入 |
 | R13 | 删除 `client/src/pages/Family.jsx`；删除 `router.jsx` 的 `/family` 路由与 `Family` import；删除 `Sidebar.jsx` 的「家庭视图」项（含 `Users` 图标 import，若不再使用） | 三个文件 |
 | R14 | **归档口径必须显式标注**：分桶与占比固定为「非归档口径」（`computeFamilySummary` 排除 archived），与页面上「显示已归档」开关**互不影响**。打开归档开关时卡片会多于占比条中的组合，须在图例旁给一行说明（措辞见 OQ-3） | `familySummary.service.js` 既有行为 |
-| R15 | 交易类型中文映射**必须引用** `client/src/constants/enums.js` 的单一导出，**不得**再写 `{ buy:'买入', sell:'卖出' }`（现状 `Family.jsx:17` 即此缺陷） | 依赖 `TASK-048` |
+| R15 | 交易类型中文映射**必须引用** `client/src/constants/enums.js` 的单一导出 `TRANSACTION_ACTION_LABELS`，**不得**再写 `{ buy:'买入', sell:'卖出' }`（`Family.jsx:17` 原缺陷，已由 `TASK-048` 修复并沉淀该导出） | ✅ 依赖 `TASK-048` **已解除**（2026-10-20） |
 | R16 | 新增组件统一放 `client/src/components/Household/`，除 `TotalAssetsCard`（G1 已建）外：`CurrencyBuckets.jsx` / `ContributionBar.jsx` / `RecentTransactions.jsx` / `RecentRebalance.jsx` / `FxPanel.jsx` | 新文件 |
 | R17 | `/api/family/*` 与 `hooks/useFamily.js` **不改名、不重构**（`queryKey: ['family-summary']` 保持，保证与 `/` 共享缓存） | 边界 |
 | R18 | 同步更新文档：`manual/CLIENT.md` §3.6（家庭视图整节拆为「Dashboard 总资产卡」+「组合管理内的家庭汇总」两处，并修 `:49` 与 `:107` 的入口描述）、`product/lines/PL-6-household.md` 的落点列、`product/lines/PL-1-ledger.md` 组合页职责、`PL-6` 中 FAM-01/02/04 的「落点」由 `/family` 改为 `/` 与 `/portfolios` | `docs/` |
@@ -234,8 +234,8 @@
 
 | 编号 | 依赖 | 状态 |
 |---|---|---|
-| D-1 | `TASK-048`（分红标签）完成 | ⏳ Backlog；`RECENT-TX` 若先搬，分红会渲染 `undefined` 并被搬到组合页 |
-| D-2 | `TASK-049` 完成 | ✅ **已实施并评审通过（2026-10-19，`Integrating`）** — 待 Human 提交与最终验收；G2 在其实施层面可启动 |
+| D-1 | `TASK-048`（分红标签）完成 | ✅ **已 `Completed`（2026-10-20）** — 独立评审通过（AC1–AC8），任务卡与 ExecPlan 已归档 `complete/`（改动仍在 `feature/TASK-048-family-dividend-label` 工作树，未提交）。产出 `client/src/constants/enums.js` 的 `TRANSACTION_ACTION_LABELS` 单一导出（全仓同类派生 3 处 → 1 处），`RECENT-TX` 搬迁时**必须 import 该导出**（R15 / AC16 的落点） |
+| D-2 | `TASK-049` 完成 | ✅ **已 `Completed`（2026-10-19）** — 提交 `69576ad`+`56c6507`（`feature/TASK-049-dashboard-household-total`，未合入 `main`）；任务卡与 ExecPlan 已归档 `complete/`。G2 可启动 |
 | D-3 | Planner 为两任务各产出 `Approved` ExecPlan | ⏳ 按纪律，改 `client/` 亦需批准 |
 
 ### 风险
@@ -279,6 +279,6 @@
 | `PortfolioCard` 已显示市值 / 持仓数 / 漂移 / 未读 | `components/PortfolioCard/index.jsx:69-84` |
 | `/portfolios` 当前只有标题行 + 两列卡片 | `pages/Portfolio/List.jsx:19-53` |
 | 贡献列表点击落 `/portfolios/view/:id/positions` | `Family.jsx:63`（该路由仍有效） |
-| 分红标签缺陷（前置） | `Family.jsx:17, 237-238`（`TASK-048`） |
+| 分红标签缺陷（前置） | `Family.jsx:17, 237-238`（`TASK-048`）— ✅ **已修复（2026-10-20）**：`Family.jsx` 改用 `TRANSACTION_ACTION_LABELS` + 显式染色映射；真实症状为「空白 badge + 跌绿底」而非页面出现 `undefined` 字样（React 渲染 `{undefined}` 为空） |
 | `familySummary` 不含 `accountType` / 大类聚合 | 返回字段仅 `portfolioId/name/currency/marketValueByCurrency/cnyValue/ratio` → NG-2 的依据 |
 | 设计稿 | Ardot《PortoMind 投资组合管理工具 Web 设计稿》，7 屏；Dashboard 与组合管理两屏需同步改版（仓库内无设计文档） |
