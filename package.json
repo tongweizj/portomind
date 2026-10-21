@@ -18,6 +18,7 @@
     "dev:worker": "npm run start --workspace cron-worker",
     "dev:client": "npm run dev --workspace client",
     "sync:prices": "npm run sync:prices --workspace cron-worker",
-    "check:integrity": "npm run check:integrity --workspace cron-worker"
+    "check:integrity": "npm run check:integrity --workspace cron-worker",
+    "sync:db": "node scripts/sync-db.cjs"
   }
 }

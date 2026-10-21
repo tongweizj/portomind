@@ -156,6 +156,35 @@ cd server && npm run seed:baseline && npm run verify
 
 删除整个开发数据库属于破坏性操作，本项目脚本不会自动执行。
 
+### 5.5 用真实数据验收（整库镜像到开发库）
+
+开发库是空的、或只有种子基线时，界面上的占比、图表、交易列表都看不出真实效果。把真实库整库镜像到开发库后，用前端验收更接近真实：
+
+```bash
+npm run sync:db -- --dry-run      # 先看计划，不写入
+npm run sync:db                   # 执行 portomind -> portomind_dev
+npm run sync:db -- --verify-only  # 只校验两边是否一致
+```
+
+| 规则 | 说明 |
+|---|---|
+| 引擎 | 官方 `mongodump` → gzip 归档 → `mongorestore`（`--nsFrom/--nsTo` 改名 + `--drop`）；BSON 类型、集合选项与索引由工具原生处理 |
+| 依赖 | MongoDB Database Tools。Windows：`scoop install mongodb-database-tools`；其它平台见 [官方下载页](https://www.mongodb.com/try/download/database-tools)。工具不在 `PATH` 时脚本会兜底查 scoop 默认目录，也可用 `MONGODUMP_BIN` / `MONGORESTORE_BIN` 指定绝对路径 |
+| 源库只读 | 脚本不对真实库做任何写操作 |
+| 完全镜像 | 目标库同名集合先删再由工具整份还原（含索引）；源库没有的多余集合会被删除（`--no-prune` 保留） |
+| 安全守卫 | 目标库名必须以 `_dev` / `_test` / `_e2e` 结尾，否则中止（`--force` 才放行）；源库与目标库同名直接拒绝。**这两条是官方工具没有的**，直接跑 `mongorestore` 灌错库不会有任何提示 |
+| 连接来源 | 连接串取 `server/.env` 的 `MONGO_URI`，库名由 `--from` / `--to` 决定；跨实例可用 `--from-uri` / `--to-uri` |
+| 部分同步 | `--only prices,transactions` 只同步指定集合；`--exclude taskruns` 跳过；`--parallel 8` 调整并行还原集合数 |
+| 校验口径 | 集合清单、每集合精确条数、**索引清单**、`_id` 哈希（≤30 万条的集合）；任一不符则退出码为 1。`mongorestore` 自身不做回读比对，这一步是它没有的 |
+| 临时归档 | 写系统临时目录，同步结束即删除 |
+
+注意事项：
+
+- 开发库是**快照**，验收前重跑一次。
+- 之后在开发库上产生的写入（新建交易、手动同步价格、SSR 重算）不会回写真实库，也不会被下一次镜像保留——这正是「可以随便点、不怕弄脏真实数据」的目的。
+- 镜像会连带复制源库的空集合；若源库有误建的空集合，可用 `--exclude` 跳过。
+- 官方工具的参数必须写成 `--opt=value`，`--opt value` 会被当成位置参数报错（脚本内部已按此拼装，手工执行时注意）。
+
 ---
 
 ## 6. 生产部署
