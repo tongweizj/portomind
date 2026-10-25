@@ -9,10 +9,11 @@
 //   原「资产管理」移出导航，收敛为「今日行情」屏内入口；「价格」→「今日行情」+「监控」badge。
 // 信息架构（TASK-044）：顶层 7 → 6 项，交易收拢为组合子资源 ——
 //   「组合管理」改为可展开父项，下挂「组合列表」与「全部交易」；原顶层「交易记录」移除。
+// 信息架构（TASK-050）：顶层 6 → 5 项，「家庭视图」移除（五区块并入 `/portfolios`）。
 import { useState } from 'react';
 import { Link, useLocation } from 'react-router';
 import {
-  LayoutDashboard, LineChart, LogOut, Layers, Bell, Users, FileText, ChevronRight
+  LayoutDashboard, LineChart, LogOut, Layers, Bell, FileText, ChevronRight
 } from 'lucide-react';
 import { ROUTES } from '../../constants/routes';
 import { colors, layout, fontStack, radii } from '../../constants/design-tokens';
@@ -25,7 +26,7 @@ const isPortfolioListPath = (pathname) =>
   || pathname.startsWith('/portfolios/edit')
   || pathname.startsWith('/portfolios/view');
 
-// 顶层 6 项。`active` 为显式判定函数，不用 NavLink 的前缀匹配 ——
+// 顶层 5 项。`active` 为显式判定函数，不用 NavLink 的前缀匹配 ——
 // 否则父项 `/portfolios` 会同时高亮「全部交易」等所有子路径。
 const navItems = [
   // TASK-049：首页承接家庭总资产卡，标签由「Dashboard · 提醒」改为「Dashboard」
@@ -40,7 +41,6 @@ const navItems = [
     ],
   },
   { to: '/prices', icon: LineChart, label: '今日行情', badge: '监控', active: (p) => p.startsWith('/prices') },
-  { to: '/family', icon: Users, label: '家庭视图', active: (p) => p === '/family' },
   { to: '/alerts/rules', icon: Bell, label: '提醒规则', active: (p) => p === '/alerts/rules' },
   { to: '/logs', icon: FileText, label: '日志', active: (p) => p === '/logs' },
 ];
@@ -112,7 +112,7 @@ export default function Sidebar() {
         总览
       </div>
 
-      {/* 导航项（6 项，「组合管理」含二级） */}
+      {/* 导航项（5 项，「组合管理」含二级） */}
       <nav className="flex-1 px-3 space-y-1">
         {navItems.map(({ to, icon: Icon, label, badge, active, children }) => {
           const childActive = Boolean(children?.some(child => child.active(pathname)));

@@ -12,7 +12,6 @@ import AssetDetail from './pages/Asset/AssetDetail';
 import AssetForm from './pages/Asset/AssetForm';
 import AssetList from './pages/Asset/AssetList';
 import Dashboard from './pages/Dashboard';
-import Family from './pages/Family';
 import LogViewer from './pages/LogViewer';
 import AlertRules from './pages/Alerts/AlertRules';
 import Detail from './pages/Portfolio/Detail';
@@ -37,8 +36,6 @@ export default function AppRouter() {
       <Routes>
         <Route element={<AppLayout />}>
           <Route path="/" element={<Dashboard />} />
-
-          <Route path="/family" element={<Family />} />
 
           <Route path="/alerts/rules" element={<AlertRules />} />
 
@@ -75,6 +72,8 @@ export default function AppRouter() {
           <Route path={ROUTE_PATTERNS.PORTFOLIO_TAB} element={<Detail />} />
 
           <Route path="/logs" element={<LogViewer />} />
+          {/* TASK-050：原「家庭视图」页已下线（五区块并入 /portfolios），不设显式重定向，
+              书签访问由下面的 `*` 通配承接落到组合列表页。 */}
           <Route
             path="*"
             element={<Navigate to={ROUTE_PATTERNS.PORTFOLIO_LIST} replace />}

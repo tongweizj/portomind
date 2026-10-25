@@ -3,6 +3,7 @@ import { useCallback, useContext, useState, useEffect } from 'react';
 import { useParams } from 'react-router';
 import { getHistory, revoke, reexecute } from '../../services/rebalance.service';
 import { EmptyState, ErrorState, LoadingState } from '../../components/DataState';
+import { REBALANCE_STATUS_LABELS } from '../../constants/enums';
 import { RebalanceTabContext } from './rebalanceTabContext';
 
 export default function RebalanceHistory() {
@@ -91,7 +92,7 @@ export default function RebalanceHistory() {
                   <td className="px-4 py-2 whitespace-nowrap text-right">{rec.suggestions.length}</td>
                   <td className="px-4 py-2 whitespace-nowrap text-right">{rec.executedTransactionIds?.length || 0}</td>
                   <td className="px-4 py-2 whitespace-nowrap text-right">{rec.reversalTransactionIds?.length || 0}</td>
-                  <td className="px-4 py-2 whitespace-nowrap">{rec.status}</td>
+                  <td className="px-4 py-2 whitespace-nowrap">{REBALANCE_STATUS_LABELS[rec.status] || rec.status}</td>
                   <td className="px-4 py-2 whitespace-nowrap space-x-2">
                     <button
                       onClick={() => handleRevoke(rec._id)}

@@ -102,6 +102,8 @@
 | TR-09 | CSV 批量导入 | 上传 → 解析 → 自动列映射 → 人工校正 → 预览校验 → 提交 → 结果报告；失败**整批回滚**（`422`）、幂等去重、超卖重放、≤500 行 / 批；**入口仅在组合内** | `/portfolios/:id/transactions/import` |
 | — | CSV 前端工具集 | `parseCsv`（引号/转义/`\n`/`\r\n` 兼容）、`mapColumns`（内置天天基金 / 雪球常见列名，宽松匹配）、`normalizeAction`（买入/申购/赎回…→ 枚举）、`normalizeDate`（多格式 → `YYYY-MM-DD`）、预览前 50 行错误标红 | `utils/csvImport.js` |
 
+**组合列表页职责扩展（TASK-050，2026-10-21）**：`/portfolios` 除组合卡片外，同一页还承接家庭横向汇总——币种分桶、组合占比条（点图例直达该组合持仓）、**最近交易 5 条预览**（全量走 `查看全部 →` `/portfolios/transactions`）、最近再平衡 10 条、家庭汇率折叠面板。原独立「家庭视图」页已下线；这些区块的数据仍来自 `GET /api/family/summary`，**口径归 [PL-6](./PL-6-household.md)**，本线只负责其中的交易与再平衡展示（交易类型标签走 `constants/enums.js` 的 `TRANSACTION_ACTION_LABELS`，再平衡状态标签走 `REBALANCE_STATUS_LABELS`）。
+
 ### M1.3 持仓与成本引擎
 
 | 编号 | 功能点 | 功能描述 | 入口 |

@@ -4,11 +4,11 @@
 
 Current status:
 
-`Draft`（2026-10-21 Planner 起草）→ 待 `Plan Review`
+`Approved`（2026-10-21 Human 批准「按 §5 W1–W10 实施」）→ `Implemented`（见 §12）→ **`Reviewing`（2026-10-21 有条件通过；AC14 空态边界待修，见 §13）** → **R-1 返修（见 §14）** → **复验通过（2026-10-21，R-1 闭环，见 §15）** → 待 `Orchestrator` 置 `Integrating` → Human 最终验收
 
 Owner:
 
-`Planner`（2026-10-21 起草）/ `Human`（Plan Review 待批）/ `Implementer`（待派）/ `Reviewer`（待派）
+`Planner`（2026-10-21 起草）/ `Human`（2026-10-21 Plan Review 批准）/ `Implementer`（2026-10-21 实施 + R-1 返修）/ 独立 `Reviewer`（2026-10-21 复核 §13 + 复验 §15；R-1 已闭环）
 
 Priority:
 
@@ -143,15 +143,20 @@ FS 起草时 `Family.jsx` 是 6 区块形态，`TASK-048` 已改动该文件，�
 | `ROUTES.PORTFOLIO_LIST` / `PORTFOLIO_TX_ALL` / `PORTFOLIO_TAB(id,'positions')` | `constants/routes.js` | ✅ 全部已有，**不要**拼裸字符串 |
 | `colors.brand` / `colors.brandSurface` | `constants/design-tokens.js` | ✅ `#635BFF` / `#EEEDFF` |
 
-### 3.3 与 FS 描述不一致、必须据实处理的三处
+### 3.3 与 FS 描述不一致、必须据实处理的四处
 
 | # | FS / 任务卡所述 | 实测事实 | 处置 |
 |---|---|---|---|
 | **F-1** | 「最近交易保留 5 条」「最近再平衡 10 条（现状上限）」 | 接口 `RECENT_LIMIT = 10`，**交易与再平衡都返回 10 条** | 交易必须在客户端 `slice(0, 5)`；再平衡直接渲染（已是 10）。**不改服务端**（R17） |
 | **F-2** | 「`formatCny` 双份待 `TASK-050` 去重」 | `TASK-049` 已把唯一实现放 `utils/priceDisplay.js:199`，`Family.jsx:32` 仍是副本 | 删页即去重；新组件一律 import `priceDisplay` 版 |
 | **F-3** | 任务卡 §1 表格写「`Family.jsx:17` 手写 `{buy, sell}`」 | 已被 `TASK-048` 修掉，现为 `TRANSACTION_ACTION_LABELS`（`:252`） | 搬移时**保持**引用方式，不得退回手写表（AC16） |
+| **F-4** | AC15 要求 `grep -rn "pages/Family" client/src` **无结果** | `utils/priceDisplay.js:195-197` 的 JSDoc 仍写「从 `pages/Family.jsx` 的本地实现抽为唯一源头…`/family` 共用…`Family.jsx` 的本地副本按 R7 暂留」 | **W8 必须改写该注释**（去掉 `pages/Family.jsx` 与 `/family` 字样）。否则删页后 grep 仍命中注释 → AC15 实测失败。这是本计划对账新发现的缺口 |
 
-### 3.4 顺带发现的同类缺陷（OD-2 待裁）
+> **另注（非 AC15 阻断，故不改）**：
+> - `components/Household/TotalAssetsCard.jsx:3,22` 的注释仍提到 `/family` 与 `Family.jsx:182`；该文件属 `TASK-049` 产出、在本任务 Out of Scope，且其字样**不匹配** AC15 的两条 grep（无 `pages/` 前缀、无单引号）→ 视为可接受的陈述性残留。
+> - `client/scripts/e2e-task-049.mjs:87,101` 会访问 `/family` 并断言 `h1 = 家庭视图`，删页后该**一次性**脚本失效；它不在 `client/src`、也无 npm script 引用 → 不属 AC15，本任务不改（后续若要复跑 TASK-049 回归需另行更新）。
+
+### 3.4 顺带发现的同类缺陷（OD-2 已裁：顺带修）
 
 `client/src/pages/Portfolio/RebalanceHistory.jsx:94` 直接渲染原始枚举：
 
@@ -180,6 +185,23 @@ empty state
 ### 3.7 未知项
 
 - 设计稿（Ardot 7 屏）未随仓库，组合管理屏尚未随本次改版重画 → 本轮按既有 Tailwind 语汇实现，视觉细节属 Human 后续验收项（FS §9 收尾已登记）。
+
+### 3.8 Plan Review 前对账（2026-10-21，提交 `c463c85`）
+
+提交 Plan Review 前对最承重的落点做了第二轮实读，全部与 §3.1–§3.6 一致：
+
+| 对账项 | 实测 |
+|---|---|
+| `pages/Portfolio/List.jsx` 全文 54 行；`isLoading`/`isError` 整页早退在 `:13-14` | ✅ |
+| `constants/enums.js` 现 `TRANSACTION_ACTION_LABELS` 在 `:28-30`；**尚无** `CURRENCY_LABELS` / `REBALANCE_STATUSES` / `REBALANCE_STATUS_LABELS` | ✅ W1 为纯新增 |
+| `utils/priceDisplay.js` `CURRENCY_META` 在 `:25-30`（无 `householdSymbol`）、`formatCny` 在 `:199` | ✅ |
+| `router.jsx` `import Family` `:15`、`/family` 路由 `:41`、`*` 通配 `:78-81` | ✅ |
+| `components/layout/Sidebar.jsx` `Users` import `:15`、家庭项 `:43`、顶层 6 项注释 `:28` | ✅ |
+| `hooks/useFamily.js` 两个 FX mutation 的 `onSuccess` 均失效 `['fx-rates']` + `['family-summary']` | ✅ AC13 由 hook 保证 |
+| `shared/services/familySummary.service.js` `RECENT_LIMIT = 10`，交易与再平衡各 `.limit(10)` | ✅ F-1 成立 |
+| `pages/Portfolio/RebalanceHistory.jsx:94` 为 `{rec.status}` | ✅ OD-2 落点 |
+
+> 附注：`pages/Portfolio/KpiCards.jsx:17` 另有本地 `formatMoney(value)`（无币种符号的数值格式化），与本任务新增的 `formatMoney(value, currency)` **不同签名不同语义**，且不在本任务范围；W1 **不得**顺手改它（避免扩大改动面）。
 
 ---
 
@@ -420,6 +442,7 @@ export default function List() {
 | `client/src/router.jsx` | 删 `import Family from './pages/Family';`（`:15`）与 `<Route path="/family" …/>`（`:41`）。`*` 通配（`:78-81`）已兜底 → AC17 |
 | `client/src/components/layout/Sidebar.jsx` | 删 `navItems` 的「家庭视图」项（`:43`）与 `Users` 图标 import（`import` 块 `:14-16`，`Users` 在 `:15`）。头部注释「顶层 6 项」→「顶层 5 项」，并补一行 TASK-050 说明 |
 | `client/src/pages/Portfolio/RebalanceHistory.jsx` | `:94` 改 `{REBALANCE_STATUS_LABELS[rec.status] || rec.status}` + import（OD-2） |
+| `client/src/utils/priceDisplay.js` | 改写 `formatCny` 的 JSDoc（`:192-198`）：去掉 `pages/Family.jsx` / `/family` 字样，改为「首页总资产卡与组合管理页共用」（AC15 的 grep 会命中注释，见 §3.3 F-4） |
 
 删除后 `Landmark` / `Wallet` / `ArrowLeftRight` / `Scale` / `RefreshCw` 等 import 随文件消失，**不需要**在别处清理。
 
@@ -445,7 +468,7 @@ export default function List() {
 | **W5** | `RecentRebalance.jsx` | 新文件 | W1 | 10 条、状态中文 |
 | **W6** | `FxPanel.jsx` | 新文件 | W1 | 默认收起、同步汇率、录入后双 query 失效 |
 | **W7** | `List.jsx` 改造（七段结构 + 状态下沉） | 1 文件 | W2–W6 | AC9 顺序 |
-| **W8** | 删除与清理（`Family.jsx` / `router.jsx` / `Sidebar.jsx` / `RebalanceHistory.jsx:94`） | 4 文件 | W7 | AC15 / AC17 / OD-2 |
+| **W8** | 删除与清理（`Family.jsx` / `router.jsx` / `Sidebar.jsx` / `RebalanceHistory.jsx:94` / `priceDisplay.js` 注释） | 5 文件 | W7 | AC15 / AC17 / OD-2 |
 | **W9** | 文档同步 4 处 | 4 文件 | W8 | AC18 |
 | **W10** | 校验与交接（静态 + 运行时走查 + 记录） | — | W9 | AC19 / AC20 |
 
@@ -491,15 +514,17 @@ git status --short server shared cron-worker                       # 期望空�
 ### 7.2 删除完整性（AC15 / AC16 / AC17）
 
 ```bash
-# ① 不得再有 Family 页面引用
+# ① 不得再有 Family 页面引用（含注释；priceDisplay.js 的 JSDoc 必须一并改写，见 §3.3 F-4）
 grep -rn "pages/Family" client/src                    # 期望 0 行
 # ② 不得再有 /family 字面量
 grep -rn "'/family'" client/src                       # 期望 0 行
 grep -rn '"/family"' client/src                       # 期望 0 行
 # ③ 侧边栏顶层导航 5 项（改动前实测 = 6；children 项缩进 6 空格，不会误计）
 grep -cE "^  (\{ to: |\{$)" client/src/components/layout/Sidebar.jsx   # 期望 5
-# ④ 交易类型标签不得退回就地手写表
+# ④ 交易类型标签不得退回就地手写表（AC16 原文检测式）
 grep -rn "ACTION_LABELS = {" client/src                # 期望 0 行
+# ④b 增强检测：确认全仓只有 enums.js 一处派生（TASK-048 已收敛，比 ④ 更强）
+grep -rn "Object.fromEntries(TRANSACTION_ACTIONS" client/src   # 期望恰 1 行，且位于 constants/enums.js
 # ⑤ 再平衡状态不得再直出英文（OD-2）
 grep -rn "{rec.status}" client/src                     # 期望 0 行
 ```
@@ -595,10 +620,341 @@ grep -rn "{rec.status}" client/src                     # 期望 0 行
 
 ## 12. Implementation Record
 
-> Implementer 填写。
+> 实施者：Implementer（2026-10-21）。本节只记录**实际做了什么 / 与计划的差异 / 自测结果**，
+> 不构成验收结论 —— 验收交独立 Reviewer（AC20）。
+
+### 12.1 变更文件清单（11 个 `client/src` + 4 处文档）
+
+| # | 文件 | 类型 | 内容 |
+|---|---|---|---|
+| 1 | `client/src/constants/enums.js` | 编辑 | 新增 `CURRENCY_LABELS`（由 `ASSET_CURRENCIES` 派生）、`REBALANCE_STATUSES`、`REBALANCE_STATUS_LABELS`（§4.2.1 原样） |
+| 2 | `client/src/utils/priceDisplay.js` | 编辑 | `CURRENCY_META` 增 `householdSymbol`（`symbol`/`digits` 未动）；新增 `householdCurrencySymbol` / `formatMoney`；**改写 `formatCny` 的 JSDoc**（去掉 `pages/Family.jsx` 与 `/family` 字样，F-4） |
+| 3 | `client/src/components/Household/CurrencyBuckets.jsx` | **新增** | 4 卡分桶，`formatMoney` 原币种 + `formatCny` 折算 + 非 CNY 汇率脚注 |
+| 4 | `.../ContributionBar.jsx` | **新增** | 堆叠条 + 图例 + 恒显口径说明；宽度归一化分支；图例项为 `<button>` 跳持仓页 |
+| 5 | `.../RecentTransactions.jsx` | **新增** | `slice(0, 5)` + 「查看全部 →」；四类 badge + 未知灰 |
+| 6 | `.../RecentRebalance.jsx` | **新增** | 10 条；状态走 `REBALANCE_STATUS_LABELS` |
+| 7 | `.../FxPanel.jsx` | **新增** | `useState` 折叠（默认收起）+ 子组件 `FxPanelBody` 仅展开时挂载 |
+| 8 | `client/src/pages/Portfolio/List.jsx` | 编辑 | 七段结构；`isLoading`/`isError` 由整页早退**下沉到卡片区**；`portfolios` 加空值兜底 |
+| 9 | `client/src/router.jsx` | 编辑 | 删 `import Family` 与 `/family` 路由；在 `*` 通配上方补 TASK-050 说明注释 |
+| 10 | `client/src/components/layout/Sidebar.jsx` | 编辑 | 删「家庭视图」项与 `Users` import；注释 6→5 项；补 TASK-050 说明 |
+| 11 | `client/src/pages/Portfolio/RebalanceHistory.jsx` | 编辑 | `{rec.status}` → `REBALANCE_STATUS_LABELS[rec.status] \|\| rec.status`（OD-2） |
+| 12 | `client/src/pages/Family.jsx` | **删除** | 300 行整页下线 |
+
+**文档 4 处**（AC18）：`manual/CLIENT.md`（§3.2 补家庭区块、§3.6 改写、§4 表、排障行、`:41`/`:49` 表述）· `product/lines/PL-6-household.md`（FAM-01/02/04 入口列 + 页面行 + 承载 + §6.3）· `product/lines/PL-1-ledger.md`（§5 M1.2 后新增「组合列表页职责扩展」）· `product/specs/FS-household-view-split.md`（状态行补 `Implemented`）。
+
+**零改动（实测）**：`server/` `shared/` `cron-worker/` `client/package.json` `hooks/useFamily.js` `services/family.service.js` `components/PortfolioCard/` `pages/Dashboard.jsx` `constants/design-tokens.js`。
+
+### 12.2 与计划的差异
+
+| # | 差异 | 理由 |
+|---|---|---|
+| **D-1** | `FxPanel` 的「同步汇率」**不再显式 `refetch()` family-summary**（原 Family 页有） | 两个 mutation 的 `onSuccess` 已 `invalidateQueries(['fx-rates'], ['family-summary'])`；实测同步后两 query 均重新请求（§12.4），再手动 refetch 属冗余。AC13 由 hook 保证，未削弱 |
+| **D-2** | 图例色块按「**有 ratio 的项**」顺序分配循环色；`ratio == null` 的项改用中性灰 `#D7DEE6` | 计划写「第 i 段取 `BAR_COLORS[i % 6]`」。若按图例数组下标取色，含 null 项后条上段的颜色会与图例错位；中性灰也更能表达「未计入条宽」 |
+| **D-3** | `ContributionBar` 标题用「组合占比」（原页是「组合贡献」） | 形态已由列表改为单条堆叠条，沿用旧名会误导为列表 |
+| **D-4** | `CLIENT.md` 除 AC18 指定处外另改 4 行：`:41`（大类用途）、`:49`（账户类型分组）、`:128`（手动入口表「家庭视图 → 汇率管理」）、`:150`（排障行） | 均为「家庭视图」失效名词清理。留着就是指向不存在页面的陈述（同 TASK-044 R-2 的口径纪律）；改动均在同一手册、同一主题 |
+| **D-5** | `RecentTransactions` 的 `PREVIEW_LIMIT = 5` 提为模块常量并注释接口 `RECENT_LIMIT = 10` | 让 F-1（接口给 10、本页要 5）在代码里自解释，避免后续误删 `slice` |
+| **D-6** | 更新了任务卡 / `TASKS.md` / `readme.md` 的状态行 | 计划未禁止；若代码已实施而状态仍写 `PLAN_REVIEW` 即为状态失真。**未动任何 AC 或 Scope 文字** |
+
+### 12.3 静态验证（§7.1 / §7.2 原样执行）
+
+| 项 | 命令 | 结果 |
+|---|---|---|
+| 构建 | `npm run build --workspace client` | **exit 0**，2408 modules（基线 2404 → +5 新组件 −1 删页） |
+| 静态检查 | `cd client && ../node_modules/.bin/eslint "src/**/*.{js,jsx}"` | **0 error / 0 warning** |
+| AC15 ① `pages/Family` | `grep -rn "pages/Family" client/src` | **0 行**（改动前 2 行：router import + priceDisplay JSDoc） |
+| AC15 ② 单/双引号 `/family` | `grep -rn "'/family'"` / `'"/family"'` | **0 / 0 行**（改动前各 1 行） |
+| AC15 ③ 侧栏顶层项 | `grep -cE "^  (\{ to: \|\{$)"` | **5**（改动前 6） |
+| AC16 ④ `ACTION_LABELS = {` | 同名 grep | **0 行** |
+| AC16 ④b 派生唯一性 | `grep -rn "Object.fromEntries(TRANSACTION_ACTIONS"` | **恰 1 行**，位于 `constants/enums.js:29` |
+| OD-2 ⑤ `{rec.status}` | `grep -rn "{rec.status}" client/src` | **0 行** |
+| AC19 零服务端 | `git status --short server shared cron-worker` | **空** |
+
+W1 单元核对（`esbuild` 打包后直接调用，7/7）：`formatMoney(1234.5,'USD')='US$1,234.5'`、`formatMoney(1234,'CNY')='¥1,234'`、`formatMoney(null,'CAD')='—'`、`householdCurrencySymbol` 四值正确；`fmtPrice(22.714,'USD')='$22.71'`、`fmtPrice(22.7145,'CNY')='¥22.715'` **行为未变**。
+
+### 12.4 运行时走查（1440×900，`portomind_e2e` 副本，一次性内联脚本、未落盘）
+
+| AC | 断言 | 实测 |
+|---|---|---|
+| AC9 | 七段 boundingBox.y 单调递增 | 标题行 108 → 分桶 200 → 占比 336 → 卡片 456 → 交易/再平衡 **908（同排两列）** → 汇率 1381；全部命中、顺序正确 |
+| AC10 | 构造 `ratio` 50/30/null | 条上 **2 段**（`50%`+`30%`，合计 **80%** ≤100）；图例 3 项，第 3 项「组合丙 — 折算不完整」 |
+| AC11 | 点第 1 个图例项 | URL → `/portfolios/view/p1/positions` |
+| AC12 | 接口给 **12** 条交易 | 渲染 **5** 行；`查看全部` href = `/portfolios/transactions`（目标页可正常打开） |
+| AC13 | 收起态 / 展开 / 同步 / 录入 | 收起态 `fx-rates` 请求 **0** 次；展开后 1 次；同步后 `summary 1→2`、`fx 1→2`；手动录入发出 PUT 后 `fx 1→2`、`summary 1→2`，输入框清空 |
+| AC14 | 开关两态 | 关闭时与打开后各存在「仅含未归档组合」说明 |
+| AC15 | 侧栏 | 顶层 5 项：Dashboard / 组合管理 / 今日行情 / 提醒规则 / 日志；无「家庭视图」 |
+| AC16 | 分红标签 | 四类中文 + 未知值原样（`weird_action`）；**无空 badge**；分红 `rgb(238,237,255)`/`rgb(99,91,255)`；买 `bg-red-50`、卖 `bg-emerald-50` 类名不变 |
+| AC17 | 访问 `/family` | 落到 `/portfolios`，页面有内容、无 JS 报错 |
+| OD-2 | 组合详情 → 再平衡 → 再平衡历史 | `Status` 列显示「待确认」（中文），不再直出 `PENDING` |
+| R-3 | `family-summary` 返回 500 | 组合卡片仍渲染 **4 张**；错误提示**恰好 1 个**；交易/再平衡区块不渲染；无 JS 报错 |
+
+截图：`%TEMP%/portomind-task050-list.png`（整页）、`%TEMP%/portomind-task050-500.png`（500 降级态）。
+
+> 走查期间发现的两处 `FAIL` **均为断言自身问题**，非产品缺陷，已修正后复跑通过：
+> ① 交易行选择器同时匹配到再平衡行（两个区块类名相同）→ 15 行；改为按区块作用域后 = 5 行。
+> ② 手动录入的 `page.route` glob `**/api/family/fx/rates*` 中 `*` 不跨 `/`，PUT 未被拦截（请求打到真实接口并写库）→ 改用 URL 判定函数后 `put=1`。**该次误写已清理**（`portomind_e2e.fxrates` 删掉 USD 7.35 手动记录，集合回到 6 条）。
+
+### 12.5 新发现（未擅自处理，提请 Human / Reviewer 裁决）
+
+| # | 发现 | 影响 | 建议 |
+|---|---|---|---|
+| **F-1（新，服务端）→ 已立项 [`TASK-051`](../../tasks/active/TASK-051-fx-rate-direction.md)** | **家庭折算的汇率方向疑似反了**：`fxRate.service.fetchFromProvider` 取的是 `open.er-api.com/v6/latest/CNY`（**以 CNY 为基准**，返回 `1 CNY = X 外币`），却被当成 `rateToCny` 入库，`familySummary.service` 再用 `amount * rate` 折算。实测 `buckets.CAD.rate = 0.211217`，`13836.49 × 0.2112 = 2922.5`，而正确值应约 `13836.49 ÷ 0.2112 ≈ 65,509` | 家庭总资产与分桶折算值被**系统性低估**；页面脚注「1 CAD ≈ ¥0.2112」与手动录入的语义（示例 `7.20`）**互相矛盾**。属 `TASK-049` 之前既有缺陷，本任务只是把同一段展示搬过来 | **单独立项**（服务端 + 口径，超出本任务 NG-5 / AC19 边界）。修法二选一：采集时存倒数，或折算时改除法；并统一手动录入语义 |
+| **F-2** | `client/scripts/e2e-task-049.mjs:87,101` 仍访问 `/family` 并断言 `h1=家庭视图` | 该一次性脚本已失效（不在 `client/src`，无 npm script 引用，不属 AC15） | 若要复跑 TASK-049 回归需先更新；本任务未改（计划 §3.3 附注已预见） |
+| **F-3** | 全仓现有两个 `formatMoney`：`utils/priceDisplay.js`（value, currency）与 `pages/Portfolio/KpiCards.jsx:17`（仅 value） | 同名不同签名，读代码时易误用 | 计划 §3.8 附注已明确不顺手改（避免扩大改动面），建议后续统一命名（如 `formatMoneyCompact`） |
+| **F-4** | `components/Household/TotalAssetsCard.jsx:3,22` 注释仍提 `/family` 与 `Family.jsx:182` | 不匹配 AC15 的两条 grep（无 `pages/` 前缀、无引号），属可接受残留 | 可随下次触碰该文件时清理 |
+
+### 12.6 Out of Scope 边界核对（§10 逐项）
+
+- ✅ `server/` `shared/` `cron-worker/` 零改动（`git status` 空）
+- ✅ `hooks/useFamily.js` 的 `queryKey` 仍为 `['family-summary']` / `['fx-rates']`
+- ✅ `components/PortfolioCard/`、`pages/Dashboard.jsx`、`constants/design-tokens.js` 零改动
+- ✅ 未新增 context / 主题层 / 抽象基类 / 测试文件
+- ✅ 未改 `/api/family/*` 契约与折算口径（F-1 只记录未修）
+- ✅ 未为 `/family` 加重定向（AC17 由 `*` 通配承接）
+- ✅ 未给汇率面板加 `localStorage`/`sessionStorage` 持久化
+- ✅ 未动 `Add/EditTransaction` 的 `<option>` 硬编码（`TASK-048` OD-3 既定）
+
+### 12.7 遗留与提示
+
+- 改动**未提交**，位于分支 `feature/TASK-050` 工作树；提交属 Human。
+- `portomind_e2e` 副本仅用于走查：走查中的写操作（同步汇率 / 手动录入）均被 `page.route` 拦截，唯一一次漏拦截的写入已清理，库内 `fxrates` 回到 6 条；真实库 `portomind` **未被读写**。
+- 设计稿未随仓库（§3.7），视觉细节属 Human 后续验收项。
 
 ---
 
 ## 13. Review Record
 
-> Reviewer 填写。
+> 独立 Reviewer（2026-10-21）。审查对象：`feature/TASK-050` 工作树未提交改动。
+> 全程**未改任何业务代码**，只写评审记录与状态。运行时走查由 Reviewer 自写一次性脚本完成（未复用 §12.4 的实现者脚本），跑完即删。
+
+### 13.1 结论
+
+**有条件通过（Conditional Pass）** —— AC9–AC13、AC15–AC20 全部满足；**AC14 在「贡献列表为空」边界不满足**（见 R-1，一行可修）。修正后即可进 `Integrating`，最终验收归 Human。
+
+### 13.2 独立复跑的实测（不采信 §12.3 / §12.4）
+
+| 项 | 我的命令 | 结果 |
+|---|---|---|
+| 构建 | `npm run build --workspace client`（显式取退出码） | **BUILD_EXIT=0**，**2408 modules**（与自述一致） |
+| 静态检查 | `cd client && ../node_modules/.bin/eslint "src/**/*.{js,jsx}"` | **ESLINT_EXIT=0**，无输出 |
+| AC15 ① | `grep -rn "pages/Family" client/src` | **0 行** |
+| AC15 ② | `grep -rn "['\"]/family['\"]" client/src` | **0 行** |
+| AC15 ③ | `grep -cE "^  (\{ to: \|\{\$)" Sidebar.jsx`（同 §7.2 的模式） | **5** |
+| AC16 ④ | `grep -rn "ACTION_LABELS = {" client/src` | **0 行** |
+| AC16 ④b | `grep -rn "Object.fromEntries(TRANSACTION_ACTIONS"` | **恰 1 行**（`enums.js:29`） |
+| OD-2 ⑤ | `grep -rn "{rec.status}" client/src` | **0 行** |
+| AC19 | `git status --short server shared cron-worker client/package.json package-lock.json` | **空** |
+
+**改动白名单核对**：`client/src` 恰为 **11 改/增 + 1 删**（5 个 `Household/*` 新增、`enums.js`、`priceDisplay.js`、`List.jsx`、`router.jsx`、`Sidebar.jsx`、`RebalanceHistory.jsx`、删 `Family.jsx`），与 §12.1 逐项一致。`hooks/` `services/` `components/PortfolioCard/` `pages/Dashboard.jsx` `constants/design-tokens.js` 均 `git status` 空。
+
+**口径收口复核（R-1 风险的正题）**：
+- `function formatCny` 全仓**仅 1 处**（`utils/priceDisplay.js:206`）—— `Family.jsx:32` 副本已随删页消失，没有搬出第四份。
+- 币种中文名手写表**0 处**（除 `enums.js` 的 `ASSET_CURRENCIES` 权威源），新组件全部走 `CURRENCY_LABELS`。
+- 再平衡状态中文映射**仅 1 处**（`REBALANCE_STATUS_LABELS`），`RebalanceHistory.jsx` 与 `RecentRebalance.jsx` 共用。残留的 `record.status` 命中都是**逻辑判断**（`disabled={rec.status !== 'EXECUTED'}`），非展示，判定正确。
+
+### 13.3 逐条 AC 判定（AC9–AC20）
+
+| # | 判定 | 我的证据 |
+|---|---|---|
+| AC9 | ✅ | 真数据实测 boundingBox.y 单调递增：标题行 **108** → 分桶 **200** → 占比条 **336** → 卡片 **456** → 最近交易 **908** → 家庭汇率 **1381**。另在 1600px 下补验交易/再平衡**同排**（`ty=398 rx=928`、`ry=398`），故「依次」在同一行内成立 |
+| AC10 | ✅ | ① 真数据：3 段宽度和 **1144px = 轨道宽 1144px**（3 段含一个 `ratio=0`）；② 构造 `ratio=60/60`（合计 **120**）→ 归一化后两段各 **572px**、和 **1144 = 轨道宽**；③ `ratio=null` 项**不占条宽**（只 2 段）且图例标「折算不完整」。**归一化分支实现者未测，我补测通过** |
+| AC11 | ✅ | 点图例「组合甲」→ URL `http://localhost:5173/portfolios/view/p1/positions`，与 `Family.jsx` 原行为一致（走 `ROUTES.PORTFOLIO_TAB`，无裸字符串拼接） |
+| AC12 | ✅ | 接口喂 **12 条** → 区块内渲染 **5 行**（按「最近交易」区块作用域计数，避开同类名的再平衡区块）；「查看全部」`href=/portfolios/transactions` |
+| AC13 | ✅ | 收起态 `fx-rates` 请求 **0 次**、无「同步汇率」按钮；展开后 **1 次**；点同步 → **POST 发出**，`summary 1→2`、`fx 1→2`；手动录入 → **PUT 发出**，`summary 2→3`、`fx 2→3`。**两个 query 均失效刷新成立**，D-1（去掉手动 refetch）未削弱 AC13 |
+| AC14 | ⚠️ **条件不满足** | 常规路径 ✅：默认态与打开「显示已归档」后均存在「仅含未归档组合」说明。**但 `portfolioContributions` 为空数组时说明整行消失** —— 见 R-1 |
+| AC15 | ✅ | 三条 grep 全 0；侧栏 5 项 = `Dashboard / 组合管理 / 今日行情 / 提醒规则 / 日志`，无「家庭视图」 |
+| AC16 | ✅ | 构造 5 种 action → badge 文本 `["买入","卖出","现金分红","分红再投","weird_action"]`，**无空 badge**；分红取计算色 `rgb(238, 237, 255)` / `rgb(99, 91, 255)`（**对比的是浏览器实际计算值，未硬编码**）；`Object.fromEntries(TRANSACTION_ACTIONS` 恰 1 行 |
+| AC17 | ✅ | 直接访问 `/family` → `http://localhost:5173/portfolios`，`h1=投资组合` 有内容，**0 JS 报错** |
+| AC18 | ✅ | 四处逐一核对：`CLIENT.md` §3.6 改写为「家庭总资产」+ 新增 §3.2 组合列表页家庭汇总小节（6 步清单）+ 手动入口表 + 排障行；`PL-6` FAM-01/02/04 落点改 `/` 与 `/portfolios`、承载改 `components/Household/*`、§6.3 重写；`PL-1` 新增「组合列表页职责扩展」；`FS` 状态行补 `Implemented`。**活跃文档（`manual/` `product/` `readme` `TASKS.md`）中「家庭视图」作为入口的陈述已清**（`CLIENT.md:139` 残留的是 API 路径 `/api/family/fx/sync`，非页面入口） |
+| AC19 | ✅ | 空输出 |
+| AC20 | ✅ | 本记录即独立复核；Implementer 未自判（§12 只写「不构成验收结论」） |
+
+### 13.4 我补验的实现者未覆盖项（4 条）
+
+计划里最容易被漏测的是「失败隔离」与「算法边界」，§12.4 的表格里这两类覆盖不全：
+
+| # | 补验项 | 方法 | 结果 |
+|---|---|---|---|
+| 1 | **AC10 归一化分支**（合计 >100%） | 构造 `ratio=60/60` | ✅ 两段变 572px，和 = 轨道宽 |
+| 2 | **AC14 空贡献边界** | 构造 `portfolioContributions: []` + 一个归档组合 + 勾选「显示已归档」 | ❌ **说明消失**（改为新发现 R-1） |
+| 3 | **AC9 同排** | 1600px 下取两个 `h2` 的 y/x | ✅ 同 y、左交易右再平衡 |
+| 4 | **`family-summary` 500 时 FxPanel 是否仍可用** | `page.route` abort summary，单独供 fx | ✅ 面板在、展开后「同步汇率」与汇率列表均正常，`pageerror=0` |
+
+补验 2 附带确认：`family-summary` abort 时组合卡片渲染 **3 张**、交易/再平衡区块 **0 个**（不二次报错）、无未捕获异常 —— R-3 的容错边界确实成立，不是纸面承诺。
+
+### 13.5 须处理（R-1，进 `Integrating` 前）
+
+> ✅ **已于 2026-10-21 返修**：改为单出口结构（说明与标题置于条件分支之外）+ 申报差异 D-7（空态补 `h2`）。验证 14/14 + 两轮负向对照。详见 **§14**。本节保留为审查原始意见。
+
+**R-1 · AC14 / OD-3 在「贡献列表为空」时失效**
+
+`components/Household/ContributionBar.jsx:20`：
+
+```jsx
+if (list.length === 0) return <EmptyState />;   // ← 提前返回，SCOPE_NOTE 在第 76 行，被一起吞掉
+```
+
+OD-3 裁决是「口径说明**恒显示**」，但实现在空态下整块 `return`，说明文案不渲染。实测复现：`portfolioContributions: []` + 仅有一个**已归档**组合 + 勾选「显示已归档」→ 页面有卡片（`cards=true`）、**没有**「仅含未归档组合」这句（`note=false`）。
+
+为什么这不是纯理论问题：这个组合（**所有组合都归档 / 家庭汇总无未归档组合** + **用户打开了「显示已归档」**）恰好是 R-1「归档口径打架」最需要那行说明的场景 —— 此时卡片有内容、分桶与占比是空的，用户最可能误以为「数据丢了」。而在数据正常时，说明本来就在，反而是安全的。
+
+修法（一行级，不扩大范围）：把 `SCOPE_NOTE` 提到空态分支之外，例如空态也渲染说明，或改成
+
+```jsx
+if (list.length === 0) return (<div className="space-y-2"><EmptyState /><p className="text-xs text-gray-400">{SCOPE_NOTE}</p></div>);
+```
+
+> 顺带一处同类（不阻塞）：`CurrencyBuckets` 空态是裸文本「暂无资产分桶数据」，`ContributionBar` 空态是 `<EmptyState />` 组件 —— 同一页相邻两个空态视觉不一致。若要统一，建议同批处理。
+
+### 13.6 建议（不阻塞）
+
+- **A-1 · `docs/issues.md` 是 0 字节未申报文件**（untracked，mtime 10:30）。§12.1 的文件清单里没有它，属 §10「未新增测试文件/文档」边界的灰区。建议删除，或说明用途并纳入清单 —— 否则随 `git add -A` 提交会把一个空文件带进版本库。
+- **A-2 · `PL-0-platform-foundation.md` 有 3 处已失效的落点陈述**（不在 AC18 范围内，但属 R-4「删 /family 留残」的文档形态）：`:343` 路由表仍写 `| /family | Family | 家庭视图 |`；`:435` 承载表仍写 `client/src/pages/Family.jsx`；`:225` 架构图仍有「家庭视图 (8)」。这是**当前实现的描述**，不是历史记录，与 `pages/Family.jsx` 已删除的事实冲突。建议随本任务或 `TASK-047` 一并清理。
+- **A-3 · D-4 的失效名词只清了 `CLIENT.md`**：`manual/DEPLOYMENT.md:302`「跨币种折算仅发生在家庭视图」、`manual/SERVER.md:102`「家庭视图没有录入入口」仍用旧名。同属「手册写了已失效的事实」（TASK-044 R-2 的口径纪律）。
+- **A-4 · 首屏布局抖动**（与 TASK-049 §11.7 同型）：`familyLoading` 为真时 ②③ 整段不渲染，卡片区随之上移；家庭汇总返回后分桶+占比插入，卡片下移约 **250px**。不影响功能，但首屏会「跳一下」。若要修，可给 ②③ 一个固定高度的骨架。
+
+### 13.7 边界核对（§10 逐项打勾）
+
+- ✅ `shared/` `server/` `cron-worker/` 零改动（`git status` 空）
+- ✅ `hooks/useFamily.js` **零改动**，`queryKey` 仍 `['family-summary']` / `['fx-rates']`
+- ✅ `components/PortfolioCard/`、`pages/Dashboard.jsx`、`constants/design-tokens.js` 零改动
+- ✅ 未新增 `context` / 主题层 / 抽象基类 / 测试文件（5 个新组件均为纯 props 展示组件，仅 `FxPanel` 自取数据且仅限 fx，符合 §4.1 的容错边界）
+- ✅ 未改 `/api/family/*` 契约与折算口径（F-1 只记录未修，已转 `TASK-051`）
+- ✅ 未为 `/family` 加重定向（`router.jsx` 只加注释，`*` 通配承接）
+- ✅ 未给汇率面板加 `localStorage`/`sessionStorage` 持久化
+- ✅ 未动 `Add/EditTransaction` 的 `<option>` 硬编码
+
+### 13.8 说明与遗留
+
+- **`TASK-051` 在本次审查期间出现**（`docs/tasks/active/TASK-051-fx-rate-direction.md`，mtime **11:12**，我 11:09 首次 `ls` 时还没有）。非本任务产出，不影响本次判定；`readme.md` / `TASKS.md` / 本 ExecPlan §12.5 对它的引用**均已核实为有效链接**（无死链）。
+- `F-2` ~ `F-4`（`e2e-task-049.mjs` 已失效、两个同名 `formatMoney`、`TotalAssetsCard` 注释残留）我复核属实且**判定可不改**：前两者不在 `client/src` 或不匹配 AC15 的 grep，第三者属 TASK-049 产出、本任务 Out of Scope。三者都已登记，不必随本任务归档蒸发。
+- `docs/readme.md` 本次改为「活跃任务只留链接 + 负责人，状态以 `TASKS.md` 为准」—— 这正是 TASK-048 审查里提的机制修法，采纳后消除了连续两次的「readme 状态失真」。核对当前 `readme:59-61` 与 `TASKS.md` 无矛盾。
+- 提交属 Human：改动仍在工作树，`feature/TASK-050` = `c463c85` + 未提交改动。
+
+---
+
+## 14. R-1 返修记录（2026-10-21）
+
+§13.5 判定的 **R-1** 经 Human 指令修复。改 1 个文件：`client/src/components/Household/ContributionBar.jsx`。
+
+### 14.1 根因
+
+`if (list.length === 0) return <EmptyState />;` 属**整块早退** —— 返回的 JSX 只含 `<EmptyState />`，同级的 `h2` 与 `SCOPE_NOTE` 全部消失。不是「说明写错了位置」，而是「空态下整棵树的兄弟节点都没了」。
+
+### 14.2 修法：单出口结构（D-7）
+
+把 `h2` 与 `SCOPE_NOTE` 移到条件分支**之外**，空态只替换中间内容：
+
+```jsx
+<div className="space-y-2">
+  <h2>组合占比</h2>
+  {list.length === 0 ? <EmptyState /> : (<> 占比条 + 图例 </>)}
+  <p className="text-xs text-gray-400">{SCOPE_NOTE}</p>
+</div>
+```
+
+与 §13.5 建议的双分支 `return` 相比，单出口的差别是**结构上消除复发**：双分支要把说明写两遍，下次再加兄弟节点仍可能只加进一支；单出口的说明不在任何分支内，不可能被漏。
+
+**差异申报 D-7**：空态也渲染 `h2`「组合占比」（§13.5 示例中没有这一步）。依据两条 —— ① 同页 `RecentTransactions`（`h2` 在容器内，`:21-27` 固定渲染，空态只换下方内容）与 `RecentRebalance`（`:15-20` 同型）已是这个写法，`ContributionBar` 原是这页**唯一**偏离该模式的组件；② AC9 的七段结构在空态下同样应完整，否则「暂无数据」是一句无主文案。若 Human 判为超出 R-1 范围，删掉空态分支的 `h2` 即可回退，不影响其余。
+
+**未动**：§13.5 尾注提到的 `CurrencyBuckets` 空态视觉不一致（Reviewer 已明示「不阻塞」）—— 仍为裸文本「暂无资产分桶数据」。口径说明文案为「分桶与占比…」，由占比区在页面上统一覆盖，信息不缺。
+
+### 14.3 验证
+
+脚本 `client/scripts/_check-contributionbar-empty.mjs`（一次性，未进 `package.json`；全部 `page.route` 构造数据，**零写库**；1440×900）。
+
+场景：**A** = `portfolioContributions: []` + 全部组合已归档 + 勾选「显示已归档」（目标场景）· **B** = 两条正常贡献（回归）· **C** = 空态且无卡片 · **D** = 控制台/页面错误。
+
+**结果 14/14 PASS**：
+
+| # | 断言 | 实测 |
+|---|---|---|
+| A0 | 卡片已渲染（证明「卡片有、占比空」场景成立） | 含「A股-长钱组合」 |
+| A1 | 空态仍显示口径说明 | ✅ |
+| A2 | 口径说明恰好 1 处 | `count=1` |
+| A3 | 空态仍显示「组合占比」标题 | ✅ |
+| A4 | 空态区块内含「暂无数据」占位 | scope 文本 = `组合占比 暂无数据 分桶与占比…` |
+| A5 | 空态不渲染占比条 | `hasBar=false` |
+| A6 | 空态区块内确有口径说明 | ✅ |
+| B1/B2 | 正常态说明存在且恰 1 处 | ✅ / `count=1` |
+| B3/B4 | 正常态图例 2 项、条在 | ✅ / `hasBar=true li=2` |
+| B5 | 正常态区块内无 `EmptyState` | ✅ |
+| C1 | 空态（无卡片）也显示说明 —— OD-3 恒显示 | ✅ |
+| D1 | 无控制台/页面错误 | ✅ |
+
+### 14.4 两轮负向对照（证明断言能失败）
+
+| 注入的缺陷形态 | 结果 | 说明 |
+|---|---|---|
+| 改回 `if (list.length === 0) return <EmptyState />;` | **7/14** | A1–A6 + C1 全 FAIL；正常态 B1–B5 仍 PASS —— 证明断言定位在空态，不误伤正常路径 |
+| **仅**把 `SCOPE_NOTE` 移进非空分支（精确复现 R-1 形态，标题保留） | **10/14** | A1 / A2 / A6 / C1 FAIL（A3/A4/A5 因标题与占位仍在而 PASS）；正常态 5 条仍 PASS —— 证明断言精确捕捉「说明只在非空态」 |
+
+### 14.5 踩到的断言坑（可复用）
+
+初版 A4 / B5 用整页 `body.includes('暂无数据')` 判定 —— **恒真**：同页「最近交易 / 最近再平衡」空数据时也渲染 `EmptyState`，`A4` 必 PASS、`B5` 必 FAIL（首跑即 FAIL）。改为按「含 `h2 组合占比` 的父容器」作用域取 `innerText` 后才有效。
+
+> 与 §13.4 / `TASK-048` 的「页面不含 undefined 恒真」同型：**整页文本断言在有多区块的页面上几乎总要作用域化**。
+
+### 14.6 收尾状态
+
+- 静态：build exit 0（2408 modules）· eslint 0 error / 0 warning。
+- **零服务端改动**：`git status server shared cron-worker` 空。
+- 改动仍未提交（`feature/TASK-050` 工作树）。**R-1 已闭环**；§13.6 的 A-1 ~ A-4 未动。
+- 新增未跟踪文件 `client/scripts/_check-contributionbar-empty.mjs`（与先前的 `_rv50.mjs` 同类，属一次性验证脚本；是否入库由 Human 定）。
+
+---
+
+## 15. R-1 复验记录（Reviewer，2026-10-21）
+
+**结论：R-1 闭环，`TASK-050` 可进 `Integrating`。** 我**未复用**实现者的 `_check-contributionbar-empty.mjs`，另写一套脚本（跑完即删）；也**未改任何业务代码**（`git status client/src` 与上轮完全一致）。
+
+### 15.1 静态复跑
+
+| 项 | 命令 | 实测 |
+|---|---|---|
+| 构建 | `npm run build --workspace client` | ✅ `BUILD_EXIT=0`，**2408 modules**（与 §14.6 一致） |
+| 静态检查 | `cd client && ../node_modules/.bin/eslint "src/**/*.{js,jsx}"` | ✅ **0 error / 0 warning** |
+| AC19 零服务端 | `git status --short server shared cron-worker client/package.json package-lock.json` | ✅ 空 |
+| AC15 / AC16 / OD-2 复查 | grep | ✅ `pages/Family` 0 · `'/family'` 0 · 侧栏 5 · `ACTION_LABELS = {` 0 · `Object.fromEntries(TRANSACTION_ACTIONS` 恰 1 · `{rec.status}` 0 |
+| 口径唯一性 | `grep -rn "分桶与占比仅含未归档组合" client/src` | ✅ **恰好 1 处**（`ContributionBar.jsx:14`）；`function formatCny` 仍 1 处 |
+
+**本轮改动面**：`client/src` 内仅 `ContributionBar.jsx` 的 mtime 变为 **11:50**，其余组件停在 10:48–10:51 —— 与 §14「改 1 个文件」一致。
+
+### 15.2 运行时复验（自写 25 条断言，5 场景）
+
+场景 A = 目标缺陷场景（`portfolioContributions: []` + 全归档卡片 + 勾「显示已归档」）· B = 空态且无卡片 · C = 正常 60/40 回归 · D = `ratio` 合计 120 归一化 · E = 全部 `ratio` 为 null（折算不完整）。全部 `page.route` 构造数据，**零写库**。
+
+**结果 25/25 PASS**，关键实测：
+
+- **A1** 空态区块文本 = `组合占比 暂无数据 分桶与占比仅含未归档组合；已归档组合需在下方卡片中单独查看。` —— 标题、占位、说明三者齐在；
+- **A2** 说明全页 `count=1`（无重复渲染）；**A3** `h2` 计数 `=1`（D-7 未造成标题重复）；**A6** 说明是区块 `lastElementChild` 且为 `<p>`，顺序为「标题 → 内容 → 说明」；
+- **C4/C5** 段宽和 `1144.0` = 轨道宽 `1144.0`，两段 `686.4 : 457.6` = 60:40；**D2** 合计 120 时两段 `[572, 572]` 等宽 —— 归一化分支未被我上次修复波及；
+- **F1** 无控制台/页面错误。
+
+### 15.3 负向对照（断言必须能失败 —— 我自己注入，两轮）
+
+不采信 §14.4 的自述，我直接改文件注入缺陷、跑同一套断言、再按 md5 还原（`RESTORE_OK`，还原后重跑仍 25/25；`grep RVINJECT` 残留 0）。
+
+| 注入形态 | 结果 | 失败断言 | 说明 |
+|---|---|---|---|
+| ① 改回整块早退 `if (list.length === 0) return <EmptyState />;` | **16/25** | A1–A6、B1–B3（9 条） | 连 `h2` 一起消失 → 区块取不到（`scope=undefined`）；正常路径 C/D/E 全 PASS，证明断言只在空态发力 |
+| ② **精确复现 R-1**：仅把说明改成 `{list.length > 0 && …}`（标题保留） | **20/25** | A1、A2、A6、B1、B2（5 条） | A3/A4/A5（标题、占位、无条）仍 PASS —— 证明断言精确锚定「说明」而非「标题」，这正是修复前后唯一的行为差异 |
+
+形态 ② 是关键：它证明我的 A1 不会因为「区块整体还在」而恒真。
+
+### 15.4 D-7 判定：**接受**
+
+空态补 `h2`「组合占比」不构成范围扩张 —— 无新文件、无新依赖、无服务端改动；且「暂无数据」在无标题时是一句无主文案，补标题后与同页 `RecentTransactions` / `RecentRebalance` 的既定写法一致，也满足 AC9 七段结构在空态的完整性。若要回退，删空态分支的 `h2` 即可，不影响其余（已在 §14.2 写明）。
+
+### 15.5 观测（非缺陷、非本轮引入，不阻塞）
+
+`list.length > 0` 但所有 `ratio` 均为 `null` 时，轨道照旧渲染为**0 段的空白灰条** + 图例标注「折算不完整」。修复前后行为一致（原实现的早退只覆盖 `length === 0`），**不是回归**。若将来要处理，可给轨道一个虚线占位或改为 `EmptyState`，需另立卡。
+
+### 15.6 须处理（文档侧，已由我按事实改）
+
+`docs/tasks/TASKS.md:30` 与 `:47` 仍写「待修 R-1」，与同文件 `:5`/`:13` 的「R-1 已返修」自相矛盾。状态唯一来源是 `TASKS.md`，故我已改正（纯状态簿记，非业务代码）。
+
+### 15.7 遗留（承接 §13.6，仍需 Human 定）
+
+- `docs/issues.md` 仍是 **0 字节未跟踪文件**（mtime 10:30，上轮已提未处理）；`git add -A` 会把它带进库。
+- `client/scripts/_check-contributionbar-empty.mjs` 已在 §14.6 申报，仍是未跟踪文件。若要随任务入库，建议改名为 `e2e-*` 并在 `TASKS.md` 登记；否则删掉，避免 `git add -A` 夹带一次性脚本。
+- §13.6 的 A-1 ~ A-4（`PL-0-platform-foundation.md` 三处失效落点、`DEPLOYMENT.md:302` / `SERVER.md:102` 旧名「家庭视图」、首屏布局抖动）**本轮未动**，仍待裁决。
