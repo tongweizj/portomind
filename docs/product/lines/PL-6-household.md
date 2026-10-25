@@ -51,7 +51,7 @@
 | FAM-02 | 组合贡献 | 保留 | 占比进度条 + 可下钻 | — | — |
 | FAM-03 | 提醒入口 | **合并** | 与 AL-07 通知中心是同一物（PRD 已注明「即其落地形态」），列为独立编号属重复描述 | 在文档层面合并描述，避免重复评估与排期 | P3 |
 | FAM-04 | 最近动态 | **强化** | 仅最近 10 笔，无法回溯 | 支持分页 / 按类型筛选 | P2 |
-| FxRate | 汇率服务 | **强化** | 单源（er-api）+ 手动；缺汇率时结果静默为 `null`，无「去补录」引导 | 增加第二数据源或多日回退；家庭视图对「汇率过期 / 缺失」给出显式补录入口 | P2 |
+| FxRate | 汇率服务 | **强化** | 单源（er-api）+ 手动；缺汇率时结果静默为 `null`，无「去补录」引导 | 增加第二数据源或多日回退；组合页「家庭汇率」面板对「汇率过期 / 缺失」给出显式补录入口 | P2 |
 | — | 历史时点汇率重算 | **强化（远期）** | PRD 已列为远期原则，但未排期、未明确取舍 | 明确「排期 or 放弃」——含则列入版本，不含则写入非目标 | P2 |
 
 ---
@@ -62,11 +62,11 @@
 
 | 编号 | 功能点 | 功能描述 | 入口 |
 |---|---|---|---|
-| FAM-01 | 家庭 Dashboard | 以 **RMB 折算**的家庭总资产 + CNY / USD / CAD / HKD 各自金额分桶（港股 HKD 单列） | `/family` |
-| FAM-02 | 组合贡献分解 | 各组合市值与占家庭比例（RMB 基准），进度条展示并支持点击直达组合 | 家庭视图 |
-| FAM-04 | 最近动态 | 最近交易 + 最近再平衡记录（交易买红卖绿；再平衡标注 AUTO/手动 与 EXECUTED/REVOKED） | 家庭视图 |
+| FAM-01 | 家庭 Dashboard | 以 **RMB 折算**的家庭总资产（首页顶部卡）+ CNY / USD / CAD / HKD 各自金额分桶（港股 HKD 单列，组合列表页） | `/` + `/portfolios` |
+| FAM-02 | 组合贡献分解 | 各组合市值与占家庭比例（RMB 基准），**堆叠条 + 图例**展示，点图例项直达该组合持仓；`ratio=null` 不占条宽并标「折算不完整」 | `/portfolios` |
+| FAM-04 | 最近动态 | 最近交易（仅 5 条预览）+ 最近再平衡记录 10 条（交易买红卖绿、分红浅紫；再平衡标注 自动/手动 与 待确认/已执行/已撤销） | `/portfolios` |
 | — | RMB 折算保守原则 | CNY 恒为 1，外币取最新汇率；**任一币种桶缺价或缺汇率 → 该组合 `cnyValue` 为 `null` 且不计入家庭总额**（宁可少报不可错报），前端提示「部分组合折算不完整」 | `familySummary.service.js` |
-| — | 家庭视图页面 | `Family` 页：同步汇率按钮、家庭总资产卡（含 `asOf` 与折算不完整提示）、币种分桶卡、组合贡献列表、最近动态、汇率管理 | `/family` |
+| — | 家庭区块宿主页 | 原独立「家庭视图」页已下线（TASK-050）：总资产卡在首页（含 `asOf` 与折算不完整提示）；币种分桶、组合占比条、最近交易/再平衡、汇率折叠面板并入组合列表页 | `/` + `/portfolios` |
 
 ### M6.2 汇率服务
 
@@ -88,7 +88,7 @@
 
 ## 6. 架构实现明细（合并自原 functions.md §4.8）
 
-**承载**：`shared/services/familySummary.service.js`、`shared/services/fxRate.service.js`、`cron-worker/src/schedulers/fxScheduler.js`、`client/src/pages/Family.jsx`
+**承载**：`shared/services/familySummary.service.js`、`shared/services/fxRate.service.js`、`cron-worker/src/schedulers/fxScheduler.js`、`client/src/components/Household/*`（`TotalAssetsCard` / `CurrencyBuckets` / `ContributionBar` / `RecentTransactions` / `RecentRebalance` / `FxPanel`）
 
 | 功能 | 说明 |
 |---|---|
@@ -106,11 +106,11 @@
 - 支持币种 `['USD','CAD','HKD']`，语义为「1 外币 = `rateToCny` 人民币」。
 - `fetchFromProvider`：`https://open.er-api.com/v6/latest/CNY`（免费免 key），超时 15s，来源标记 `source='er-api'`。
 - `upsertRate`：按 `(currency, date)` 幂等 upsert；手动录入标记 `source='manual'`。
-- 采集调度：默认 **09:30**（`FX_SYNC_CRON`，央行中间价公布后）；**采集失败仅记日志**，不阻塞其他调度，家庭视图可手动兜底。
+- 采集调度：默认 **09:30**（`FX_SYNC_CRON`，央行中间价公布后）；**采集失败仅记日志**，不阻塞其他调度，组合页「家庭汇率」面板可手动兜底。
 
-### 6.3 前端（`/family`）
+### 6.3 前端（首页 + 组合列表页）
 
-「同步汇率」按钮；**家庭总资产卡**（渐变蓝，含 `asOf` 与折算不完整提示）；**币种分桶卡**（固定顺序 USD/CAD/CNY/HKD，非 CNY 显示 `1 {currency} ≈ ¥{rate}`）；**组合贡献列表**（占比进度条，点击跳组合）；**最近动态**（交易：买红卖绿；再平衡：AUTO/手动 + EXECUTED/REVOKED 状态）；**汇率管理**（列表 + 手动录入表单）。
+首页顶部**家庭总资产卡**（渐变蓝，含 `asOf` 与折算不完整提示，点击进组合管理）；组合列表页自上而下承接家庭五区块：**币种分桶卡**（固定顺序 USD/CAD/CNY/HKD，非 CNY 显示 `1 {currency} ≈ ¥{rate}`；符号用 `US$`/`CA$`）、**组合占比堆叠条 + 图例**（点图例跳该组合持仓）、**最近交易 5 条 + 查看全部**、**最近再平衡 10 条**、**家庭汇率折叠面板**（默认收起，含「同步汇率」与手动录入，展开后才请求 `fx-rates`）。口径说明恒显示：分桶与占比仅含未归档组合。
 
 ### 6.4 家庭 API
 

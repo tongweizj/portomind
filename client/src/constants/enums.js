@@ -63,6 +63,29 @@ export const ASSET_CURRENCIES = Object.freeze([
 ]);
 
 /**
+ * 币种 → 中文名的唯一派生（TASK-050 W1）。
+ * 权威来源是上面的 ASSET_CURRENCIES；分桶卡与汇率面板共用，不得就地再写一份表。
+ */
+export const CURRENCY_LABELS = Object.freeze(
+  Object.fromEntries(ASSET_CURRENCIES.map(({ value, label }) => [value, label]))
+);
+
+/**
+ * 再平衡记录状态（TASK-050 W1，OD-2）。
+ * 取值来自 shared/models/rebalanceRecord.js 的 status 枚举。
+ */
+export const REBALANCE_STATUSES = Object.freeze([
+  { value: 'PENDING', label: '待确认' },
+  { value: 'EXECUTED', label: '已执行' },
+  { value: 'REVOKED', label: '已撤销' },
+]);
+
+/** 再平衡状态 → 中文标签的唯一派生。组合详情历史表与首页最近再平衡共用（禁止就地重写）。 */
+export const REBALANCE_STATUS_LABELS = Object.freeze(
+  Object.fromEntries(REBALANCE_STATUSES.map(({ value, label }) => [value, label]))
+);
+
+/**
  * 组合账户类型（账户载体）。与组合类型（风险定位：活钱/稳健/长期）正交。
  * 后端枚举见 shared/models/portfolio.js 的 accountType。
  */

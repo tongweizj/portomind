@@ -22,15 +22,23 @@ export const CHANGE_LOOKBACK_DAYS = 14;
 
 export const assetClassLabels = Object.fromEntries(ASSET_CLASSES.map(o => [o.value, o.label]));
 
+// `symbol` 用于行情/成交价（紧邻代码列，上下文自明，取紧凑写法）；
+// `householdSymbol` 用于家庭层金额卡（卡片式、无上下文，`$` 无法区分美元与加元）。
+// OD-1（Human 2026-10-21 裁决）：家庭层沿用 `US$` / `CA$`。两套符号并存是刻意的，勿合并。
 const CURRENCY_META = {
-  USD: { symbol: '$', digits: 2 },
-  CAD: { symbol: 'C$', digits: 2 },
-  CNY: { symbol: '¥', digits: 3 },
-  HKD: { symbol: 'HK$', digits: 2 },
+  USD: { symbol: '$', householdSymbol: 'US$', digits: 2 },
+  CAD: { symbol: 'C$', householdSymbol: 'CA$', digits: 2 },
+  CNY: { symbol: '¥', householdSymbol: '¥', digits: 3 },
+  HKD: { symbol: 'HK$', householdSymbol: 'HK$', digits: 2 },
 };
 
 export function currencyMeta(currency) {
   return CURRENCY_META[currency] || { symbol: '', digits: 2 };
+}
+
+/** 家庭层币种符号（`US$`/`CA$`/`¥`/`HK$`）；未知币种返回空串。 */
+export function householdCurrencySymbol(currency) {
+  return (CURRENCY_META[currency] || {}).householdSymbol ?? '';
 }
 
 export function fmtPrice(value, currency) {
@@ -192,11 +200,22 @@ export function localDateStr(offsetDays = 0) {
 /**
  * RMB 金额展示：`¥` + 千分位 + 最多 2 位小数；`null`/`undefined` 显示「—」。
  *
- * TASK-049：从 `pages/Family.jsx` 的本地实现抽为唯一源头，供首页总资产卡与
- * `/family` 共用（AC2「同源同格式」）。`Family.jsx` 的本地副本按 R7 暂留，
- * 去重随 TASK-050 删除该页时一并处理。
+ * TASK-049 抽为唯一源头，现供**首页总资产卡**与**组合管理页家庭区块**共用
+ * （「同源同格式」）。TASK-050 起全仓仅此一处实现。
  */
 export function formatCny(value) {
   if (value == null) return '—';
   return `¥${Number(value).toLocaleString('zh-CN', { maximumFractionDigits: 2 })}`;
+}
+
+/**
+ * 家庭层金额展示：币种符号 + 千分位 + 最多 2 位小数；`null`/`undefined` 显示「—」。
+ *
+ * 与 `fmtPrice` 的区别（**别合并**）：`fmtPrice` 是**单价**口径，按 `digits` 固定小数位
+ * （CNY 3 位），用于行情/成交价；本函数是**金额**口径，千分位 + 至多 2 位小数，用于分桶与占比。
+ * 符号用 `householdSymbol`（`US$`/`CA$`），理由见 `CURRENCY_META` 上方注释（OD-1）。
+ */
+export function formatMoney(value, currency) {
+  if (value == null) return '—';
+  return `${householdCurrencySymbol(currency)}${Number(value).toLocaleString('zh-CN', { maximumFractionDigits: 2 })}`;
 }
