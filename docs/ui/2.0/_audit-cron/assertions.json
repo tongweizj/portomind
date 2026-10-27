@@ -1,0 +1,222 @@
+[
+  {
+    "name": "AC8 源码无 setInterval（不轮询）",
+    "ok": true,
+    "detail": "发现 setInterval"
+  },
+  {
+    "name": "AC8 刷新按钮调用 refreshBoard",
+    "ok": true,
+    "detail": "未找到刷新按钮"
+  },
+  {
+    "name": "S.logs.tab 默认 = board",
+    "ok": true,
+    "detail": "默认值不是 board"
+  },
+  {
+    "name": "R-2 旧 tab key（runs/logs 分支）已移除",
+    "ok": true,
+    "detail": "仍存在旧 key"
+  },
+  {
+    "name": "AC11 侧栏「日志」入口未被改动",
+    "ok": true,
+    "detail": "nav-logs 被改"
+  },
+  {
+    "name": "AC1 tab 恰 3 个且顺序正确",
+    "ok": true,
+    "detail": "[\"任务运行看板\",\"任务日志\",\"服务器日志\"]"
+  },
+  {
+    "name": "AC1 默认选中第一个 tab（看板）",
+    "ok": true,
+    "detail": "[{\"t\":\"任务运行看板\",\"on\":true},{\"t\":\"任务日志\",\"on\":false},{\"t\":\"服务器日志\",\"on\":false}]"
+  },
+  {
+    "name": "AC2 总览条恰好 5 个健康灯",
+    "ok": true,
+    "detail": "dots=5"
+  },
+  {
+    "name": "AC2 健康灯含任务名",
+    "ok": true,
+    "detail": "价格同步|完整性检查|提醒评估|汇率同步|再平衡分发"
+  },
+  {
+    "name": "AC2 整体徽章 = 需关注（c-amber）",
+    "ok": true,
+    "detail": "需关注 / chip c-amber"
+  },
+  {
+    "name": "AC2 快照时间文案就位",
+    "ok": true,
+    "detail": "基于 taskruns 最近一次运行 + 价格库当前态 · 更新于 2026-10-26 09:35"
+  },
+  {
+    "name": "AC3 渲染 5 张任务卡",
+    "ok": true,
+    "detail": "cards=5"
+  },
+  {
+    "name": "AC3 每卡有任务名 + 上次运行 + 数据态 chip + 运行态副行",
+    "ok": true,
+    "detail": "[[\"价格同步\",\"关注\",\"运行态 SUCCEEDED\"],[\"完整性检查\",\"关注\",\"运行态 SUCCEEDED\"],[\"提醒评估\",\"好\",\"运行态 SUCCEEDED\"],[\"汇率同步\",\"好\",\"运行态 SUCCEEDED\"],[\"再平衡分发\",\"关注\",\"运行态 PARTIAL\"]]"
+  },
+  {
+    "name": "AC3 数据态着色：价格/完整性=amber，提醒/汇率=green，再平衡=amber",
+    "ok": true,
+    "detail": "chip c-amber | chip c-amber | chip c-green | chip c-green | chip c-amber"
+  },
+  {
+    "name": "AC3 无 NaN（progress 为空的任务不画 bar 也不算百分比）",
+    "ok": true,
+    "detail": "NaN=0 bars=2"
+  },
+  {
+    "name": "AC3 progress=null 的三张卡不画进度条",
+    "ok": true,
+    "detail": "[[\"价格同步\",true],[\"完整性检查\",true],[\"提醒评估\",false],[\"汇率同步\",false],[\"再平衡分发\",false]]"
+  },
+  {
+    "name": "AC3 每张卡都有「查看日志」入口",
+    "ok": true,
+    "detail": "[[\"查看日志\"],[\"查看日志\"],[\"查看日志\"],[\"查看日志\"],[\"查看日志\",\"查看详情\"]]"
+  },
+  {
+    "name": "AC4 价格卡显示目标上一开市日 + 38/40 · 95%",
+    "ok": true,
+    "detail": "目标 2026-10-25（上一开市日）：38/40 · 95%"
+  },
+  {
+    "name": "AC4 价格卡 note 标出 0700.HK 超时未采",
+    "ok": true,
+    "detail": "⚠ 缺 0700.HK（超时未采）、VBG.TO（无价 61 天）"
+  },
+  {
+    "name": "AC4 价格卡数据态 chip = 关注（amber）且运行态 SUCCEEDED 在副行（反「全绿误导」）",
+    "ok": true,
+    "detail": "关注 / chip c-amber / 运行态 SUCCEEDED"
+  },
+  {
+    "name": "AC5 图例存在且声明与行情红涨绿跌无关",
+    "ok": true,
+    "detail": "状态色（系统态，与行情「红涨绿跌」无关）：卡片 chip 文案与颜色 = 数据态（好/关注/坏/跳过）；运行态（SUCCEEDED 等）已降为卡片副行小灰字。\n"
+  },
+  {
+    "name": "AC5 图例四态齐备",
+    "ok": true,
+    "detail": "状态色（系统态，与行情「红涨绿跌」无关）：卡片 chip 文案与颜色 = 数据态（好/关注/坏/跳过）；运行态（SUCCEEDED 等）已降为卡片副行小灰字。\n      好关注坏跳过/未跑\n      · 运行态 SUCCEEDED ≠ "
+  },
+  {
+    "name": "AC6 再平衡卡关键数字「到期 2 / 生成 1 / 失败 1」",
+    "ok": true,
+    "detail": "到期 2 / 生成 1 / 失败 1"
+  },
+  {
+    "name": "AC6 再平衡卡有「查看详情」",
+    "ok": true,
+    "detail": "[\"查看日志\",\"查看详情\"]"
+  },
+  {
+    "name": "AC6 「查看详情」进 /logs/rebalance",
+    "ok": true,
+    "detail": "#/logs/rebalance"
+  },
+  {
+    "name": "AC6 详情页逐组合 3 行",
+    "ok": true,
+    "detail": "rows=3"
+  },
+  {
+    "name": "AC6 三行内容正确（CN-长钱生成 3 / CN-稳钱 FAILED·SYMBOL_NOT_FOUND / CA-长钱 跳过）",
+    "ok": true,
+    "detail": "[[\"CN-长钱\",\"每日\",\"到期\",\"SUCCEEDED\",\"已生成 3 笔\",\"3\",\"—\",\"查看原始日志去组合\"],[\"CN-稳钱\",\"每日\",\"到期\",\"FAILED\",\"未生成\",\"—\",\"SYMBOL_NOT_FOUND\",\"查看原始日志去组合\"],[\"CA-长钱\",\"每周\",\"未到期\",\"SKIPPED\",\"未生成\",\"—\",\"未设目标配置\",\"查看原始日志去组合\"]]"
+  },
+  {
+    "name": "AC6 4 个筛选器（日期/组合/状态/频率）",
+    "ok": true,
+    "detail": "selects=4"
+  },
+  {
+    "name": "AC6 有只读声明",
+    "ok": true,
+    "detail": "ⓘ 本页只读。「执行 / 撤销 / 重做」在组合域完成 —— 点「去组合」跳转。"
+  },
+  {
+    "name": "AC6 面包屑可返回看板",
+    "ok": true,
+    "detail": "‹ 返回看板"
+  },
+  {
+    "name": "AC9 详情页无执行/撤销/重做类控件",
+    "ok": true,
+    "detail": "[]"
+  },
+  {
+    "name": "AC7 任务日志行数 = TASKRUNS 长度（7）",
+    "ok": true,
+    "detail": "rows=7"
+  },
+  {
+    "name": "AC7 任务日志首行仍是 daily-price-sync",
+    "ok": true,
+    "detail": "daily-price-sync"
+  },
+  {
+    "name": "AC7 服务器日志行数 = LOGLINES 长度（9）",
+    "ok": true,
+    "detail": "lines=9"
+  },
+  {
+    "name": "AC8 「↻ 刷新」按钮生效（快照时间推进）",
+    "ok": true,
+    "detail": "基于 taskruns 最近一次运行 + 价格库当前态 · 更新于 2026-10-26 09:35 → 基于 taskruns 最近一次运行 + 价格库当前态 · 更新于 2026-10-26 09:42"
+  },
+  {
+    "name": "AC9 看板无执行/撤销/重做类控件",
+    "ok": true,
+    "detail": "[]"
+  },
+  {
+    "name": "AC9 负向对照：注入假按钮后断言确实会失败",
+    "ok": true,
+    "detail": "[\"执行再平衡\"]"
+  },
+  {
+    "name": "AC10 进度条用主色 #635BFF",
+    "ok": true,
+    "detail": "rgb(99, 91, 255)"
+  },
+  {
+    "name": "AC10 链接用主色 #635BFF",
+    "ok": true,
+    "detail": "rgb(99, 91, 255)"
+  },
+  {
+    "name": "AC10 卡片边框用 --border #E3E8EE",
+    "ok": true,
+    "detail": "rgb(227, 232, 238)"
+  },
+  {
+    "name": "AC10 无横向溢出",
+    "ok": true,
+    "detail": "scrollWidth > clientWidth"
+  },
+  {
+    "name": "AC10 看板用 .cron-grid 网格",
+    "ok": true,
+    "detail": "未使用 grid"
+  },
+  {
+    "name": "OQ8 深链 ?portfolio=cn-long 生效（只剩 1 行）",
+    "ok": true,
+    "detail": "rows=1"
+  },
+  {
+    "name": "OQ8 深链 ?date= 生效",
+    "ok": true,
+    "detail": "2026-10-25"
+  }
+]

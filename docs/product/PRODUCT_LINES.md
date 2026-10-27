@@ -167,7 +167,7 @@ PL-0 平台基座 ──横切驱动──> PL-1 / PL-2 / PL-3 / PL-4 / PL-5 / P
 |---|---|---|
 | `shared/` | 代码库（无进程） | 全部业务内核：models / services / tasks / fetchers / constants / config / utils —— **唯一实现** |
 | `client/` | 进程 | SPA 界面，全部业务操作与可视化 |
-| `server/` | 进程 | REST API；**不注册任何 cron**，也**不暴露调度 / TaskRun 查询接口** |
+| `server/` | 进程 | REST API；**不注册任何 cron**，调度 / TaskRun 仅暴露**只读聚合查询**（`GET /api/cron/status`），**不暴露触发 / 写操作** |
 | `cron-worker/` | 进程 | **全项目唯一调度所有者**，注册全部 5 类定时任务 |
 
 > 详细运行时形态见 [DEPLOYMENT.md §1](../manual/DEPLOYMENT.md)；技术栈与外部集成见 [ARCHITECTURE.md §2 / §3](../architecture/ARCHITECTURE.md)。

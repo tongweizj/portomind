@@ -122,7 +122,7 @@ FS 卡片 `C-01`（PM 拆分，2026-10-26）
 | **B1** | Human 批准本卡（范围与优先级） | ⏳ 待排期 |
 | **B2** | Planner 产出 ExecPlan 并经 Human Plan Review | ⏳ 阻塞（业务代码改动硬前置） |
 | **B3** | 独立 Reviewer 复核（Reviewer ≠ Implementer） | ⏳ 交付时 |
-| B4 | `TASK-054`（`GET /api/cron/status`） | ❌ **不阻塞本卡**：骨架以空态/占位渲染，C-02 合入后填色即可（AC7 卡住"不能白屏"） |
+| B4 | `TASK-054`（`GET /api/cron/status`） | ❌ **不阻塞本卡**：骨架以空态/占位渲染，接口合入后填色即可（AC7 卡住"不能白屏"）。**2026-10-27 更新**：接口已在 `TASK-054` 实现完成（分支 `c7389d1`，**未合入 `main`**），本卡仍可按空态开发 |
 
 > **无技术阻塞。** 本卡与 `TASK-054` 的文件集**不重叠**（054 只动 `server/`，本卡只动 `client/src/pages|components`）。
 

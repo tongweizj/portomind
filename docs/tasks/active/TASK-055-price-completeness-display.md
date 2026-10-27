@@ -120,7 +120,7 @@ FS 卡片 `C-03`（PM 拆分，2026-10-26）
 | **B1** | Human 批准本卡 | ⏳ 待排期 |
 | **B2** | Planner 产出 ExecPlan 并经 Human Plan Review | ⏳ 阻塞 |
 | **B3** | 独立 Reviewer 复核 | ⏳ 交付时 |
-| **B4** | `TASK-054`（`GET /api/cron/status`，AC2 提供 `targetMarketDate/expected/fetched/missing[]`） | ⏳ **硬前置**（无数据源则只能渲染假数字） |
+| **B4** | `TASK-054`（`GET /api/cron/status`，AC2 提供 `targetMarketDate/expected/fetched/missing[]`） | ✅ **已解除（2026-10-27，`TASK-054` 归档 `complete/`）**——接口已实现（分支 `c7389d1`）；⚠️ **尚未合入 `main`**，开工前需先合并或从该分支切，否则本地 `GET /api/cron/status` 仍 404 |
 | **B5** | `TASK-053`（卡片位） | ⏳ **硬前置**（无卡片位无处渲染） |
 | B6 | `TASK-056`（状态色 token） | ⚠️ 弱依赖：可与本卡并行，但**合入前**必须已有 token，否则 AC2 无法断言 |
 

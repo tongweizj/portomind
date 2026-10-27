@@ -133,7 +133,7 @@ cron-worker ──────────────┘
 | 模块 | 禁止 |
 |---|---|
 | `client` | 直连数据库 · 存密钥 · 引入 `@portomind/shared` · 自算百分比阈值 |
-| `server` | 注册 cron · 承载业务规则 · 托管静态文件（生产由 Nginx） · 暴露调度/TaskRun 查询接口（当前**没有**这类端点） |
+| `server` | 注册 cron · 承载业务规则 · 托管静态文件（生产由 Nginx） · 暴露触发/写操作类调度接口（**只读聚合查询除外**，如 `GET /api/cron/status`） |
 | `cron-worker` | 引入 Web 框架 · 监听端口 · 直接改业务数据而不经 `shared` 服务层 |
 | `shared` | 依赖进程环境（已核：无 `process.exit`、不读 CLI 参数、不注册信号） · 引用任何外壳模块 |
 
@@ -171,7 +171,7 @@ cron-worker/index.js
   ↓  MongoDB（业务集合 + taskruns） ／ logs/task-YYYY-MM-DD.log
 ```
 
-两个进程共用 `LOG_DIR`（默认仓库根 `logs/`），因此 `server` 的日志查询接口可以直接读出 `cron-worker` 写下的任务日志——这是「无调度状态接口」前提下唯一的运行态可见通道。
+两个进程共用 `LOG_DIR`（默认仓库根 `logs/`），因此 `server` 的日志查询接口可以直接读出 `cron-worker` 写下的任务日志——这是**日志方向**的运行态通道；结构化运行态与数据态由只读聚合接口 `GET /api/cron/status`（TASK-054）提供。
 
 ---
 
@@ -221,8 +221,8 @@ cron-worker/index.js
 | 6 | **无 TTL / 无归档** | `taskruns`、`alertevents` 无限增长 | 长期运行后查询变慢，且没有清理口径 |
 | 7 | **无数据库事务** | 见 §6 | 多集合写入非原子，中断会留下半完成状态（靠幂等键兜底，但并非全覆盖） |
 | 8 | **枚举双份定义** | 见 §7 第 8 条 | 新增市场/类型时极易漏同步，前后端表现不一致 |
-| 9 | **controller 未完全下沉** | 9 个 controller 中 3 个直接 `require('@portomind/shared/models/*')` 并自行查询 | 与 §7 第 1 条「规则只在 shared」冲突；新功能应走 `shared/service`，旧的可增量收敛 |
-| 10 | **无运行态查询接口** | `server` 侧没有任何 TaskRun / 调度器端点，运行态只能读日志文件 | 数据是否「按时到位」无法从界面判断（已立项：cron-worker 状态看板） |
+| 9 | **controller 未完全下沉** | 10 个 controller 中 3 个直接 `require('@portomind/shared/models/*')` 并自行查询 | 与 §7 第 1 条「规则只在 shared」冲突；新功能应走 `shared/service`（新增的 `cronStatus` 即如此），旧的可增量收敛 |
+| 10 | **运行态查询只读且尚不完整** | `GET /api/cron/status`（TASK-054）已提供 TaskRun 只读聚合，但 `server` 仍**不提供**触发 / 写操作端点；数据态可视化还需前端（TASK-053/055） | 数据是否「按时到位」目前只能靠接口/日志判断，看板尚未落地 |
 
 ---
 

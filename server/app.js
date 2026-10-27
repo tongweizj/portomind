@@ -15,6 +15,7 @@ const priceRoutes = require('./routes/price.routes');
 const alertRoutes = require('./routes/alert.routes');
 const familyRoutes = require('./routes/family.routes');
 const valuationRoutes = require('./routes/valuation.routes');
+const cronStatusRoutes = require('./routes/cronStatus.routes');
 
 const app = express();
 const allowedOrigins = (process.env.CORS_ORIGINS ||
@@ -47,6 +48,8 @@ app.use('/api/prices', priceRoutes);
 app.use('/api/alerts', alertRoutes);
 app.use('/api/family', familyRoutes);
 app.use('/api/valuations', valuationRoutes);
+// TASK-054：只读聚合（GET /api/cron/status）；不注册 cron、不提供触发能力
+app.use('/api/cron', cronStatusRoutes);
 
 app.use((req, res) => failure(req, res, 404, 'API route not found'));
 app.use(errorHandler);

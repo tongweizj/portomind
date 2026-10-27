@@ -1,108 +1,312 @@
-/* 原型审查：量 1440x900 首屏折线 + 抓关键交互状态。
-   只读，不改原型文件；输出截图到 docs/ui/2.0/_audit/ */
+/* TASK-059 原型整改 · 断言脚本（不是"看着对"，是 PASS/FAIL）
+   运行：node _audit.cjs
+   产出：_audit/*.png 截图 + 控制台 PASS/FAIL 汇总 + 退出码（有 FAIL 则 1）
+   只读原型文件，不改它。 */
 const { chromium } = require('playwright-core');
 const path = require('path');
 const fs = require('fs');
 
-const FILE = 'file:///' + path.resolve(__dirname, 'portomind-prototype.html').replace(/\\/g, '/');
+const HTML = path.resolve(__dirname, 'portomind-prototype.html');
+const FILE = 'file:///' + HTML.replace(/\\/g, '/');
 const OUT = path.resolve(__dirname, '_audit');
 if (!fs.existsSync(OUT)) fs.mkdirSync(OUT, { recursive: true });
 
+const results = [];
+function check(name, ok, detail) {
+  results.push({ name, ok: !!ok, detail: detail === undefined ? '' : detail });
+}
+
 (async () => {
+  const src = fs.readFileSync(HTML, 'utf8');
+  const count = (re) => (src.match(re) || []).length;
+
+  /* ---------- 0. 文件级静态断言（不依赖浏览器） ---------- */
+  check('U-02 全文件 lastRebal 计数 = 0', count(/lastRebal/g) === 0, `count=${count(/lastRebal/g)}`);
+  check('U-29 全文件「单用户」计数 = 0', count(/单用户/g) === 0, `count=${count(/单用户/g)}`);
+  check('U-01 文案不含「不会级联删除」', !/不会级联删除/.test(src));
+  check('U-09 配置弹窗无「时间间隔判据」控件', !/时间间隔判据/.test(src));
+  check('U-09 AUTO 频率无 off 选项', !/\[\s*'off'\s*,\s*'关闭'\s*\]/.test(src));
+  check('U-11 tab key 用 position-history', /'position-history'\s*,\s*'持仓历史'/.test(src) && !/'history'\s*,\s*'持仓历史'/.test(src));
+  check('U-03/U-26 全文件 rebTab 计数 = 0', count(/rebTab/g) === 0, `count=${count(/rebTab/g)}`);
+  check('U-16 五种触发原因常量齐备', ['NEVER_EXECUTED', 'TIME_INTERVAL_EXCEEDED', 'ABSOLUTE_DEVIATION_EXCEEDED', 'RELATIVE_DEVIATION_EXCEEDED', 'TOTAL_VALUE_ZERO'].every(k => src.includes(k)));
+
+  /* ---------- 起浏览器 ---------- */
   const browser = await chromium.launch({
     executablePath: 'C:/Program Files/Google/Chrome/Application/chrome.exe',
     headless: true,
   });
   const page = await browser.newPage({ viewport: { width: 1440, height: 900 } });
   const errs = [];
-  page.on('pageerror', e => errs.push('PAGEERROR: ' + e.message));
-  page.on('console', m => { if (m.type() === 'error') errs.push('CONSOLE: ' + m.text()); });
+  page.on('pageerror', (e) => errs.push('PAGEERROR: ' + e.message));
+  page.on('console', (m) => { if (m.type() === 'error') errs.push('CONSOLE: ' + m.text()); });
 
-  await page.goto(FILE);
-  await page.waitForTimeout(300);
+  const goto = async (h) => { await page.goto(FILE + h); await page.waitForTimeout(220); };
+  const text = (sel) => page.evaluate((s) => {
+    const el = document.querySelector(s);
+    return el ? el.textContent.trim() : null;
+  }, sel);
 
-  const probe = async (hash, label) => {
-    await page.goto(FILE + hash);
-    await page.waitForTimeout(250);
-    const r = await page.evaluate(() => {
-      const vh = window.innerHeight;
-      const rect = sel => {
-        const el = document.querySelector(sel);
-        if (!el) return null;
-        const b = el.getBoundingClientRect();
-        return { top: Math.round(b.top), bottom: Math.round(b.bottom), h: Math.round(b.height) };
-      };
-      // 健康表：最后一行
-      const rows = [...document.querySelectorAll('.card table.tb tbody tr')];
-      const lastRow = rows.length ? (() => { const b = rows[rows.length - 1].getBoundingClientRect(); return { bottom: Math.round(b.bottom) }; })() : null;
-      const cards = [...document.querySelectorAll('.content > .card')].map(c => {
-        const b = c.getBoundingClientRect();
-        return { top: Math.round(b.top), bottom: Math.round(b.bottom), h: Math.round(b.height) };
-      });
-      return {
-        vh,
-        scrollH: document.documentElement.scrollHeight,
-        contentScrollH: (() => { const c = document.querySelector('.content'); return c ? c.scrollHeight : null; })(),
-        cards,
-        lastRow,
-        tabs: [...document.querySelectorAll('.tab')].map(t => t.textContent.trim()),
-        activeTab: (document.querySelector('.tab.on') || {}).textContent || null,
-        kpiLabels: [...document.querySelectorAll('.kpi .l')].map(x => x.textContent.trim()),
-        segs: [...document.querySelectorAll('.seg-btn')].map(x => x.textContent.trim()),
-        chips: [...document.querySelectorAll('.chip')].map(x => x.textContent.trim()).slice(0, 14),
-      };
-    });
-    await page.screenshot({ path: path.join(OUT, label + '.png'), fullPage: false });
-    return r;
-  };
+  /* ---------- 1. 几何基线（不许劣化） ---------- */
+  await goto('#/');
+  const dashGeo = await page.evaluate(() => {
+    const rows = [...document.querySelectorAll('.card table.tb tbody tr')];
+    const last = rows.length ? rows[rows.length - 1].getBoundingClientRect() : null;
+    return {
+      scrollH: document.documentElement.scrollHeight,
+      healthLastBottom: last ? Math.round(last.bottom) : null,
+    };
+  });
+  await page.screenshot({ path: path.join(OUT, 'dash.png') });
+  check('几何 Dashboard scrollH ≤ 994', dashGeo.scrollH <= 994, `now=${dashGeo.scrollH}`);
+  check('几何 健康表最后一行 bottom ≤ 900', dashGeo.healthLastBottom !== null && dashGeo.healthLastBottom <= 900, `now=${dashGeo.healthLastBottom}`);
 
-  const dash = await probe('#/', 'dash');
-  const ov = await probe('#/portfolios/view/cn-long/overview', 'overview');
-  const reb = await probe('#/portfolios/view/cn-long/rebalance', 'rebalance');
-  await probe('#/portfolios', 'list');
+  await goto('#/portfolios/view/cn-long/overview');
+  const ovGeo = await page.evaluate(() => {
+    const c = document.querySelector('.content');
+    return { contentScrollH: c ? c.scrollHeight : null };
+  });
+  await page.screenshot({ path: path.join(OUT, 'overview.png') });
+  check('几何 总览 contentScrollH ≤ 993', ovGeo.contentScrollH !== null && ovGeo.contentScrollH <= 993, `now=${ovGeo.contentScrollH}`);
 
-  // 交互：点「N 条待确认」，看最终落到哪个 hash
-  await page.goto(FILE + '#/');
-  await page.waitForTimeout(250);
-  const clickTarget = await page.locator('.card table.tb tbody tr a').first();
-  await clickTarget.click();
-  await page.waitForTimeout(350);
-  const afterTodoClick = await page.evaluate(() => location.hash);
+  await goto('#/portfolios/view/cn-long/rebalance');
+  await page.screenshot({ path: path.join(OUT, 'rebalance.png') });
+  await goto('#/portfolios');
+  await page.screenshot({ path: path.join(OUT, 'list.png') });
 
-  // 交互：切换再平衡子 Tab 后刷新，看是否保持
-  await page.goto(FILE + '#/portfolios/view/cn-long/rebalance');
-  await page.waitForTimeout(250);
-  await page.getByText('再平衡历史', { exact: true }).click();
-  await page.waitForTimeout(300);
-  const hashAfterHist = await page.evaluate(() => location.hash);
-  await page.reload();
-  await page.waitForTimeout(300);
-  const segAfterReload = await page.evaluate(() =>
-    (document.querySelector('.seg-btn.on') || {}).textContent || null);
-
-  // 交互：driftOf 对「到期未超阈」的表现
+  /* ---------- 2. U-05 driftOf 四态 ---------- */
   const dueOnly = await page.evaluate(() => {
-    // 造一个：阈值放宽到 100%（不会超阈），间隔 1 天（必到期）
-    const p = PORTFOLIOS.find(x => x.id === 'cn-long');
+    const p = PORTFOLIOS.find((x) => x.id === 'cn-long');
     const bak = JSON.parse(JSON.stringify(p.cfg));
-    p.cfg.abs = 100; p.cfg.rel = 999; p.cfg.interval = 1; p.cfg.timeOn = true;
+    p.cfg.abs = 100; p.cfg.rel = 999; p.cfg.interval = 1;
     const d = driftOf(p);
     p.cfg = bak;
     return { kind: d.kind, label: d.label, due: d.due, overN: d.overN };
   });
+  check('U-05 到期未超阈 → kind=due 且含「已到期」', dueOnly.kind === 'due' && /已到期/.test(dueOnly.label) && dueOnly.due === true, JSON.stringify(dueOnly));
 
-  // 交互：大类目标保存后是否必为 0 偏离
-  const classMode = await page.evaluate(() => {
-    const p = PORTFOLIOS.find(x => x.id === 'cn-long');
-    const total = pValue(p);
-    const t = {};
-    p.holdings.forEach(h => { const a = A(h.sym); t[h.sym] = total > 0 ? +((a.price * h.qty / total * 100)).toFixed(4) : 0; });
-    const bak = p.targets; p.targets = t;
-    const rows = devRows(p).map(r => ({ sym: r.sym, abs: +r.abs.toFixed(4), flag: r.flag }));
-    p.targets = bak;
-    return rows;
+  const neverKind = await page.evaluate(() => {
+    // 用不超阈的组合构造（超阈优先于「从未执行」，不能拿 cn-long 测）
+    const p = PORTFOLIOS.find((x) => x.id === 'cn-stable');
+    const bak = { le: p.lastExecutedAt, abs: p.cfg.abs, rel: p.cfg.rel };
+    p.cfg.abs = 100; p.cfg.rel = 999; p.lastExecutedAt = null;
+    const d = driftOf(p);
+    p.lastExecutedAt = bak.le; p.cfg.abs = bak.abs; p.cfg.rel = bak.rel;
+    return { kind: d.kind, label: d.label };
   });
+  check('U-05 从未执行态存在（不超阈时）', neverKind.kind === 'never' && /从未/.test(neverKind.label), JSON.stringify(neverKind));
 
-  console.log(JSON.stringify({ dash, ov, reb, afterTodoClick, hashAfterHist, segAfterReload, dueOnly, classMode, errs }, null, 2));
+  // 构造 CN-稳钱「必然到期」，检查 5 处渲染面都不再说「配置正常」
+  const dueSurfaces = await page.evaluate(() => {
+    const p = PORTFOLIOS.find((x) => x.id === 'cn-stable');
+    p.lastExecutedAt = '2026-08-27'; p.cfg.interval = 1;
+    const out = { drift: driftOf(p).kind };
+    // 1) KPI
+    out.kpi = (() => { const t = document.createElement('div'); t.innerHTML = kpiRow(p); return t.textContent; })();
+    // 2) 目标 vs 实际 卡头
+    out.overview = (() => { const t = document.createElement('div'); t.innerHTML = tabOverview(p, driftOf(p)); return t.textContent; })();
+    // 3) 再平衡页 banner
+    out.rebSugg = (() => { const t = document.createElement('div'); t.innerHTML = rebSugg(p, driftOf(p)); return t.textContent; })();
+    return out;
+  });
+  await goto('#/');
+  const dashDueChip = await page.evaluate(() => {
+    const p = PORTFOLIOS.find((x) => x.id === 'cn-stable');
+    p.lastExecutedAt = '2026-08-27'; p.cfg.interval = 1;
+    const tr = [...document.querySelectorAll('.card table.tb tbody tr')].find((r) => r.textContent.includes('CN-稳钱'));
+    return tr ? tr.querySelector('.chip') ? tr.querySelector('.chip').textContent.trim() : null : null;
+  });
+  await goto('#/portfolios');
+  const listDueChip = await page.evaluate(() => {
+    const p = PORTFOLIOS.find((x) => x.id === 'cn-stable');
+    p.lastExecutedAt = '2026-08-27'; p.cfg.interval = 1;
+    const cards = [...document.querySelectorAll('.pcard')];
+    const c = cards.find((x) => x.textContent.includes('CN-稳钱'));
+    const chips = c ? [...c.querySelectorAll('.chip')].map((x) => x.textContent.trim()) : [];
+    return chips;
+  });
+  check('U-05 到期态：健康表/卡片/KPI 均不出现「配置正常」',
+    dashDueChip && !/配置正常/.test(dashDueChip) && /已到期/.test(dashDueChip)
+    && !listDueChip.some((t) => t === '配置正常')
+    && !/配置正常/.test(dueSurfaces.kpi)
+    && !/配置正常/.test(dueSurfaces.overview)
+    && !/配置正常/.test(dueSurfaces.rebSugg),
+    JSON.stringify({ dashDueChip, listDueChip, kpiNormal: /配置正常/.test(dueSurfaces.kpi), ovNormal: /配置正常/.test(dueSurfaces.overview), rbNormal: /配置正常/.test(dueSurfaces.rebSugg) }));
+  check('U-05 再平衡页 banner 不再说「当前配置在阈值内」', !/当前配置在阈值内/.test(dueSurfaces.rebSugg));
+
+  /* ---------- 3. U-07 待办点击不被行覆盖 ---------- */
+  await goto('#/');
+  await page.locator('.card table.tb tbody tr a', { hasText: '条待确认' }).first().click();
+  await page.waitForTimeout(300);
+  const afterTodoClick = await page.evaluate(() => location.hash);
+  check('U-07 点「N 条待确认」落 ?sub=suggestions', /sub=suggestions/.test(afterTodoClick), afterTodoClick);
+
+  await goto('#/');
+  const unreadClick = await page.evaluate(() => {
+    const tr = [...document.querySelectorAll('.card table.tb tbody tr')].find((r) => r.textContent.includes('条未读'));
+    if (!tr) return { ok: false, reason: 'no unread link' };
+    const a = [...tr.querySelectorAll('a')].find((x) => x.textContent.includes('条未读'));
+    a.click();
+    return { ok: true, pid: S.dashEvPid, hash: location.hash };
+  });
+  check('U-07 点「N 条未读」写入组合筛选', unreadClick.ok && !!unreadClick.pid, JSON.stringify(unreadClick));
+
+  /* ---------- 4. U-03 子 Tab URL 化 ---------- */
+  await goto('#/portfolios/view/cn-long/rebalance');
+  await page.getByText('再平衡历史', { exact: true }).click();
+  await page.waitForTimeout(280);
+  const hashAfterHist = await page.evaluate(() => location.hash);
+  await page.reload();
+  await page.waitForTimeout(280);
+  const segAfterReload = await page.evaluate(() => (document.querySelector('.seg-btn.on') || {}).textContent || null);
+  check('U-03 点历史后 hash 含 sub=history', /sub=history/.test(hashAfterHist), hashAfterHist);
+  check('U-03 刷新后仍激活「再平衡历史」', segAfterReload === '再平衡历史', segAfterReload);
+
+  /* ---------- 5. U-04 ?record= 精确落点 ---------- */
+  await goto('#/');
+  await page.locator('.ev-row', { hasText: '再平衡建议待确认' }).first().click();
+  await page.waitForTimeout(300);
+  const hashAfterEv = await page.evaluate(() => location.hash);
+  const hitInfo = await page.evaluate(() => ({
+    hit: document.querySelectorAll('.rb-hit').length,
+    detailRows: document.querySelectorAll('.rb-detail tbody tr').length,
+    // 只查 #view 内的横幅（body.textContent 会把 <script> 源码算进来，恒真）
+    notFoundBanner: [...document.querySelectorAll('#view .banner')].some((x) => /该建议不在最近记录中/.test(x.textContent)),
+  }));
+  check('U-04 带锚点事件 → sub=history & record=', /sub=history/.test(hashAfterEv) && /record=r1/.test(hashAfterEv), hashAfterEv);
+  check('U-04 命中行高亮 + 明细展开行数 = 3', hitInfo.hit === 1 && hitInfo.detailRows === 3 && hitInfo.notFoundBanner === false, JSON.stringify(hitInfo));
+
+  await goto('#/portfolios/view/cn-long/rebalance?sub=history');
+  const noHit = await page.evaluate(() => ({
+    hit: document.querySelectorAll('.rb-hit').length,
+    notFoundBanner: [...document.querySelectorAll('#view .banner')].some((x) => /该建议不在最近记录中/.test(x.textContent)),
+  }));
+  check('U-04 负向对照：无 record= 不高亮、不提示不在记录中', noHit.hit === 0 && noHit.notFoundBanner === false, JSON.stringify(noHit));
+
+  await goto('#/portfolios/view/cn-long/rebalance?sub=history&record=zzz');
+  const notFound = await page.evaluate(() =>
+    [...document.querySelectorAll('#view .banner')].some((x) => /该建议不在最近记录中/.test(x.textContent)));
+  check('U-04 未知 record → 提示「该建议不在最近记录中」', notFound === true, String(notFound));
+
+  /* ---------- 6. U-12 basic 回落总览 ---------- */
+  await goto('#/portfolios/view/cn-long/basic');
+  const basicTab = await page.evaluate(() => (document.querySelector('.tab.on') || {}).textContent || null);
+  check('U-12 #/view/:id/basic → 激活「总览」', basicTab === '总览', basicTab);
+
+  check('U-11/U-12 Tab key 集合固定 5 项', /overview.*positions.*position-history.*rebalance.*transactions/.test(
+    (src.match(/const tabs = \[\[[\s\S]*?\]\];/) || [''])[0].replace(/\s+/g, '')
+  ), (src.match(/const tabs = \[\[[\s\S]*?\]\];/) || [''])[0].slice(0, 120));
+
+  /* ---------- 7. U-01 删除弹窗文案 ---------- */
+  await goto('#/portfolios/view/cn-long/overview');
+  const delText = await page.evaluate(() => { openDelPortfolio('cn-long'); return document.getElementById('modal').textContent; });
+  const delNeed = ['永久删除', '交易记录', '再平衡记录', '不可恢复', '提醒将不再显示'];
+  check('U-01 删除文案含 5 要素且无反向表述',
+    delNeed.every((k) => delText.includes(k)) && !/不会级联删除/.test(delText),
+    JSON.stringify(delNeed.map((k) => [k, delText.includes(k)])));
+  await page.evaluate(() => closeModal());
+
+  /* ---------- 8. U-02 Header 三个组合空态/有值 ---------- */
+  const headerChips = {};
+  for (const pid of ['cn-stable', 'cn-long', 'ca-long']) {
+    await goto('#/portfolios/view/' + pid + '/overview');
+    headerChips[pid] = await page.evaluate(() => {
+      const chips = [...document.querySelectorAll('.chip')].map((x) => x.textContent.trim());
+      return chips.find((t) => t.startsWith('最近再平衡')) || null;
+    });
+  }
+  check('U-02 Header 有值/有值/从未 三者各显一次',
+    /2026-10-14/.test(headerChips['cn-stable'] || '') &&
+    /2026-08-27/.test(headerChips['cn-long'] || '') &&
+    /从未/.test(headerChips['ca-long'] || ''),
+    JSON.stringify(headerChips));
+
+  /* ---------- 9. U-06 大类目标不是"保存即正常" ---------- */
+  const classMode = await page.evaluate(() => {
+    const p = PORTFOLIOS.find((x) => x.id === 'cn-long');
+    const bak = { t: p.targets, tl: p.targetLevel, ct: p.classTargets };
+    p.classTargets = { equity: 60, bond: 40, gold: 0, cash: 0 };
+    p.targetLevel = 'asset_class'; p.targets = null;
+    const rows = classDevRows(p);
+    const d = driftOf(p);
+    const out = {
+      rows: rows.map((r) => ({ name: r.name, target: r.target, actual: +r.actual.toFixed(2), abs: +r.abs.toFixed(2), flag: r.flag })),
+      hasNonZero: rows.some((r) => Math.abs(r.abs) > 0.001),
+      overN: d.overN, kind: d.kind,
+      flaggedClasses: rows.filter((r) => r.flag !== '正常').length,
+      zeroTargetZeroActual: (() => { const r = rows.find((x) => x.target === 0 && x.actual === 0); return r ? r.flag : null; })(),
+    };
+    p.targets = bak.t; p.targetLevel = bak.tl; p.classTargets = bak.ct;
+    return out;
+  });
+  check('U-06 大类目标 60/40 vs 实际 80/20 → 非零偏离且判超阈',
+    classMode.hasNonZero && classMode.overN > 0 && classMode.kind === 'over', JSON.stringify(classMode));
+  check('U-06 overN 与展示口径一致（大类模式数类）',
+    classMode.overN === classMode.flaggedClasses && classMode.flaggedClasses === 3, `overN=${classMode.overN} flagged=${classMode.flaggedClasses}`);
+  check('U-06 目标 0 且实际 0 的类不误报（相对偏离无意义）', classMode.zeroTargetZeroActual === '正常', String(classMode.zeroTargetZeroActual));
+
+  /* ---------- 10. U-21 健康表偏离列文案 ---------- */
+  await goto('#/');
+  const devCols = await page.evaluate(() => {
+    return [...document.querySelectorAll('.card table.tb tbody tr')].map((tr) => {
+      const tds = tr.querySelectorAll('td');
+      return tds.length >= 3 ? tds[2].textContent.trim() : '';
+    });
+  });
+  const overDevCols = devCols.filter((t) => /超阈/.test(t));
+  check('U-21 「偏离」列 = 「N 项超阈」（无变体）',
+    overDevCols.length > 0 && overDevCols.every((t) => /^\d+ 项超阈$/.test(t)), JSON.stringify(devCols));
+
+  /* ---------- 11. U-28 Dashboard 页头两按钮，提醒卡内无立即评估 ---------- */
+  const headBtns = await page.evaluate(() => [...document.querySelectorAll('.page-head .btn')].map((b) => b.textContent.trim()));
+  const evCardHasEval = await page.evaluate(() => {
+    const h = [...document.querySelectorAll('.card-h')].find((x) => x.textContent.includes('待处理提醒'));
+    return h ? /立即评估/.test(h.textContent) : null;
+  });
+  check('U-28 页头有「立即评估」「规则管理」', headBtns.some((t) => /立即评估/.test(t)) && headBtns.some((t) => /规则管理/.test(t)), JSON.stringify(headBtns));
+  check('U-28 提醒卡内无「立即评估」（无双入口）', evCardHasEval === false, String(evCardHasEval));
+
+  /* ---------- 12. U-09 配置弹窗选项集合 ---------- */
+  await goto('#/portfolios/view/cn-long/overview');
+  const cfgOpts = await page.evaluate(() => {
+    openCfg('cn-long');
+    const opts = [...document.querySelectorAll('#cfgFreq option')].map((o) => o.value);
+    const hasTimeOn = !!document.getElementById('cfgTimeOn');
+    closeModal();
+    return { opts, hasTimeOn };
+  });
+  check('U-09 频率选项 = daily/weekly/monthly（无 off）',
+    JSON.stringify(cfgOpts.opts) === JSON.stringify(['daily', 'weekly', 'monthly']), JSON.stringify(cfgOpts));
+  check('U-09 无「时间间隔判据」开关', cfgOpts.hasTimeOn === false, String(cfgOpts.hasTimeOn));
+
+  /* ---------- 13. U-17 缺价保护（构造） ---------- */
+  const missingCase = await page.evaluate(() => {
+    const p = PORTFOLIOS.find((x) => x.id === 'cn-long');
+    const a = A('510500');
+    const bak = a.price; a.price = null;
+    const rows = devRows(p);
+    const target = document.querySelector('#view') ? null : null;
+    const html = tabOverview(p, driftOf(p));
+    a.price = bak;
+    const m = rows.find((r) => r.sym === '510500');
+    return { flag: m.flag, abs: m.abs, footer: /项缺最新价，未能参与偏离判定/.test(html), mvOk: isFinite(pValue(p)) };
+  });
+  check('U-17 缺价行 → 偏离「—」且表尾提示，总市值不被污染',
+    missingCase.flag === '缺价' && missingCase.abs === null && missingCase.footer === true && missingCase.mvOk === true,
+    JSON.stringify(missingCase));
+
+  /* ---------- 14. 无 JS 报错 ---------- */
+  check('无 JS 报错', errs.length === 0, errs.join(' | '));
+
   await browser.close();
-})().catch(e => { console.error('FAIL', e); process.exit(1); });
+
+  /* ---------- 汇总 ---------- */
+  const pass = results.filter((r) => r.ok).length;
+  const fail = results.length - pass;
+  console.log('\n===== TASK-059 原型整改断言 =====');
+  results.forEach((r, i) => {
+    console.log(`${r.ok ? 'PASS' : 'FAIL'}  ${String(i + 1).padStart(2, '0')}. ${r.name}${r.detail ? '   [' + r.detail + ']' : ''}`);
+  });
+  console.log(`\n合计 ${results.length} 条 · PASS ${pass} · FAIL ${fail}`);
+  fs.writeFileSync(path.join(OUT, 'assertions.json'), JSON.stringify(results, null, 2));
+  process.exit(fail ? 1 : 0);
+})().catch((e) => { console.error('FAIL(harness)', e); process.exit(1); });

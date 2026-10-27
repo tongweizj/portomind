@@ -1,0 +1,117 @@
+[
+  {
+    "name": "F1-a 详情页跳转后落在任务日志（#/logs）",
+    "ok": true,
+    "detail": "#/logs"
+  },
+  {
+    "name": "F1-a 过滤结果恰 1 行且是 rebalance-suggestions:cn-stable",
+    "ok": true,
+    "detail": "1 行 / rebalance-suggestions:cn-stable"
+  },
+  {
+    "name": "F1-a ★从 FAILED 行点进去看到的状态仍是 FAILED（不再反看 SUCCEEDED）",
+    "ok": true,
+    "detail": "FAILED / chip c-red"
+  },
+  {
+    "name": "F1-a 摘要给出失败原因 SYMBOL_NOT_FOUND",
+    "ok": true,
+    "detail": "SYMBOL_NOT_FOUND：目标/持仓 symbol 写法不一致"
+  },
+  {
+    "name": "F1-b 价格同步日志行摘要 = 成功 38 · 失败 2（与看板 38/40 同源）",
+    "ok": true,
+    "detail": "daily-price-sync / 成功 38 · 失败 2（0700.HK 超时、VBG.TO 无价）"
+  },
+  {
+    "name": "F1-b 价格同步状态不再是「全绿 SUCCEEDED」",
+    "ok": true,
+    "detail": "PARTIAL / chip c-amber"
+  },
+  {
+    "name": "F1-c 完整性检查摘要 = 检查 43 · 完整 40 · 缺口 2 · 跳过 1",
+    "ok": true,
+    "detail": "检查 43 · 完整 40 · 缺口 2 · 跳过 1"
+  },
+  {
+    "name": "F1-c 提醒评估摘要 = 命中 3（与看板「命中 3 条提醒」一致）",
+    "ok": true,
+    "detail": "评估 8 · 命中 3 · 归档 0"
+  },
+  {
+    "name": "F1-c CA-长钱 = SKIPPED（与看板一致，不再 SUCCEEDED）",
+    "ok": true,
+    "detail": "SKIPPED / chip c-gray"
+  },
+  {
+    "name": "F1-c CN-长钱 = SUCCEEDED 且仍生成 3 笔（与看板一致）",
+    "ok": true,
+    "detail": "SUCCEEDED / 生成 3 笔建议（待确认）"
+  },
+  {
+    "name": "F1-c 状态 chip 四态着色：SUCCEEDED=绿 / PARTIAL=黄 / FAILED=红 / SKIPPED=灰",
+    "ok": true,
+    "detail": "daily-price-sync:PARTIAL:chip c-amber | price-integrity-check:SUCCEEDED:chip c-green | alert-evaluate:SUCCEEDED:chip c-green | fx-rate-sync:SUCCEEDED:chip c-green | rebalance-suggestions:cn-long:SUCCEEDED:chip c-green | rebalance-suggestions:cn-stable:FAILED:chip c-red | rebalance-suggestions:ca-long:SKIPPED:chip c-gray"
+  },
+  {
+    "name": "F1-c 状态筛选下拉补至四态（SUCCEEDED/PARTIAL/FAILED/SKIPPED）",
+    "ok": true,
+    "detail": "[\"\",\"SUCCEEDED\",\"PARTIAL\",\"FAILED\",\"SKIPPED\"]"
+  },
+  {
+    "name": "F1-c 选 SKIPPED 后只剩 1 行（筛选真的生效）",
+    "ok": true,
+    "detail": "rows=1"
+  },
+  {
+    "name": "F1-d 服务器日志：同步 40 个启用资产（原 14）",
+    "ok": true,
+    "detail": "未找到 40"
+  },
+  {
+    "name": "F1-d 服务器日志：新增 3 条提醒（原 1）",
+    "ok": true,
+    "detail": "未找到 3"
+  },
+  {
+    "name": "F1-d 服务器日志：缺口标的与看板一致（000191、510510）",
+    "ok": true,
+    "detail": "未找到 000191、510510"
+  },
+  {
+    "name": "F1-d 服务器日志不再出现旧口径的「0700.HK、AAPL」缺口写法",
+    "ok": true,
+    "detail": "仍存在旧写法"
+  },
+  {
+    "name": "F1-d 服务器日志行数仍为 9（原始视图零回归）",
+    "ok": true,
+    "detail": "lines=9"
+  },
+  {
+    "name": "F2 操作列两个链接包在 .act-cell 内",
+    "ok": true,
+    "detail": "{\"has\":true,\"gap\":\"12px\",\"count\":2,\"space\":12,\"sameRow\":true}"
+  },
+  {
+    "name": "F2 两链接有实际间距（≥ 8px，不再粘连）",
+    "ok": true,
+    "detail": "space=12px gap=12px"
+  },
+  {
+    "name": "F2 两链接同行不换行",
+    "ok": true,
+    "detail": "两链接不在同一行"
+  },
+  {
+    "name": "F3 完整性 note 分述「缺口」与「无 launchDate 跳过」（不再混写为因果）",
+    "ok": true,
+    "detail": "⚠ 缺口：000191、510510；另有 1 个无 launchDate 被跳过"
+  },
+  {
+    "name": "F3 note 不再出现「（无 launchDate，跳过 1）」旧混写",
+    "ok": true,
+    "detail": "⚠ 缺口：000191、510510；另有 1 个无 launchDate 被跳过"
+  }
+]

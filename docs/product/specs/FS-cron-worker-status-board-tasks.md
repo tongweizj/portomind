@@ -1,7 +1,7 @@
 # 任务卡片 — cron-worker 运行看板（日志频道增强）
 
 > 关联需求：[FS-cron-worker-status-board.md](./FS-cron-worker-status-board.md)
-> 状态：**已拆分，待排期/指派执行**
+> 状态：**已拆分（C-02 已交付 2026-10-27，其余待排期/指派执行）**
 > 负责人（PM）：产品通 / owner：Max
 > 拆分日期：2026-10-26
 
@@ -14,7 +14,9 @@
 - **频道硬约束（OQ6）**：`/logs` 子树**只读排障、永不放执行动作**。本文件所有卡片的 AC 都隐含这一条；C-01 / C-07 额外做可验证化断言。
 - **与组合域的边界（OQ7）**：本文件**不承接**「再平衡提醒详情」（建议明细 / 执行 / 撤销），那部分在 `FS-portfolio-ia-cleanup` 的 `A16`。
 
-> **任务卡映射（2026-10-26 立项）**：C-01 → `TASK-053` · C-02 → `TASK-054` · C-03 → `TASK-055` · C-04 → `TASK-056` · **C-05 → `TASK-057`**（均在 `docs/tasks/active/`，索引见 [`TASKS.md`](../../tasks/TASKS.md)）。**P0 批次 C-01~C-05 已全部立项**；C-06~C-10 尚未立项。
+> **任务卡映射（2026-10-26 立项）**：C-01 → `TASK-053` · C-02 → `TASK-054` · C-03 → `TASK-055` · C-04 → `TASK-056` · **C-05 → `TASK-057`**（索引见 [`TASKS.md`](../../tasks/TASKS.md)）。**P0 批次 C-01~C-05 已全部立项**；C-06~C-10 尚未立项。
+>
+> **✅ 交付进度（2026-10-27）**：**C-02 → `TASK-054` 已完成并归档**（[`complete/TASK-054`](../../tasks/complete/TASK-054-cron-status-aggregate-api.md) / [ExecPlan](../../exec-plans/complete/TASK-054-cron-status-aggregate-api.md)）：`GET /api/cron/status` 只读聚合已实现，5 条任务固定顺序、有效目标日、`contractReady` 降级、`?detail=rebalance` 全部就位。**⚠️ 代码尚未合入 `main`**（分支 `c7389d1`），前端消费前需先合并。C-01 / C-03 / C-04 / C-05 仍未开工。
 >
 > ⚠️ C-05 转卡时实库核查（`portomind_dev`，204 条 `taskruns`）发现一处本文件未预见的硬冲突：**`(taskName, runKey)` 唯一索引真实存在**，与「`SKIPPED` 落库」直接矛盾（`DUPLICATE_RUN_KEY` 的成因正是该 key 已存在）。另实测：含 `result` 的文档 **0 条**、父任务 `rebalance-check` 记录 **0 条**、僵尸 `RUNNING` **1 条（已僵 62 天）**。故 `TASK-057` 的 OQ-1 必须先裁再开工。
 
@@ -51,6 +53,8 @@
 - **边界**：仅前端信息架构与骨架；数据由 C-02 提供。
 
 ### C-02 后端聚合接口 `GET /api/cron/status`
+> **✅ 已交付（2026-10-27，`TASK-054` 归档 `complete/`）**：实现已按「有效目标日 / `created` 而非 `alertsFired` / `contractReady` 降级」落地；本卡下方 AC 中 `{ok,gap,skippedNoLaunchDate}`、`alertsFired`、`各币种成功标志` 三处**旧字段名与实现不一致**，实际对外字段见 [`API_CONTRACT.md`](../../dev/API_CONTRACT.md) 与 TASK-054 ExecPlan §4.3（FS 回改由 PM 处理）。
+
 - **类型**：后端
 - **优先级**：P0
 - **关联需求**：R2

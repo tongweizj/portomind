@@ -68,11 +68,12 @@
 
 - [执行计划流程 EXECUTION_PLANS](./process/EXECUTION_PLANS.md)
 - [任务清单 TASKS](./tasks/TASKS.md)
-  - 活跃任务：[TASK-054 后端聚合接口 `GET /api/cron/status`](./tasks/active/TASK-054-cron-status-aggregate-api.md) — **PLAN_REVIEW**（2026-10-26 产出 ExecPlan，详见 [ExecPlan](./exec-plans/active/TASK-054-cron-status-aggregate-api.md)）；`TASK-050` 已于 2026-10-26 结案并合入 `main`
+  - 活跃任务：[TASK-058 账号与访问控制（U1 认证内核）](./tasks/active/TASK-058-authentication-and-accounts.md)（`APPROVED`，可动代码）· [TASK-060 用户模块原型整改](./tasks/active/TASK-060-user-module-prototype-remediation.md)（零业务代码）—— **状态一律以 [`TASKS.md`](./tasks/TASKS.md) 为准**
+  - 已结案待合入：[TASK-054 后端聚合接口 `GET /api/cron/status`](./tasks/complete/TASK-054-cron-status-aggregate-api.md)（2026-10-27 归档；**代码仍在 `feature/TASK-054-cron-status-aggregate-api` = `c7389d1`，未合入 `main`**）
   - 阻塞中：无
-  - 待排期（[cron-worker 运行看板](./product/specs/FS-cron-worker-status-board.md) P0 批次 C-01~C-05）：[TASK-053 看板 tab 骨架](./tasks/active/TASK-053-log-board-tab-skeleton.md) · [TASK-055 价格完成度展示](./tasks/active/TASK-055-price-completeness-display.md) · [TASK-056 状态色语义与图例](./tasks/active/TASK-056-status-color-semantics.md) · [TASK-057 `taskruns` 数据契约增强（`result`/`SKIPPED`/父任务）](./tasks/active/TASK-057-taskrun-result-contract.md)
+  - 待排期（[cron-worker 运行看板](./product/specs/FS-cron-worker-status-board.md) P0 批次；**C-02 已完成 2026-10-27**）：[TASK-053 看板 tab 骨架](./tasks/active/TASK-053-log-board-tab-skeleton.md) · [TASK-055 价格完成度展示](./tasks/active/TASK-055-price-completeness-display.md) · [TASK-056 状态色语义与图例](./tasks/active/TASK-056-status-color-semantics.md) · [TASK-057 `taskruns` 数据契约增强（`result`/`SKIPPED`/父任务）](./tasks/active/TASK-057-taskrun-result-contract.md)
   - 待立项/待排期：[TASK-045 交易流水查询与筛选](./tasks/active/TASK-045-transaction-query-filters.md) · [TASK-046 CSV 二次导入未去重](./tasks/active/TASK-046-csv-import-dedup.md) · [TASK-047 TASK-044 审查遗留整改（M-1/M-2/M-5/M-6）](./tasks/active/TASK-047-review-followups.md) · [TASK-051 家庭折算汇率方向反了](./tasks/active/TASK-051-fx-rate-direction.md) · [TASK-052 Agent 运行规则审计与整改](./tasks/active/TASK-052-agent-rules-update.md)
-  - 已完成任务：[TASK-050 组合列表页承接家庭五区块](./tasks/complete/TASK-050-portfolio-list-household-blocks.md)（2026-10-26）· [TASK-048 Family 页分红类交易标签修正](./tasks/complete/TASK-048-family-dividend-label.md)（2026-10-20）· [TASK-049 Dashboard 承接家庭总资产卡](./tasks/complete/TASK-049-dashboard-household-total.md)（2026-10-19）· [TASK-044 交易记录收拢进组合管理](./tasks/complete/TASK-044-transaction-consolidation.md)（2026-10-19）· [TASK-043 标的频道合并](./tasks/complete/TASK-043-asset-price-consolidation.md)（2026-10-18）· [TASK-005 统一调度器](./tasks/complete/TASK-005-unify-scheduler.md)（2026-10-15）
+  - 已完成任务：[TASK-054 后端聚合接口 `GET /api/cron/status`](./tasks/complete/TASK-054-cron-status-aggregate-api.md)（2026-10-27）· [TASK-050 组合列表页承接家庭五区块](./tasks/complete/TASK-050-portfolio-list-household-blocks.md)（2026-10-26）· [TASK-048 Family 页分红类交易标签修正](./tasks/complete/TASK-048-family-dividend-label.md)（2026-10-20）· [TASK-049 Dashboard 承接家庭总资产卡](./tasks/complete/TASK-049-dashboard-household-total.md)（2026-10-19）· [TASK-044 交易记录收拢进组合管理](./tasks/complete/TASK-044-transaction-consolidation.md)（2026-10-19）· [TASK-043 标的频道合并](./tasks/complete/TASK-043-asset-price-consolidation.md)（2026-10-18）· [TASK-005 统一调度器](./tasks/complete/TASK-005-unify-scheduler.md)（2026-10-15）
 - [执行计划模板](./templates/EXEC_PLAN_TEMPLATE.md) · [任务模板](./templates/TASK_TEMPLATE.md)
 - Agent 角色：[Orchestrator](./agents/ORCHESTRATOR.md) · [Planner](./agents/PLANNER.md) · [Implementer](./agents/IMPLEMENTER.md) · [Reviewer](./agents/REVIEWER.md)
 
@@ -82,7 +83,7 @@
 - [TASK-005 统一调度器 ExecPlan（已完成 2026-10-15）](./exec-plans/complete/TASK-005-unify-scheduler.md)
 - [docs/manual 重复与一致性整改记录（2026-10-15）](./exec-plans/complete/DOCS-DEDUP-2026-10-15.md)
 - [依赖升级评估 DEPENDENCY_UPGRADES](./exec-plans/complete/DEPENDENCY_UPGRADES.md)
-- [执行计划归档](./exec-plans/complete/)（含 TASK-050 家庭五区块承接 / TASK-048 分红标签 / TASK-049 Dashboard 承接 / TASK-044 交易记录收拢 / TASK-043 标的频道合并 / TASK-005 统一调度器）· [活跃执行计划](./exec-plans/active/)（[TASK-054 聚合接口](./exec-plans/active/TASK-054-cron-status-aggregate-api.md)，`Plan Review`）
+- [执行计划归档](./exec-plans/complete/)（含 TASK-054 cron 状态聚合接口 / TASK-050 家庭五区块承接 / TASK-048 分红标签 / TASK-049 Dashboard 承接 / TASK-044 交易记录收拢 / TASK-043 标的频道合并 / TASK-005 统一调度器）· [活跃执行计划](./exec-plans/active/)（[TASK-058 认证内核](./exec-plans/active/TASK-058-authentication-kernel.md) `Approved`）
 
 ## 项目根
 
