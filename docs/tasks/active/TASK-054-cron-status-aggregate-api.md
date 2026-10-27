@@ -3,19 +3,19 @@
 ## Metadata
 
 **Status:**  
-`APPROVED`（2026-10-26）—— Human Plan Review 通过：**`OD-4` / `OD-5` / `OD-6` 与 4 项新增裁决（`OD-8`~`OD-11`）全部采纳 Planner/Review 建议**；ExecPlan 已按裁决修订并置 `Approved`，**批准后可按 ExecPlan 动业务代码**。
+`REVIEWED`（2026-10-27）—— 已实施完成 + **两轮独立复核通过**（第一轮 PASS WITH FINDINGS → 8 条 MINOR 全整改；第二轮复检 PASS，无 BLOCKER/MAJOR）：新增 `shared/constants/cronStatus.constants.js`、`shared/services/cronStatus.service.js`、controller / routes、`app.js` 注册 1 行；新增 **28 条测试**（U1–U17 + A1–A11 全绿）；全量回归 `test:server` **180/0**、`test:worker` **77/0**；生产库只读冒烟通过。**待 Human 合入 `main` 后归档 `complete/`**。
 
 **Priority:**  
 `High`（P0 Must Have。看板所有数据态数字的唯一来源；没有它，`TASK-053` 只能渲染一片灰灯）
 
 **Owner:**  
-`Planner`（2026-10-26 交付并修订 ExecPlan）→ `Human`（2026-10-26 Plan Review 通过）→ `Implementer`（**待指派**）→ 独立 `Reviewer`
+`Planner`（2026-10-26 交付并修订 ExecPlan）→ `Human`（2026-10-26 Plan Review 通过）→ `Implementer`（2026-10-26 实施完成）→ 独立 `Reviewer`（**2026-10-27 两轮复核通过**）→ `Human`（待合入 `main` 后归档）
 
 **Created:**  
 `2026-10-26`
 
 **Updated:**  
-`2026-10-26`（立项，含实码核查；发现 3 处 FS 与实现口径不一致，见 §2.3）· `2026-10-26`（Planner 产出 ExecPlan → `PLAN_REVIEW`）· **`2026-10-26`（Human Plan Review 通过 → `APPROVED`；ExecPlan 按 OD-4/5/6 + 4 项新裁决修订；只读实库探测完成，原唯一证据缺口关闭，见 §2.4）**
+`2026-10-26`（立项，含实码核查；发现 3 处 FS 与实现口径不一致，见 §2.3）· `2026-10-26`（Planner 产出 ExecPlan → `PLAN_REVIEW`）· **`2026-10-26`（Human Plan Review 通过 → `APPROVED`；ExecPlan 按 OD-4/5/6 + 4 项新裁决修订；只读实库探测完成，原唯一证据缺口关闭，见 §2.4）** · **`2026-10-26`（实施完成 → `REVIEWING`：新增 5 个代码/路由文件 + 2 个测试文件 + 1 个测试辅助文件；24 条新测试全绿，全量 176/0、77/0；生产库只读冒烟通过；待独立 Reviewer）** · **`2026-10-27`（两轮独立复核通过 → `REVIEWED`：8 条 MINOR 全整改；新增 4 条测试后共 28 条，全量 180/0、77/0；待 Human 合入 `main` 后归档）**
 
 **Type:**  
 `Feature`（后端新增只读聚合接口）
@@ -179,7 +179,7 @@ FS 卡片 `C-02`（PM 拆分，2026-10-26）
 |---|---|---|
 | **B1** | Human 批准本卡（含 OQ-1/OQ-2/OQ-3 的裁决） | ✅ **已解除**（2026-10-26 立项并下发规划） |
 | **B2** | Planner 产出 ExecPlan 并经 Human Plan Review（**须先冻结响应字段名**） | ✅ **已解除（2026-10-26）**：ExecPlan 已修订并 `Approved`；字段名冻结于 ExecPlan §4.3；`OD-4/5/6 + OD-8~OD-11` 全部采纳建议 |
-| **B3** | 独立 Reviewer 复核 | ⏳ 交付时 |
+| **B3** | 独立 Reviewer 复核 | ✅ **已解除（2026-10-27）**：两轮独立复核通过（第一轮 PASS WITH FINDINGS → 8 条 MINOR 修复；第二轮 PASS，仅 4 条文档台账项已收尾） |
 | **B4** | `C-05`（数据契约增强，**未立项**） | ❌ **不阻塞**：本卡按"字段缺失→`null`+`contractReady=false`"降级；C-05 落地后同一接口自动填满（读取顺序见 ExecPlan D-21） |
 | **B5** | `TASK-058`（认证内核，APPROVED）与本卡的合入顺序 | ⚠️ **不阻塞但需协调**：058 先合入则本端点需登录、测试需会话 stub；见 R-10 |
 
@@ -249,11 +249,26 @@ OD-1/OD-2/OD-3/OD-7 维持 Planner 原裁定（实现真名 / 取最晚 + byMark
 
 M-1 路由路径写成 `/api/cron`（应为 `/api/cron/status`）· M-2 AC5 `fxCount` 无来源 · M-3 多市场 `expected` 口径冲突 · M-4 AC7「首日命中僵尸体」不成立 · M-5 主视图 `perPortfolio` 无日期基准 · M-6 U4 用例日期在真实日历下不可能 · M-7 未考虑 `TASK-058` 认证互锁 · M-8 AC4 无测试 · M-9 `gapAssets` 依赖 057 未决 OQ-2。逐项修法见 ExecPlan §11.2。
 
-### 9.5 开工前状态
+### 9.5 进度状态
 
 - [x] Human 批准本卡（含 OD-4/5/6 + OD-8~OD-11）
 - [x] ExecPlan 修订并 `Approved`，字段名冻结
 - [x] 分支 `feature/TASK-054-cron-status-aggregate-api` 已建；文档基线已提交
 - [x] 只读实库探测完成（证据缺口关闭）
-- [ ] Implementer 指派 → 按 ExecPlan W1–W13 实施
-- [ ] 独立 Reviewer 复核（AC14）
+- [x] Implementer 实施完成（W1–W11 + W13；2026-10-26）
+- [x] 测试：新增 **28** 条（U1–U17 + A1–A11）；全量 `test:server` **180/0**、`test:worker` **77/0**；生产库只读冒烟通过
+- [x] 独立 Reviewer 第一轮：**PASS WITH FINDINGS**（无 BLOCKER/MAJOR，8 条 MINOR 已整改）
+- [x] Reviewer 复检（第二轮）：**PASS WITH FINDINGS（仅 4 条文档台账项）** → 台账项已收尾，无代码/测试/AC 问题
+- [ ] Human 合入 `main` 后归档 `complete/`
+
+### 9.6 实施期差异（2026-10-26，供 Human 复核）
+
+| # | 差异 | 影响 | 处理 |
+|---|---|---|---|
+| 1 | **价格项 `contractReady` 恒为 `true`**（原计划 §4.7/U7 写「5 项 false」，与 §3.6「除价格同步」冲突） | 仅澄清语义，不改字段集合；价格数据态确实不依赖 `taskruns.result` | 计划 §4.7/U7 已统一为「4 项 false + 价格 true」；U7 已按此断言。**若 Human 要求严格按计划原文，可回退为 `false`（1 行改动 + U7 同步）** |
+| 2 | **主视图预算由 5 次改为 6 次**（最差 7 次） | Q6 主视图也要取子 taskrun 的 `runStatus/failures`（AC6 要求「failures 无论 C-05 是否落地都可得」） | 计划 §4.2 已按实现更新；仍无 N+1 |
+| 3 | **新增 `server/test/helpers/modelStubs.js` 测试辅助** | 仅测试内使用，不进入生产代码 | 计划 §11.3 已记录 |
+| 4 | **脏数据护栏 `safeDate()` + `result` 内 null 元素过滤** | 防止 C-05 Mixed 数据/历史脏值让只读端点 500（AC8「不 500」精神） | U16 覆盖；Reviewer F2 整改 |
+| 5 | **新增 U15/U16/U17/A10/A11 五条测试**（真实停摆、脏 result、查询形状、detail 空日、date 作用域） | 补 AC12 覆盖 + Reviewer F1/F4/F6 回归 | 计划 §7.2/§7.3 已补行 |
+
+> 以上均为实施层澄清/加固，**未新增/删除对外字段、未改变 AC 语义**；按 AGENTS.md §6 显式提请 Human 复核（尤其差异 1）。

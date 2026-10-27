@@ -4,11 +4,13 @@
 
 Current status:
 
-`Approved`（2026-10-26 Human Plan Review 通过 → 本文修订稿即实施基线）→ `Implementing` → `Verifying` → `Reviewing`（独立 Reviewer）→ `Completed`
+`Completed`（2026-10-27：两轮独立复核通过，整改完成；待 Human 合入 `main` 后归档 `complete/`）
+
+> 实施记录见 §11.3。状态流：`Approved`（2026-10-26 Human Plan Review 通过）→ `Implementing` → `Verifying`（180/0、77/0）→ `Reviewing`（两轮独立复核通过）→ `Completed`（2026-10-27；待 Human 合入 `main` 后归档）。
 
 Owner:
 
-`Planner`（2026-10-26 起草 → 2026-10-26 依 Human 裁决修订为 Approved）/ `Implementer`（待指派）/ 独立 `Reviewer`（交付时）
+`Planner`（2026-10-26 起草 → 2026-10-26 依 Human 裁决修订为 Approved）/ `Implementer`（2026-10-26 实施）/ 独立 `Reviewer`（2026-10-26 复核）
 
 Priority:
 
@@ -274,7 +276,7 @@ client  ──GET /api/cron/status──▶  routes/cronStatus.routes.js   (rout
                               controllers/cronStatus.controller.js   ← 只做：参数校验 → 调服务 → success()/failure()
                                         │
                                         ▼
-                        shared/services/cronStatus.service.js        ← 唯一实现：主视图 5–6 次查询 + 全部派生
+                        shared/services/cronStatus.service.js        ← 唯一实现：主视图 6–7 次查询 + 全部派生
                                         │
                   ┌─────────────────────┼──────────────────────┬─────────────┐
                   ▼                     ▼                      ▼             ▼
@@ -296,13 +298,15 @@ client  ──GET /api/cron/status──▶  routes/cronStatus.routes.js   (rout
 |---|---|---|---|
 | Q1 | `TaskRun.aggregate` 取 5 个任务各自最近一条（`$match taskName $in` → `$sort startedAt:-1` → `$group by taskName $first`） | **1** | 1（复用，用于默认日期） |
 | Q2 | `Asset.find({active:true}).select('symbol name market launchDate').lean()` | **1** | 0 |
-| Q3 | `Price.find({symbol:{$in:...}, $or:[各市场目标日的 dateBounds]}).select('symbol timestamp').lean()` | **1** | 0 |
+| Q3 | `Price.find({ $or:[各市场目标日的 dateBounds] }).select('symbol timestamp').lean()`，桶内 symbol 集合在 JS 内构建（从 `asset.symbol` 出发精确匹配；不按 symbol 预过滤，避免漏掉同一 symbol 的跨市场/多写法行） | **1** | 0 |
 | Q4 | `Portfolio.find({archived:{$ne:true}}).select('name accountType rebalanceSettings.rebalanceSchedule').lean()` | **1** | **1** |
 | Q5 | `FxRate.aggregate` 取最新汇率日的币种计数（AC5 `fxCount`，D-18） | **1** | 0 |
-| Q6 | `TaskRun.aggregate` 取指定日的 `rebalance-check`（父）+ `rebalance-suggestions:*`（子） | **0** | **1** |
+| Q6 | `TaskRun.aggregate` 取 `rebalance-check`（父）+ `rebalance-suggestions:*`（子）各自最近一条；**主视图也需 1 次**（`perPortfolio[].runStatus/failures` 来自子记录），detail 用 `startedAt ∈ dateBounds(date)` | **1** | **1** |
 | Q7 | 仅当 `fetched===0 && expected>0`：`Price.distinct('symbol', {timestamp: 目标日 bounds})` 的 `length`（诊断用） | **0 或 1** | 0 |
 
-→ 主视图稳态 **5 次**、最差 6 次；detail 稳态 **3 次**。**不得**写成「逐资产查价」「逐组合查 taskrun」「逐个市场查价」。Review 时以此表为准。
+→ 主视图稳态 **6 次**、`fetched===0` 时最差 7 次；detail 稳态 **2–3 次**（带 `date` 2 次；缺省 `date` 时多 1 次确定默认分发日）。**不得**写成「逐资产查价」「逐组合查 taskrun」「逐个市场查价」。Review 时以此表为准。
+>
+> **实施期修正（2026-10-26）**：初稿把 Q6 记为「主视图 0 次」，但主视图 `dataState.perPortfolio[].runStatus/failures` 必须来自子 taskrun（AC6），故主视图也需 1 次 Q6；已按实现更新上表，总预算 6–7 次仍远低于 N+1 风险阈值。
 
 > 已知张力：`DATA_MODEL.md:318` 建议聚合带时间范围。Q1 是为满足 AC1「该任务最近一条」而设计的跨任务分组，`$match` 走 `taskName` 后由 `(startedAt:-1,taskName:1)` 索引支撑排序；当前 244 条、增长可控（`taskruns` 无 TTL 属另立卡）。Reviewer 若要求加窗口，**必须同时改 AC1 的 null 语义**，不得单方面加窗口。
 
@@ -357,6 +361,8 @@ RunSummary = {
 `CONTRACT_NOT_READY` · `NO_TASK_RUN` · `NO_OPEN_DAY` · `EXPECTED_ZERO` · `TARGET_LAGGED` · `SYMBOL_FORMAT_MISMATCH` · `UNSUPPORTED_MARKET` · `DETAIL_NOT_REBALANCE` · `PORTFOLIO_ID_INVALID` · `PORTFOLIO_NOT_FOUND` · `PORTFOLIO_ARCHIVED` · `NO_DISTRIBUTION_RECORD`
 
 > 同一任务可同时命中多条（例：`NO_OPEN_DAY` + `EXPECTED_ZERO`），因此 `notes` 为**数组**、按「严重度高→低」排序；level 冲突时以 §4.4 判定表为准，不依赖 note 顺序。
+>
+> **实施期澄清（Reviewer F1）**：`NO_TASK_RUN` 当前**没有触发路径**（detail 空日改用 `NO_DISTRIBUTION_RECORD`，见 §4.7）；保留在 code 集合里供 C-07/未来复用，避免前端二次改词。detail 空日必须出现 `NO_DISTRIBUTION_RECORD`。
 
 ### 4.4 五项 `dataState`（逐项冻结）
 
@@ -560,7 +566,7 @@ function staleThresholdHours(taskName) { return (TASK_PERIOD_HOURS[taskName] ?? 
 
 | 场景 | 表现 | 禁止 |
 |---|---|---|
-| `taskruns` 整集合为空 | 5 项 `lastRun: null`、`contractReady: false`；**价格同步仍给真实 `expected/fetched`**（它不依赖 taskruns）；其余 4 项数值全 `null`；HTTP **200** | 返回任何 `SUCCEEDED`；把 `null` 当 `0` |
+| `taskruns` 整集合为空 | 5 项 `lastRun: null`；**价格同步 `contractReady: true`**（其数据态不依赖 taskruns，仍给真实 `expected/fetched`）；其余 4 项 `contractReady: false`、数值全 `null`；HTTP **200** | 返回任何 `SUCCEEDED`；把 `null` 当 `0` |
 | `result` 缺失（当前常态） | 4 项 `contractReady:false` + `notes:[CONTRACT_NOT_READY]` | 用 `status` 冒充完成度 |
 | 父任务 `rebalance-check` 缺失 | `due/totalPortfolios/skippedCount/generatedCount = null`；`perPortfolio` 仍返（字段 null，`runStatus/failures` 可读） | 用「有无子记录」反推 `due`；把「无记录」渲染成「未到期」 |
 | 某日无分发记录（detail） | `rows: []` + `notes:[NO_DISTRIBUTION_RECORD]` + `notes:[CONTRACT_NOT_READY]`（父任务缺失时）+ `date` 回显 | 返回 `summary` 全 0 冒充「全部正常」 |
@@ -614,19 +620,19 @@ function staleThresholdHours(taskName) { return (TASK_PERIOD_HOURS[taskName] ?? 
 > 顺序即依赖顺序。**W0 / W12（规划期准备与证据）已由 Planner 完成**；W1 完成前不得动 W3+（常量是 W3 的地基）。
 
 - [x] **W0 分支准备**（2026-10-26 完成）：分支 `feature/TASK-054-cron-status-aggregate-api` 已建并基于含文档基线的 HEAD；`grep -rn "STALE_FACTOR\|STALE_THRESHOLD\|cronStatus" shared/ server/` → 0 命中（无既有实现，不与 057 撞车）。
-- [ ] **W1 常量**：新建 `shared/constants/cronStatus.constants.js`（§4.6，含 `PRICE_SYNC_DUE_HOUR`）。
-- [ ] **W2 服务层骨架**：新建 `shared/services/cronStatus.service.js`，先导出 `buildLastRuns(now)`（Q1）+ `pickTargetDay(market, now, tz)`（D-16 纯函数）+ `resolveStale(lastRun, now)`。
-- [ ] **W3 单元测试（先红）**：新建 `server/test/integration/cronStatus.service.test.js`，写入 §7.2 全部用例并**确认全部失败**（红的具体形态见 §7.2）。
-- [ ] **W4 价格数据态**：`buildPriceDataState(now)`——D-16 锚点 → expected/fetched/missing/byMarket/notListed/unsupportedMarkets → `dayPriceSymbolCount`（Q2/Q3/Q7）。
-- [ ] **W5 另四项数据态 + 降级**：`buildIntegrity/Alerts/Fx/Rebalance`，含 `contractReady` / `notes` / `dataStateLevel`（§4.4；fxCount 走 Q5）。
-- [ ] **W6 再平衡 row builder**：`buildRebalanceRows({date, portfolioId})`（Q4/Q6），供主视图与 detail 共用；返回 `perPortfolioDate`。
-- [ ] **W7 对外编排**：`getStatus({now, detail, date, portfolioId})` 返回 §4.3 / §4.5 的完整结构；参数校验逻辑以「抛 `error.status=400`」的形式留在 controller。
-- [ ] **W8 控制器 + 路由 + 注册**：`controllers/cronStatus.controller.js`（`getStatus`）、`routes/cronStatus.routes.js`（**`router.get('/status')`**）、`app.js` 插 1 行（D-15）。
-- [ ] **W9 集成测试**：`server/test/integration/cronStatus.api.test.js`（AC1 全字段、AC8 参数校验；若 058 已落地则加会话 stub）。
-- [ ] **W10 回归**：`npm run test:server`（基线 **152** 条全绿）、`npm run test:worker`（**77** 条，期望零变化）、`node --check` 新增文件。
-- [ ] **W11 文档**：`API_CONTRACT.md` 接口清单加 1 行（含 `notes`/`targetMarketDate` 语义）；`SERVER.md` §5 加 1 行 + 修 `:64` + 写明 `PRICE_SYNC_CRON` 与 `PRICE_SYNC_DUE_HOUR` 的联动；`ARCHITECTURE.md:136` + `PRODUCT_LINES.md:170` 约束措辞改写；`docs/readme.md` 状态（提交版已写 Approved，复核即可）。
+- [x] **W1 常量**：新建 `shared/constants/cronStatus.constants.js`（§4.6，含 `PRICE_SYNC_DUE_HOUR`）。
+- [x] **W2 服务层骨架**：新建 `shared/services/cronStatus.service.js`，先导出 `buildLastRuns(now)`（Q1）+ `pickTargetDay(market, now, tz)`（D-16 纯函数）+ `resolveStale(lastRun, now)`。
+- [x] **W3 单元测试（先红）**：新建 `server/test/integration/cronStatus.service.test.js`，写入 §7.2 全部用例并**确认全部失败**（红的具体形态见 §7.2）。**实测红形态**：service 尚未创建时运行 → `MODULE_NOT_FOUND`（require stack 指向本测试文件）；实现后由 15/15 绿，Reviewer 整改后 17/17 绿。
+- [x] **W4 价格数据态**：`buildPriceDataState(now)`——D-16 锚点 → expected/fetched/missing/byMarket/notListed/unsupportedMarkets → `dayPriceSymbolCount`（Q2/Q3/Q7）。
+- [x] **W5 另四项数据态 + 降级**：`buildIntegrity/Alerts/Fx/Rebalance`，含 `contractReady` / `notes` / `dataStateLevel`（§4.4；fxCount 走 Q5）。
+- [x] **W6 再平衡 row builder**：`buildRebalanceRows({date, portfolioId})`（Q4/Q6），供主视图与 detail 共用；返回 `perPortfolioDate`。
+- [x] **W7 对外编排**：`getStatus({now, detail, date, portfolioId})` 返回 §4.3 / §4.5 的完整结构；参数校验逻辑以「抛 `error.status=400`」的形式留在 controller。
+- [x] **W8 控制器 + 路由 + 注册**：`controllers/cronStatus.controller.js`（`getStatus`）、`routes/cronStatus.routes.js`（**`router.get('/status')`**）、`app.js` 插 1 行（D-15）。
+- [x] **W9 集成测试**：`server/test/integration/cronStatus.api.test.js`（AC1 全字段、AC8 参数校验；若 058 已落地则加会话 stub）。
+- [x] **W10 回归**：`npm run test:server`（基线 **152** 条全绿 → 实测 **180/0**）、`npm run test:worker`（**77/0**，零变化）、`node --check` 新增文件。
+- [x] **W11 文档**：`API_CONTRACT.md` 接口清单加 1 行（含 `notes`/`targetMarketDate` 语义）；`SERVER.md` §5 加 1 行 + 修 `:64` + 写明 `PRICE_SYNC_CRON` 与 `PRICE_SYNC_DUE_HOUR` 的联动；`ARCHITECTURE.md:136`（另修 `:174/:224/:225`）+ `PRODUCT_LINES.md:170` 约束措辞改写；`docs/readme.md` 状态更新为 `REVIEWED`。
 - [x] **W12 真实库只读探测**（2026-10-26 完成，见 §3.6 / §7.4）：`active=44`、最近有价日 `2026-10-21`、目标日 `2026-10-23` 桶 `0`、`taskruns=244/含 result=0`、僵尸 RUNNING 非最新、44/44 symbol 精确匹配。
-- [ ] **W13 交接 Reviewer**：按 §10 逐项自检，附 §7 全部实测输出。
+- [x] **W13 交接 Reviewer**：按 §10 逐项自检，附 §7 全部实测输出；第一轮 PASS WITH FINDINGS → 8 条修复 → 第二轮复检 PASS（仅 4 条文档台账项，已收尾）。
 
 ---
 
@@ -684,20 +690,23 @@ grep -rn "stripSuffix" shared/services/cronStatus.service.js   # 期望 0 行
 
 | # | 用例 | 断言（必须能失败） | 红的具体形态 |
 |---|---|---|---|
-| U1 | **AC2 日期归桶**：`now = 2026-10-23T14:00:00Z`（周五，03:00 后）；US 资产 2 个，`prices` 只在 `2026-10-22/23` 有记录 | `targetMarketDate === '2026-10-22'`（周四，即周五 03:00 应采到的交易日）；`fetched === 2`；`2026-10-23` 的价不算 | 直接把「今天」或「昨天」当目标日 → 断言失败 |
+| U1 | **AC2 日期归桶**：`now = 2026-10-23T14:00:00Z`（周五，03:00 后）；US 资产 3 个（`AAA`/`BBB` 周四桶有价、`CCC` **只在周五桶有价**），另有一条周五桶的 `AAA` 价 | `targetMarketDate === '2026-10-22'`；`expected===3`、`fetched===2`、`missing===['CCC']`、`dataStateLevel==='warn'`（证明按 timestamp 归桶、且错日期的价不得计数） | 直接把「今天」或「昨天」当目标日、或忽略 timestamp 归桶 → 断言失败 |
 | U2 | **AC2 节假日回退**：`now = 2026-10-05T14:00:00Z`（CN 国庆长假内）；仅 CN-FUND 资产 | `targetMarketDate` 早于 `2026-10-01`；`expected > 0`；不出现 `NaN` | 只回退 1 天（不做循环）→ 失败 |
 | U3 | **AC2 `expected=0`**：`active` 资产为空 | `expected===0`、`fetched===0`、`missing: []`、`dataStateLevel==='unknown'`（**不得**是 `'ok'`）、`notes` 含 `EXPECTED_ZERO` | 把 `fetched>=expected` 判成 ok → 失败（0/0 不是"齐了"） |
 | U4 | **AC2 多市场不同目标日（D-17）**：`now = 2026-10-08T14:00:00Z`（周四；US/CA 上一开市日 10-07，CN 因 10-01~07 长假上一开市日 **09-30**） | 顶层 `targetMarketDate === '2026-10-07'`；`byMarket.US.targetMarketDate==='2026-10-07'`、`byMarket['CN-FUND'].targetMarketDate==='2026-09-30'`；**顶层 `expected` = 各市场 expected 之和** | 取 `Math.min`，或只按顶层单一日期统计 expected → 失败 |
 | U5 | **AC7 僵尸（最新一条）**：最新 `status='RUNNING'`、`startedAt = now - 3d` | `stale===true`、`lastRun.status==='STALE'`、`lastRun.rawStatus==='RUNNING'` | 不判 stale → `status==='RUNNING'` 时失败 |
 | U6 | **AC7 负向对照**：最新 `status='RUNNING'`、`startedAt = now - 1h` | `stale===false`、`lastRun.status==='RUNNING'` | 判据写成 `status==='RUNNING'` 就 stale → 失败 |
-| U7 | **AC9 空态**：三个集合全空 | 5 项 `lastRun===null`、`contractReady===false`；`JSON.stringify(data)` **不含 `'SUCCEEDED'`**；价格项 `expected===0` | 任何"没记录就当成功"的兜底 → 失败 |
+| U7 | **AC9 空态**：三个集合全空 | 5 项 `lastRun===null`；**4 项 `contractReady===false`**（完整性/提醒/汇率/再平衡）+ **价格项 `contractReady===true`**（其数据态不依赖 taskruns，实现期修正见 §11.3）；`JSON.stringify(data)` **不含 `'SUCCEEDED'`**；价格项 `expected===0` | 任何"没记录就当成功"的兜底 → 失败 |
 | U8 | **AC3 不得用 status 冒充**：`lastRun.status='SUCCEEDED'` 但无 `result` | `missingCount===null`（**不是 0**）、`contractReady===false`、`notes` 含 `CONTRACT_NOT_READY` | 把 `missingCount` 默认成 0 → 失败 |
 | U9 | **AC6 不得反推 due**：父任务无记录、4 条子任务记录全 `SUCCEEDED` | `due===null`（**不是 0**，也不是 4）；`failures` 仍可读 | 用子记录数当 due → 失败 |
 | U10 | **AC5 不得用 fxCount 反推币种**：`FxRate` 最新日 3 条、无 `result` | `fxCount===3`、`currencies===null`、`contractReady===false` | 编造 `{USD:ok,CAD:ok,HKD:ok}` → 失败 |
 | U11 | **AC4 `created=0` 正常态**：`result={evaluated:12,created:0,archived:1,failed:0}` | 四项数值透传；`dataStateLevel==='ok'`（**不得** `'warn'`/`'bad'`） | 把 created=0 映射成失败/黄 → 失败 |
 | U12 | **D-16 周末有效目标日**：`now = 2026-10-25T14:00:00Z`（周日）；价格只有 `10-22(周四)` 桶 | `targetMarketDate === '2026-10-22'`；`calendarPrevOpenDay === '2026-10-23'`（周五）；`notes` 含 `TARGET_LAGGED`；`fetched===expected` → `'ok'` | 用日历口径取 10-23 → 得 0/44 `'bad'` → 失败 |
 | U13 | **D-16 未到采集时点**：`now = 2026-10-26T06:00:00Z`（周一 02:00 EDT，03:00 前） | `targetMarketDate === '2026-10-22'`（周四）；**不得**取 10-23（周五价尚未采集） | 只要「今天开市」就取昨天 → 失败 |
-| U14 | **D-19 非最新 RUNNING 不误判**：最新一条 `SUCCEEDED`，另有一条 60 天前 `RUNNING` | `stale===false`、`lastRun.status==='SUCCEEDED'` | 扫全表找 RUNNING → 误报 → 失败 |
+| U14 | **D-19 只判最新**：stub 只返回每任务最新一条（Q1 的 `$sort startedAt:-1` + `$group $first` 由 **U17** 直接断言管线形状）；测试世界给最新一条 `SUCCEEDED` | `stale===false`、`lastRun.status==='SUCCEEDED'`（历史 RUNNING 被 Q1 天然排除，不另扫全表） | 改成扫全表找 RUNNING → 与 U17 的管线断言冲突 → 失败 |
+| U15 | **真实停摆仍报红**（D-16 不得掩盖故障）：`now = 2026-10-26T14:00:00Z`（周一 10:00 EDT，03:00 已过），价格只有 `10-22` 桶 | `targetMarketDate==='2026-10-23'`、`fetched===0`、`dataStateLevel==='bad'` | 把「今天没采集」也回退成上周四 → 掩盖真实停摆 → 失败 |
+| U16 | **脏 `result` 不 500**（Reviewer F2）：`gapAssets:[null,{…}]`、父 `perPortfolio:[null,{…}]`、子 `failures:[null,{…}]` | 端点不抛错；`null` 元素被过滤，正常项照常透出 | 无护栏 → TypeError 500 → 失败 |
+| U17 | **查询形状**（Reviewer F4）：Q1 必须 `$sort startedAt:-1` + `$group $first`；Q5 必须 `$dateToString` + `$sum` + `$limit`；Q6 必须同时匹配 `rebalance-check` 与 `rebalance-suggestions:` | 断言被记录的 aggregate 管线 | 改成全表扫描 / 全量取回 → 失败 |
 
 > 给 U4 用的真实日历数据：2026 CN 休市 = `10-01/02/05/06/07`（`shared/config/markets.js:36-44`），不存在"10-21~23 连休"——初稿 U4 的日期组合在真实日历下不可能成立（M-6）。
 
@@ -716,6 +725,8 @@ grep -rn "stripSuffix" shared/services/cronStatus.service.js   # 期望 0 行
 | A7 | AC9 空态 HTTP 层 | 全空集合 → 200，`JSON.stringify(body.data)` 不含任何 `SUCCEEDED` |
 | A8 | detail 非 rebalance | `?detail=foo` → 400、`notes[].code==='DETAIL_NOT_REBALANCE'`（经 `failure()` 返回时为 `error.code` 或 message，按既有封装实测） |
 | A9 | AC1 路由精确性 | `GET /api/cron/status` → 200；`GET /api/cron` → 404（M-1 回归） |
+| A10 | AC8 detail 空日 | 该日无分发记录 → 200、`rows:[]`、`notes[].code==='NO_DISTRIBUTION_RECORD'`（Reviewer F1 回归） |
+| A11 | AC8 date 作用域 | 主视图 `?date=garbage` → **200**（date 仅 detail 校验；不让 URL 里的旧 date 拖垮看板，Reviewer F6 回归） |
 
 ### 7.4 真实库只读探测（**2026-10-26 已执行，原 §7.4 的"待 Implementer 执行"取消**）
 
@@ -771,7 +782,7 @@ node --check server/routes/cronStatus.routes.js
 | AC4 | U11 |
 | AC5 | U10 |
 | AC6 | U9 + A6 |
-| AC7 | U5 / U6 / U14 |
+| AC7 | U5 / U6 / U14 / U17 |
 | AC8 | A3–A6 / A8 |
 | AC9 | U7 / A7 |
 | AC10 | §7.1 ① |
@@ -890,13 +901,60 @@ node --check server/routes/cronStatus.routes.js
 | F-2 | 初稿称「同一交易日抓两次会有两条」 | 纠正：`saveLatest` 是 upsert，一天一条（§3.4 F-2） |
 | F-9/F-10 | 初稿未识别采集节奏与 `launchDate` 全空 | 新增 F-9/F-10 + D-16 / OD-4 说明 |
 
-### 11.3 实施结果（待 Implementer 填）
+### 11.3 实施结果（2026-10-26，Implementer）
 
-- [ ] W1–W11 完成情况
-- [ ] §7.1 输出
-- [ ] §7.2 / §7.3 测试条数与失败数
-- [ ] 与计划的差异（含任何不得不偏离 §4 的地方及理由）
-- [ ] 新发现（未擅自处理，提请 Human / Reviewer 裁决）
+**交付文件**
+
+| 文件 | 状态 |
+|---|---|
+| `shared/constants/cronStatus.constants.js` | 新增（5 任务名 / 周期 / 48h 阈值 / 回退上限 / **03:00 同步时点** / 再平衡前缀） |
+| `shared/services/cronStatus.service.js` | 新增（唯一派生实现：Q1–Q7 只读查询 + 5 项数据态 + detail） |
+| `server/controllers/cronStatus.controller.js` | 新增（参数校验 + `success`/`failure`） |
+| `server/routes/cronStatus.routes.js` | 新增（`router.get('/status')`） |
+| `server/app.js` | 修改（+1 require、+1 `app.use('/api/cron', …)`，路由 9 → 10） |
+| `server/test/integration/cronStatus.service.test.js` | 新增（U1–U17，17 条） |
+| `server/test/integration/cronStatus.api.test.js` | 新增（A1–A11，11 条） |
+| `server/test/helpers/modelStubs.js` | 新增（测试替身，仅测试用） |
+| `docs/dev/API_CONTRACT.md` / `docs/manual/SERVER.md` / `docs/architecture/ARCHITECTURE.md` / `docs/product/PRODUCT_LINES.md` | 修改（AC13 + D-10） |
+
+**验证证据（本机执行，2026-10-26）**
+
+- §7.1 静态检查：写调用 **0**；`app.use('/api/')` = **10** 且 `/api/cron` 1 行；`router.get('/status')` 1 行、`router.get('/')` 0 行；`cron-worker/` 改动 **0**；controller 内阈值常量 **0**；`shared` 反向 require **0**；`stripSuffix` **0**；`node --check` 5 个文件全部通过。
+- 新增测试：`cronStatus.service.test.js` **17 pass / 0 fail**；`cronStatus.api.test.js` **11 pass / 0 fail**（含 Reviewer 整改后新增的 U16/U17/A10/A11）。
+- 全量回归（Reviewer 整改后复跑）：`npm run test:server` = **180 pass / 0 fail**（基线 152 + 新增 28）；`npm run test:worker` = **77 pass / 0 fail**（零变化）。
+- 真实库只读冒烟（生产库 `portomind`，无写操作）：
+  - `now=2026-10-26` 快照：价格目标日 `2026-10-23`、`expected=44 / fetched=0` → `bad`；完整性/提醒 `contractReady=false`；汇率 `fxCount=3 / currencies=null`；再平衡 `perPortfolioDate=2026-10-25`、4 行、`due=null`、`failures=1`；detail `rows=4 / failed=1`；非法/不存在 portfolioId → `PORTFOLIO_NOT_FOUND` 且 200。
+  - `now=2026-10-22`（历史）快照：目标日 `2026-10-21`、`expected=44 / fetched=42`（CN-FUND 29/29、CA 9/11、US 4/4）、missing=`VBU.TO,VBG.TO` → `warn`。**精确符号匹配在真实数据上成立**（D-20）。
+  - 同一快照证明 D-16：周末/03:00 前目标日自动回退，而真实停摆（10-26 无 run）仍报 `bad`。
+
+**与计划的差异（4 处，均已回写计划/测试）**
+
+1. **价格项 `contractReady` 恒为 `true`**：价格数据态只依赖 `assets/prices`，不依赖 `taskruns.result`，为空集合时仍可计算 → 实施取 `true`；计划 §4.7/U7 的「5 项 false」已改为「4 项 false + 价格 true」。理由：`contractReady` 的语义是「该任务数据态字段是否完整可得」，价格项恒可得。
+2. **Q6 主视图也需要 1 次查询**（子 taskrun 的 `runStatus/failures`）：主视图预算 5 → **6**（最差 7），§4.2 已更新。
+3. **新增测试辅助文件** `server/test/helpers/modelStubs.js`（测试替身集中一处，避免两个测试文件重复猴补；不进入生产代码、不被 `test/integration/*.test.js` 入口单独执行）。另按 §7.2 新增 U15 用例（真实停摆不得被 D-16 掩盖）。
+4. **脏数据护栏 `safeDate()`**：把 `launchDate` / `startedAt` / `endedAt` / 父任务日期统一做「非法 → null」处理，避免 C-05 的 Mixed 数据或历史脏值让只读端点 500（Reviewer F2 整改的一部分；U16 覆盖 `result` 内 null 元素）。
+
+> ⚠️ **计划变更追认（供 Human 复核，AGENTS.md §6）**：以上 1–4 项均为**实施层澄清/加固**，不新增/删除任何对外字段，不改变 AC1–AC14 的语义；`contractReady` 对价格项的含义此前计划自相矛盾（§3.6 与 §4.7 表述冲突），本次按语义统一并回写。若 Human 认为需走正式计划变更审批，请驳回，我将回退为计划原文（价格项 `contractReady=false`）并相应改 U7。
+
+**Reviewer 整改记录（2026-10-26，PASS WITH FINDINGS → 已修）**
+
+| 编号 | 严重度 | 问题 | 整改 |
+|---|---|---|---|
+| F1 | MINOR | detail 空日发 `NO_TASK_RUN`，冻结契约要求 `NO_DISTRIBUTION_RECORD`，后者从不触发 | 改用 `NO_DISTRIBUTION_RECORD`；新增 A10 回归；§4.3 注明 `NO_TASK_RUN` 暂无触发路径 |
+| F2 | MINOR | `result` 内 `null` 元素（Mixed 未校验）会 TypeError → 500 | `gapAssets` / `perPortfolio` / `failures` 全部过滤非对象元素；新增 U16 |
+| F3 | MINOR | `ARCHITECTURE.md:174/224/225` 仍宣称「无调度状态接口 / 无 TaskRun 端点 / 9 个 controller」 | 已改写为「只读聚合已建立」并更正 controller 计数；FS 旧措辞仍由 PM 回改（§4.9） |
+| F4 | MINOR | U14/D-19 与 D-18 只测结果不测管线；U1 未覆盖「仅错误日期有价」 | 新增 U17 断言 Q1/Q5/Q6 的聚合管线形状；U1 增加只在周五桶有价的 `CCC` → `expected=3/fetched=2/warn` |
+| F5 | MINOR | `result` 缺失但 `FxRate` 有数据时汇率卡无 `CONTRACT_NOT_READY` 解释 | 改为 `contractReady=false` 必带 note；U10 增加断言 |
+| F6 | MINOR | 主视图也校验 `date`（文档说仅 detail），URL 旧 date 会 400 | 仅 `detail=rebalance` 时校验/使用 `date`；新增 A11；API_CONTRACT 同步 |
+| F7 | MINOR | `completenessRatio` 透传 `result` 值，计划要求服务端算 | 改为服务端 `actualCount/expectedCount` |
+| F8 | MINOR | 计划变更未记录 Human 追认、代码与 §11.3 短暂不一致 | 本表 + 上方「计划变更追认」补齐；测试条数/回归数已更新 |
+
+**实施期新发现**
+
+1. 实库 `asset.symbol` 存的是小写 `.cn`（如 `015532.cn`），而 `Price.symbol` 写入即 uppercase；实施在比较两侧都做 `trim().toUpperCase()`（**大小写归一 ≠ 后缀归一**，不违反 D-20）。
+2. 采样时（2026-10-26 23:26 EDT）生产库最新 `taskrun` 仍是 10-25，且 10-23 的 `daily-price-sync` 44/44 全失败 → 看板首日会红，属真实数据状态（R-14）。
+3. `FxRate` 最新日为 2026-10-22（USD `0.149493`），`fx-rate-sync` 最新一次为 FAILED；C-05 接通后看板会直接暴露 `TASK-051` 的方向错误。
+4. `launchDate` 44/44 全空，`notListed[]` 当前恒空——逻辑已实现，待资产补数据后才会生效。
 
 ---
 
@@ -904,3 +962,40 @@ node --check server/routes/cronStatus.routes.js
 
 > 由独立 Reviewer 填写，Implementer 不得自评（AC14）。
 > 复核重点：**R-4（不得用 status 冒充完成度）**、R-5（查询预算）、R-8（文档假事实）、AC9 的负向对照是否真的能失败、**D-16 的目标日公式是否真的不产生周末假缺口**、**D-20 是否严格精确匹配**、**`notes` 数组与 level 判定表是否与 OD-5 条件一致**。
+
+### 12.1 第一轮（2026-10-26，独立 Reviewer）
+
+- **结论：PASS WITH FINDINGS**（无 BLOCKER、无 MAJOR）。
+- 复核范围：工作区快照 @ `2026-10-26 23:38 EDT`；AC1–AC14 逐条给出证据（AC14 = 本次复核本身）。
+- 查询次数实测：主视图 **6**（`fetched===0` 时 **7**）、detail 带 `date` **2** / 缺省 `date` **3**、无效 `portfolioId` 0（早退）；无 N+1。
+- 复核确认：R-4（5 个 builder 的 `dataStateLevel` 均无 `status` 输入）、R-5（6–7 次预算内）、R-8（`ARCHITECTURE:136`/`PRODUCT_LINES:170`/`SERVER:64` 已改，FS 旧措辞按 §4.9 转 PM）、AC9 负向断言可真实失败、D-16 与 U12/U13/U15 一致、D-20 严格精确匹配（未做后缀归一）。
+- **8 条 MINOR（F1–F8）→ 整改记录见 §11.3「Reviewer 整改记录」，已全部修复。**
+
+### 12.2 第二轮（复检，2026-10-27）
+
+- **结论：PASS WITH FINDINGS**（无 BLOCKER、无 MAJOR）。F1–F8 全部 **RESOLVED**；新增 3 条 MINOR（N1/N2/N3）为文案/文档计数/计划行漂移，复检后已一并修复（见 §12.3）。
+- 复核快照：`cronStatus.service.js` sha256 `D1C093E6…`（827 行）· controller `C81A6622…` · service test `B8DCCA76…` · api test `D35101EF…` · helper `0812D911…`。
+- 验证：新增测试 service **17/17**、api **11/11**；Reviewer 用「每文件独立进程」等价执行全量：server **180/180**、worker **77/77**（单进程全量会因既有测试相互污染出现 12 fail，剔除 054 文件后的基线 152 用例同样 12 fail，证明与 054 无关；`npm test` 走进程隔离，即 180/0 路径）。
+- F1（`service.js` detail 空日 → `NO_DISTRIBUTION_RECORD` + A10）、F2（`gapAssets`/`perPortfolio`/`failures` 过滤 + U16）、F3（`ARCHITECTURE.md:174/224/225`、`readme.md`、TASKS 头）、F4（U1 的 `CCC` 错桶 + U17 管线断言）、F5（FX 降级必带 note + U10）、F6（`date` 仅 detail + A11 + API_CONTRACT）、F7（服务端算 `completenessRatio`）、F8（§11.3 差异 4 + 追认 + 整改表）：**均复核通过**。
+- 查询预算复测：主视图 **6**（`fetched===0` 时 **7**）、detail **2/3**、无效 `portfolioId` **0**；静态检查复跑 0 写调用、`app.use('/api/')=10`、controller 无阈值常量、无反向 require、无 `stripSuffix`、`cron-worker/` 与 `shared/models/` 零改动。
+
+### 12.3 二轮遗留 MINOR（复检后已于收尾修复）
+
+| # | 内容 | 处理 |
+|---|---|---|
+| N1 | FX 降级文案在 `result` 存在但缺 `currencies/rates` 时仍称「result 缺失」 | ✅ 已按 `result` 是否存在区分文案（`service.js` FX builder） |
+| N2 | 任务卡 / TASKS.md / readme / ExecPlan §Status 仍写「24 条 / 176/0」 | ✅ 已统一为 **28 条（U1–U17 + A1–A11）/ server 180/0** |
+| N3 | §7.2 U1 行仍是旧 2 资产口径；U14 的「60 天前 RUNNING」无法由 stub 构造 | ✅ U1 已改 3 资产（含 `CCC` 错桶）；U14 已改为「只判最新」，D-19 的管线保证由 U17 断言 |
+
+**最终结论：无 BLOCKER / 无 MAJOR；F1–F8 与 N1–N3 全部关闭。AC1–AC14 满足（AC14 由两轮独立复核保证）。**
+
+### 12.4 第三轮（收尾台账，2026-10-27）
+
+第二轮遗留的 4 条**纯文档台账项**已修，Reviewer 确认无代码/测试/AC 问题：
+
+1. 任务卡 Owner 由「复核中」改为「两轮复核通过」；
+2. 任务卡 B3 依赖标记为 ✅ 已解除；
+3. 任务卡 §9.5 的「Reviewer 复检」勾选并注明第二轮 PASS；
+4. §5 Work Breakdown 的 W1–W11 / W13 全部勾选，并补记 W3 的真实红形态（`MODULE_NOT_FOUND` → 实现后 15/15 → 整改后 17/17）。
+
+> 未执行项：Human 合入 `main` 与归档 `complete/`（属 Human 验收，不在 Agent 范围）。
