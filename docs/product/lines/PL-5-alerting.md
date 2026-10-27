@@ -1,13 +1,16 @@
 # PL-5 提醒与通知线（Alerting）
 
-> 版本：v1.0 · 日期：2026-10-15
+> 版本：v1.1 · 日期：2026-10-26
 > 归属：[PRODUCT_LINES.md](../PRODUCT_LINES.md)「产品线 INDEX」中 **PL-5** 的明细子文件
+> v1.1 修订：§1 开头补一句指向 [PRODUCT_LINES.md §1](../PRODUCT_LINES.md) 的链接（产品级定义唯一归属，路线 B）；本线内容未动。
 > 内容范围：① 成熟度快评（总表 §2.4） ② 产品线 → 产品模块归属（总表 §3） ③ 全量功能评估 ④ 已实现功能点清单 ⑤ 架构实现明细（合并自原 `architecture/functions.md` §4.7，原文件已[归档](../../archive/functions.md)）
 > 功能编码：`AL-01~10`，沿用 [PRD](../specs/PRD.md)
 
 ---
 
 ## 1. 定位与价值主张
+
+> 产品是什么、三条硬边界、价值主线：见 [PRODUCT_LINES.md §1](../PRODUCT_LINES.md)（唯一权威定义）。本节只写本线专属的定位与价值。
 
 **价值主张：把「该看 / 该买 / 该卖」变成可行动的站内信号。**
 
@@ -16,6 +19,7 @@
 - **上游依赖**：PL-2 价格与估值分位、PL-3 漂移、PL-1 盈亏。
 - **下游影响**：通知中心是「待办」的统一入口；家庭总览（PL-6）的提醒入口即本线落地形态。
 - **边界约定**：**恰好等于阈值不触发**，严格大于 / 小于才触发。
+- **角色边界：本线是「通道」，不是「全部事件的作者」**。`AlertEvent` 有两个写入方：① 本线的规则引擎（`AL-05`，事件带 `ruleId`，受 `cooldownDays`/静默/`active` 管控）；② **PL-4 再平衡通知（`RB-12`，`ruleId = null`）**，AUTO 巡检命中后直接投递。后者**不属本线产品能力**：没有规则可配、没有 `active`、没有冷却与静默。本线只负责事件表、去重机制、通知中心渲染与未读数——把 `RB-12` 纳入 `AlertRule` 是明确的 Non-goal（2026-10-26 裁决，见 [FS-portfolio-ia-cleanup](../specs/FS-portfolio-ia-cleanup.md) OQ-3）。
 
 ---
 
@@ -53,7 +57,7 @@
 | AL-04 | AlertEvent | 保留 | 不可删 + 快照，审计友好 | — | — |
 | AL-05 | 评估引擎 | 保留 | 逐规则故障隔离 + 同日幂等 | — | — |
 | AL-06 | 去重静默 | **强化** | `cooldownDays` 仅规则级抑制，冷却期内「条件恢复又触发」会被压掉，可能漏报 | 增加「条件恢复后可重触发」策略或按值分档静默 | P2 |
-| AL-07 | 通知中心 | **强化** | 缺筛选条件持久化、事件搜索、批量已读；且与家庭视图信息存在重叠 | 增加筛选记忆 / 搜索 / 批量操作；明确「通知中心」为唯一事件入口 | P2 |
+| AL-07 | 通知中心 | **强化** | 缺筛选条件持久化、事件搜索、批量已读；且与家庭视图信息存在重叠。另：事件流里混着**不可配、不可静音**的再平衡通知（`ruleId=null`），用户会误以为「这么多提醒应该能关掉一个」 | 增加筛选记忆 / 搜索 / 批量操作；明确本页为唯一事件入口；对 `ruleId=null` 的事件在 UI 上标注来源（「再平衡」），不做静默入口 | P2 |
 | AL-08 | 规则管理 | **强化** | 8 种类型表单偏重，新用户门槛高 | 提供「规则模板」（到价 / 浮亏 / 漂移 / 跟随信号）与一键克隆 | **P1** |
 | AL-09 | 52周高低 | 保留 | 严格突破、恰等不触发，口径清晰 | — | — |
 | AL-10 | 估值分位规则 | **强化** | 依赖 AS-11 手动数据，**无数据时静默不触发**，用户易误判为「功能坏了」 | 规则面板展示「数据状态：缺失 / 最新日期」，缺失时给出录入引导 | P1 |
@@ -86,7 +90,7 @@
 
 | 编号 | 功能点 | 功能描述 | 入口 |
 |---|---|---|---|
-| AL-04 | 事件模型 | `AlertEvent`（**不可删除**，审计留存）：`ruleId` / `portfolioId` / `symbol` / `level(info/warning/action)` / `title` / `content` / `snapshot`（触发时条件快照）/ `triggeredAt` / `status(unread/read/dismissed)` | 引擎写入 |
+| AL-04 | 事件模型 | `AlertEvent`（**不可删除**，审计留存）：`ruleId` / `portfolioId` / `symbol` / `level(info/warning/action)` / `title` / `content` / `snapshot`（触发时条件快照）/ `triggeredAt` / `status(unread/read/dismissed)`。**`ruleId` 为 `null` 表示该事件来自外部写入方（当前唯一：PL-4 `RB-12` 再平衡通知），不受规则体系管控** | 引擎写入 / PL-4 投递 |
 | AL-07 | 通知中心 | `Dashboard`（`/`）：状态筛选（未读 / 全部）+ 组合筛选；事件卡（level 色条、未读点、级别标签）；点击跳转（有 symbol → 价格历史；否则有 portfolioId → 再平衡 Tab）；标记已读 / 忽略；「立即评估」+「规则管理」入口 | `/` |
 | — | 顶栏未读铃铛 | 未读数（`useUnreadAlertCount` **5 秒轮询**），`>0` 显红点，`>99` 显「99+」 | `AppLayout` 顶栏 |
 | — | 提醒 API | `GET /alerts/events/unread-count`、`GET /alerts/events`（按 status/level/portfolioId/ruleId 筛选）、`PATCH /alerts/events/:id/read`、`POST /alerts/evaluate`、`GET/POST /alerts/rules`、`GET/PUT/DELETE /alerts/rules/:id` | API |
@@ -165,6 +169,7 @@
 - **静默失败风险**（AL-10 / AS-11）：估值分位无数据时规则不触发，且**不告知用户**——最易被误判为「功能坏了」。
 - **静默策略偏粗**（AL-06）：冷却期内条件恢复再触发会被压掉，可能漏报。
 - **表单门槛**（AL-08）：8 种类型 + 动态参数，新用户上手成本高。
+- **再平衡通知不可配**（`RB-12`，属 PL-4 出口）：`ruleId=null` 的事件没有 `active` / `cooldownDays` / 静默能力。**Non-goal**：不通过给 `AlertRule` 增加 `ruleType: rebalance_due` 来解决——那会引入第二套触发源（AUTO 巡检 + 规则引擎）并需要对同一组合的事件去重。若未来要支持静音，须在 PL-4 侧重新设计触发源。
 
 ---
 
@@ -172,7 +177,8 @@
 
 - [PRODUCT_LINES.md](../PRODUCT_LINES.md) — 产品线总览与 INDEX（本文件的上级）
 - [PL-2 行情数据线](./PL-2-market-data.md) — 价格与估值分位输入（AS-11）
-- [PL-4 再平衡决策线](./PL-4-rebalancing.md) — AUTO 建议写入 AlertEvent
+- [PL-4 再平衡决策线](./PL-4-rebalancing.md) — `RB-12` 再平衡通知：本线的**外部写入方**（`ruleId=null`）
 - [PL-6 家庭总览线](./PL-6-household.md) — FAM-03 即本线通知中心的落地形态
+- [FS-portfolio-ia-cleanup](../specs/FS-portfolio-ia-cleanup.md) — 明确「再平衡通知不纳入 `AlertRule`」的裁决与 Dashboard 组合健康表
 - [PRD.md](../specs/PRD.md) — 需求基线（功能编码来源）
 - [functions.md（已归档）](../../archive/functions.md) — 本文 §6 的原始来源

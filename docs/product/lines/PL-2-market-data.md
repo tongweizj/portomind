@@ -1,13 +1,16 @@
 # PL-2 行情数据线（Market Data）
 
-> 版本：v1.0 · 日期：2026-10-15
+> 版本：v1.1 · 日期：2026-10-26
 > 归属：[PRODUCT_LINES.md](../PRODUCT_LINES.md)「产品线 INDEX」中 **PL-2** 的明细子文件
+> v1.1 修订：§1 开头补一句指向 [PRODUCT_LINES.md §1](../PRODUCT_LINES.md) 的链接（产品级定义唯一归属，路线 B）；本线内容未动。
 > 内容范围：① 成熟度快评（总表 §2.4） ② 产品线 → 产品模块归属（总表 §3） ③ 全量功能评估 ④ 已实现功能点清单 ⑤ 架构实现明细（合并自原 `architecture/functions.md` §4.2 / §4.9，原文件已[归档](../../archive/functions.md)）
 > 功能编码：`AS-04~08` / `AS-10`（行情价格）· `AS-11`（估值分位），沿用 [PRD](../specs/PRD.md)
 
 ---
 
 ## 1. 定位与价值主张
+
+> 产品是什么、三条硬边界、价值主线：见 [PRODUCT_LINES.md §1](../PRODUCT_LINES.md)（唯一权威定义）。本节只写本线专属的定位与价值。
 
 **价值主张：每日自动获取多市场行情与估值分位，是估值 / 盈亏 / 提醒的输入底座。**
 
@@ -211,5 +214,5 @@
 - [PL-0 平台基座线](./PL-0-platform-foundation.md) — 调度清单 / 交易日历 / 数据模型总表
 - [PL-5 提醒与通知线](./PL-5-alerting.md) — AS-11 的消费方（AL-10 估值分位规则）
 - [PL-6 家庭总览线](./PL-6-household.md) — 价格是家庭折算的输入
-- [CRON_WORKER.md](../../manual/CRON_WORKER.md) — 调度所有权、价格同步、完整性检查、历史回补
+- [cron-worker 总览](../../manual/CRON_WORKER.md) — 入口；运维 / 产品 / 开发三视角见其导航
 - [functions.md（已归档）](../../archive/functions.md) — 本文 §6 的原始来源

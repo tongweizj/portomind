@@ -23,7 +23,7 @@ PortoMind 是 npm workspaces monorepo，由 **四个 workspace** 组成：
 
 **调度所有权（ADR-002）**：`cron-worker` 是**唯一**调度所有者，单进程注册全部 5 类定时任务；
 `server` 不注册任何 cron。因此不存在「二选一拓扑」，也不会有任务因选错所有者而静默停跑。
-不要配置系统 cron 调用任务脚本，PM2 只负责保活。详见 [cron-worker 使用手册](./CRON_WORKER.md) §3。
+不要配置系统 cron 调用任务脚本，PM2 只负责保活。详见 [cron-worker 运维手册](./CRON_WORKER_OPS.md)。
 
 ---
 
@@ -96,7 +96,7 @@ MARKET_DATA_TIMEOUT_MS=10000
 # LOG_DIR 可选；默认写入仓库根 logs/，与 server 共用
 ```
 
-> 调度环境变量详解与开关见 [cron-worker 使用手册](./CRON_WORKER.md) §2.2；`server` 不持有 `SCHEDULER_ENABLED` 也没有 `*_CRON`。
+> 调度环境变量详解与开关见 [cron-worker 运维手册](./CRON_WORKER_OPS.md) §2；`server` 不持有 `SCHEDULER_ENABLED` 也没有 `*_CRON`。
 
 ### 4.3 client（前端）
 
@@ -221,7 +221,7 @@ pm2 logs portomind-api --lines 50 | grep SCHEDULERS_STARTED
 # 期望：无输出（server 不持有调度）
 ```
 
-若使用 PM2 cluster 或多实例，只允许**一个** worker 实例启用调度，其余必须设 `SCHEDULER_ENABLED=false`。详细的调度机制与再平衡分发见 [cron-worker 使用手册](./CRON_WORKER.md) §3。
+若使用 PM2 cluster 或多实例，只允许**一个** worker 实例启用调度，其余必须设 `SCHEDULER_ENABLED=false`。详细的调度机制与再平衡分发见 [cron-worker 开发文档](../dev/CRON_WORKER_DEV.md) §3。
 
 ### 6.3 Nginx 示例
 
@@ -339,6 +339,6 @@ cd cron-worker && npm test
 
 - [client 使用手册](./CLIENT.md) — 界面业务操作
 - [server 使用手册](./SERVER.md) — API 进程、手动 API 端点
-- [cron-worker 使用手册](./CRON_WORKER.md) — 定时任务、数据质量、CLI
+- [cron-worker 总览](./CRON_WORKER.md) — 入口；运维 / 产品介绍 / 开发三视角见其导航
 - [API 契约](../dev/API_CONTRACT.md) — REST API 详细定义
 - [ADR-002 单一调度器](../architecture/adr/ADR-002-single-scheduler.md) — 调度架构决策

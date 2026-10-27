@@ -13,7 +13,7 @@
 
 关键事实：
 
-- **不持有任何调度**：没有 `SCHEDULER_ENABLED`，也没有 `*_CRON`（见 [cron-worker 使用手册](./CRON_WORKER.md) §3）。所有自动任务都由 cron-worker 触发。
+- **不持有任何调度**：没有 `SCHEDULER_ENABLED`，也没有 `*_CRON`（见 [cron-worker 总览](./CRON_WORKER.md) §1）。所有自动任务都由 cron-worker 触发。
 - **不连券商、不自动交易**：再平衡只生成建议，执行需人工确认。
 - **无认证授权**（ADR-001 仅模板）：API 不可暴露公网，仅限可信局域网。安全边界见 [系统部署手册](./DEPLOYMENT.md) §「安全边界」。
 
@@ -79,7 +79,7 @@ curl "http://localhost:8080/api/prices/date/$(date +%F)?page=1&pageSize=20"
 ## 5. 手动 API 端点
 
 这些端点提供**手动触发**能力，与 cron-worker 的定时任务**共用同一业务引擎**（`@portomind/shared`），
-结果口径一致。自动触发由 cron-worker 负责（见 [cron-worker 使用手册](./CRON_WORKER.md) §3）。
+结果口径一致。自动触发由 cron-worker 负责（见 [cron-worker 总览](./CRON_WORKER.md) §2）。
 
 | 方法 | 路径 | 作用 |
 |---|---|---|
@@ -120,6 +120,6 @@ curl -X PUT http://localhost:8080/api/valuations/000300/pe -H 'Content-Type: app
 ## 相关文档
 
 - [client 使用手册](./CLIENT.md) — 界面业务操作
-- [cron-worker 使用手册](./CRON_WORKER.md) — 定时任务、数据质量、CLI
+- [cron-worker 总览](./CRON_WORKER.md) — 入口；运维 / 产品介绍 / 开发三视角见其导航
 - [系统部署手册](./DEPLOYMENT.md) — 安装/启动/生产部署/环境变量/安全边界/备份
 - [API 契约](../dev/API_CONTRACT.md) — REST API 详细定义

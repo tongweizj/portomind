@@ -1,13 +1,16 @@
 # PL-6 家庭总览线（Household）
 
-> 版本：v1.0 · 日期：2026-10-15
+> 版本：v1.1 · 日期：2026-10-26
 > 归属：[PRODUCT_LINES.md](../PRODUCT_LINES.md)「产品线 INDEX」中 **PL-6** 的明细子文件
+> v1.1 修订：§1 开头补一句指向 [PRODUCT_LINES.md §1](../PRODUCT_LINES.md) 的链接（产品级定义唯一归属，路线 B）；本线内容未动。
 > 内容范围：① 成熟度快评（总表 §2.4） ② 产品线 → 产品模块归属（总表 §3） ③ 全量功能评估 ④ 已实现功能点清单 ⑤ 架构实现明细（合并自原 `architecture/functions.md` §4.8，原文件已[归档](../../archive/functions.md)）
 > 功能编码：`FAM-01~04` + `FxRate`（汇率），沿用 [PRD](../specs/PRD.md)
 
 ---
 
 ## 1. 定位与价值主张
+
+> 产品是什么、三条硬边界、价值主线：见 [PRODUCT_LINES.md §1](../PRODUCT_LINES.md)（唯一权威定义）。本节只写本线专属的定位与价值。
 
 **价值主张：跨账户、跨币种，以 RMB 一屏看清家庭总资产。**
 

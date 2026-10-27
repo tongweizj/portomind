@@ -895,6 +895,6 @@ PortoMind 是**自托管的个人 / 家庭投资组合管理应用**，面向单
 - [PRD.md](../product/specs/PRD.md) — 产品需求基线（功能编码来源）
 - [CLIENT.md](../manual/CLIENT.md) — 使用指南
 - [DEPLOYMENT.md](../manual/DEPLOYMENT.md) / [DEPLOYMENT.md](../manual/DEPLOYMENT.md) / [CRON_WORKER.md](../manual/CRON_WORKER.md) — 开发 / 部署 / 生产操作
-- [ROADMAP.md](../product/ROADMAP.md) — 路线图
+- [tasks/TASKS.md](../tasks/TASKS.md) — 路线图（原 `product/ROADMAP.md` 从未建立）
 - [standards/DOCS.md](../standards/DOCS.md) — 文档结构规范与单一归属规则
 - [adr/ADR-001-authentication.md](../architecture/adr/ADR-001-authentication.md) / [adr/ADR-002-single-scheduler.md](../architecture/adr/ADR-002-single-scheduler.md) — 架构决策记录（认证模板 / 单一调度器与 shared 内核）

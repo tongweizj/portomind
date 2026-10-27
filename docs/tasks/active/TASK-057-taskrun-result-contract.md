@@ -85,7 +85,7 @@ FS 卡片 `C-05`（PM 拆分，2026-10-26）
 | `taskName` 分布 | `daily-price-sync 47` · `rebalance-suggestions:<pid> 36×4` · `price-integrity-check 7` · `fx-rate-sync 3` · `alert-evaluate 3` | 合计 204 ✓；完整性检查历史明显短于价格同步 |
 | 未归档组合 | **4 个**（`A股-长钱` / `A股-稳钱` / `CA-RRSP` / `CA-家庭RESP`），`rebalanceSchedule` 全为 `daily` | AC4 的 `perPortfolio.length` 期望值取 **4**（实库口径，不是"3 个组合"的记忆值） |
 
-### 2.4 ⚠️ FS 未覆盖的三处冲突（本卡新增，直接影响实现形态）
+### 2.4 ⚠️ FS 未覆盖的四处冲突（本卡新增，直接影响实现形态）
 
 | # | 冲突 | 事实 | 影响 |
 |---|---|---|---|

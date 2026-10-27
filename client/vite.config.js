@@ -7,6 +7,9 @@ export default defineConfig({
     react(),
   ],
   server: {
+    host: '0.0.0.0',
+    port: 6600,
+    strictPort: true,
     proxy: {
       '/api': {
         // 后端地址：默认本机 8080；换机器/连远端时用环境变量覆盖，避免把个人地址硬编码进共享配置

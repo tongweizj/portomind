@@ -2,15 +2,16 @@
 
 ## Active
 
-> **无活跃任务**（无 `Implementing` / `Reviewing` 中的任务）。`TASK-050` 已于 2026-10-26 结案——两轮独立复核通过（R-1 闭环）、Human 合并入 `main`（`cafcc5d` / PR #35），任务卡与 ExecPlan 均已归档 `complete/`。
+> **在途**：`TASK-058` 已进入 **APPROVED**（2026-10-26 Human Plan Review 通过，**全仓首个 `Approved` ExecPlan**，可动代码）；`TASK-054` 仍停在 **PLAN_REVIEW**。`TASK-050` 已于 2026-10-26 结案——两轮独立复核通过（R-1 闭环）、Human 合并入 `main`（`cafcc5d` / PR #35），任务卡与 ExecPlan 均已归档 `complete/`。
 >
 > 分支现状（2026-10-26 核实）：`main` = `cafcc5d`，**同时含** `TASK-044` / `TASK-048` / `TASK-049` / `TASK-050`（PR #34、#35）。**堆叠分支时代结束，`main` 即最全基线，新任务直接从 `main` 拉分支。**
 >
-> 当前没有 `Approved` ExecPlan 的在途任务；下表 Backlog 中的任务均需 Human 先确认优先级、再由 Planner 产出 `Approved` ExecPlan 才能动代码。
+> **`Approved` ExecPlan 现有 1 份**（`TASK-058` U1，2026-10-26）；`TASK-054` 仍待 Human 点头 3 条。下表 Backlog 中的其余任务均需 Human 先确认优先级、再由 Planner 产出 `Approved` ExecPlan 才能动代码。**`TASK-059` 例外**：它是文档/原型整改（零业务代码），清单确认即可执行，不需 ExecPlan。
 
 | ID | Task | Priority | Status | Owner | ExecPlan |
 |---|---|---|---|---|---|
-| — | 无 | — | — | — | — |
+| TASK-058 | 账号与访问控制（用户模块，U1 后端认证内核） | **Critical** | **APPROVED**（2026-10-26）：ExecPlan 通过 Plan Review，**§9 的 5 项实施裁决全部采纳**（`bcryptjs`+`cookie-parser` / 密码 8–72 无复杂度 / 会话绝对 7 天 / 用户名强制小写 / 只 stub 会话查询且 E2E 兜底升为交付门槛）。⚠️ **发布约束：U1 与 U2 必须同批上线**（U1 单独上线 = 全站 401）；U2 尚未拆分 | `Planner`（已交付）→ `Implementer`（待指派）→ 独立 `Reviewer` | [`exec-plans/active/TASK-058`](../exec-plans/active/TASK-058-authentication-kernel.md) |
+| TASK-054 | 后端聚合接口 `GET /api/cron/status`（FS **C-02**） | High | **PLAN_REVIEW**：ExecPlan 已产出（2026-10-26）。核心为「1 端点 + 5 任务 × (运行态 + 数据态)」：价格完成度按 `assets × prices` 派生、`stale` 判僵尸 `RUNNING`、`contractReady` 显式降级（057 未落地时 4 项为 `null`）。**字段名已在 ExecPlan §4.3 冻结**。待 Human 点头 3 条：`expected` 是否排除未上市资产、是否返回 `dataStateLevel`、是否改 `ARCHITECTURE`/`PRODUCT_LINES` 的「server 不暴露调度接口」约束措辞 | `Planner`（已交付）→ `Human`（Plan Review）→ `Implementer` → 独立 `Reviewer` | [`exec-plans/active/TASK-054`](../exec-plans/active/TASK-054-cron-status-aggregate-api.md) |
 
 ## Backlog
 
@@ -24,16 +25,16 @@
 | TASK-051 | 家庭折算汇率方向反了（`rateToCny` 存成 `1 CNY = X 外币`） | High | 由 `TASK-050` 实施期 **F-1** 立项（2026-10-21）。采集端取 `open.er-api.com/v6/latest/CNY`（`1 CNY = X 外币`）却当 `rateToCny`（`1 外币 = X 人民币`）入库，折算再乘 → **USD/CAD 严重低估、HKD 反被高估 37.6%**；真实数据实测 `totalCny` 3,151 vs 修正后 76,128（**偏差 24 倍**）。`fxRate.service` 零单测、既有测试手填 `7.2` 绕过采集端故全绿；手动录入 `7.2` 可修但次日 09:30 cron 覆盖回错值。**待 Human 裁决 OQ1（修采集端 / 折算端 / 双字段）与 OQ2（历史数据处置）** | `docs/tasks/active/TASK-051-fx-rate-direction.md` |
 | TASK-052 | Agent 运行规则（docs 治理层）审计与整改 | High | 两轮审计合并：2 份 0 字节（`REVIEWER.md` / `EXEC_PLAN_TEMPLATE.md`）、1 份断尾（`EXECUTION_PLANS.md`）、5 份未本地化模板被引为权威、状态词三套并存、任务卡模板合规 52.7%、看板与事实 12 处失配。整改分三批（文档修复 / 规则补全 / `docs:check` 校验环），**不碰 `client/ server/ shared/ cron-worker/`**。待 Human 批准范围与顺序 | `docs/tasks/active/TASK-052-agent-rules-update.md` |
 | TASK-053 | 日志频道「任务运行看板」tab 骨架（FS **C-01**） | High | `FS-cron-worker-status-board` P0 卡片转卡。`/logs` 内新增置顶 tab（含总览条 + 5 卡网格），原两个原始视图零回归；tab 状态落 URL；`/logs` 子树**只读**（NG6）。**无技术依赖，可与 TASK-056 先行**。⚠️ 检测式须限定 `/logs` 子树——`useMutation` 全仓存在（`hooks/useAlerts` / `useFamily`） | `docs/tasks/active/TASK-053-log-board-tab-skeleton.md` |
-| TASK-054 | 后端聚合接口 `GET /api/cron/status`（FS **C-02**） | High | 看板数据唯一来源：5 任务「运行态 + 数据态」一次返回；价格完成度用 `assets × prices` 派生，**不取信 `status`**；再平衡「到期」只来自父任务 `result`（缺失则 `null` + `contractReady=false`）。⚠️ **实码核查发现 3 处 FS 口径不符**：完整性真实输出是 `{expectedCount, actualCount, missingCount}` 而非 `{ok,gap}`、提醒是 `created` 而非 `alertsFired`、汇率为 `fxCount` 无币种标志 → 需裁决 OQ-1 | `docs/tasks/active/TASK-054-cron-status-aggregate-api.md` |
 | TASK-055 | 价格同步「数据态完成度」展示（FS **C-03**） | High | 价格卡的「目标市场日（上一开市日）+ 应采/已采 + 进度条 + missing 清单」；四态色阶（绿/黄/红/灰）、`0/0` 不出 `NaN`、`fetched>expected` 不溢出、接口失败不拖垮全页。**硬前置 TASK-053 + TASK-054**；颜色引用 TASK-056 的 token | `docs/tasks/active/TASK-055-price-completeness-display.md` |
 | TASK-056 | 看板系统状态色语义与图例（FS **C-04**） | High | 新增 4 个**系统状态** token（禁复用行情 `up`/`down`）+ 首屏图例 + "红=坏绿=好"文案；非颜色标识兜底（色盲）；对比度 ≥4.5:1。⚠️ 实证：`priceDisplay.js` **已把红色同时用于"涨"和"缺口"**，是本卡的直接动因。**无数据依赖，可与 TASK-053 先行** | `docs/tasks/active/TASK-056-status-color-semantics.md` |
-| TASK-057 | `taskruns` 数据契约增强（`result` / `SKIPPED` / 再平衡父任务）（FS **C-05**） | High | **P0 批次的数据底座**：① schema 加 `result: Mixed`（现无 → strict **静默丢弃**）；② `normalizeCounts` 白名单放开**显式** `result` 透传；③ `SKIPPED` 落库；④ 补父任务 `rebalance-check` + `result.perPortfolio[]`。⚠️ **实库核查（204 条）**：含 `result` 的 **0 条**、父任务记录 **0 条**、僵尸 `RUNNING` **1 条已僵 62 天**、唯一索引 `(taskName,runKey)` **真实存在** → **与「SKIPPED 落库」直接冲突**，须先裁 **OQ-1**（partial index / 合成 runKey / 只记 ALREADY_RUNNING / 独立集合）。另发现汇率"各币种成功标志"因采集**全或无**而恒全绿（OQ-4）。**先于 TASK-054 的字段冻结** | `docs/tasks/active/TASK-057-taskrun-result-contract.md` |
+| TASK-059 | 组合线原型稿整改（原型对齐 `Approved` 的 `FS-portfolio-ia-cleanup`） | High | **零业务代码**（只动 `docs/ui/2.0/` + `docs/product/`）。原型结构全对、**行为有 7 个 P0**：删除文案把级联范围说反（实码确实删交易+再平衡记录）、Header 读不存在的 `lastRebal`、再平衡子 Tab 内存态（`?sub=` 0 处）、`?record=` 整体缺失、`driftOf` 把「到期未超阈」吞成「配置正常」（实测确认）、大类目标是假实现（拿实际占比当目标，保存即全 0 偏离）、健康表待办点击被整行覆盖（实测落到 overview）。共 **29 项 U + 9 项 D**。**✅ D 组已于 2026-10-26 22:40 全部回写**（FS `HD-10`~`HD-14`：`overThresholdCount` 落地 / `B8a` 作废 / `A17` 设置目标按钮 / `B15` 组合卡四格 / `B16` 删组合后事件全部隐藏 / `AC23` 自相矛盾已修；`PL-3 §6.3` 扩为四字段）。**原型 29 项待整改** | `docs/tasks/active/TASK-059-prototype-alignment-portfolio-ia.md` |
+| TASK-057 | `taskruns` 数据契约增强（`result` / `SKIPPED` / 再平衡父任务）（FS **C-05**） | High | **P0 批次的数据底座**：① schema 加 `result: Mixed`（现无 → strict **静默丢弃**）；② `normalizeCounts` 白名单放开**显式** `result` 透传；③ `SKIPPED` 落库；④ 补父任务 `rebalance-check` + `result.perPortfolio[]`。⚠️ **实库核查（204 条）**：含 `result` 的 **0 条**、父任务记录 **0 条**、僵尸 `RUNNING` **1 条已僵 62 天**、唯一索引 `(taskName,runKey)` **真实存在** → **与「SKIPPED 落库」直接冲突**，须先裁 **OQ-1**（partial index / 合成 runKey / 只记 ALREADY_RUNNING / 独立集合）。另发现汇率"各币种成功标志"因采集**全或无**而恒全绿（OQ-4）。~~先于 TASK-054 的字段冻结~~ → **不再阻塞 054**：054 的对外 API 字段已在自身 ExecPlan §4.3 冻结，`result` 内部键名由 057 冻结、054 用适配器承接（054 ExecPlan §4.8 D-7）；两卡谁先落地都可，054 首日按 `contractReady=false` 降级 | `docs/tasks/active/TASK-057-taskrun-result-contract.md` |
 
 ## Blocked
 
 | ID | Task | Reason |
 |---|---|---|
-| — | 无 | 当前无技术阻塞。`TASK-051` / `TASK-046` / `TASK-047` 不是被依赖卡住，而是**等 Human 裁决或排期**；`TASK-053`~`TASK-057` 的先后顺序已定（`TASK-057` → `TASK-054` → `TASK-053` → `TASK-055`，`TASK-056` 可与 053 并行），但均未开工 |
+| — | 无 | 当前无技术阻塞。`TASK-051` / `TASK-046` / `TASK-047` 不是被依赖卡住，而是**等 Human 裁决或排期**；`TASK-053`~`TASK-057` 的先后顺序：`TASK-054` 已进入 `Plan Review`（可先落地，靠 `contractReady` 降级）、`TASK-057` 与其**互不阻塞**（见 057 行说明）、`TASK-053` / `TASK-056` 无数据依赖可先行、`TASK-055` 硬前置为 053 + 054。**五卡均未开工** |
 
 ## Done
 

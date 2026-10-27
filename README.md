@@ -69,7 +69,7 @@ npm run dev:worker
 - 后端：`http://localhost:8080`
 - API 前缀：`http://localhost:8080/api`
 
-定时任务（价格同步/完整性检查/提醒评估/汇率同步/再平衡分发）**只在 `cron-worker` 中注册**，API 进程不跑任何定时任务。`SCHEDULER_ENABLED` 与全部 `*_CRON` 配置只存在于 `cron-worker/.env`。启动方式与自检见 [调度进程手册](./docs/manual/CRON_WORKER.md) §2.5。
+定时任务（价格同步/完整性检查/提醒评估/汇率同步/再平衡分发）**只在 `cron-worker` 中注册**，API 进程不跑任何定时任务。`SCHEDULER_ENABLED` 与全部 `*_CRON` 配置只存在于 `cron-worker/.env`。启动方式与自检见 [cron-worker 运维手册](./docs/manual/CRON_WORKER_OPS.md) §5。
 
 ## 验证
 
@@ -101,14 +101,16 @@ npm run verify
 
 - [客户端使用手册](./docs/manual/CLIENT.md) — 界面业务操作、业务口径、常见问题
 - [服务端使用手册](./docs/manual/SERVER.md) — server 进程、手动 API 端点、排障
-- [调度进程手册](./docs/manual/CRON_WORKER.md) — 调度机制、数据质量程序、CLI、监控排障
+- [cron-worker 总览](./docs/manual/CRON_WORKER.md) — 进程入口；运维 / 产品介绍 / 开发三视角导航见其内链接
 - [系统部署手册](./docs/manual/DEPLOYMENT.md) — 本地开发、生产部署、环境变量全表、安全边界、备份
 - [产品线总览与功能评估](./docs/product/PRODUCT_LINES.md) — 产品线划分、功能全景与取舍建议（子文件 PL-0~PL-6）
 - [架构总览](./docs/architecture/ARCHITECTURE.md) — 分层与模块边界
 - [ADR-002 单一调度器与共享内核](./docs/architecture/adr/ADR-002-single-scheduler.md) — 调度所有权收敛决策
 - [REST API 契约](./docs/dev/API_CONTRACT.md)
+- [数据模型参考](./docs/dev/DATA_MODEL.md) — 各模型字段、索引、引用关系、已知契约缺口
+- [前端开发文档](./docs/dev/CLIENT_DEV.md) — 路由、Query 数据层、组件清单、设计 token
 - [产品需求文档 PRD](./docs/product/specs/PRD.md) — 需求基线
-- [后续路线图](./docs/product/ROADMAP.md)
+- [任务板与阶段路线](./docs/tasks/TASKS.md)
 - [文档索引](./docs/readme.md) — 全部文档入口
 
 ## 重要业务规则

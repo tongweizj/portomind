@@ -88,18 +88,18 @@ PortoMind 是 Max 家庭的自托管投资组合管理平台：家庭拥有多�
 | CM-05 | **账户类型（账户载体）**：tiantian / xueqiu / tfsa / rrsp / resp / taxable / other | ✅ | — | 新增可选字段，默认 other；用于家庭视图按真实账户分组展示（CM-03 是风险定位，与账户类型正交） |
 | CM-06 | 目标配置：按 symbol 设置目标比例 | ✅ | — | 目标不可重复；非空合计精确 100% |
 | CM-07 | 目标配置校验反馈 | ✅ | — | 合计 ≠100% 时保存被拒并提示 |
-| CM-08 | 目标配置按大类（asset class）聚合视图 | ✅ | P2 | 已实现：targets 支持 `level: 'asset' | 'asset_class'`（二选一，混合禁止）；大类目标模式下 thresholdChecker 聚合为伪持仓复用 symbol 级口径、suggestionGenerator 按类内市值占比摊分到 symbol、actual-ratios 支持 `?level=asset_class`（币种内大类占比）、组合卡片 drift 徽标同口径；前端目标配置页大类/资产级切换与大类视图 |
-| CM-09 | 再平衡参数：绝对偏离阈值（默认 5%）、相对偏离阈值（默认 10%）、时间间隔（默认 60 天），三项可独立启停 | ✅ | — | 0–100% 范围校验；间隔 ≥1 天 |
-| CM-10 | 再平衡检查频率：daily / weekly / monthly | ✅ | — | enum，默认 daily |
+| CM-08 | 目标配置按大类（asset class）聚合视图 | ✅ | P2 | 已实现：targets 支持 `level: 'asset'` / `'asset_class'`（二选一，混合禁止）；大类目标模式下 thresholdChecker 聚合为伪持仓复用 symbol 级口径、suggestionGenerator 按类内市值占比摊分到 symbol、actual-ratios 支持 `?level=asset_class`（币种内大类占比）、组合卡片 drift 徽标同口径；前端目标配置页大类/资产级切换与大类视图 |
+| CM-09 | 再平衡参数：绝对偏离阈值（默认 5%）、相对偏离阈值（默认 10%）、时间间隔（默认 60 天），三项可独立启停 | ✅ | — | 0–100% 范围校验；间隔 ≥1 天。**归属 PL-3「配置声明」**（2026-10-26），判定与执行归 PL-4 |
+| CM-10 | 再平衡检查频率：daily / weekly / monthly | ✅ | — | enum，默认 daily。**归属 PL-3「配置声明」**，按频率分发由 PL-4 AUTO 调度承担 |
 | CM-11 | 组合列表：卡片展示名称、描述、类型、币种 | ✅ | — | — |
-| CM-12 | 组合列表卡片增强：当前市值（组合币种）、持仓资产数、漂移状态徽标、待处理提醒数 | ✅ | P1 | 市值按币种分桶 + 持仓数 + 漂移徽标 + 未读提醒数（`GET /api/portfolios/summary` 返回 `stats.unreadAlertCount`，组合卡片显示「N 条未读提醒」）全部落地 |
-| CM-13 | 组合详情 Tab：概览 / 持仓 / 交易 / 持仓历史 / 再平衡 | ✅ | — | 路由 `PORTFOLIO_TAB` 模式 |
+| CM-12 | 组合列表卡片增强：当前市值（组合币种）、持仓资产数、漂移状态徽标、待处理提醒数 | ◐ | P1 | 市值按币种分桶 + 持仓数 + 漂移徽标 + 未读提醒数（`GET /api/portfolios/summary` 返回 `stats.unreadAlertCount`，组合卡片显示「N 条未读提醒」）已落地。**缺口（2026-10-26 对账）**：徽标只反映绝对/相对偏离，`summary.js` 的 `drift` 过滤掉 `timeInterval` → **「到期该再平衡」在列表页不可见**。修法见 FS `B3`（补 `drift.dueByTime`，不改既有语义） |
+| CM-13 | 组合详情 Tab | ◐ | P1 | **实码 4 个 Tab：持仓概览 / 持仓历史 / 再平衡 / 交易记录**（`Detail.jsx` 的 `TABS`，`DEFAULT_TAB='positions'`），**不存在「概览」Tab**。原表述「概览 / 持仓 / 交易 / 持仓历史 / 再平衡」5 项与实码不符，2026-10-26 对账修正。**目标态 5 Tab**（首 Tab「总览」= KPI + 目标 vs 实际 + 偏离原因 + 最近再平衡）= FS 交付单元 A |
 | CM-14 | 组合统计：实时持仓比例（目标 vs 实际） | ✅ | — | `GET /:id/stats/actual-ratios` |
 | CM-15 | 组合统计：汇总统计 | ✅ | — | `GET /:id/stats` |
 | CM-16 | 组合持仓概览：份额、平均成本、剩余成本、最新价、市值、未实现盈亏、盈亏比 | ✅ | — | 支持搜索与按市值/盈亏比排序分页 |
 | CM-17 | 组合持仓历史：市值与剩余成本趋势（日/周/月粒度） | ✅ | — | 币种分组展示，不跨币种合计 |
 | CM-18 | 组合内交易流水视图 | ✅ | — | 分页；增删改统一走交易模块 |
-| CM-19 | 级联删除：删除组合同时删除其全部交易与再平衡记录 | ✅ | — | 先删子资源再删组合；失败时保留组合避免孤儿记录；前端二次确认并明示后果 |
+| CM-19 | 级联删除：删除组合同时删除其全部交易与再平衡记录 | ◐ | P1 | 先删子资源再删组合；失败时保留组合避免孤儿记录。**缺口（2026-10-26 对账）**：后端能力与确认设计齐全，但**界面入口不存在**——`deletePortfolio` 仅被零引用的 `Basic.jsx` 引用，用户无法触达。目标入口 = 详情 Header「更多」+ 输入组合名确认（FS A9） |
 | CM-20 | 组合归档（停用不删除，保留历史） | ✅ | P2 | 归档组合不参与家庭市值与再平衡调度，数据保留 |
 
 #### 4.1.4 数据模型（现状 + 增量）
@@ -204,7 +204,7 @@ Portfolio {
 | AS-08 | **港股支持**：market 增加 `HK`、currency 增加 `HKD`、路由 Yahoo（`XXXX.HK` 代码）、交易日历增加 HK 节假日 | ✅ | **P0（批次1）** | 已实测：`0700.HK`（腾讯 453 HKD）、`1211.HK`（比亚迪 87.2 HKD）实时+历史（2024 年 1 月 K 线）+ 开市判断全部通过；`.HK` 后缀与场外基金 `.CN` 推断互斥无冲突；HK 节假日静态表 2024/2025 官方 + 2026 推算（需逐年核对 HKEX 公告） |
 | AS-09 | assetClass 大类字段（equity/bond/gold/cash） | ✅ | P2（批次4） | 已实现：server/cron-worker 模型 + 常量三份同步；与 ASSET_TYPES 正交（黄金 ETF type=etf、assetClass=gold）；null = 未分类（mongoose enum 显式含 null），表单可编辑 + 列表筛选/排序；**为 CM-08 大类目标层与家庭视图大类分组铺垫就绪**；存量资产需逐条补分类 |
 | AS-10 | A股股票日线（非 ETF） | ✅ | — | 东方财富 fetcher 按 secid 路由：5/6/9 开头→上海 `1.x`，其余→深圳 `0.x`；实测个股后确认 |
-| AS-11 | 估值分位（A股宽基 PE/PB 历史分位） | ✅ | P2 | 已实现：Valuation 模型（indexCode/metric pe|pb/value/percentile/date/source，按 (indexCode,metric,date) 幂等）+ `/api/valuations` 列表与录入；手动录入为主（衔接 index-valuation-selfcalc 自算结果），作 AL-10 估值分位规则的评估输入 |
+| AS-11 | 估值分位（A股宽基 PE/PB 历史分位） | ✅ | P2 | 已实现：Valuation 模型（indexCode / metric `pe` 或 `pb` / value / percentile / date / source，按 (indexCode,metric,date) 幂等）+ `/api/valuations` 列表与录入；手动录入为主（衔接 index-valuation-selfcalc 自算结果），作 AL-10 估值分位规则的评估输入 |
 
 #### 4.2.4 数据源与路由（现状）
 
@@ -410,6 +410,8 @@ AlertEvent {
 
 再平衡是系统的决策闭环：「阈值检查 → 生成建议 → 用户确认执行（生成内部交易）→ 撤销/重做」。**永不自动交易**（安全边界）：AUTO 模式也只是自动生成待确认建议。建议按组合币种计算，不做跨币种折算。
 
+> **归属说明（2026-10-26）**：本节的阈值参数 `CM-09`、检查频率 `CM-10` 属 §4.1 组合管理的「配置声明」，本模块只承载其**运行时**（判定/建议/执行/巡检）与**通知投递** `RB-12`。分段依据：声明的变更频率低、无副作用；运行时有资金后果与独立状态机。
+
 #### 4.5.2 用户故事
 
 1. 作为用户，我设好目标配置与阈值，系统每天检查，偏离超限时告诉我哪个资产超了、超多少；
@@ -432,6 +434,7 @@ AlertEvent {
 | RB-09 | 前端：待确认建议恢复展示、最近执行记录、双层饼图（当前 vs 执行后） | ✅ | — | — |
 | RB-10 | 建议费用模型与交易 fee 字段口径统一 | ✅ | P1（批次3） | 已实现：执行再平衡时交易 fee = 建议 estimatedCost（费用+税），可对账；撤销反向交易 fee 与原交易一致 |
 | RB-11 | 大类层再平衡（equity/bond/gold/cash） | ✅ | P2（批次4） | 已实现：大类目标 → 类内市值占比摊分 symbol 级建议（保持大类内部结构）；新大类无持仓记 `CLASS_NO_POSITIONS`、未分类持仓记 `UNCLASSIFIED_POSITIONS`；建议标注 assetClass；RebalanceRecord 记 classMode |
+| RB-12 | 再平衡通知（异步投递） | ✅ | P2 | AUTO 巡检命中后经 `alertCenter.notify` 写 `AlertEvent`（`ruleId=null`、`level=action`），通知中心可见、可标记已读/忽略。**归属 PL-4 出口、载体 PL-5 事件表**（2026-10-26 登记；此前三份文档均未认领）。**Non-goal**：不纳入 `AlertRule`（`ruleType: rebalance_due`），避免 AUTO 巡检与规则引擎两套触发源并存；因此它不可配、不可静默 |
 
 #### 4.5.4 数据模型（现状）
 
@@ -495,6 +498,7 @@ RebalanceRecord {
 | 2026-08-31 | **PRD 状态勾选（批次1 收官核对）**：CM-12 ◐→✅（未读提醒数落地）、FAM-03 🔲→✅（通知中心即其落地形态）、§4.1.7 完成度 16/20→19/20（CM-05/12/20 划线标注 T1/T2/T3）、§4.1.4 增量注释更新、§4.2/§4.4 概述与数据模型标题更新、RB-08 验收标准更新（通知中心已接入）、里程碑批次1 标 ✅、批次2 交付列表移除已提前完成的 CM-05/CM-12 |
 | 2026-08-31 | **家庭层完成（批次2，FAM-01/02/04）**：FxRate 模型（currency/rateToCny/date/source，按 (currency,date) 幂等 upsert）+ fxRate.service（getLatestRates/upsertRate/syncLatestRates，er-api 免 key 公开源，失败降级可手动录入）+ fxScheduler 每日 09:30 采集；familySummary.service（buildCurrencyBuckets/buildFamilySummary 纯函数 + computeFamilySummary 编排：RMB 基准总资产、USD/CAD/CNY/HKD 分桶、组合贡献占比、缺价/缺汇率标 null 不误报、最近交易/再平衡动态）；/api/family 四端点；客户端家庭视图页（总资产卡片 + 分桶卡 + 贡献列表 + 动态流 + 汇率管理）。测试 server 114/114（新增 12：family.summary），lint/build 清洁 |
 | 2026-08-31 | **AS-09 assetClass 完成（CM-08 前置就绪）**：三份常量加 ASSET_CLASSES（equity/bond/gold/cash，与 ASSET_TYPES 正交）；server/cron-worker asset 模型加 assetClass（enum 显式含 null=未分类）；asset.service 白名单/规范化/筛选（unclassified→null 特例）；controller 校验 + 透传；客户端 AssetForm 下拉（含说明文案）+ AssetList 大类列/筛选/排序。测试 server 118/118（新增 4：规范化/非法拒绝/筛选/模型枚举）、cron-worker 69/69、lint/build 清洁。**注意**：mongoose enum 须显式含 null 才允许未分类（踩坑） |
-| 2026-08-31 | **大类层级完成（批次4，CM-08/RB-11/T4）**：targets 支持 `level: 'asset'|'asset_class'`（二选一，混合禁止；model 去 uppercase 改由 normalizeTargets 按 level 规范化大小写）；assetClassAggregator（aggregateByAssetClass/buildClassPositions/hasClassTargets/deriveSymbolTargets 纯函数 + getAssetClassMap）；thresholdChecker 大类模式（聚合伪持仓复用 evaluateThresholds）；suggestionGenerator 大类摊分（类内市值占比 → symbol 目标；CLASS_NO_POSITIONS/UNCLASSIFIED_POSITIONS warning；建议标注 assetClass；RebalanceRecord.classMode）；actual-ratios `?level=asset_class`（币种内大类占比）；summary/alertEngine 组合漂移同口径兼容；前端 TargetAllocation 大类视图 + PortfolioForm 层级切换。测试 server 133/133（新增 15：targets 校验 4 + 聚合器 6 + threshold 1 + ratios 1 + HTTP 3），lint/build 清洁。§4.1 20/20 全部实现 |
+| 2026-08-31 | **大类层级完成（批次4，CM-08/RB-11/T4）**：targets 支持 `level: 'asset'` / `'asset_class'`（二选一，混合禁止；model 去 uppercase 改由 normalizeTargets 按 level 规范化大小写）；assetClassAggregator（aggregateByAssetClass/buildClassPositions/hasClassTargets/deriveSymbolTargets 纯函数 + getAssetClassMap）；thresholdChecker 大类模式（聚合伪持仓复用 evaluateThresholds）；suggestionGenerator 大类摊分（类内市值占比 → symbol 目标；CLASS_NO_POSITIONS/UNCLASSIFIED_POSITIONS warning；建议标注 assetClass；RebalanceRecord.classMode）；actual-ratios `?level=asset_class`（币种内大类占比）；summary/alertEngine 组合漂移同口径兼容；前端 TargetAllocation 大类视图 + PortfolioForm 层级切换。测试 server 133/133（新增 15：targets 校验 4 + 聚合器 6 + threshold 1 + ratios 1 + HTTP 3），lint/build 清洁。§4.1 20/20 全部实现 |
+| 2026-10-26 | **组合/再平衡 IA 对账与归属裁决**：① `CM-13` Tab 数量与实码对齐（实为 4 个且无「概览」）→ 状态 ✅→◐，目标态 5 Tab 见 [FS-portfolio-ia-cleanup](./FS-portfolio-ia-cleanup.md)；② `CM-12` ✅→◐（`drift` 过滤掉 `timeInterval`，「到期」不可见）；③ `CM-19` ✅→◐（删除入口不存在）；④ `CM-09/CM-10` 归属 PL-3「配置声明」；⑤ 新增 `RB-12` 再平衡通知（此前 PL-4/PL-5/PRD 三处均未认领），并把「纳入 `AlertRule`」写为 Non-goal。**仅文档，无代码改动** |
 | 2026-08-31 | **AL-09/AL-10 完成（提醒规则扩展，随 AS-11）**：AS-11 估值分位数据层——Valuation 模型（indexCode/metric/value/percentile/date/source，幂等）+ valuation.service（getLatestValuations/getLatestValuation/upsertValuation）+ `/api/valuations`（列表/录入，手动为主衔接 index-valuation-selfcalc）；AL-09 规则 `high_52w`/`low_52w`（lookbackDays 默认 365，窗口取历史不含今日，Price.aggregate 批量 max/min）；AL-10 规则 `valuation_percentile`（indexCode/metric/threshold/direction，严格比较，低估 info/高估 warning）；controller params 校验 + 客户端表单（回看天数/指数代码/指标/阈值/方向）。测试 server 145/145（新增 12：engine 5 + valuation 7），lint/build 清洁。§4.4 提醒 10/10 全部实现 |
 | 2026-08-31 | **交易增强完成（批次3，TR-06~09 + RB-10）**：TR-06 fee——model fee（默认 0）+ 重放 buy/div_reinvest 成本含费、sell realizedPnl 扣费（不回溯漂移）+ 表单费用输入；TR-07 分红——action 扩展 div_cash（现金分红不进持仓）/div_reinvest（等价买入转增）+ 表单与说明；TR-08 整手——后端 detectLotWarnings（CN buy 非整手响应附加 `CN_LOT_SIZE` warnings 不阻断）+ 前端 confirm 提示；TR-09 CSV——POST /api/transactions/import（逐条校验失败整批回滚 → 幂等去重（按日比较）→ 超卖重放 → insertMany，≤500 行）+ 前端导入页（CSV 解析/列名智能映射/预览/错误报告，天天基金/雪球模板）；RB-10——执行再平衡交易 fee = 建议 estimatedCost、撤销反向 fee 与原一致。测试 server 157/157（新增 12：fee 重放 4 + 分红 2 + 整手 1 + 导入 3 + 执行/撤销 2），lint/build 清洁。**PRD 全部五大模块 + 四个批次全部完成** |

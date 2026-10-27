@@ -16,6 +16,8 @@
 
 ## 1. 问题
 
+> **时效说明（2026-10-26 18:00 补注）**：本卡 §5 的审计条目（尤其 **D6 / D7 / D8 / D10**）中凡涉及 `TASK-050` 与「`main` 停在 `891d0f7`」的事实，**已随 `TASK-050` 结案（合入 `main` `cafcc5d`，PR #35）而失效** —— 现 `TASK-050` = `COMPLETED`、任务卡与 ExecPlan 已归档 `complete/`、`TASKS.md` 的 Active 已清空、Done 表补 `Merged` 落点、`readme.md` 活跃行已改「无」。**但这些失效恰好印证 D6/D7 本身的结论**（缺少 State→Owner→产物映射、`Completed` 不保证已合入、看板与事实会漂移），故整改条目**保留不动**，仅在此提示：实施整改时请以当前 `TASKS.md` / `main` 为基线核对，不要照抄本节引用的行号与状态。
+
 本项目的 agent 运行规则实际由**三层**构成，而书面那层有明显空洞：
 
 1. **书面层**（`docs/`）：[AGENTS.md](../../../AGENTS.md)、[docs/readme.md](../../readme.md)、[DOCS.md](../../standards/DOCS.md)、[EXECUTION_PLANS.md](../../process/EXECUTION_PLANS.md)、`docs/agents/*`、`docs/templates/*`、`docs/standards/*`；
