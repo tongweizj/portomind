@@ -49,10 +49,9 @@
   .s-child{padding:6px 0 6px 44px;border-radius:var(--r-md);color:var(--ink2);font-weight:500;font-size:13px;cursor:pointer;}
   .s-child:hover{color:var(--ink);}
   .s-child.on{color:var(--brand);font-weight:600;background:var(--brand-surf);}
+  /* 侧栏底部：只剩分隔线 + 版本号（TASK-060 M-01/M-02 / E4·E5 —— 侧栏不提供任何账户入口） */
   .s-bottom{padding:0 12px 16px;}
   .s-sep{height:1px;background:var(--border);margin:0 12px 12px;}
-  .s-exit{display:flex;align-items:center;gap:12px;padding:8px 12px;border-radius:var(--r-md);color:var(--ink2);font-weight:500;cursor:pointer;font-size:14px;}
-  .s-exit:hover{background:#EEF1F5;}
   .s-ver{color:var(--muted);font-size:12px;padding:8px 16px 0;}
 
   .main{flex:1;margin-left:232px;min-width:0;display:flex;flex-direction:column;}
@@ -81,6 +80,48 @@
   .gs-none{padding:14px;color:var(--muted);font-size:13px;text-align:center;}
   .avatar{width:32px;height:32px;border-radius:50%;background:var(--brand);color:#fff;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;cursor:pointer;}
   .content{padding:24px 32px 64px;flex:1;min-width:0;}
+
+  /* ===== 顶栏头像下拉（TASK-060 M-03 / A-15 / D11·D12）
+     面板 = 身份行（只读，非 a/button）+ 分隔线 + 账户设置 + 退出登录，恰两个动作 ===== */
+  .user-menu{position:relative;}
+  .um-trigger{background:none;border:none;padding:0;cursor:pointer;display:flex;border-radius:50%;font-family:inherit;}
+  .um-trigger:focus-visible{outline:2px solid var(--brand);outline-offset:3px;}
+  .um-panel{position:absolute;right:0;top:calc(100% + 8px);width:200px;background:var(--card);border:1px solid var(--border);border-radius:var(--r-lg);box-shadow:0 12px 32px rgba(10,37,64,.14);padding:6px;display:none;z-index:50;}
+  .um-panel.show{display:block;}
+  /* 身份行：用户名 + 角色同一行；角色弱化（muted，不用 chip 强调） */
+  .um-id{padding:9px 12px 8px;display:flex;align-items:center;gap:8px;cursor:default;}
+  .um-name{font-size:13px;font-weight:700;color:var(--ink);}
+  .um-role{font-size:12px;font-weight:500;color:var(--muted);}
+  .um-sep{height:1px;background:var(--border);margin:4px 6px;}
+  .um-row{display:block;width:100%;text-align:left;padding:8px 12px;border-radius:var(--r-sm);font-size:13px;font-weight:500;color:var(--ink2);cursor:pointer;border:none;background:none;font-family:inherit;transition:all .15s;}
+  .um-row:hover{background:#EEF1F5;color:var(--ink);}
+  .um-row:disabled{opacity:.45;cursor:not-allowed;}
+  .um-row:disabled:hover{background:none;color:var(--ink2);}
+  .um-row[hidden]{display:none;}
+  .um-row.danger{color:var(--danger);}
+  .um-row.danger:hover{background:#FDECEF;color:var(--danger);}
+
+  /* ===== 登录屏（无侧栏/顶栏）与强制改密闸门 ===== */
+  body.authed-off .sidebar,
+  body.authed-off .topbar{display:none;}
+  body.authed-off .main{margin-left:0;}
+  body.authed-off .content{padding:0;}
+  .login-wrap{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px;background:linear-gradient(160deg,#F6F8FA 0%,#EEEDFF 100%);}
+  .login-card{width:400px;max-width:100%;background:var(--card);border:1px solid var(--border);border-radius:14px;box-shadow:0 20px 48px rgba(10,37,64,.12);overflow:hidden;}
+  .login-head{padding:28px 28px 8px;display:flex;align-items:center;gap:12px;}
+  .login-head .mark{width:36px;height:36px;background:var(--brand);border-radius:8px;display:flex;align-items:center;justify-content:center;color:#fff;font-size:20px;}
+  .login-head .t{font-size:19px;font-weight:700;}
+  .login-head .s{font-size:12px;color:var(--muted);}
+  .login-body{padding:8px 28px 28px;}
+  .demo-note{background:var(--brand-surf);border:1px solid #D9D6FF;border-radius:8px;padding:10px 12px;font-size:12px;color:var(--brand-hov);margin-bottom:18px;line-height:1.6;}
+  .demo-note b{color:var(--brand);}
+  .center-screen{display:flex;align-items:center;justify-content:center;padding:24px;flex-direction:column;gap:14px;text-align:center;min-height:calc(100vh - 160px);}
+
+  /* 注：账户页页内 Tab（.ptabs/.ptab）已于 2026-10-27 随「系统设置独立成页」移除，
+     系统设置改由顶栏下拉进入（D13）。此处不再保留无引用的样式。 */
+  .kv{display:grid;grid-template-columns:120px 1fr;gap:10px 14px;font-size:13px;align-items:center;}
+  .kv .k{color:var(--muted);}
+  .kv .v{font-weight:600;}
 
   /* ===== 通用 ===== */
   .card{background:var(--card);border:1px solid var(--border);border-radius:var(--r-lg);}
@@ -168,6 +209,31 @@
   .search-box .ic{position:absolute;left:10px;top:50%;transform:translateY(-50%);color:var(--muted);font-size:13px;}
   .search-box .input{padding-left:30px;width:240px;}
   .count{font-size:12px;color:var(--muted);}
+  /* 加载骨架（原 auth 原型 A-13，合并后统一在此定义） */
+  .skel-row{display:flex;gap:14px;padding:12px 14px;border-bottom:1px solid #F1F3F7;}
+  .skel{height:12px;border-radius:6px;background:linear-gradient(90deg,#EDF0F4 25%,#F6F8FA 37%,#EDF0F4 63%);background-size:400% 100%;animation:sk 1.4s ease infinite;}
+  @keyframes sk{0%{background-position:100% 50%}100%{background-position:0 50%}}
+
+  /* ===== 任务运行看板（TASK-061 / FS-cron-worker-status-board） =====
+     系统态色：红=坏 · 绿=好 —— 与行情「红涨绿跌」语义无关，图例须书面区分 */
+  .cron-overview{display:flex;align-items:center;gap:16px;flex-wrap:wrap;padding:12px 0 4px;}
+  .hl-wrap{display:flex;gap:14px;flex-wrap:wrap;}
+  .hl{display:inline-flex;align-items:center;gap:6px;font-size:13px;color:var(--ink2);}
+  .cron-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:14px;margin:12px 0;}
+  .cron-card .ph-title{font-size:15px;font-weight:600;}
+  .cron-card .knum{font-size:13px;margin:8px 0;color:var(--ink);}
+  .cron-card .note{font-size:12px;color:var(--warn-t);background:var(--warn-bg);padding:4px 8px;border-radius:6px;margin:4px 0;}
+  .cron-card .card-actions{margin-top:8px;display:flex;gap:14px;}
+  .cron-card .run-state{font-size:11px;color:var(--muted);margin:2px 0 6px;letter-spacing:.02em;}
+  .pbar{height:8px;background:#F1F3F7;border-radius:999px;overflow:hidden;margin:8px 0;}
+  .pbar-f{height:100%;background:var(--brand);border-radius:999px;}
+  .cron-legend{font-size:12px;color:var(--muted);display:flex;align-items:center;gap:6px;flex-wrap:wrap;padding:8px 0;border-top:1px solid var(--border);margin-top:6px;}
+  .link{color:var(--brand);cursor:pointer;font-size:13px;font-weight:500;}
+  .link:hover{text-decoration:underline;}
+  .cron-ro{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--muted);margin-top:10px;padding:8px 12px;background:#FBFCFD;border:1px solid var(--border);border-radius:var(--r-md);}
+  .crumbs{font-size:13px;color:var(--muted);margin-bottom:10px;}
+  /* F2：详情页操作列两个链接同格并排，须留间距（否则粘连成一个） */
+  .act-cell{display:flex;gap:12px;align-items:center;}
 
   /* 表单 */
   .field{margin-bottom:14px;}
@@ -279,6 +345,9 @@
   .detail-back{margin-bottom:2px;}
   .detail-back a{font-size:13px;color:var(--ink2);cursor:pointer;font-weight:500;}
   .detail-back a:hover{color:var(--brand);}
+  /* ?record= 命中行高亮 + 明细展开行 */
+  .rb-hit td{background:var(--brand-surf) !important;}
+  .rb-detail td{padding:0 !important;border-bottom:1px solid #F1F3F7;}
   @media(max-width:1100px){.two-col{grid-template-columns:1fr !important;}}
   .log-line{font-family:"Inter",monospace;font-size:12px;padding:6px 14px;border-bottom:1px solid #F1F3F7;white-space:pre-wrap;}
   .log-line.lv-ERROR{color:var(--danger);}
@@ -287,7 +356,7 @@
 
   @media(max-width:1100px){
     .sidebar{width:64px;flex-basis:64px;}
-    .s-logo .name,.s-group,.s-item span.lbl,.s-badge,.s-child,.s-exit span,.s-ver{display:none;}
+    .s-logo .name,.s-group,.s-item span.lbl,.s-badge,.s-child,.s-ver{display:none;}
     .s-item{justify-content:center;padding:10px;}
     .main{margin-left:64px;}
     .content{padding:18px 16px 56px;}
@@ -318,12 +387,9 @@
       </div>
       <div class="s-item" id="nav-prices" data-nav="prices" onclick="go('#/prices')">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 17l6-8 4 5 8-10"/></svg>
-        <span class="lbl">今日行情</span><span class="s-badge">监控</span>
+        <span class="lbl">自选行情</span><span class="s-badge">监控</span>
       </div>
-      <div class="s-item" id="nav-alerts" data-nav="alerts" onclick="go('#/alerts/rules')">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M18 9a6 6 0 10-12 0c0 6-2 7-2 7h16s-2-1-2-7"/><path d="M10 20a2 2 0 004 0"/></svg>
-        <span class="lbl">提醒规则</span>
-      </div>
+      <!-- 「提醒规则」已移出侧栏，入口在顶栏头像下拉（2026-10-27）；侧栏保持 4 项 -->
       <div class="s-item" id="nav-logs" data-nav="logs" onclick="go('#/logs')">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 5h16M4 12h10M4 19h7"/></svg>
         <span class="lbl">日志</span>
@@ -331,11 +397,7 @@
     </nav>
     <div class="s-bottom">
       <div class="s-sep"></div>
-      <div class="s-exit" onclick="toast('演示原型：登录体系未接入（PL-0 认证为公网前置项）')">
-        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/><path d="M16 17l5-5-5-5M21 12H9"/></svg>
-        <span>退出登录</span>
-      </div>
-      <div class="s-ver">v0.9.2 · 自托管</div>
+      <div class="s-ver">v2.1 · 自托管</div>
     </div>
   </aside>
 
@@ -350,7 +412,27 @@
           oninput="gsSearch(this.value)" onfocus="gsSearch(this.value)"/>
         <div class="gs-drop" id="gsDrop"></div>
       </div>
-      <div class="avatar" onclick="toast('单用户模式 · 无多账号（见 FS-authentication）')">T</div>
+      <!-- 账户唯一入口：顶栏右侧头像下拉（M-03 / D11·D12）。侧栏不再提供任何账户入口。 -->
+      <div class="user-menu" id="userMenu">
+        <button class="um-trigger" id="umTrigger" aria-haspopup="menu" aria-expanded="false" aria-controls="umPanel"
+          onclick="toggleUserMenu(event)" title="账户菜单">
+          <span class="avatar" id="umAvatar">A</span>
+        </button>
+        <div class="um-panel" id="umPanel" role="menu" aria-labelledby="umTrigger">
+          <div class="um-id" role="none">
+            <span class="um-name" id="umName">admin</span>
+            <span class="um-role" id="umRole">管理员</span>
+          </div>
+          <div class="um-sep"></div>
+          <div class="um-acts">
+            <button class="um-row" role="menuitem" onclick="userMenuPick('#/account')">账户设置</button>
+            <!-- 「系统设置」是独立页面（#/account/users），非 /account 的子 Tab；仅 admin 渲染（D13） -->
+            <button class="um-row" role="menuitem" id="umSysRow" hidden onclick="userMenuPick('#/account/users')">系统设置</button>
+            <button class="um-row" role="menuitem" onclick="userMenuPick('#/alerts/rules')">提醒规则</button>
+            <button class="um-row danger" role="menuitem" onclick="doLogout()">退出登录</button>
+          </div>
+        </div>
+      </div>
     </div>
     <div class="content" id="view"></div>
   </div>
@@ -362,9 +444,21 @@
 <script>
 'use strict';
 /* =====================================================
-   PortoMind 全量产品原型 · v2.0
+   PortoMind 全量产品原型 · v2.0（TASK-059 整改后）
    设计对齐 docs/ui/1.0（Ardot 设计稿）+ design-tokens.js
-   路由：hash-based；全部状态在内存中 mock，可走通全流程
+   路由：hash-based（path + query）；全部状态在内存中 mock，可走通全流程
+
+   ⚠️ 实施勿照搬
+   - 本文件的「演示注记」「原型演示数据」等文案只是走查提示，不进产品。
+   - 目标配置弹窗、CSV 导入预览等交互为行为演示；落地形态见 FS（NG-9 跳 /portfolios/edit/:id）。
+   - 视觉标尺以 Ardot 9 屏为准；行为标尺以本原型 + FS 为准，冲突时以需求为准。
+   - 所有带 data-demo 标记的节点（演示注记 / 预填账号 / 明文口令 mock）落地一律不得照搬 ——
+     FS §4.1 明文要求「登录页不提示默认账号」。落地检查方式：按 data-demo 全量剔除（不是条件渲染），
+     剔除后应 0 处残留。
+   - S.session 默认带一个演示登录态（见下方注释），落地实现时不得保留。
+
+   认证模块（登录 / 账户 / 系统设置）已于本次合并统一到本文件，
+   docs/ui/2.0/portomind-auth-prototype.html 退为跳转壳。
 ===================================================== */
 
 /* ---------- 设计 token（与 client/src/constants/design-tokens.js 同源） ---------- */
@@ -409,20 +503,22 @@ const PORTFOLIOS = [
   { id:'cn-stable', name:'CN-稳钱', ptype:'稳健', account:'天天基金', ccy:'CNY',
     desc:'债券与货币基金为主，控制回撤，追求稳定收益。',
     targets:{ '110011':25, '003376':20, '000198':30, '518880':25 },
-    cfg:{ abs:5, rel:10, interval:60, timeOn:true, freq:'monthly' },
-    archived:false, lastRebal:'2026-10-14',
+    targetLevel:'asset', classTargets:null,
+    cfg:{ abs:5, rel:10, interval:60, freq:'monthly' },
+    archived:false, createdAt:'2025-11-02', lastExecutedAt:'2026-10-14',
     holdings:[ {sym:'110011',qty:30000,cost:3.210}, {sym:'003376',qty:80000,cost:1.050}, {sym:'000198',qty:130000,cost:1.000}, {sym:'518880',qty:12000,cost:6.900} ] },
   { id:'cn-long', name:'CN-长钱', ptype:'长期', account:'雪球', ccy:'CNY',
     desc:'以宽基指数为核心的长钱账户，覆盖A股与美股敞口。',
     targets:{ '510300':40, '510500':15, '513100':25, '518880':20 },
-    cfg:{ abs:5, rel:10, interval:60, timeOn:true, freq:'daily' },
-    archived:false, lastRebal:'2026-08-27',
+    targetLevel:'asset', classTargets:null,
+    cfg:{ abs:5, rel:10, interval:60, freq:'daily' },
+    archived:false, createdAt:'2025-06-18', lastExecutedAt:'2026-08-27',
     holdings:[ {sym:'510300',qty:60000,cost:3.680}, {sym:'510500',qty:10000,cost:6.120}, {sym:'513100',qty:80000,cost:1.380}, {sym:'518880',qty:15000,cost:7.100} ] },
   { id:'ca-long', name:'CA-长钱', ptype:'长期', account:'TFSA', ccy:'CAD',
     desc:'TFSA 免税账户，加股与美股 ETF 长期定投。',
-    targets:null,
-    cfg:{ abs:5, rel:10, interval:60, timeOn:true, freq:'off' },
-    archived:false, lastRebal:null,
+    targets:null, targetLevel:'asset', classTargets:null,
+    cfg:{ abs:5, rel:10, interval:60, freq:'monthly' },
+    archived:false, createdAt:'2026-01-09', lastExecutedAt:null,
     holdings:[ {sym:'XIC',qty:400,cost:45.10}, {sym:'VUN',qty:500,cost:39.80}, {sym:'XBB',qty:250,cost:29.10}, {sym:'XEF',qty:300,cost:38.40} ] },
 ];
 
@@ -443,10 +539,15 @@ let TXNS = [
 let txSeq = 100;
 
 let REBALS = [
-  { id:'r1', pid:'cn-long', date:'2026-10-26', status:'PENDING', mode:'AUTO', count:3, trades:null },
-  { id:'r2', pid:'cn-long', date:'2026-08-27', status:'EXECUTED', mode:'手动', count:6, trades:null },
-  { id:'r3', pid:'cn-long', date:'2026-07-02', status:'REVOKED', mode:'手动', count:2, trades:null },
-  { id:'r4', pid:'cn-stable', date:'2026-09-20', status:'EXECUTED', mode:'手动', count:2, trades:null },
+  { id:'r1', pid:'cn-long', date:'2026-10-26', status:'PENDING', mode:'AUTO', count:3,
+    suggestions:[
+      { sym:'510300', action:'sell', shares:1200, price:4.02 },
+      { sym:'510500', action:'buy',  shares:800,  price:6.35 },
+      { sym:'513100', action:'buy',  shares:3000, price:1.512 },
+    ], trades:null },
+  { id:'r2', pid:'cn-long', date:'2026-08-27', status:'EXECUTED', mode:'手动', count:6, suggestions:[], trades:null },
+  { id:'r3', pid:'cn-long', date:'2026-07-02', status:'REVOKED', mode:'手动', count:2, suggestions:[], trades:null },
+  { id:'r4', pid:'cn-stable', date:'2026-09-20', status:'EXECUTED', mode:'手动', count:2, suggestions:[], trades:null },
 ];
 let rebSeq = 10;
 
@@ -466,7 +567,7 @@ const RULE_TYPE_LABEL = {
 };
 
 let EVENTS = [
-  { id:'e1', ruleId:'g4', kind:'rebalance', pid:'cn-long', text:'CN-长钱 · 再平衡建议待确认（3 项超阈 · 已到期）', time:'2 小时前', unread:true, link:'#/portfolios/view/cn-long/rebalance' },
+  { id:'e1', ruleId:null, kind:'rebalance', pid:'cn-long', text:'CN-长钱 · 再平衡建议待确认（3 项超阈 · 已到期）', time:'2 小时前', unread:true, snapshot:{ recordId:'r1', suggestionsCount:3 }, link:'#/portfolios/view/cn-long/rebalance?sub=history&record=r1' },
   { id:'e2', ruleId:'g1', kind:'price', pid:null, text:'AAPL · 最新价 US$275.10 高于阈值 US$270.00', time:'今天 09:00', unread:true, link:'#/prices/AAPL/history' },
   { id:'e3', ruleId:'g5', kind:'signal', pid:null, text:'518880 · 买入信号：黄金回调加仓（有效期至 2026-11-15）', time:'昨天 21:14', unread:true, link:'#/instruments/518880' },
   { id:'e4', ruleId:null, kind:'stale', pid:null, text:'0700.HK · 5 个交易日无最新价（行情采集滞后）', time:'昨天 03:05', unread:true, link:'#/instruments/0700.HK' },
@@ -475,25 +576,71 @@ let EVENTS = [
 ];
 let evSeq = 10;
 
+/* TASK-061 F1：本表与 CRON_STATUS（看板）必须是**同一套数据宇宙** —— 同一个 2026-10-26 的跑批结果。
+   曾出现「看板 FAILED / 任务日志 SUCCEEDED」的自相矛盾：从 FAILED 行点「查看原始日志」反看到绿灯，
+   等于把本功能要根除的「全绿误导」当众演一遍。下列数字与 CRON_STATUS 逐项对齐：
+   价格 38/40 · 完整性 完整40/缺口2/跳过1 · 提醒 命中3 · CN-稳钱 FAILED · CA-长钱 SKIPPED。 */
 const TASKRUNS = [
-  { task:'daily-price-sync', time:'2026-10-26 07:00', status:'SUCCEEDED', dur:'2m 18s', summary:'成功 13 · 失败 1（0700.HK 超时）' },
-  { task:'price-integrity-check', time:'2026-10-26 03:30', status:'SUCCEEDED', dur:'41s', summary:'检查 14 · 缺口 2 · 跳过 1' },
-  { task:'alert-evaluate', time:'2026-10-26 04:00', status:'SUCCEEDED', dur:'8s', summary:'评估 8 · 新增 1 · 归档 0' },
+  { task:'daily-price-sync', time:'2026-10-26 07:00', status:'PARTIAL', dur:'2m 18s', summary:'成功 38 · 失败 2（0700.HK 超时、VBG.TO 无价）' },
+  { task:'price-integrity-check', time:'2026-10-26 03:30', status:'SUCCEEDED', dur:'41s', summary:'检查 43 · 完整 40 · 缺口 2 · 跳过 1' },
+  { task:'alert-evaluate', time:'2026-10-26 04:00', status:'SUCCEEDED', dur:'8s', summary:'评估 8 · 命中 3 · 归档 0' },
   { task:'fx-rate-sync', time:'2026-10-26 09:30', status:'SUCCEEDED', dur:'3s', summary:'同步 3 个币种（USD/CAD/HKD）' },
   { task:'rebalance-suggestions:cn-long', time:'2026-10-26 00:00', status:'SUCCEEDED', dur:'1m 02s', summary:'生成 3 笔建议（待确认）' },
-  { task:'rebalance-suggestions:cn-stable', time:'2026-10-26 00:00', status:'SUCCEEDED', dur:'38s', summary:'无偏离，未生成建议' },
-  { task:'rebalance-suggestions:ca-long', time:'2026-10-26 00:00', status:'SUCCEEDED', dur:'2s', summary:'未设目标配置，跳过' },
+  { task:'rebalance-suggestions:cn-stable', time:'2026-10-26 00:00', status:'FAILED', dur:'38s', summary:'SYMBOL_NOT_FOUND：目标/持仓 symbol 写法不一致' },
+  { task:'rebalance-suggestions:ca-long', time:'2026-10-26 00:00', status:'SKIPPED', dur:'2s', summary:'未设目标配置，跳过' },
 ];
+
+/* ---------- 任务运行看板 mock（TASK-061 / FS-cron-worker-status-board）
+   形态对齐 TASK-054 的 GET /api/cron/status：**数据态**为主信号，运行态只作辅助解释。
+   ⚠️ 运行态 SUCCEEDED ≠ 数据到位（价格 03:00 写的是上一开市日；完整性检查每天绿但有缺口）
+   · dataLevel: green 好 / amber 关注 / red 坏 / gray 跳过未跑 —— 红=坏、绿=好，与行情「红涨绿跌」无关
+   · progress===null 的任务（提醒/汇率/再平衡）：不画进度条，只显关键数字
+   · 价格 targetDay 是「上一开市日」而非运行日（OQ2）—— 2026-10-26 07:00 跑的活，目标是 2026-10-25
+   · 真实字段以 TASK-054/057 契约为准；此处为原型演示值 ---------- */
+const CRON_STATUS = {
+  snapshotAt: '2026-10-26 09:35',
+  tasks: [
+    { key:'daily-price-sync', name:'价格同步', lastRun:'2026-10-26 07:00', runState:'SUCCEEDED',
+      dataLevel:'amber', targetDay:'2026-10-25', expected:40, fetched:38, missing:['0700.HK','VBG.TO'], progress:95,
+      keyNumbers:'目标 2026-10-25（上一开市日）：38/40 · 95%', note:'缺 0700.HK（超时未采）、VBG.TO（无价 61 天）' },
+    { key:'price-integrity-check', name:'完整性检查', lastRun:'2026-10-26 03:30', runState:'SUCCEEDED',
+      dataLevel:'amber', ok:40, gap:2, skippedNoLaunchDate:1, gapItems:['000191','510510'], progress:95,
+      keyNumbers:'完整 40 / 缺口 2 / 跳过 1', note:'缺口：000191、510510；另有 1 个无 launchDate 被跳过' },
+    { key:'alert-evaluate', name:'提醒评估', lastRun:'2026-10-26 04:00', runState:'SUCCEEDED',
+      dataLevel:'green', alertsFired:3, progress:null, keyNumbers:'命中 3 条提醒' },
+    { key:'fx-rate-sync', name:'汇率同步', lastRun:'2026-10-26 09:30', runState:'SUCCEEDED',
+      dataLevel:'green', currencies:{USD:'ok',CAD:'ok',HKD:'ok'}, progress:null, keyNumbers:'USD ✓ CAD ✓ HKD ✓' },
+    { key:'rebalance', name:'再平衡分发', lastRun:'2026-10-26 00:00', runState:'PARTIAL',
+      dataLevel:'amber', due:2, generated:1, failed:1, progress:null,
+      keyNumbers:'到期 2 / 生成 1 / 失败 1', detailLink:'#/logs/rebalance',
+      perPortfolio:[
+        {pid:'cn-long',  name:'CN-长钱', schedule:'daily',  due:true,  runState:'SUCCEEDED', generated:true,  suggestions:3, reason:null},
+        {pid:'cn-stable',name:'CN-稳钱', schedule:'daily',  due:true,  runState:'FAILED',    generated:false, suggestions:0, reason:'SYMBOL_NOT_FOUND'},
+        {pid:'ca-long',  name:'CA-长钱', schedule:'weekly', due:false, runState:'SKIPPED',   generated:false, suggestions:0, reason:'未设目标配置'}
+      ] }
+  ]
+};
+const RB_DATES = ['2026-10-26','2026-10-25','2026-10-24'];
 const LOGLINES = [
   { t:'2026-10-26 07:02:18', lv:'ERROR', msg:'price-sync · 0700.HK 拉取失败：Yahoo HK 超时（已重试 3 次，放弃）' },
   { t:'2026-10-26 07:02:10', lv:'WARN', msg:'price-sync · 0700.HK 第 3 次重试（指数退避 + 抖动）…' },
-  { t:'2026-10-26 07:00:01', lv:'INFO', msg:'price-sync · 开始同步 14 个启用资产（active only）' },
+  { t:'2026-10-26 07:00:01', lv:'INFO', msg:'price-sync · 开始同步 40 个启用资产（active only）' },
   { t:'2026-10-26 09:30:03', lv:'INFO', msg:'fx · 同步 USD/CAD/HKD 汇率成功（er-api）' },
-  { t:'2026-10-26 04:00:08', lv:'INFO', msg:'alert · 评估 8 条规则，新增 1 条提醒（cooldown 生效）' },
-  { t:'2026-10-26 03:30:41', lv:'INFO', msg:'integrity · 检查完成：缺口 2（0700.HK、AAPL 延迟回补 DEFERRED）' },
+  { t:'2026-10-26 04:00:08', lv:'INFO', msg:'alert · 评估 8 条规则，新增 3 条提醒（cooldown 生效）' },
+  { t:'2026-10-26 03:30:41', lv:'INFO', msg:'integrity · 检查完成：缺口 2（000191、510510）' },
   { t:'2026-10-26 03:30:02', lv:'WARN', msg:'integrity · 本批截断：INTEGRITY_REPAIR_TRUNCATED（上限 50 条）' },
   { t:'2026-10-26 00:00:59', lv:'INFO', msg:'rebalance · cn-long 生成 3 笔建议（3 项超阈 · 已到期）' },
   { t:'2026-10-26 00:00:02', lv:'INFO', msg:'rebalance · ca-long 未设目标配置，跳过' },
+];
+
+/* ---------- 用户与认证 mock（TASK-060 / FS-authentication）
+   单租户 · 多账号 · admin/member 两角色 · 无自助注册 · 只停用不删除
+   data-demo="1" —— 明文口令仅原型内演示，落地绝不可照搬（真实库只存哈希） ---------- */
+const USERS = [ // data-demo="1"
+  {username:'admin',  password:'admin1234', role:'admin',  active:true,  mustChangePassword:false, lastLoginAt:'2026-10-26 09:12', createdAt:'2026-10-20 09:00'},
+  {username:'member', password:'member',    role:'member', active:true,  mustChangePassword:false, lastLoginAt:'2026-10-25 21:10', createdAt:'2026-10-22 20:00'},
+  {username:'tongwei',password:'tw123456',  role:'member', active:true,  mustChangePassword:false, lastLoginAt:'2026-10-24 19:30', createdAt:'2026-10-25 20:05'},
+  {username:'guest',  password:'guest1234', role:'member', active:false, mustChangePassword:false, lastLoginAt:'2026-10-20 10:00', createdAt:'2026-10-19 12:00'},
 ];
 
 /* ---------- 全局 UI 状态 ---------- */
@@ -504,11 +651,20 @@ const S = {
   txAll:{ q:'', pid:'', page:1 },
   prices:{ q:'', watch:'', cls:'' },
   instruments:{ q:'', type:'', status:'' },
-  detail:{ pid:null, tab:'overview', q:'', sort:'value', page:1, rebTab:'sugg', foldCfg:false },
+  detail:{ pid:null, tab:'overview', q:'', sort:'value', page:1, foldCfg:false },
   hist:{ sym:null, range:'1Y', month:'' },
-  logs:{ tab:'runs', task:'', status:'', level:'ALL' },
+  // TASK-061：默认落「任务运行看板」；runs→task、logs→server（旧深链不再支持，见 TASK-061 R-2）
+  logs:{ tab:'board', task:'', status:'', level:'ALL' },
+  // 再平衡看板详情筛选（/logs/rebalance）—— 只读排障，无任何执行动作
+  rb:{ date:'2026-10-26', pid:'', state:'', schedule:'' },
   gen:{},           // pid -> 生成的建议
   cfgDraft:null,
+  /* 会话（TASK-060 / FS-authentication）。默认给一个演示登录态：
+     否则打开文件就落登录页，全产品走查与 TASK-059 的断言都会被挡。
+     真实产品首次访问必落 #/login；退出登录后守卫即按真实规则工作。 */
+  session:{ username:'admin', role:'admin', mustChangePassword:false },
+  loginErr:null,
+  usersLoading:false,   // 系统设置用户表加载骨架（原 auth 原型 A-13）
 };
 
 /* ---------- 基础工具 ---------- */
@@ -554,34 +710,100 @@ function ptypeChip(t){
 }
 
 /* ---------- 组合派生计算 ---------- */
-function pValue(p){ return p.holdings.reduce((s,h)=>{ const a=A(h.sym); return s + (a ? h.qty*a.price : 0); }, 0); }
+function pValue(p){ return p.holdings.reduce((s,h)=>{ const a=A(h.sym); return s + (a && a.price!=null ? h.qty*a.price : 0); }, 0); }
+function missingPriceHoldings(p){ return p.holdings.filter(h=>{ const a=A(h.sym); return !a || a.price==null; }); }
 function pCost(p){ return p.holdings.reduce((s,h)=>s + h.qty*h.cost, 0); }
 function pPL(p){ const v=pValue(p), c=pCost(p); return v-c; }
 function pPLPct(p){ const c=pCost(p); return c>0 ? (pValue(p)-c)/c*100 : 0; }
-function holdingPL(h){ const a=A(h.sym); return a ? (a.price-h.cost)*h.qty : 0; }
+function holdingPL(h){ const a=A(h.sym); return a && a.price!=null ? (a.price-h.cost)*h.qty : 0; }
+function hasTargets(p){ return !!(p.targets || (p.targetLevel==='asset_class' && p.classTargets)); }
+/* 大类级目标 → 资产级目标（按目标大类占比 × 类内当前市值结构摊分；绝不用实际占比冒充目标） */
+function assetTargetsFor(p){
+  if(p.targetLevel==='asset_class' && p.classTargets){
+    const byCls = {}, cnt = {};
+    p.holdings.forEach(h=>{ const a=A(h.sym); if(!a) return;
+      byCls[a.cls] = (byCls[a.cls]||0) + (a.price!=null ? h.qty*a.price : 0);
+      cnt[a.cls] = (cnt[a.cls]||0) + 1; });
+    const map = {};
+    p.holdings.forEach(h=>{ const a=A(h.sym); if(!a) return;
+      const T = p.classTargets[a.cls] || 0, clsVal = byCls[a.cls] || 0;
+      map[h.sym] = clsVal>0 ? T*(h.qty*a.price/clsVal) : (cnt[a.cls] ? T/cnt[a.cls] : 0); });
+    return map;
+  }
+  return p.targets || null;
+}
 function devRows(p){
-  if(!p.targets) return null;
+  const targetMap = assetTargetsFor(p);
+  if(!targetMap) return null;
   const total = pValue(p);
   return p.holdings.map(h=>{
     const a = A(h.sym);
+    const target = targetMap[h.sym] || 0;
+    if(!a || a.price==null){
+      return { sym:h.sym, name:a?a.name:h.sym, target, actual:null, abs:null, rel:null,
+        overAbs:false, overRel:false, missing:true, flag:'缺价' };
+    }
     const actual = total>0 ? (h.qty*a.price)/total*100 : 0;
-    const target = p.targets[h.sym] || 0;
     const abs = actual - target;
-    const rel = target>0 ? abs/target*100 : (abs>0?999:-999);
-    const overAbs = Math.abs(abs) > p.cfg.abs, overRel = Math.abs(rel) > p.cfg.rel;
-    return { sym:h.sym, name:a.name, target, actual, abs, rel, overAbs, overRel,
+    // 目标为 0 时相对偏离无意义（分母为 0），只按绝对偏离判定；否则 -999 会误报「相对」
+    const rel = target>0 ? abs/target*100 : null;
+    const overAbs = Math.abs(abs) > p.cfg.abs, overRel = rel!==null && Math.abs(rel) > p.cfg.rel;
+    return { sym:h.sym, name:a.name, target, actual, abs, rel, overAbs, overRel, missing:false,
       flag: overAbs&&overRel ? '绝对+相对' : (overAbs?'绝对':(overRel?'相对':'正常')) };
   });
 }
-function daysSinceRebal(p){ return p.lastRebal ? daysBetween(p.lastRebal, TODAY) : null; }
+/* 大类级口径：首列显示大类中文名（FS A15） */
+function classDevRows(p){
+  if(!p.classTargets) return null;
+  const total = pValue(p), actualVal = {};
+  p.holdings.forEach(h=>{ const a=A(h.sym); if(!a || a.price==null) return;
+    actualVal[a.cls] = (actualVal[a.cls]||0) + h.qty*a.price; });
+  return Object.keys(p.classTargets).map(c=>{
+    const target = p.classTargets[c] || 0;
+    const actual = total>0 ? (actualVal[c]||0)/total*100 : 0;
+    const abs = actual - target;
+    const rel = target>0 ? abs/target*100 : null;
+    const overAbs = Math.abs(abs) > p.cfg.abs, overRel = rel!==null && Math.abs(rel) > p.cfg.rel;
+    return { sym:c, name:clsLabel(c), target, actual, abs, rel, overAbs, overRel, missing:false,
+      flag: (overAbs||overRel) ? (overAbs&&overRel?'绝对+相对':(overAbs?'绝对':'相对')) : '正常' };
+  });
+}
+function daysSinceRebal(p){ return p.lastExecutedAt ? daysBetween(p.lastExecutedAt, TODAY) : null; }
+/* A4 五种触发原因（常量集中，文案唯一来源） */
+const DRIFT_REASON_LABEL = {
+  NEVER_EXECUTED:'从未执行过再平衡',
+  TIME_INTERVAL_EXCEEDED:'距上次再平衡已超过时间间隔',
+  ABSOLUTE_DEVIATION_EXCEEDED:'绝对偏离超过阈值',
+  RELATIVE_DEVIATION_EXCEEDED:'相对偏离超过阈值',
+  TOTAL_VALUE_ZERO:'组合总市值为 0，无法判定偏离',
+};
+function driftReasons(p){
+  const out = [];
+  if(pValue(p) <= 0) out.push('TOTAL_VALUE_ZERO');
+  if(p.lastExecutedAt === null) out.push('NEVER_EXECUTED');
+  else if(daysSinceRebal(p) >= p.cfg.interval) out.push('TIME_INTERVAL_EXCEEDED');
+  const rows = (p.targetLevel==='asset_class' && p.classTargets) ? (classDevRows(p) || []) : (devRows(p) || []);
+  if(rows.some(r=>r.overAbs)) out.push('ABSOLUTE_DEVIATION_EXCEEDED');
+  if(rows.some(r=>r.overRel)) out.push('RELATIVE_DEVIATION_EXCEEDED');
+  return out;
+}
+/* 四态：超阈(over) > 从未执行(never) > 已到期(due) > 配置正常(ok)；未设目标(none) 独立
+   overN 的口径必须与展示表一致：大类模式数「类」，资产模式数「标的」 */
 function driftOf(p){
-  if(!p.targets) return { kind:'none', label:'未设目标', chip:'c-gray', overN:0, due:false };
-  const rows = devRows(p);
-  const overN = rows.filter(r=>r.flag!=='正常').length;
+  const targetMap = assetTargetsFor(p);
+  if(!targetMap) return { kind:'none', label:'未设目标', chip:'c-gray', overN:0, due:false, ds:null, never:false, missing:0 };
+  const assetRows = devRows(p) || [];
+  const displayRows = (p.targetLevel==='asset_class' && p.classTargets) ? (classDevRows(p) || assetRows) : assetRows;
+  const missing = assetRows.filter(r=>r.missing).length;
+  const overN = displayRows.filter(r=>r.flag!=='正常' && r.flag!=='缺价').length;
   const ds = daysSinceRebal(p);
-  const due = p.cfg.timeOn && ds!==null && ds >= p.cfg.interval;
-  if(overN>0) return { kind:'over', label:'偏离超阈', chip:'c-amber', overN, due, ds };
-  return { kind:'ok', label:'配置正常', chip:'c-green', overN:0, due:false, ds };
+  const never = p.lastExecutedAt === null;
+  const due = !never && ds!==null && ds >= p.cfg.interval;
+  const base = { overN, due, ds, never, missing };
+  if(overN>0) return { kind:'over', label: overN+' 项超阈', chip:'c-amber', ...base };
+  if(never)   return { kind:'never', label:'从未执行', chip:'c-blue', ...base };
+  if(due)     return { kind:'due', label:'已到期', chip:'c-amber', ...base };
+  return { kind:'ok', label:'配置正常', chip:'c-green', ...base };
 }
 function familyBuckets(){
   const b = { CNY:0, USD:0, CAD:0, HKD:0 };
@@ -677,34 +899,114 @@ function donutSVG(items, size, thick){
 }
 
 /* =====================================================
-   路由
+   路由（path + query 双段解析；?sub= / ?record= 驱动深链）
 ===================================================== */
+const DETAIL_TABS = ['overview','positions','position-history','rebalance','transactions'];
 window.addEventListener('hashchange', route);
+function parseHash(){
+  const raw = location.hash.replace(/^#/,'') || '/';
+  const qi = raw.indexOf('?');
+  const pathPart = qi>=0 ? raw.slice(0,qi) : raw;
+  const queryPart = qi>=0 ? raw.slice(qi+1) : '';
+  const q = {};
+  queryPart.split('&').filter(Boolean).forEach(kv=>{
+    const eq = kv.indexOf('=');
+    const k = eq>=0 ? kv.slice(0,eq) : kv;
+    const v = eq>=0 ? kv.slice(eq+1) : '';
+    if(k) q[decodeURIComponent(k)] = decodeURIComponent(v);
+  });
+  return { parts: pathPart.split('/').filter(Boolean), q };
+}
+/* next 是不可信输入：必须是站内路径，且不得自身含 next=（防自我嵌套，TASK-060 A-02 / R-2） */
+function safeNext(raw){
+  if(!raw) return null;
+  const v = String(raw).trim();
+  if(!v.startsWith('/')) return null;
+  if(v.indexOf('next=') >= 0) return null;
+  if(v === '/login' || v.startsWith('/login?') || v === '/login/') return null;
+  return v;
+}
+function finish(title, fn){
+  $('tbTitle').textContent = title;
+  render(fn);
+  window.scrollTo(0,0);
+}
 function route(){
-  const h = location.hash.replace(/^#/,'') || '/';
-  const parts = h.split('/').filter(Boolean);
-  closeMenu(); gsClose();
+  const { parts, q } = parseHash();
+  closeMenu(); gsClose(); setUserMenu(false);
+  const path = '/' + parts.join('/');
+
+  /* ---- 未登录守卫（M-04 / FS §4.5）：除 /login 外一律重定向。
+     next 只编码 path（不含 query、不含 next=），从根上避免自我嵌套 ---- */
+  if(!S.session){
+    document.body.classList.add('authed-off');
+    if(parts[0] !== 'login'){
+      // 根路径不带 next（登录后本来就落 Dashboard）
+      location.replace(path === '/' ? '#/login' : '#/login?next=' + encodeURIComponent(path));
+      return finish('登录', vLogin);
+    }
+    return finish('登录', vLogin);
+  }
+  document.body.classList.remove('authed-off');
+  syncUserMenu();
+
+  /* 已登录访问 /login → 回 Dashboard（用 replace，避免回退键回到登录页） */
+  if(parts[0] === 'login'){ location.replace('#/'); return; }
+
+  /* 强制改密闸门：除 /account 外一律拦到「需先修改密码」屏，无可跳过入口（§4.2 / D10） */
+  if(S.session.mustChangePassword && path !== '/account'){
+    setNav('acct');
+    return finish('需要修改密码', vForcedChange);
+  }
+
+  /* 账户设置 —— M-04 补齐的三条路由之一，不占侧栏导航位。系统设置已独立成页，不再挂 Tab */
+  if(parts[0] === 'account' && !parts[1]){
+    setNav('acct');
+    return finish('账户设置', vAccount);
+  }
+  /* 系统设置 —— 独立页面（非 /account 子 Tab）；入口在顶栏下拉「账户设置」下方，仅 admin（D13）。
+     强制改密闸门在其上方，故 forced 态不会到达此处。 */
+  if(parts[0] === 'account' && parts[1] === 'users'){
+    if(S.session.role !== 'admin') return finish('无权访问', vForbiddenUsers);
+    setNav('acct');
+    return finish('系统设置', vUsers);
+  }
+
   let title = 'Dashboard';
   if(parts.length===0){ setNav('root'); render(vDashboard); }
   else if(parts[0]==='portfolios'){
     if(parts[1]==='transactions'){ setNav('ptx'); title='全部交易'; render(vTxAll); }
     else if(parts[1]==='view' && P(parts[2])){
-      const pid = parts[2], tab = parts[3]||'overview';
+      const pid = parts[2];
+      const tabRaw = parts[3] || 'overview';
+      // 白名单回落：未知 tab（含历史遗留的 basic）一律落「总览」，不静默渲染交易记录
+      const tab = DETAIL_TABS.includes(tabRaw) ? tabRaw : 'overview';
+      // 再平衡子 Tab 单一数据源 = URL；非法值回落 suggestions
+      const sub = q.sub==='history' ? 'history' : 'suggestions';
+      const recordId = q.record || null;
       S.detail.pid = pid; S.detail.tab = tab;
       setNav('plist'); title = P(pid).name;
-      render(()=>vPortfolioDetail(pid, tab));
+      render(()=>vPortfolioDetail(pid, tab, sub, recordId));
     } else { setNav('plist'); title='组合管理'; render(vPortfolioList); }
   }
   else if(parts[0]==='prices'){
     if(parts[1] && parts[2]==='history' && A(parts[1])){ setNav('prices'); title = parts[1]+' · 价格历史'; render(()=>vPriceHistory(parts[1])); }
-    else { setNav('prices'); title='今日行情'; render(vPrices); }
+    else { setNav('prices'); title='自选行情'; render(vPrices); }
   }
   else if(parts[0]==='instruments'){
     if(parts[1] && A(parts[1])){ setNav('prices'); title = parts[1]+' · 标的详情'; render(()=>vInstrumentDetail(parts[1])); }
     else { setNav('prices'); title='标的列表'; render(vInstruments); }
   }
   else if(parts[0]==='alerts'){ setNav('alerts'); title='提醒规则'; render(vAlertRules); }
-  else if(parts[0]==='logs'){ setNav('logs'); title='日志'; render(vLogs); }
+  else if(parts[0]==='logs'){
+    /* /logs/rebalance —— 再平衡分发详情（OQ8 独立子路由，非看板卡内展开） */
+    if(parts[1]==='rebalance'){
+      // 深链初值：?date= / ?portfolio=（OQ8）
+      if(q.date) S.rb.date = q.date;
+      if(q.portfolio) S.rb.pid = q.portfolio;
+      setNav('logs'); title='日志 · 再平衡详情'; render(vRebalanceBoard);
+    } else { setNav('logs'); title='日志'; render(vLogs); }
+  }
   else { setNav('root'); render(vDashboard); }
   $('tbTitle').textContent = title;
   window.scrollTo(0,0);
@@ -728,32 +1030,352 @@ function toggleNavChev(){
 }
 
 /* =====================================================
+   账户与访问控制（TASK-060 M-01~M-04 / FS-authentication）
+   单租户多账号 · admin/member · 无自助注册 · 只停用不删除
+   账户与登出的唯一入口 = 顶栏头像下拉；侧栏不提供任何账户入口
+===================================================== */
+const RE_USERNAME = /^[a-z0-9][a-z0-9_.-]{2,31}$/;
+const USERNAME_RULE = '需 3–32 字符，仅小写字母 / 数字 / 下划线 / 点 / 连字符';
+const PWD_RULE = '密码长度需 8–72 字符';
+let umOpen = false;
+
+function activeAdminCount(){ return USERS.filter(u=>u.role==='admin' && u.active).length; }
+function roleChip(r){ return r==='admin' ? '<span class="chip c-purple">管理员</span>' : '<span class="chip c-blue">成员</span>'; }
+function roleLabel(r){ return r==='admin' ? '管理员' : '成员'; }
+
+/* --- 顶栏头像下拉（M-03 / A-15）--- */
+function syncUserMenu(){
+  const s = S.session;
+  const menu = $('userMenu');
+  if(menu) menu.style.display = s ? '' : 'none';
+  if(!s) return;
+  if($('umAvatar')) $('umAvatar').textContent = s.username[0].toUpperCase();
+  if($('umName')) $('umName').textContent = s.username;
+  if($('umRole')) $('umRole').textContent = roleLabel(s.role);   // 弱化文本，不用 chip
+  /* 「系统设置」独立页面入口：仅 admin 渲染；强制改密态保留但禁用并说明原因（§4.2 / D10 / D13） */
+  const sys = $('umSysRow');
+  if(sys){
+    sys.hidden = s.role !== 'admin';
+    sys.disabled = !!s.mustChangePassword;
+    sys.title = s.role !== 'admin' ? '仅管理员可见'
+      : (s.mustChangePassword ? '请先完成密码修改后再访问' : '账号与权限管理');
+  }
+}
+function toggleUserMenu(e){ if(e) e.stopPropagation(); setUserMenu(!umOpen); }
+function setUserMenu(open){
+  umOpen = open;
+  const p = $('umPanel'), t = $('umTrigger');
+  if(p) p.classList.toggle('show', open);
+  if(t) t.setAttribute('aria-expanded', open ? 'true' : 'false');
+}
+function userMenuPick(h){ setUserMenu(false); go(h); }
+document.addEventListener('click', (e)=>{ if(umOpen && !e.target.closest('.user-menu')) setUserMenu(false); });
+document.addEventListener('keydown', (e)=>{
+  if(e.key !== 'Escape') return;
+  if(umOpen){ setUserMenu(false); const t = $('umTrigger'); if(t) t.focus(); }
+});
+
+/* --- 登录 / 登出 --- */
+function doLogin(u, p){
+  const user = USERS.find(x=>x.username === String(u).toLowerCase().trim());
+  if(!user || user.password !== p) return {ok:false, err:'用户名或密码错误'};   // 不区分"不存在"与"密码错"
+  // 停用态刻意区分文案：账号由管理员创建、停用也是管理员所为，不构成对外泄露（D8 裁决，勿"修正"）
+  if(!user.active) return {ok:false, err:'该账号已停用，请联系管理员'};
+  S.session = {username:user.username, role:user.role, mustChangePassword:user.mustChangePassword};
+  user.lastLoginAt = TODAY + ' 09:12';
+  return {ok:true};
+}
+function doLogout(){
+  S.session = null;
+  setUserMenu(false); closeModal(); closeMenu();
+  go('#/login');
+  toast('已退出登录','ok');
+}
+function submitLogin(){
+  const r = doLogin($('lgUser').value, $('lgPwd').value);
+  if(!r.ok){ S.loginErr = r.err; render(vLogin); return; }
+  S.loginErr = null;
+  const { q } = parseHash();
+  const next = safeNext(q.next);
+  // 默认落 Dashboard（D10）；仅 mustChangePassword 进 /account
+  const dest = S.session.mustChangePassword ? '/account' : (next || '/');
+  toast(`欢迎，${S.session.username}`,'ok');
+  go('#' + dest);
+}
+
+/* --- 字段级报错（复用已定义的 .input.err / .ferr）--- */
+function markField(id, msg){
+  const el = $(id); if(!el) return;
+  el.classList.add('err');
+  const box = el.parentElement;
+  let h = box.querySelector('.ferr');
+  if(!h){ h = document.createElement('div'); h.className = 'ferr'; box.appendChild(h); }
+  h.textContent = msg;
+}
+function clearField(id){
+  const el = $(id); if(!el) return;
+  el.classList.remove('err');
+  const h = el.parentElement.querySelector('.ferr');
+  if(h) h.remove();
+}
+
+/* --- 账户操作 --- */
+function saveAccName(){
+  const v = ($('accName').value || '').trim().toLowerCase();
+  clearField('accName');
+  if(!RE_USERNAME.test(v)){ markField('accName', '用户名' + USERNAME_RULE); return; }
+  if(v !== S.session.username && USERS.some(u=>u.username === v)){ markField('accName','用户名已存在'); return; }
+  const me = USERS.find(u=>u.username === S.session.username);
+  if(me) me.username = v;
+  S.session.username = v;
+  toast('用户名已更新','ok'); route();
+}
+function saveAccPw(){
+  const forced = S.session.mustChangePassword;
+  const cur = forced ? null : ($('pwCur') ? $('pwCur').value : '');
+  const nw = $('pwNew').value, nw2 = $('pwNew2').value;
+  ['pwCur','pwNew','pwNew2'].forEach(clearField);
+  if(!forced && !cur){ markField('pwCur','请输入当前密码'); return; }
+  // 上界显式拒绝，绝不静默截断（ED-2）
+  if(nw.length < 8 || nw.length > 72){ markField('pwNew', PWD_RULE); return; }
+  if(nw !== nw2){ markField('pwNew2','两次输入不一致'); return; }
+  const me = USERS.find(u=>u.username === S.session.username);
+  if(!forced && me && me.password !== cur){ markField('pwCur','当前密码不正确'); return; }
+  if(me){ me.password = nw; me.mustChangePassword = false; }
+  S.session.mustChangePassword = false;
+  toast('密码已修改，其他设备会话已失效','ok');
+  if(forced){ go('#/'); } else { route(); }
+}
+function toggleUserActive(u){
+  const t = USERS.find(x=>x.username === u); if(!t) return;
+  if(t.username === S.session.username) return toast('不能停用自己','err');
+  if(t.active && t.role === 'admin' && activeAdminCount() <= 1) return toast('不能停用最后一个启用管理员','err');
+  t.active = !t.active;
+  toast(t.active ? `已启用 ${u}` : `已停用 ${u}，其现有会话立即失效`, 'ok');
+  route();
+}
+function changeUserRole(u, r){
+  const t = USERS.find(x=>x.username === u); if(!t) return;
+  if(t.active && t.role === 'admin' && r === 'member' && activeAdminCount() <= 1){
+    toast('不能把最后一个启用管理员降级','err'); route(); return;
+  }
+  const isSelf = (u === S.session.username);
+  t.role = r;
+  if(isSelf && r !== 'admin'){
+    // 权限即时生效，落 403 是预期行为 —— 但必须说明，否则像页面坏了（D9 连带面）
+    S.session.role = 'member';
+    toast('你已失去用户管理权限','ok');
+    go('#/account');
+    return;
+  }
+  toast(`${u} 角色已改为 ${roleLabel(r)}`,'ok');
+  route();
+}
+function openCreateUser(){
+  openModal('新建用户', ''
+    + '<div class="field"><label class="flabel" for="cuName">用户名</label><input class="input input-full" id="cuName" placeholder="小写字母/数字，3–32 字符" oninput="clearField(\'cuName\')"/></div>'
+    + '<div class="field"><label class="flabel" for="cuPwd">初始密码</label><input class="input input-full" id="cuPwd" type="password" placeholder="8–72 字符" oninput="clearField(\'cuPwd\')"/></div>'
+    + '<div class="field"><label class="flabel" for="cuRole">角色</label><select class="select input-full" id="cuRole" style="width:100%;padding:9px 12px;"><option value="member">成员</option><option value="admin">管理员</option></select></div>'
+    + '<div class="fhint">初始密码由管理员设定，对方首次登录需强制改密。</div>',
+    '<button class="btn" onclick="closeModal()">取消</button><button class="btn btn-pri" onclick="doCreateUser()">创建</button>');
+}
+function doCreateUser(){
+  const name = ($('cuName').value || '').toLowerCase().trim();
+  const pwd = $('cuPwd').value;
+  const role = $('cuRole').value;
+  if(!RE_USERNAME.test(name)){ markField('cuName','用户名'+USERNAME_RULE); return; }
+  if(USERS.some(u=>u.username === name)){ markField('cuName','用户名已存在'); return; }
+  if(pwd.length < 8 || pwd.length > 72){ markField('cuPwd','初始'+PWD_RULE); return; }
+  USERS.push({username:name, password:pwd, role, active:true, mustChangePassword:true, lastLoginAt:'—', createdAt:TODAY+' 10:00'});
+  closeModal(); toast('已创建用户，对方首次登录需改密','ok'); route();
+}
+function openResetPwd(u){
+  openModal('重置密码 · ' + esc(u), ''
+    + '<div class="field"><label class="flabel" for="rsPwd">新密码</label><input class="input input-full" id="rsPwd" type="password" placeholder="8–72 字符" oninput="clearField(\'rsPwd\')"/></div>'
+    + '<div class="fhint">重置后该用户全部会话立即失效，下次登录必须改密。<b>不能重置自己的密码</b>——请到「我的账户」自助修改。</div>',
+    '<button class="btn" onclick="closeModal()">取消</button><button class="btn btn-pri" onclick="doResetPwd(\'' + esc(u) + '\')">重置</button>');
+}
+function doResetPwd(u){
+  const t = USERS.find(x=>x.username === u); if(!t) return;
+  // 管理员重置自己的密码会清掉自己全部会话、当场被踢下线（D9）
+  if(u === S.session.username){ markField('rsPwd','请在账户页修改自己的密码'); return; }
+  const v = $('rsPwd').value;
+  if(v.length < 8 || v.length > 72){ markField('rsPwd', PWD_RULE); return; }
+  t.password = v; t.mustChangePassword = true;
+  closeModal(); toast(`${u} 密码已重置，会话已失效`,'ok'); route();
+}
+
+/* --- 视图：登录 / 账户 / 强制改密 / 403 --- */
+function vLogin(){
+  const err = S.loginErr ? `<div class="ferr" style="margin-bottom:12px;">${esc(S.loginErr)}</div>` : '';
+  return `<div class="login-wrap"><div class="login-card">
+    <div class="login-head"><div class="mark">✦</div><div><div class="t">PortoMind</div><div class="s">家庭投资组合 · 登录</div></div></div>
+    <div class="login-body">
+      <div class="demo-note" data-demo="1"><b>原型演示提示（真实产品不显示）</b>：FS §4.1 规定登录页<strong>不得</strong>提示默认账号。可用 <b>admin / admin1234</b>（管理员）或 <b>member / member</b>（成员）。</div>
+      ${err}
+      <form id="lgForm" onsubmit="submitLogin();return false;" autocomplete="off">
+        <div class="field"><label class="flabel" for="lgUser">用户名</label>
+          <input class="input input-full" id="lgUser" placeholder="用户名（小写）" value="admin" data-demo="1" oninput="clearField('lgUser')"/></div>
+        <div class="field"><label class="flabel" for="lgPwd">密码</label>
+          <input class="input input-full" id="lgPwd" type="password" placeholder="密码" value="admin1234" data-demo="1" oninput="clearField('lgPwd')"/></div>
+        <button class="btn btn-pri" type="submit" style="width:100%;justify-content:center;">登 录</button>
+      </form>
+      <div class="fhint" style="margin-top:12px;text-align:center;">错误提示统一为「用户名或密码错误」，不泄露账号是否存在（§U2-R1）</div>
+    </div>
+  </div></div>`;
+}
+function vForcedChange(){
+  return `<div class="center-screen">
+    <div style="font-size:40px;">🔒</div>
+    <div class="ph-title">需要修改密码后才能继续</div>
+    <div class="muted" style="max-width:420px;">根据安全策略，你的账号需先设置自己的密码。请完成修改（§4.2 / D10），无可跳过入口。</div>
+    <button class="btn btn-pri" onclick="go('#/account')">前往修改密码</button>
+  </div>`;
+}
+function vForbiddenUsers(){
+  return `<div class="center-screen">
+    <div style="font-size:40px;">🚫</div>
+    <div class="ph-title">无权访问用户管理</div>
+    <div class="muted" style="max-width:460px;">当前账号为「成员」角色，无法管理用户。如需管理请联系管理员。</div>
+    <button class="btn btn-pri" onclick="go('#/')">返回 Dashboard</button>
+  </div>`;
+}
+function vAccount(){
+  const s = S.session;
+  const forced = s.mustChangePassword;
+  const me = USERS.find(u=>u.username === s.username) || {username:s.username, role:s.role, active:true, lastLoginAt:'—'};
+  const banner = forced ? `<div class="banner banner-warn"><span>🔒</span><div><b>首次登录需修改密码</b>　除「修改密码」与顶栏下拉外，其余功能已锁定（§4.2 / D10）。</div></div>` : '';
+  const head = `<div class="page-head"><div class="ph-title">账户设置</div>
+    <div class="ph-desc">管理你的身份与登录信息${s.role === 'admin' ? '　·　账号与权限在顶栏下拉「系统设置」' : ''}</div></div>`;
+  return banner + head + accountSelfSection(me, forced);
+}
+/* 系统设置：独立页面，自有页头，不复用 vAccount 容器（D13） */
+function vUsers(){
+  const head = `<div class="page-head"><div class="ph-title">系统设置</div>
+    <div class="ph-desc">账号仅由管理员创建；用户只可停用，不可删除</div></div>`;
+  return head + accountUsersSection();
+}
+function accountSelfSection(me, forced){
+  return `
+  <div class="card" style="margin-bottom:16px;">
+    <div class="card-h"><span class="card-t">身份</span><span class="card-sub">只读</span></div>
+    <div class="card-b"><div class="kv">
+      <div class="k">用户名</div><div class="v">${esc(me.username)}</div>
+      <div class="k">角色</div><div class="v">${roleChip(me.role)}</div>
+      <div class="k">状态</div><div class="v">${me.active?'<span class="chip c-green">启用</span>':'<span class="chip c-gray">停用</span>'}</div>
+      <div class="k">上次登录</div><div class="v num">${esc(me.lastLoginAt)}</div>
+    </div></div>
+  </div>
+  <div class="card" style="margin-bottom:16px;${forced?'opacity:.5;':''}">
+    <div class="card-h"><span class="card-t">修改用户名</span>${forced?'<span class="card-sub">强制改密期间不可用</span>':''}</div>
+    <div class="card-b">
+      <div class="field"><label class="flabel" for="accName">新用户名</label>
+        <input class="input input-full" id="accName" value="${esc(me.username)}" ${forced?'disabled':''} oninput="clearField('accName')"/></div>
+      <button class="btn" onclick="saveAccName()" ${forced?'disabled':''}>保存用户名</button>
+      <div class="fhint">唯一性校验；保存后当前会话保持有效、界面即时刷新。</div>
+    </div>
+  </div>
+  <div class="card">
+    <div class="card-h"><span class="card-t">修改密码</span><span class="card-sub">${forced?'必须优先完成':'需校验当前密码'}</span></div>
+    <div class="card-b">
+      ${forced?'':`<div class="field"><label class="flabel" for="pwCur">当前密码</label><input class="input input-full" id="pwCur" type="password" oninput="clearField('pwCur')"/></div>`}
+      <div class="field"><label class="flabel" for="pwNew">新密码</label><input class="input input-full" id="pwNew" type="password" placeholder="8–72 字符" oninput="clearField('pwNew')"/></div>
+      <div class="field"><label class="flabel" for="pwNew2">确认新密码</label><input class="input input-full" id="pwNew2" type="password" oninput="clearField('pwNew2')"/></div>
+      <button class="btn btn-pri" onclick="saveAccPw()">${forced?'设定新密码并进入':'保存密码'}</button>
+      <div class="fhint">保存后，<b>该账号其他设备的会话立即失效</b>（当前会话保留）。</div>
+    </div>
+  </div>`;
+}
+function accountUsersSection(){
+  // 加载骨架（原 auth 原型 A-13）：默认 false，断言可注入验证
+  if(S.usersLoading){
+    const skel = Array.from({length:4}).map(()=>`<div class="skel-row">
+      ${[120,70,70,120,120,60,180].map(w=>`<div class="skel" style="width:${w}px"></div>`).join('')}</div>`).join('');
+    return `<div class="tbl-wrap">${skel}</div>`;
+  }
+  const s = S.session;
+  const lastAdmin = activeAdminCount() <= 1;
+  const rows = USERS.slice().sort((a,b)=>b.createdAt.localeCompare(a.createdAt)).map(u=>{
+    const isSelf = u.username === s.username;
+    const isLastAdmin = u.active && u.role === 'admin' && lastAdmin;
+    const stopDisabled = !u.active || isLastAdmin || isSelf;
+    // 自己那一行不给「重置密码」（会清掉自己全部会话），改「改密码」
+    const pwdBtn = isSelf
+      ? `<button class="btn btn-sm" onclick="go('#/account')">改密码</button>`
+      : `<button class="btn btn-sm" onclick="openResetPwd('${esc(u.username)}')">重置密码</button>`;
+    return `<tr data-self="${isSelf?1:0}">
+      <td><b>${esc(u.username)}</b>${isSelf?' <span class="chip c-gray">你</span>':''}</td>
+      <td>${roleChip(u.role)}</td>
+      <td>${u.active?'<span class="chip c-green">启用</span>':'<span class="chip c-gray">停用</span>'}</td>
+      <td class="num">${esc(u.lastLoginAt)}</td>
+      <td class="num">${esc(u.createdAt)}</td>
+      <td>${u.mustChangePassword?'<span class="chip c-amber">待改密</span>':''}</td>
+      <td><div style="display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end;">
+        ${pwdBtn}
+        <select class="select" onchange="changeUserRole('${esc(u.username)}',this.value)" ${isLastAdmin?'disabled title="最后一个启用管理员，不可降级"':''}>
+          <option value="admin" ${u.role==='admin'?'selected':''}>管理员</option>
+          <option value="member" ${u.role==='member'?'selected':''}>成员</option>
+        </select>
+        <button class="btn btn-sm ${u.active?'':'btn-pri'}" onclick="toggleUserActive('${esc(u.username)}')" ${stopDisabled?'disabled':''} title="${isLastAdmin?'最后一个启用管理员，不可停用':(isSelf?'不能停用自己':'')}">${u.active?'停用':'启用'}</button>
+      </div></td>
+    </tr>`;
+  }).join('') || `<tr><td colspan="7"><div class="empty"><span class="em">👥</span>还没有其他账号<br/><button class="btn btn-pri btn-sm" style="margin-top:10px" onclick="openCreateUser()">＋ 新建用户</button></div></td></tr>`;
+
+  return `
+  <div class="toolbar">
+    <button class="btn btn-pri" onclick="openCreateUser()">＋ 新建用户</button>
+    <span class="count" style="margin-left:auto;">共 ${USERS.length} 个账号 · 启用管理员 ${activeAdminCount()} 个</span>
+  </div>
+  <div class="tbl-wrap"><table class="tb">
+    <thead><tr><th>用户名</th><th>角色</th><th>状态</th><th>上次登录</th><th>创建时间</th><th>改密</th><th class="r">操作</th></tr></thead>
+    <tbody>${rows}</tbody>
+  </table></div>
+  <div class="banner banner-amber" style="margin-top:16px;"><span>🛡️</span><div><b>系统不变量</b>　任意时刻至少有一个启用状态的管理员。停用 / 降级唯一管理员的操作按钮会被禁用并提示原因（不会静默失败）。</div></div>`;
+}
+
+/* =====================================================
    视图 · Dashboard（家庭总览）
 ===================================================== */
 function vDashboard(){
   const fb = familyBuckets();
   const b = fb.b;
   const actives = PORTFOLIOS.filter(p=>!p.archived);
-  const bucketSub = ['CNY','USD','CAD','HKD'].map(c=>
-    (b[c]>0 ? (CCY_SYM[c]+Math.round(b[c]).toLocaleString('en-US')) : CCY_SYM[c]+' —')
-  ).join(' · ');
+  const ccyHasP = c => actives.some(p=>p.ccy===c);
+  const subParts = ['CNY','USD','CAD','HKD'].map(c=>{
+    if(b[c]>0) return CCY_SYM[c]+Math.round(b[c]).toLocaleString('en-US');
+    return ccyHasP(c) ? CCY_SYM[c]+' —' : null;   // 有持仓但缺价/缺汇率 → 「—」，空桶整项不渲染
+  }).filter(Boolean);
+  const bucketSub = subParts.length ? subParts.join(' · ') : '暂无持仓市值';
   const stats = `${actives.length} 个组合 · ${ASSETS.length} 个资产 · ${TXNS.length} 笔交易。所有数据保存在你自己的服务器上。`;
+  const incomplete = actives.some(p=>missingPriceHoldings(p).length>0);
 
-  // 健康表：有事的在上
-  const rows = actives.map(p=>({p, d:driftOf(p)})).sort((x,y)=>{
-    const rank = d=>d.kind==='over'?0:(d.kind==='none'?1:2);
-    return rank(x.d)-rank(y.d);
-  });
-  const healthRows = rows.map(({p,d})=>{
+  // 健康表全序：待办数>0 → 超阈 → 到期 → 其余；同档按 createdAt 倒序（FS B10）
+  const rows = actives.map(p=>{
     const pending = REBALS.filter(r=>r.pid===p.id && r.status==='PENDING').length;
+    const un = EVENTS.filter(e=>e.unread && e.pid===p.id).length;
+    return { p, d:driftOf(p), pending, un };
+  }).sort((x,y)=>{
+    const todo = o=> (o.pending+o.un)>0 ? 0 : 1;
+    if(todo(x)!==todo(y)) return todo(x)-todo(y);
+    const rank = k=> k==='over'?0:(k==='due'?1:(k==='never'?2:(k==='ok'?3:4)));
+    if(rank(x.d.kind)!==rank(y.d.kind)) return rank(x.d.kind)-rank(y.d.kind);
+    return String(y.p.createdAt).localeCompare(String(x.p.createdAt));
+  });
+  const healthRows = rows.map(({p,d,pending,un})=>{
     const todo = [];
-    if(pending) todo.push(`<a onclick="go('#/portfolios/view/${p.id}/rebalance')">${pending} 条待确认</a>`);
-    const un = EVENTS.filter(e=>e.unread && (e.pid===p.id || (e.ruleId && RULES.find(r=>r.id===e.ruleId && r.pid===p.id)))).length;
-    if(un) todo.push(`<a onclick="go('#/')">${un} 条未读</a>`);
+    // 徽标必须阻止冒泡，否则被整行 handler 覆盖成总览
+    if(pending) todo.push(`<a onclick="event.stopPropagation();go('#/portfolios/view/${p.id}/rebalance?sub=suggestions')">${pending} 条待确认</a>`);
+    if(un) todo.push(`<a onclick="event.stopPropagation();S.dashEvPid='${p.id}';S.dashEv='unread';go('#/')">${un} 条未读</a>`);
+    const chip = d.kind==='over' ? `<span class="chip c-amber">${d.label}</span>`
+      : d.kind==='due' ? '<span class="chip c-amber">已到期</span>'
+      : d.kind==='never' ? '<span class="chip c-blue">从未执行</span>'
+      : d.kind==='none' ? '<span class="chip c-gray">未设目标</span>'
+      : '<span class="chip c-green">配置正常</span>';
+    const miss = missingPriceHoldings(p).length;
     return `<tr class="rowlink" onclick="go('#/portfolios/view/${p.id}/overview')">
       <td style="font-weight:600">${esc(p.name)}</td>
-      <td class="num">${p.ccy==='CNY' ? money(pValue(p),'CNY') : money(pValue(p),p.ccy)}</td>
-      <td><span class="chip ${d.chip}">${d.kind==='over' ? d.label+' · '+d.overN+' 项' : d.label}</span></td>
+      <td class="num">${money(pValue(p),p.ccy)}${miss?' <span class="muted" title="部分持仓缺最新价，未计入市值">ⓘ</span>':''}</td>
+      <td>${chip}</td>
       <td>${todo.length?todo.join(' · '):'—'}</td>
       <td class="muted">${daysAgoLabel(d.ds)}</td>
     </tr>`;
@@ -762,8 +1384,7 @@ function vDashboard(){
   const evs = EVENTS.filter(e=>S.dashEv==='all' || e.unread).filter(e=>!S.dashEvPid || e.pid===S.dashEvPid);
   const evRows = evs.length ? evs.map(ev=>{
     const dotColor = { rebalance:C.warn, price:C.up, signal:C.brand, stale:C.muted, hi52:C.down }[ev.kind] || C.muted;
-    const r = ev.ruleId ? RULES.find(x=>x.id===ev.ruleId) : null;
-    const pidName = ev.pid ? P(ev.pid).name : (r && r.pid ? P(r.pid).name : '');
+    const pidName = ev.pid && P(ev.pid) ? P(ev.pid).name : '';
     return `<div class="ev-row ${ev.unread?'unread':'read'}" onclick="${ev.link?`go('${ev.link}')`:''}">
       <span class="dot" style="background:${dotColor}"></span>
       <span class="ev-text">${esc(ev.text)}${pidName?` <span class="chip c-gray">${esc(pidName)}</span>`:''}</span>
@@ -778,15 +1399,11 @@ function vDashboard(){
   const pidOpts = '<option value="">全部组合</option>' + PORTFOLIOS.map(p=>`<option value="${p.id}" ${S.dashEvPid===p.id?'selected':''}>${esc(p.name)}</option>`).join('');
 
   return `
-  <div class="card" style="margin-bottom:16px;">
-    <div class="card-b">
-      <div style="display:flex;gap:8px;margin-bottom:10px;">
-        <span class="chip c-purple">自托管 · 单用户</span><span class="chip c-gray">不连接券商</span><span class="chip c-gray">原型演示数据</span>
-      </div>
-      <div class="ph-title">家庭总览</div>
-      <div class="ph-desc">${stats}</div>
-      <div class="fhint num">数据时点 ${TODAY} 18:00 · 汇率已同步（1 USD = ${FX.USD.rate} CNY · 1 CAD = ${FX.CAD.rate} CNY）</div>
-    </div>
+  <div class="page-head head-row">
+    <div><div class="ph-title">家庭总览</div><div class="ph-desc">${stats}</div></div>
+    <div class="spacer"></div>
+    <button class="btn" onclick="evalNow()">⟳ 立即评估</button>
+    <button class="btn" onclick="go('#/alerts/rules')">规则管理</button>
   </div>
 
   <div class="card" style="margin-bottom:16px;cursor:pointer;" onclick="go('#/portfolios')">
@@ -794,15 +1411,15 @@ function vDashboard(){
       <div class="card-sub">家庭总资产（RMB 折算）</div>
       <div style="font-size:34px;font-weight:800;" class="num">${money(fb.totalCny,'CNY')}</div>
       <div class="num" style="font-size:13px;color:var(--ink2);margin-top:4px;">${bucketSub}</div>
-      <div class="fhint" style="margin-top:6px;">点击进入组合管理 · 折算只发生在家庭层 · 缺价或缺汇率的组合不计入总额</div>
+      <div class="fhint" style="margin-top:6px;">点击进入组合管理 · 折算只发生在家庭层 · ${incomplete?'<b style="color:var(--warn-t)">折算不完整：部分组合缺最新价</b>':'缺价或缺汇率的组合不计入总额'}</div>
     </div>
   </div>
 
   <div class="card" style="margin-bottom:16px;">
-    <div class="card-h"><span class="card-t">组合健康</span><span class="card-link" onclick="go('#/portfolios')">组合管理 →</span></div>
+    <div class="card-h"><span class="card-t">组合健康</span><span class="card-sub">市值单币种简化</span><span class="card-link" onclick="go('#/portfolios')">组合管理 →</span></div>
     <table class="tb">
       <thead><tr><th>组合</th><th>市值</th><th>偏离</th><th>待办</th><th>上次再平衡</th></tr></thead>
-      <tbody>${healthRows}</tbody>
+      <tbody>${healthRows || `<tr><td colspan="5"><div class="empty"><span class="em">📁</span>暂无组合，先创建一个<br/><button class="btn btn-pri btn-sm" style="margin-top:10px" onclick="openPortfolioForm(null)">＋ 新建组合</button></div></td></tr>`}</tbody>
     </table>
   </div>
 
@@ -814,10 +1431,12 @@ function vDashboard(){
         <button class="seg-btn ${S.dashEv==='all'?'on':''}" onclick="S.dashEv='all';route()">全部</button>
       </span>
       <select class="select" style="margin-left:8px;" onchange="S.dashEvPid=this.value;route()">${pidOpts}</select>
-      <span class="card-link" onclick="evalNow()">⟳ 立即评估</span>
     </div>
     ${evRows}
-  </div>`;
+  </div>
+
+  <div class="fhint" style="margin-top:12px;">数据时点 ${TODAY} 18:00 · 汇率已同步（1 USD = ${FX.USD.rate} CNY · 1 CAD = ${FX.CAD.rate} CNY）</div>
+  <div class="fhint" style="margin-top:4px;">演示注记：自托管 · 单租户 · 多账号 ｜ 不连接券商 ｜ 原型演示数据（实施勿照搬）</div>`;
 }
 function markRead(id){ const e = EVENTS.find(x=>x.id===id); if(e){ e.unread=false; toast('已标记为已读'); route(); } }
 function ignoreEv(id){ EVENTS = EVENTS.filter(x=>x.id!==id); toast('事件已忽略（事件仅可标记，不可删除 · 演示中直接移出列表）'); route(); }
@@ -837,7 +1456,7 @@ function evalNow(){
     if(r.lastFired && daysBetween(r.lastFired, TODAY) < r.cooldown) return; // 静默期
     r.lastFired = TODAY;
     EVENTS.unshift({ id:'e'+(evSeq++), ruleId:r.id, kind:r.type, pid:r.pid, text, time:'刚刚', unread:true,
-      link: r.pid ? '#/portfolios/view/'+r.pid+'/rebalance' : '#/prices/'+r.asset+'/history' });
+      link: r.pid ? '#/portfolios/view/'+r.pid+'/rebalance?sub=suggestions' : '#/prices/'+r.asset+'/history' });
     created++;
   });
   toast(created ? `评估完成：${RULES.length} 条规则 · 新增 ${created} 条提醒` : '评估完成：8 条规则 · 新增 0 条（静默期内不重复触发）', created?'ok':'');
@@ -881,7 +1500,11 @@ function vPortfolioList(){
     const d = driftOf(p);
     const pending = REBALS.filter(r=>r.pid===p.id && r.status==='PENDING').length;
     const ccyChip = `<span class="chip c-gray">${p.ccy}</span>`;
-    const driftChip = d.kind==='over' ? `<span class="chip c-amber">偏离超阈</span>` : (d.kind==='none' ? `<span class="chip c-gray">未设目标</span>` : `<span class="chip c-green">配置正常</span>`);
+    const driftChip = d.kind==='over' ? `<span class="chip c-amber">${d.label}</span>`
+      : d.kind==='due' ? '<span class="chip c-amber">已到期</span>'
+      : d.kind==='never' ? '<span class="chip c-blue">从未执行</span>'
+      : d.kind==='none' ? '<span class="chip c-gray">未设目标</span>'
+      : '<span class="chip c-green">配置正常</span>';
     const archChip = p.archived ? `<span class="chip c-gray">已归档</span>` : '';
     return `<div class="pcard ${p.archived?'archived':''}">
       <div style="display:flex;gap:6px;flex-wrap:wrap;">${ptypeChip(p.ptype)}${ccyChip}${driftChip}${archChip}</div>
@@ -925,7 +1548,7 @@ function vPortfolioList(){
   const rebRows = [...REBALS].sort((a,b)=>b.date.localeCompare(a.date)).slice(0,10).map(r=>{
     const p = P(r.pid);
     const cls = r.status==='EXECUTED'?'c-green':(r.status==='PENDING'?'c-amber':'c-gray');
-    return `<tr class="rowlink" onclick="go('#/portfolios/view/${r.pid}/rebalance')">
+    return `<tr class="rowlink" onclick="go('#/portfolios/view/${r.pid}/rebalance?sub=history&record=${r.id}')">
       <td class="num muted">${r.date}</td><td style="font-weight:600">${esc(p.name)}</td>
       <td><span class="chip ${cls}">${REBAL_STATUS[r.status]}</span></td>
       <td class="muted">${r.mode}</td><td class="num r">${r.count} 笔建议</td>
@@ -963,11 +1586,11 @@ function vPortfolioList(){
   <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px;" class="two-col">
     <div class="card">
       <div class="card-h"><span class="card-t">最近交易</span><span class="card-sub">仅 5 条预览</span><span class="card-link" onclick="go('#/portfolios/transactions')">查看全部 →</span></div>
-      <table class="tb"><tbody>${recentTx}</tbody></table>
+      <table class="tb"><tbody>${recentTx || '<tr><td><div class="empty"><span class="em">📭</span>暂无交易记录</div></td></tr>'}</tbody></table>
     </div>
     <div class="card">
       <div class="card-h"><span class="card-t">最近再平衡</span><span class="card-sub">最近 10 条</span></div>
-      <table class="tb"><thead><tr><th>日期</th><th>组合</th><th>状态</th><th>方式</th><th class="r">建议</th></tr></thead><tbody>${rebRows}</tbody></table>
+      <table class="tb"><thead><tr><th>日期</th><th>组合</th><th>状态</th><th>方式</th><th class="r">建议</th></tr></thead><tbody>${rebRows || '<tr><td colspan="5"><div class="empty"><span class="em">📭</span>还没有再平衡记录</div></td></tr>'}</tbody></table>
     </div>
   </div>
 
@@ -1054,7 +1677,7 @@ function vTxAll(){
 }
 
 /* =====================================================
-   视图 · 今日行情（/prices）
+   视图 · 自选行情（/prices）
 ===================================================== */
 function vPrices(){
   const f = S.prices;
@@ -1076,7 +1699,7 @@ function vPrices(){
 
   return `
   <div class="page-head head-row">
-    <div><div class="ph-title">今日行情</div>
+    <div><div class="ph-title">自选行情</div>
     <div class="ph-desc">跨资产每日监控 · 只读快视图。点击任一行下钻到「标的详情」；缺口超过 3 天标红（AS-07）。</div></div>
     <div class="spacer"></div>
     <button class="btn" onclick="refreshPrices()">⟳ 刷新</button>
@@ -1138,7 +1761,7 @@ function vInstruments(){
   return `
   <div class="page-head head-row">
     <div><div class="ph-title">标的列表</div>
-    <div class="ph-desc">全部投资标的的主数据（原「资产管理」，从今日行情进入）。代码唯一且大写；大类用于大类级目标配置。</div></div>
+    <div class="ph-desc">全部投资标的的主数据（原「资产管理」，从自选行情进入）。代码唯一且大写；大类用于大类级目标配置。</div></div>
     <div class="spacer"></div>
     <span class="chip c-gray">${ASSETS.length} 项资产</span>
     <button class="btn btn-pri" onclick="openAssetForm(null)">＋ 新增资产</button>
@@ -1191,7 +1814,7 @@ function vInstrumentDetail(sym){
   const meta = [a.sym, MARKET_NAME[a.market]||a.market, a.ccy, typeLabel(a).t, clsLabel(a.cls)];
   if(!a.active) meta.push('已停用');
   return `
-  <div class="detail-back"><a onclick="go('#/prices')">← 返回今日行情</a></div>
+  <div class="detail-back"><a onclick="go('#/prices')">← 返回自选行情</a></div>
   <div class="head-row" style="margin:6px 0 16px;">
     <div>
       <div class="ph-title">${esc(a.name)} ${a.watch?'<span class="chip c-amber">关注</span>':''} ${!a.active?'<span class="chip c-gray">已停用</span>':''}</div>
@@ -1388,27 +2011,88 @@ function saveRuleForm(id){
 }
 
 /* =====================================================
-   视图 · 日志（/logs）
+   视图 · 日志（/logs）—— TASK-061 / FS-cron-worker-status-board
+   置顶「任务运行看板」+ 两个原始日志视图（任务日志 / 服务器日志）。
+   全频道只读排障：永不出现「执行 / 撤销 / 重做 / 手动触发 / 编辑阈值」（OQ6、AC9）
 ===================================================== */
+const LEVEL_CLASS = { green:'c-green', amber:'c-amber', red:'c-red', gray:'c-gray' };
+const LEVEL_DOT   = { green:'#16A34A', amber:'#F59E0B', red:'#DC2626', gray:'#94A3B8' };
+const LEVEL_LABEL = { green:'好', amber:'关注', red:'坏', gray:'跳过/未跑' };
+const STATE_CLASS = { SUCCEEDED:'c-green', PARTIAL:'c-amber', FAILED:'c-red', SKIPPED:'c-gray' };
+const RB_SCHED_LABEL = { daily:'每日', weekly:'每周', monthly:'每月' };
+/* 整体徽章只由「数据态」决定 —— 运行态 SUCCEEDED 不参与「全部正常」判定（§2.1 铁律） */
+function overallBadge(tasks){
+  if(tasks.some(t=>t.dataLevel==='red'))   return ['c-red','存在失败'];
+  if(tasks.some(t=>t.dataLevel==='amber')) return ['c-amber','需关注'];
+  if(tasks.some(t=>t.dataLevel==='gray'))  return ['c-gray','可能停滞'];
+  return ['c-green','全部正常'];
+}
+function cronCard(t){
+  const bar = t.progress!=null
+    ? `<div class="pbar"><div class="pbar-f" style="width:${Math.min(100,t.progress)}%"></div></div>`
+    : '';   // progress=null 的任务不画 bar，杜绝 NaN / 溢出（R-3）
+  const actions = `<a class="link" onclick="S.logs.tab='task';S.logs.task='${t.key}';go('#/logs')">查看日志</a>`
+    + (t.detailLink ? ` <a class="link" onclick="go('${t.detailLink}')">查看详情</a>` : '');
+  return `<div class="card cron-card"><div class="card-b">
+    <div class="head-row"><div class="ph-title">${t.name}</div>
+      <span class="chip ${LEVEL_CLASS[t.dataLevel]}" title="数据态：${LEVEL_LABEL[t.dataLevel]}">${LEVEL_LABEL[t.dataLevel]}</span></div>
+    <div class="muted" style="margin:4px 0">上次运行 ${t.lastRun}</div>
+    <div class="run-state">运行态 ${t.runState}</div>
+    ${bar}<div class="knum">${t.keyNumbers}</div>
+    ${t.note ? `<div class="note">⚠ ${t.note}</div>` : ''}
+    <div class="card-actions">${actions}</div>
+  </div></div>`;
+}
+/* 手动刷新（OQ5：不轮询、无 setInterval）—— 原型无后端，仅推进快照时间并重绘 */
+let boardTick = 0;
+function refreshBoard(){
+  boardTick++;
+  const d = new Date(2026,9,26,9,35); d.setMinutes(d.getMinutes() + boardTick*7);
+  const p2 = (n)=>String(n).padStart(2,'0');
+  CRON_STATUS.snapshotAt = `${d.getFullYear()}-${p2(d.getMonth()+1)}-${p2(d.getDate())} ${p2(d.getHours())}:${p2(d.getMinutes())}`;
+  toast('看板已刷新（手动 · 无自动轮询）','ok'); route();
+}
 function vLogs(){
   const f = S.logs;
+  const { q } = parseHash();
+  // 深链支持：#/logs?tab=task&task=xxx（卡片「查看日志」跳转）
+  if(q.tab==='board'||q.tab==='task'||q.tab==='server') f.tab = q.tab;
+  if(q.task) f.task = q.task;
   const seg = `<span class="seg">
-    <button class="seg-btn ${f.tab==='runs'?'on':''}" onclick="S.logs.tab='runs';route()">任务运行记录</button>
-    <button class="seg-btn ${f.tab==='logs'?'on':''}" onclick="S.logs.tab='logs';route()">服务日志</button>
+    <button class="seg-btn ${f.tab==='board'?'on':''}" onclick="S.logs.tab='board';route()">任务运行看板</button>
+    <button class="seg-btn ${f.tab==='task'?'on':''}" onclick="S.logs.tab='task';route()">任务日志</button>
+    <button class="seg-btn ${f.tab==='server'?'on':''}" onclick="S.logs.tab='server';route()">服务器日志</button>
   </span>`;
-  if(f.tab==='runs'){
+  if(f.tab==='board'){
+    const [obc,obl] = overallBadge(CRON_STATUS.tasks);
+    return `
+    <div class="toolbar">${seg}
+      <button class="btn" onclick="refreshBoard()">↻ 刷新</button>
+      <span class="count">基于 taskruns 最近一次运行 + 价格库当前态 · 更新于 ${CRON_STATUS.snapshotAt}</span>
+    </div>
+    <div class="cron-overview">
+      <div class="hl-wrap">${CRON_STATUS.tasks.map(t=>`<span class="hl"><span class="dot" style="background:${LEVEL_DOT[t.dataLevel]}"></span>${t.name}</span>`).join('')}</div>
+      <span class="chip ${obc}">${obl}</span>
+    </div>
+    <div class="cron-grid">${CRON_STATUS.tasks.map(cronCard).join('')}</div>
+    <div class="cron-legend">状态色（系统态，与行情「红涨绿跌」无关）：卡片 chip 文案与颜色 = 数据态（好/关注/坏/跳过）；运行态（SUCCEEDED 等）已降为卡片副行小灰字。
+      ${Object.keys(LEVEL_LABEL).map(k=>`<span class="chip ${LEVEL_CLASS[k]}">${LEVEL_LABEL[k]}</span>`).join('')}
+      · 运行态 SUCCEEDED ≠ 数据到位（价格 07:00 写的是上一开市日；完整性检查每天绿却有缺口）</div>
+    <div class="cron-ro">ⓘ 本频道只读排障：只回答「系统有没有干活、干成了没有」，不放任何执行动作。</div>`;
+  }
+  if(f.tab==='task'){
     let list = TASKRUNS;
     if(f.task) list = list.filter(t=>t.task.includes(f.task));
     if(f.status) list = list.filter(t=>t.status===f.status);
     const rows = list.map(t=>
       `<tr><td style="font-weight:600" class="num">${esc(t.task)}</td>
-       <td><span class="chip ${t.status==='SUCCEEDED'?'c-green':'c-red'}">${t.status}</span></td>
+       <td><span class="chip ${STATE_CLASS[t.status] || 'c-gray'}">${t.status}</span></td>
        <td class="num muted">${t.time}</td><td class="num r muted">${t.dur}</td>
        <td class="muted">${esc(t.summary)}</td></tr>`).join('');
     return `
     <div class="toolbar">${seg}
       <input class="input" placeholder="按任务名筛选…" value="${esc(f.task)}" oninput="S.logs.task=this.value;route()"/>
-      <select class="select" onchange="S.logs.status=this.value;route()"><option value="">全部状态</option><option value="SUCCEEDED">SUCCEEDED</option><option value="FAILED">FAILED</option></select>
+      <select class="select" onchange="S.logs.status=this.value;route()">${[['','全部状态'],['SUCCEEDED','SUCCEEDED'],['PARTIAL','PARTIAL'],['FAILED','FAILED'],['SKIPPED','SKIPPED']].map(([v,l])=>`<option value="${v}" ${f.status===v?'selected':''}>${l}</option>`).join('')}</select>
       <span class="count">任务由 cron-worker 唯一调度 · 价格 07:00 · 完整性 03:30 · 提醒 04:00 · 汇率 09:30 · 再平衡 00:00（UTC）</span>
     </div>
     <div class="tbl-wrap"><table class="tb">
@@ -1416,6 +2100,7 @@ function vLogs(){
       <tbody>${rows}</tbody></table></div>
     <div class="fhint" style="margin-top:10px;">注：successCount 在 persistPrice 后计数 —— 任务全绿 ≠ 有新数据；缺口以完整性检查为准。</div>`;
   }
+  /* ---- 服务器日志（原 logs 分支，逻辑未动，仅 tab key 改名） ---- */
   let lines = LOGLINES.filter(l=>f.level==='ALL'||l.lv===f.level);
   return `
   <div class="toolbar">${seg}
@@ -1426,19 +2111,61 @@ function vLogs(){
 }
 
 /* =====================================================
+   视图 · 再平衡分发详情（/logs/rebalance）—— OQ8 形态 B：独立子路由，不在看板卡内展开
+   只读：只列「跑成没跑成 / 失败原因」；建议明细与执行动作归组合域（OQ7）
+===================================================== */
+function vRebalanceBoard(){
+  const f = S.rb;
+  const t = CRON_STATUS.tasks.find(x=>x.key==='rebalance');
+  const list = t.perPortfolio.filter(r=>
+    (!f.pid       || r.pid===f.pid) &&
+    (!f.schedule  || r.schedule===f.schedule) &&
+    (!f.state     || r.runState===f.state));
+  const rows = list.map(r=>`<tr>
+    <td style="font-weight:600">${esc(r.name)}</td>
+    <td class="muted">${RB_SCHED_LABEL[r.schedule] || r.schedule}</td>
+    <td>${r.due ? '<span class="chip c-purple">到期</span>' : '<span class="chip c-gray">未到期</span>'}</td>
+    <td><span class="chip ${STATE_CLASS[r.runState] || 'c-gray'}">${r.runState}</span></td>
+    <td>${r.generated ? `已生成 <b>${r.suggestions}</b> 笔` : '<span class="muted">未生成</span>'}</td>
+    <td class="num r">${r.generated ? r.suggestions : '—'}</td>
+    <td class="muted">${r.reason ? esc(r.reason) : '—'}</td>
+    <td><div class="act-cell"><a class="link" onclick="S.logs.tab='task';S.logs.task='rebalance-suggestions:${r.pid}';go('#/logs')">查看原始日志</a><a class="link" onclick="go('#/portfolios/view/${r.pid}/rebalance')">去组合</a></div></td>
+  </tr>`).join('') || `<tr><td colspan="8"><div class="empty">无匹配记录</div></td></tr>`;
+  return `
+  <div class="crumbs"><a class="link" onclick="go('#/logs?tab=board')">‹ 返回看板</a></div>
+  <div class="page-head">
+    <div class="ph-title">再平衡分发 · 逐组合结果</div>
+    <div class="ph-desc">只读：只列「跑成没跑成 / 失败原因」。建议明细、执行与撤销在组合域完成。</div>
+  </div>
+  <div class="toolbar">
+    <select class="select" onchange="S.rb.date=this.value;route()">${RB_DATES.map(d=>`<option value="${d}" ${f.date===d?'selected':''}>${d}</option>`).join('')}</select>
+    <select class="select" onchange="S.rb.pid=this.value;route()"><option value="">全部组合</option>${t.perPortfolio.map(r=>`<option value="${r.pid}" ${f.pid===r.pid?'selected':''}>${esc(r.name)}</option>`).join('')}</select>
+    <select class="select" onchange="S.rb.state=this.value;route()">${[['','全部状态'],['SUCCEEDED','已运行'],['FAILED','失败'],['SKIPPED','跳过']].map(([v,l])=>`<option value="${v}" ${f.state===v?'selected':''}>${l}</option>`).join('')}</select>
+    <select class="select" onchange="S.rb.schedule=this.value;route()">${[['','全部频率'],['daily','每日'],['weekly','每周'],['monthly','每月']].map(([v,l])=>`<option value="${v}" ${f.schedule===v?'selected':''}>${l}</option>`).join('')}</select>
+    <span class="count">${list.length} / ${t.perPortfolio.length} 个组合 · 上次运行 ${t.lastRun}</span>
+  </div>
+  <div class="tbl-wrap"><table class="tb">
+    <thead><tr><th>组合</th><th>计划</th><th>到期</th><th>运行态</th><th>生成结果</th><th class="r">建议数</th><th>失败原因</th><th>操作</th></tr></thead>
+    <tbody>${rows}</tbody></table></div>
+  <div class="cron-ro">ⓘ 本页只读。「执行 / 撤销 / 重做」在组合域完成 —— 点「去组合」跳转。</div>
+  <div class="fhint">数据契约降级位（FS §4.5.2）：真实实现依赖 TASK-057 的 <code>result</code> 字段；契约未就绪时「没跑」与「跑过但无记录」不可区分，此处按「跳过」呈现并记录 note。</div>`;
+}
+
+/* =====================================================
    视图 · 组合详情（5 Tab）
 ===================================================== */
-function vPortfolioDetail(pid, tab){
+function vPortfolioDetail(pid, tab, sub, recordId){
   const p = P(pid); if(!p) return vPortfolioList();
   const d = driftOf(p);
-  const tabs = [['overview','总览'],['positions','持仓概览'],['history','持仓历史'],['rebalance','再平衡'],['transactions','交易记录']];
+  // Tab key 必须与实码 Detail.jsx 一致：position-history（不是 history），避免破坏旧深链
+  const tabs = [['overview','总览'],['positions','持仓概览'],['position-history','持仓历史'],['rebalance','再平衡'],['transactions','交易记录']];
   const tabBar = `<div class="tabs">${tabs.map(([k,l])=>`<div class="tab ${tab===k?'on':''}" onclick="go('#/portfolios/view/${pid}/${k}')">${l}</div>`).join('')}</div>`;
   const header = vDetailHeader(p, d);
   let body = '';
   if(tab==='overview') body = tabOverview(p, d);
   else if(tab==='positions') body = tabPositions(p);
-  else if(tab==='history') body = tabPHistory(p);
-  else if(tab==='rebalance') body = tabRebalance(p, d);
+  else if(tab==='position-history') body = tabPHistory(p);
+  else if(tab==='rebalance') body = tabRebalance(p, d, sub||'suggestions', recordId);
   else body = tabTxns(p);
   return header + tabBar + body;
 }
@@ -1455,14 +2182,14 @@ function vDetailHeader(p, d){
             ${ptypeChip(p.ptype)}
             <span class="chip c-gray">基础币种 · ${p.ccy}</span>
             <span class="chip c-gray">账户 · ${esc(p.account)}</span>
-            <span class="chip c-gray">最近再平衡 · ${p.lastRebal||'暂无'}</span>
+            <span class="chip c-gray">最近再平衡 · ${p.lastExecutedAt ? p.lastExecutedAt + '（' + daysAgoLabel(daysSinceRebal(p)) + '）' : '从未'}</span>
           </div>
         </div>
         <div class="spacer"></div>
         <div style="display:flex;gap:8px;position:relative;flex-wrap:wrap;">
-          <button class="btn" onclick="openPortfolioForm('${p.id}')">编辑组合</button>
+          <button class="btn btn-pri" onclick="openTxForm('${p.id}',null)">＋ 添加交易</button>
+          <button class="btn" onclick="openPortfolioForm('${p.id}')">编辑</button>
           <button class="btn" onclick="openTargetForm('${p.id}')">设置目标</button>
-          <button class="btn btn-pri" onclick="go('#/portfolios/view/${p.id}/rebalance')">再平衡</button>
           <button class="btn" onclick="toggleMenu('${menuId}')">⋯</button>
           <div class="menu" id="${menuId}">
             <div class="menu-item" onclick="toggleArchive('${p.id}')">${p.archived?'取消归档':'归档组合'}</div>
@@ -1484,7 +2211,7 @@ function toggleArchive(pid){ const p=P(pid); p.archived=!p.archived; toast(`${p.
 function openDelPortfolio(pid){
   const p = P(pid);
   openModal('删除组合', `
-    <p style="font-size:13px;margin-bottom:10px;">此操作将删除组合 <b>${esc(p.name)}</b> 及其目标配置。已有交易与事件不会级联删除（口径见手册 §5）。</p>
+    <p style="font-size:13px;margin-bottom:10px;">此操作将同时<b>永久删除</b>组合 <b>${esc(p.name)}</b> 的<b>全部交易记录</b>与<b>再平衡记录</b>，<b>不可恢复</b>。该组合相关的提醒将不再显示（事件数据保留、不随组合删除）。</p>
     <div class="field"><label class="flabel">请输入组合名称以确认：<b>${esc(p.name)}</b></label>
     <input class="input input-full" id="delName" oninput="const b=document.getElementById('delGo');b.disabled=this.value!=='${esc(p.name)}'"/></div>
   `, `<button class="btn" onclick="closeModal()">取消</button><button class="btn btn-pri" id="delGo" disabled style="background:var(--danger);border-color:var(--danger)" onclick="doDelPortfolio('${pid}')">确认删除</button>`);
@@ -1498,10 +2225,12 @@ function doDelPortfolio(pid){
 function kpiRow(p){
   const d = driftOf(p);
   const pl = pPL(p), plPct = pPLPct(p);
-  let rbVal, rbSub, rbCls='';
+  let rbVal, rbSub;
   if(d.kind==='none'){ rbVal='<span class="muted" style="font-size:18px;">未设目标</span>'; rbSub='<a onclick="openTargetForm(\''+p.id+'\')">去设置目标 →</a>'; }
   else if(d.kind==='over'){ rbVal=`<span class="warn-text" style="font-size:20px;">${d.overN} 项超阈</span>`; rbSub=`<span class="warn-text">${d.due?'已到期 · '+d.ds+' 天未调仓':'偏离超阈'}</span>`; }
-  else { rbVal='<span style="font-size:20px;color:var(--down);font-weight:700;">配置正常</span>'; rbSub='<span class="muted">无待办</span>'; }
+  else if(d.kind==='never'){ rbVal='<span style="font-size:20px;color:#0284C7;font-weight:700;">从未执行</span>'; rbSub='<span class="muted">尚未执行过任何一次再平衡</span>'; }
+  else if(d.kind==='due'){ rbVal='<span class="warn-text" style="font-size:20px;">已到期</span>'; rbSub=`<span class="warn-text">距上次再平衡 ${d.ds} 天 &gt; 阈值 ${p.cfg.interval} 天</span>`; }
+  else { rbVal='<span style="font-size:20px;color:var(--down);font-weight:700;">配置正常</span>'; rbSub='<span class="muted">未超阈且未到期</span>'; }
   return `<div class="kpi-row" style="margin-bottom:16px;">
     <div class="kpi"><div class="l">持仓总市值（${p.ccy}）</div><div class="v num">${money(pValue(p),p.ccy)}</div></div>
     <div class="kpi"><div class="l">未实现盈亏</div><div class="v num ${chgCls(pl)}">${pl>=0?'+':''}${money(pl,p.ccy).replace('-','-')}</div><div class="s num ${chgCls(pl)}">${pctS(plPct)}</div></div>
@@ -1511,35 +2240,48 @@ function kpiRow(p){
 }
 /* --- Tab: 总览 --- */
 function tabOverview(p, d){
-  const rows = devRows(p);
+  const isClass = p.targetLevel==='asset_class' && p.classTargets;
+  const rows = isClass ? classDevRows(p) : devRows(p);
   let targetCard;
   if(!rows){
     targetCard = `<div class="card" style="margin-bottom:16px;"><div class="empty"><span class="em">🎯</span>未设目标配置 —— 设置后才能生成再平衡建议<br/>
       <button class="btn btn-pri btn-sm" style="margin-top:12px" onclick="openTargetForm('${p.id}')">设置目标</button></div></div>`;
   } else {
     const tr = rows.map(r=>{
-      const st = r.flag==='正常' ? '<span class="chip c-green">正常</span>' : `<span class="chip c-amber">${r.flag}</span>`;
+      const st = r.flag==='正常' ? '<span class="chip c-green">正常</span>'
+        : (r.flag==='缺价' ? '<span class="chip c-gray">缺价</span>' : `<span class="chip c-amber">${r.flag}</span>`);
+      const actTxt = r.actual==null ? '—' : r.actual.toFixed(1)+'%';
+      const absTxt = r.abs==null ? '—' : pctS(r.abs,1).replace('%','');
+      const relTxt = r.rel==null ? '—' : pctS(r.rel,1);
       return `<tr>
-        <td><div class="asset-cell"><div class="n">${esc(r.name)}</div><div class="s">${r.sym}</div></div></td>
-        <td class="num r">${r.target.toFixed(0)}%</td><td class="num r">${r.actual.toFixed(1)}%</td>
-        <td class="num r ${r.overAbs?'warn-text':'muted'}">${pctS(r.abs,1).replace('%','')}</td>
-        <td class="num r ${r.overRel?'warn-text':'muted'}">${pctS(r.rel,1)}</td>
+        <td><div class="asset-cell"><div class="n">${esc(r.name)}</div><div class="s">${esc(r.sym)}${isClass?' · 大类级':''}</div></div></td>
+        <td class="num r">${r.target.toFixed(1)}%</td><td class="num r">${actTxt}</td>
+        <td class="num r ${r.overAbs?'warn-text':'muted'}">${absTxt}</td>
+        <td class="num r ${r.overRel?'warn-text':'muted'}">${relTxt}</td>
         <td>${st}</td></tr>`;
     }).join('');
+    const missing = rows.filter(r=>r.missing).length;
+    const reasons = driftReasons(p);
+    const reasonText = reasons.length ? reasons.map(k=>DRIFT_REASON_LABEL[k]).join(' · ') : '未触发任何阈值';
+    const chip = d.kind==='over' ? `<span class="chip c-amber">${d.overN} 项超阈${d.due?' · 已到期':''}</span>`
+      : d.kind==='never' ? '<span class="chip c-blue">从未执行</span>'
+      : d.kind==='due' ? '<span class="chip c-amber">已到期</span>'
+      : '<span class="chip c-green">配置正常</span>';
     targetCard = `<div class="card" style="margin-bottom:16px;">
       <div class="card-h"><span class="card-t">目标 vs 实际</span>
-        <span class="spacer"></span>
-        ${d.overN?`<span class="chip c-amber">${d.overN} 项超阈${d.due?' · 已到期':''}</span>`:'<span class="chip c-green">配置正常</span>'}
+        ${isClass?'<span class="card-sub">大类级口径 · 首列为大类</span>':''}
+        <span class="spacer"></span>${chip}
       </div>
       <table class="tb">
-        <thead><tr><th>标的</th><th class="r">目标</th><th class="r">实际</th><th class="r">绝对偏离</th><th class="r">相对偏离</th><th>状态</th></tr></thead>
+        <thead><tr><th>${isClass?'大类':'标的'}</th><th class="r">目标</th><th class="r">实际</th><th class="r">绝对偏离</th><th class="r">相对偏离</th><th>状态</th></tr></thead>
         <tbody>${tr}</tbody>
       </table>
-      ${d.overN?`<div style="padding:12px 18px;background:var(--warn-bg);display:flex;align-items:center;gap:10px;font-size:13px;color:var(--warn-t);">
-        触发原因：绝对偏离 &gt; ${p.cfg.abs}% · 相对偏离 &gt; ${p.cfg.rel}%${d.due?` · 距上次再平衡 ${d.ds} 天`:''}
+      ${missing?`<div class="tbl-foot">${missing} 项缺最新价，未能参与偏离判定</div>`:''}
+      <div style="padding:12px 18px;display:flex;align-items:center;gap:10px;font-size:13px;background:${reasons.length?'var(--warn-bg)':'transparent'};color:${reasons.length?'var(--warn-t)':'var(--muted)'};">
+        触发原因：${reasonText}
         <span class="spacer"></span>
-        <button class="btn btn-pri btn-sm" onclick="go('#/portfolios/view/${p.id}/rebalance')">去再平衡</button>
-      </div>`:''}
+        <button class="btn btn-pri btn-sm" onclick="go('#/portfolios/view/${p.id}/rebalance?sub=suggestions')">去再平衡</button>
+      </div>
     </div>`;
   }
   const last = [...REBALS].filter(r=>r.pid===p.id).sort((a,b)=>b.date.localeCompare(a.date))[0];
@@ -1549,8 +2291,14 @@ function tabOverview(p, d){
       <b class="num">${last.date}</b><span class="chip ${last.status==='EXECUTED'?'c-green':(last.status==='PENDING'?'c-amber':'c-gray')}">${REBAL_STATUS[last.status]}</span>
       <span class="muted">${last.mode} · ${last.count} 笔建议</span>
       <span class="spacer"></span>
-      <a onclick="S.detail.rebTab='hist';go('#/portfolios/view/${p.id}/rebalance')">查看历史 →</a>
-    </div></div>` : '';
+      <a onclick="go('#/portfolios/view/${p.id}/rebalance?sub=history')">查看历史 →</a>
+    </div></div>` : `<div class="card" style="margin-bottom:16px;">
+    <div class="card-h"><span class="card-sub">最近一次再平衡</span></div>
+    <div class="card-b" style="display:flex;align-items:center;gap:12px;">
+      <span class="muted">从未执行过再平衡</span>
+      <span class="spacer"></span>
+      <button class="btn btn-sm" onclick="go('#/portfolios/view/${p.id}/rebalance?sub=suggestions')">去生成建议 →</button>
+    </div></div>`;
   const cfg = p.cfg;
   const cfgCard = `<div class="card">
     <div class="card-h fold-head" onclick="S.detail.foldCfg=!S.detail.foldCfg;route()">
@@ -1559,7 +2307,7 @@ function tabOverview(p, d){
       <span class="card-link" onclick="event.stopPropagation();openCfg('${p.id}')">编辑</span>
     </div>
     ${S.detail.foldCfg?`<div class="card-b" style="font-size:13px;color:var(--ink2);">
-      绝对偏离 <b>${cfg.abs}%</b> · 相对偏离 <b>${cfg.rel}%</b> · 时间间隔 <b>${cfg.timeOn?cfg.interval+' 天':'已关闭'}</b> · AUTO 调度 <b>${{daily:'每日',weekly:'每周',monthly:'每月',off:'关闭'}[cfg.freq]}</b>
+      绝对偏离 <b>${cfg.abs}%</b> · 相对偏离 <b>${cfg.rel}%</b> · 时间间隔 <b>${cfg.interval} 天</b> · AUTO 调度 <b>${{daily:'每日',weekly:'每周',monthly:'每月'}[cfg.freq]||cfg.freq}</b>
     </div>`:''}
   </div>`;
   return kpiRow(p) + targetCard + lastCard + cfgCard;
@@ -1574,21 +2322,22 @@ function tabPositions(p){
   hs.sort((a,b)=>b.qty*A(b.sym).price - a.qty*A(a.sym).price);
   const rows = hs.map(h=>{
     const a = A(h.sym);
-    const val = h.qty*a.price, pl = holdingPL(h);
-    const dayChg = val*a.chg/100;
+    const priceOk = a && a.price!=null;
+    const val = priceOk ? h.qty*a.price : 0, pl = holdingPL(h);
+    const dayChg = priceOk ? val*a.chg/100 : 0;
     return `<tr class="rowlink" onclick="go('#/instruments/${encodeURIComponent(h.sym)}')">
       <td><div class="asset-cell"><div class="n">${esc(a.name)}</div><div class="s">${MARKET_NAME[a.market]||a.market} · ${typeLabel(a).t}</div></div></td>
       <td style="font-weight:600">${h.sym}</td>
       <td>${typeChip(h.sym)}</td>
       <td class="num r">${h.qty.toLocaleString('en-US')}</td>
       <td class="num r">${money(h.cost,p.ccy, a.type==='fund'?3:2)}</td>
-      <td class="num r">${priceFmt(a)}</td>
-      <td class="num r" style="font-weight:600">${money(val,p.ccy)}</td>
-      <td class="num r ${chgCls(dayChg)}">${(dayChg>=0?'+':'')+money(dayChg,p.ccy)}</td>
+      <td class="num r">${priceOk?priceFmt(a):'—'}</td>
+      <td class="num r" style="font-weight:600">${priceOk?money(val,p.ccy):'—'}</td>
+      <td class="num r ${chgCls(dayChg)}">${priceOk?(dayChg>=0?'+':'')+money(dayChg,p.ccy):'—'}</td>
       <td class="num r ${chgCls(pl)}">${pctS(pl/(h.qty*h.cost)*100)}</td>
     </tr>`;
   }).join('');
-  return kpiRow(p) + `
+  return `
   <div class="toolbar">
     <div class="search-box"><span class="ic">⌕</span><input class="input" placeholder="搜索资产代码或名称…" value="${esc(f.q)}" oninput="S.detail.q=this.value;route()"/></div>
     <select class="select" onchange="S.detail.sort=this.value;route()">
@@ -1627,31 +2376,23 @@ function tabPHistory(p){
     <thead><tr><th>日期</th><th class="r">总市值</th><th class="r">当日变动</th><th class="r">持仓</th></tr></thead>
     <tbody>${rows.join('')}</tbody></table></div>`;
 }
-/* --- Tab: 再平衡 --- */
-function tabRebalance(p, d){
+/* --- Tab: 再平衡（子 Tab 由 ?sub=suggestions|history 驱动，无内存态） --- */
+function tabRebalance(p, d, sub, recordId){
+  const isHist = sub==='history';
   const seg = `<span class="seg">
-    <button class="seg-btn ${S.detail.rebTab==='sugg'?'on':''}" onclick="S.detail.rebTab='sugg';route()">再平衡建议</button>
-    <button class="seg-btn ${S.detail.rebTab==='hist'?'on':''}" onclick="S.detail.rebTab='hist';route()">再平衡历史</button>
+    <button class="seg-btn ${!isHist?'on':''}" onclick="go('#/portfolios/view/${p.id}/rebalance?sub=suggestions')">再平衡建议</button>
+    <button class="seg-btn ${isHist?'on':''}" onclick="go('#/portfolios/view/${p.id}/rebalance?sub=history')">再平衡历史</button>
   </span>`;
   const head = `<div class="page-head" style="margin-bottom:12px;">
     <div class="ph-title">再平衡</div>
     <div class="ph-desc">${esc(p.name)} · 偏离阈值由「总览 · 再平衡配置」维护，本页只负责检查、生成与执行建议。</div>
   </div><div style="margin-bottom:16px;">${seg}</div>`;
-  return head + (S.detail.rebTab==='sugg' ? rebSugg(p, d) : rebHist(p));
+  return head + (isHist ? rebHist(p, recordId) : rebSugg(p, d));
 }
 function rebSugg(p, d){
   const cfg = p.cfg;
   const left = `
-    <div class="card" style="margin-bottom:16px;">
-      <div class="card-h"><span class="card-t">触发阈值</span></div>
-      <div class="card-b" style="font-size:13px;">
-        <div class="fhint" style="margin-bottom:10px;">只读 · 修改请到「总览 · 再平衡配置」</div>
-        <div style="display:flex;justify-content:space-between;padding:6px 0;"><span class="muted">资产级别偏离</span><b class="num">${cfg.abs}%</b></div>
-        <div style="display:flex;justify-content:space-between;padding:6px 0;"><span class="muted">类别级别偏离</span><b class="num">3%</b></div>
-        <div style="display:flex;justify-content:space-between;padding:6px 0;"><span class="muted">整体收益比例偏离</span><b class="muted">已关闭</b></div>
-        <a onclick="openCfg('${p.id}')" style="font-weight:600;">编辑配置 →</a>
-      </div>
-    </div>
+    <div class="fhint" style="margin-bottom:12px;">触发阈值与 AUTO 频率在「总览 · 再平衡配置」维护，本页不设第二入口。</div>
     <div class="card">
       <div class="card-h"><span class="card-t">再平衡建议参数</span></div>
       <div class="card-b">
@@ -1663,24 +2404,38 @@ function rebSugg(p, d){
     </div>`;
   const g = S.gen[p.id];
   let right;
-  if(!p.targets){
+  if(!hasTargets(p)){
     right = `<div class="card" style="min-height:300px;"><div class="empty"><span class="em">🎯</span>未设目标配置 —— 无法生成建议<br/>
       <button class="btn btn-pri btn-sm" style="margin-top:12px" onclick="openTargetForm('${p.id}')">去设置目标</button></div></div>`;
   } else {
-    const banner = d.overN ? `<div class="banner banner-warn" style="margin-bottom:14px;">
-      <span>⚠</span><span class="t">组合偏离已超出阈值，建议立即再平衡以恢复目标配置。</span>
-      <span class="spacer"></span>
-      <button class="btn btn-sm" onclick="this.closest('.banner').remove()">✕</button>
-    </div>` : `<div class="banner banner-amber" style="margin-bottom:14px;background:#E8F7F0;color:var(--down);border-color:#C7EED8;">
-      <span>✓</span><span class="t">当前配置在阈值内，可随时手动生成建议。</span>
-    </div>`;
+    // 四态 banner：超阈 / 已到期 / 从未执行 / 正常。到期态绝不再报「当前配置在阈值内」
+    let banner;
+    if(d.kind==='over'){
+      banner = `<div class="banner banner-warn" style="margin-bottom:14px;">
+        <span>⚠</span><span class="t">组合偏离已超出阈值，建议立即再平衡以恢复目标配置。</span>
+        <span class="spacer"></span>
+        <button class="btn btn-sm" onclick="this.closest('.banner').remove()">✕</button>
+      </div>`;
+    } else if(d.kind==='due'){
+      banner = `<div class="banner banner-amber" style="margin-bottom:14px;">
+        <span>⚠</span><span class="t">距上次再平衡 ${d.ds} 天，已超过时间间隔阈值 ${cfg.interval} 天，建议检查配置。</span>
+      </div>`;
+    } else if(d.kind==='never'){
+      banner = `<div class="banner banner-amber" style="margin-bottom:14px;">
+        <span>⚠</span><span class="t">该组合从未执行过再平衡，建议先生成并执行一次以建立基准。</span>
+      </div>`;
+    } else {
+      banner = `<div class="banner banner-amber" style="margin-bottom:14px;background:#E8F7F0;color:var(--down);border-color:#C7EED8;">
+        <span>✓</span><span class="t">当前配置在阈值内且未到期，可随时手动生成建议。</span>
+      </div>`;
+    }
     const gRows = g ? g.rows.map(r=>{
       const opCls = r.action==='buy' ? 'chg-up' : (r.action==='sell' ? 'chg-down' : 'muted');
       const op = r.action==='buy' ? '<span class="'+opCls+'">买入</span>' : (r.action==='sell' ? '<span class="'+opCls+'">卖出</span>' : '<span class="muted">持有</span>');
       return `<tr>
         <td><div class="asset-cell"><div class="n">${esc(r.name)}</div><div class="s">${r.sym}</div></div></td>
-        <td class="num r">${r.target.toFixed(0)}%</td><td class="num r">${r.actual.toFixed(1)}%</td>
-        <td class="num r ${r.flag==='正常'?'muted':'warn-text'}">${pctS(r.rel,1)}</td>
+        <td class="num r">${r.target.toFixed(1)}%</td><td class="num r">${r.actual==null?'—':r.actual.toFixed(1)+'%'}</td>
+        <td class="num r ${r.flag==='正常'?'muted':'warn-text'}">${r.rel==null?'—':pctS(r.rel,1)}</td>
         <td>${op}</td><td class="num r" style="font-weight:600">${r.shares?r.shares.toLocaleString('en-US')+' 股':'0 股'}</td>
       </tr>`;
     }).join('') : '';
@@ -1720,16 +2475,16 @@ function rebSugg(p, d){
 function donutOf(p, kind){
   const rows = devRows(p);
   if(!rows) return '<div class="empty" style="padding:20px;">—</div>';
-  const items = rows.map((r,i)=>({ label:r.name, value: kind==='actual'?Math.max(r.actual,0):r.target, color:PALETTE[i%PALETTE.length] }));
+  const items = rows.map((r,i)=>({ label:r.name, value: kind==='actual'?Math.max(r.actual||0,0):r.target, color:PALETTE[i%PALETTE.length] }));
   return donutSVG(items, 150, 26);
 }
 function legendOf(p, kind){
   const rows = devRows(p); if(!rows) return '';
-  return rows.map((r,i)=>`<div class="li"><span class="dot" style="background:${PALETTE[i%PALETTE.length]}"></span>${r.sym}<span class="lp num">${(kind==='actual'?Math.max(r.actual,0):r.target).toFixed(1)}%</span></div>`).join('');
+  return rows.map((r,i)=>`<div class="li"><span class="dot" style="background:${PALETTE[i%PALETTE.length]}"></span>${r.sym}<span class="lp num">${(kind==='actual'?Math.max(r.actual||0,0):r.target).toFixed(1)}%</span></div>`).join('');
 }
 function genRebal(pid){
   const p = P(pid);
-  if(!p.targets){ toast('未设目标配置','err'); return; }
+  if(!hasTargets(p)){ toast('未设目标配置','err'); return; }
   const cash = parseFloat(($('rbCash')&&$('rbCash').value)||0)||0;
   const feeRate = (parseFloat(($('rbFee')&&$('rbFee').value)||0)||0)/100;
   const total = pValue(p) + cash;
@@ -1743,7 +2498,7 @@ function genRebal(pid){
   });
   // 资金约束：卖出所得 + 现金 >= 买入所需
   let avail = cash + rows.filter(r=>r.action==='sell').reduce((s,r)=>s+r.shares*A(r.sym).price,0);
-  rows.filter(r=>r.action==='buy').sort((a,b)=>b.rel-a.rel).forEach(r=>{
+  rows.filter(r=>r.action==='buy').sort((a,b)=>(b.rel||0)-(a.rel||0)).forEach(r=>{
     const cost = r.shares*A(r.sym).price;
     if(cost>avail){ r.shares = Math.floor(avail/A(r.sym).price); }
     avail -= r.shares*A(r.sym).price;
@@ -1781,9 +2536,9 @@ function execRebal(pid){
     const tx = { id:'t'+(txSeq++), pid, date:TODAY, sym:r.sym, action:r.action, qty:r.shares, price:A(r.sym).price, fee:0 };
     applyTx(p, tx); trades.push(tx);
   });
-  const rec = { id:'r'+(rebSeq++), pid, date:TODAY, status:'EXECUTED', mode:'手动', count:trades.length, trades };
+  const rec = { id:'r'+(rebSeq++), pid, date:TODAY, status:'EXECUTED', mode:'手动', count:trades.length, suggestions:[], trades };
   REBALS.unshift(rec);
-  p.lastRebal = TODAY;
+  p.lastExecutedAt = TODAY;
   S.gen[pid] = null;
   toast(`再平衡已执行：生成 ${trades.length} 笔交易（可撤销）`,'ok');
   route();
@@ -1807,26 +2562,49 @@ function doRevoke(id){
 function redoRebal(id){
   const r = REBALS.find(x=>x.id===id); const p = P(r.pid);
   if(r.trades){ r.trades.forEach(t=>{ const re = { ...t, id:'t'+(txSeq++), date:TODAY }; applyTx(p, re); }); }
-  r.status = 'EXECUTED'; p.lastRebal = TODAY;
+  r.status = 'EXECUTED'; p.lastExecutedAt = TODAY;
   toast('已重做：交易流水重新生成','ok'); route();
 }
-function rebHist(p){
+function rebHist(p, recordId){
   const list = [...REBALS].filter(r=>r.pid===p.id).sort((a,b)=>b.date.localeCompare(a.date));
+  const hit = recordId ? list.find(r=>r.id===recordId) : null;
+  const notFound = recordId && !hit;
   const rows = list.length ? list.map(r=>{
     const cls = r.status==='EXECUTED'?'c-green':(r.status==='PENDING'?'c-amber':'c-gray');
-    let acts = '';
+    const isHit = !!hit && r.id===hit.id;
+    let acts;
     if(r.status==='EXECUTED') acts = `<button class="btn btn-sm" onclick="revokeRebal('${r.id}')">撤销</button>`;
     else if(r.status==='REVOKED') acts = `<button class="btn btn-sm" onclick="redoRebal('${r.id}')">重做</button>`;
-    else acts = `<button class="btn btn-sm" onclick="S.detail.rebTab='sugg';route()">查看建议</button>`;
-    return `<tr><td class="num">${r.date}</td>
+    else acts = `<button class="btn btn-sm btn-pri" onclick="go('#/portfolios/view/${p.id}/rebalance?sub=suggestions')">去处理</button>`;
+    let html = `<tr class="${isHit?'rb-hit':''}"><td class="num">${r.date}</td>
       <td><span class="chip ${cls}">${REBAL_STATUS[r.status]}</span></td>
       <td class="muted">${r.mode}</td><td class="num r">${r.count} 笔建议</td>
       <td style="text-align:right;">${acts}</td></tr>`;
+    // 命中锚点：自动展开只读建议明细（数据随记录返回，零新增请求）
+    if(isHit && r.suggestions && r.suggestions.length){
+      const srows = r.suggestions.map(s=>{
+        const op = s.action==='buy' ? '<span class="chg-up">买入</span>' : (s.action==='sell' ? '<span class="chg-down">卖出</span>' : '<span class="muted">持有</span>');
+        return `<tr><td style="font-weight:600">${esc(s.sym)}</td><td>${op}</td>
+          <td class="num r">${(s.shares||0).toLocaleString('en-US')} 股</td>
+          <td class="num r">${money(s.price||0,p.ccy)}</td></tr>`;
+      }).join('');
+      html += `<tr class="rb-detail"><td colspan="5">
+        <div style="padding:12px 18px;background:#FBFCFD;border-top:1px dashed var(--border);">
+          <div class="card-sub" style="margin-bottom:8px;">该记录的建议明细（只读 · ${r.suggestions.length} 条）</div>
+          <table class="tb" style="border:1px solid var(--border);border-radius:8px;overflow:hidden;">
+            <thead><tr><th>标的</th><th>操作</th><th class="r">数量</th><th class="r">价格</th></tr></thead>
+            <tbody>${srows}</tbody>
+          </table>
+        </div></td></tr>`;
+    }
+    return html;
   }).join('') : `<tr><td colspan="5"><div class="empty"><span class="em">📭</span>还没有再平衡记录</div></td></tr>`;
-  return `<div class="tbl-wrap"><table class="tb">
+  const miss = notFound ? `<div class="banner banner-amber" style="margin-bottom:12px;">
+    <span>ⓘ</span><span class="t">该建议不在最近记录中（可能已被清理或超出最近 N 条范围），以下为完整历史。</span></div>` : '';
+  return `${miss}<div class="tbl-wrap"><table class="tb">
     <thead><tr><th>日期</th><th>状态</th><th>触发方式</th><th class="r">建议</th><th class="r">操作</th></tr></thead>
     <tbody>${rows}</tbody></table></div>
-    <div class="fhint" style="margin-top:10px;">AUTO 调度按 ${p.cfg.freq==='off'?'已关闭':{daily:'每日',weekly:'每周',monthly:'每月'}[p.cfg.freq]}自动检查并生成待确认建议，永不自动执行（三条不可让渡边界之一）。</div>`;
+    <div class="fhint" style="margin-top:10px;">AUTO 调度按 ${({daily:'每日',weekly:'每周',monthly:'每月'}[p.cfg.freq]||p.cfg.freq)}自动检查并生成待确认建议，永不自动执行（三条不可让渡边界之一）。</div>`;
 }
 /* --- Tab: 交易记录 --- */
 function tabTxns(p){
@@ -2031,37 +2809,50 @@ function savePortfolioForm(pid){
     toast('组合已保存','ok');
   } else {
     PORTFOLIOS.push({ id:'pf'+Date.now(), name, ptype:$('pfType').value, account:$('pfAcc').value, ccy:$('pfCcy').value,
-      desc:$('pfDesc').value||'（暂无描述）', targets:null, cfg:{abs:5,rel:10,interval:60,timeOn:true,freq:'off'}, archived:false, lastRebal:null, holdings:[] });
+      desc:$('pfDesc').value||'（暂无描述）', targets:null, targetLevel:'asset', classTargets:null,
+      cfg:{abs:5,rel:10,interval:60,freq:'monthly'}, archived:false, createdAt:TODAY, lastExecutedAt:null, holdings:[] });
     toast('组合已创建 —— 下一步：录入交易或设置目标','ok');
   }
   closeModal(); route();
 }
 function openTargetForm(pid){
   const p = P(pid);
-  const rows = p.holdings.length ? p.holdings : [{sym:'（暂无持仓）',qty:0,cost:0}];
+  // 空持仓 → 不给输入项（避免残留的假行）
+  if(!p.holdings.length){
+    openModal('目标配置 · '+esc(p.name), `
+      <div class="empty"><span class="em">📭</span>该组合还没有持仓 —— 目标配置需基于至少一个持仓标的<br/>
+        <span class="fhint" style="display:block;margin-top:6px;">请先在「交易记录」录入交易，或添加持仓后再设置目标。</span></div>
+    `, `<button class="btn btn-pri" onclick="closeModal()">知道了</button>`);
+    return;
+  }
   const inputs = p.holdings.map((h,i)=>{
     const a = A(h.sym);
-    const cur = p.targets ? (p.targets[h.sym]||0) : Math.round(100/p.holdings.length);
+    const cur = p.targets ? (p.targets[h.sym]||0) : +(100/p.holdings.length).toFixed(2);
     return `<div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;">
       <span style="flex:1;font-size:13px;"><b>${h.sym}</b> <span class="muted">${esc(a?a.name:'')}</span></span>
       <input class="input num" style="width:90px;text-align:right;" id="tg_${i}" data-sym="${h.sym}" value="${cur}" oninput="tgSum()"/> %
     </div>`;
   }).join('');
+  const isClass = p.targetLevel==='asset_class';
+  const classVal = c => (p.classTargets && p.classTargets[c]!=null) ? p.classTargets[c] : 0;
   openModal('目标配置 · '+esc(p.name), `
+    <div class="banner banner-amber" style="margin-bottom:14px;">
+      <span>ⓘ</span><span class="t">落地形态：本入口跳转 <b>/portfolios/edit/:id</b> 的目标区维护；此弹窗仅为行为演示，实施勿照搬。</span>
+    </div>
     <div class="field"><label class="flabel">模式（二选一）</label>
       <div class="radio-row">
-        <label><input type="radio" name="tgMode" value="asset" checked onchange="document.getElementById('tgAssetBox').style.display='block';document.getElementById('tgClassBox').style.display='none'"/>资产级</label>
-        <label><input type="radio" name="tgMode" value="class" onchange="document.getElementById('tgAssetBox').style.display='none';document.getElementById('tgClassBox').style.display='block'"/>大类级</label>
+        <label><input type="radio" name="tgMode" value="asset" ${isClass?'':'checked'} onchange="document.getElementById('tgAssetBox').style.display='block';document.getElementById('tgClassBox').style.display='none'"/>资产级</label>
+        <label><input type="radio" name="tgMode" value="class" ${isClass?'checked':''} onchange="document.getElementById('tgAssetBox').style.display='none';document.getElementById('tgClassBox').style.display='block'"/>大类级</label>
       </div>
-      <div class="fhint">大类级建议会按「类内持仓市值占比」摊分到具体资产；使用前请先把资产大类补全。</div>
+      <div class="fhint">大类级目标会按「目标大类占比 × 类内当前市值结构」摊分到具体资产；绝不会用实际占比冒充目标。</div>
     </div>
-    <div id="tgAssetBox">${inputs}
+    <div id="tgAssetBox" style="display:${isClass?'none':'block'}">${inputs}
       <div style="text-align:right;margin-top:6px;">合计 <span class="sum-line num" id="tgSum">0%</span>（必须精确 100%）</div>
     </div>
-    <div id="tgClassBox" style="display:none;">
+    <div id="tgClassBox" style="display:${isClass?'block':'none'};">
       ${['equity','bond','gold','cash'].map((c,i)=>`<div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;">
         <span style="flex:1;font-size:13px;">${clsLabel(c)}</span>
-        <input class="input num" style="width:90px;text-align:right;" id="tgc_${i}" value="0" oninput="tgSum()"/> %</div>`).join('')}
+        <input class="input num" style="width:90px;text-align:right;" id="tgc_${i}" data-cls="${c}" value="${classVal(c)}" oninput="tgSum()"/> %</div>`).join('')}
       <div style="text-align:right;margin-top:6px;">合计 <span class="sum-line num" id="tgSum2">0%</span>（必须精确 100%）</div>
     </div>
   `, `<button class="btn" onclick="closeModal()">取消</button><button class="btn btn-pri" onclick="saveTargetForm('${pid}')">保存目标</button>`);
@@ -2077,21 +2868,19 @@ function tgSum(){
 function saveTargetForm(pid){
   const p = P(pid);
   const mode = document.querySelector('input[name="tgMode"]:checked').value;
-  const targets = {};
   if(mode==='asset'){
+    const targets = {};
     let s = 0, i = 0;
     while($('tg_'+i)){ const sym = $('tg_'+i).dataset.sym; const v = parseFloat($('tg_'+i).value)||0; targets[sym]=v; s+=v; i++; }
     if(Math.abs(s-100)>0.01){ toast('资产级目标合计必须精确 100%（当前 '+s.toFixed(1)+'%）','err'); return; }
+    p.targets = targets; p.targetLevel = 'asset'; p.classTargets = null;
   } else {
-    let s = 0; const clsMap = {};
+    const clsMap = {}; let s = 0;
     ['equity','bond','gold','cash'].forEach((c,j)=>{ const v = parseFloat(($('tgc_'+j)||{}).value)||0; clsMap[c]=v; s+=v; });
     if(Math.abs(s-100)>0.01){ toast('大类级目标合计必须精确 100%（当前 '+s.toFixed(1)+'%）','err'); return; }
-    // 大类级：按类内持仓市值占比摊分
-    const total = pValue(p);
-    p.holdings.forEach(h=>{ const a=A(h.sym); targets[h.sym] = total>0 ? +((a.price*h.qty/total*100)).toFixed(4) : 0; });
-    // 摊分后仍按大类占比修正：此处用市值结构保持不变（演示）
+    // 保留大类目标本身（不用实际占比冒充）；资产级目标由 assetTargetsFor() 按规则摊分派生
+    p.classTargets = clsMap; p.targetLevel = 'asset_class'; p.targets = null;
   }
-  p.targets = targets;
   closeModal(); toast('目标配置已保存（合计 100%）','ok'); route();
 }
 function openCfg(pid){
@@ -2102,14 +2891,10 @@ function openCfg(pid){
       <div class="field"><label class="flabel">相对偏离（%）</label><input class="input input-full num" id="cfgRel" value="${c.rel}"/></div>
       <div class="field"><label class="flabel">时间间隔（天）</label><input class="input input-full num" id="cfgIv" value="${c.interval}"/></div>
     </div>
-    <div class="frow">
-      <div class="field"><label class="flabel">AUTO 调度频率</label>
-        <select class="select input-full" id="cfgFreq">
-          ${[['daily','每日'],['weekly','每周'],['monthly','每月'],['off','关闭']].map(([v,l])=>`<option value="${v}" ${c.freq===v?'selected':''}>${l}</option>`).join('')}
-        </select></div>
-      <div class="field"><label class="flabel">时间间隔判据</label>
-        <select class="select input-full" id="cfgTimeOn"><option value="1" ${c.timeOn?'selected':''}>启用</option><option value="0" ${!c.timeOn?'selected':''}>关闭</option></select></div>
-    </div>
+    <div class="field" style="max-width:260px;"><label class="flabel">AUTO 调度频率</label>
+      <select class="select input-full" id="cfgFreq">
+        ${[['daily','每日'],['weekly','每周'],['monthly','每月']].map(([v,l])=>`<option value="${v}" ${c.freq===v?'selected':''}>${l}</option>`).join('')}
+      </select></div>
     <div class="fhint">任一判据触发即提示再平衡；AUTO 只生成待确认建议，永不自动执行。</div>
   `, `<button class="btn" onclick="closeModal()">取消</button><button class="btn btn-pri" onclick="saveCfg('${pid}')">保存</button>`);
 }
@@ -2119,7 +2904,6 @@ function saveCfg(pid){
   p.cfg.rel = parseFloat($('cfgRel').value)||10;
   p.cfg.interval = parseFloat($('cfgIv').value)||60;
   p.cfg.freq = $('cfgFreq').value;
-  p.cfg.timeOn = $('cfgTimeOn').value==='1';
   closeModal(); toast('再平衡配置已保存','ok'); route();
 }
 function openAssetForm(symE){

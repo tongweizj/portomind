@@ -1,0 +1,303 @@
+{
+  "generatedAt": "2026-10-27T19:16:31.372Z",
+  "total": 59,
+  "pass": 59,
+  "fail": 0,
+  "results": [
+    {
+      "name": "A-06 全文件「该账号已停用」计数 = 1",
+      "ok": true,
+      "detail": "count=1"
+    },
+    {
+      "name": "A-06 停用文案紧邻 D8 裁决注释",
+      "ok": true,
+      "detail": "（注释须在文案上一行）"
+    },
+    {
+      "name": "A-14 USERS 明文口令 mock 带 data-demo",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "A-14 文件头有 data-demo 全量剔除说明",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "A-07 样式表无 .s-user / .s-exit 定义",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "A-08 .toolbar 与 .count 样式已定义",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "M-02 全文件无「登录体系未接入」假按钮文案",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "合并：auth 原型已退役为跳转壳（无第二套实现）",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "A-14 演示注记 / 预填账号 / 密码三处 DOM 均带 data-demo",
+      "ok": true,
+      "detail": "{\"note\":true,\"user\":true,\"pwd\":true}"
+    },
+    {
+      "name": "A-11 登录页包在 form 内且有 submit 按钮",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "A-11 密码框按 Enter → 触发登录（session 已建立）",
+      "ok": true,
+      "detail": "{\"hash\":\"#/\",\"session\":{\"username\":\"member\",\"role\":\"member\",\"mustChangePassword\":false}}"
+    },
+    {
+      "name": "A-02 未登录直访 #/portfolios → #/login?next=%2Fportfolios",
+      "ok": true,
+      "detail": "#/login?next=%2Fportfolios"
+    },
+    {
+      "name": "A-02 next= 出现且仅出现 1 次（无自我嵌套）",
+      "ok": true,
+      "detail": "count=1"
+    },
+    {
+      "name": "A-02 next=/portfolios 登录后回跳 #/portfolios",
+      "ok": true,
+      "detail": "#/portfolios"
+    },
+    {
+      "name": "A-02 负向对照 next=/login?next=x → 回落 #/",
+      "ok": true,
+      "detail": "#/"
+    },
+    {
+      "name": "B admin 首登（mustChangePassword）→ 落 #/account",
+      "ok": true,
+      "detail": "#/account"
+    },
+    {
+      "name": "D13 admin #/account 无页内 Tab（系统设置已独立成页）",
+      "ok": true,
+      "detail": "{\"ptabs\":0,\"title\":\"账户设置\"}"
+    },
+    {
+      "name": "A-09 身份区块无「管理员 管理员」重复",
+      "ok": true,
+      "detail": "用户名admin 角色管理员 状态启用 上次登录2026-10-26 09:12"
+    },
+    {
+      "name": "A-10 强制改密输 73 字符 → 被拒且提示含「8–72」",
+      "ok": true,
+      "detail": "{\"err\":true,\"msg\":\"密码长度需 8–72 字符\",\"hash\":\"#/account\"}"
+    },
+    {
+      "name": "A-15 强制改密态下顶栏下拉可展开，账户设置/退出登录均可用",
+      "ok": true,
+      "detail": "{\"missing\":false,\"expanded\":\"true\",\"labels\":[\"账户设置\",\"系统设置\",\"提醒规则\",\"退出登录\"],\"sysShown\":true,\"sysDisabled\":true,\"sysTitle\":\"请先完成密码修改后再访问\",\"othersEnabled\":true}"
+    },
+    {
+      "name": "D13 强制改密态：系统设置项保留但禁用 + 说明原因（不静默消失）",
+      "ok": true,
+      "detail": "{\"missing\":false,\"expanded\":\"true\",\"labels\":[\"账户设置\",\"系统设置\",\"提醒规则\",\"退出登录\"],\"sysShown\":true,\"sysDisabled\":true,\"sysTitle\":\"请先完成密码修改后再访问\",\"othersEnabled\":true}"
+    },
+    {
+      "name": "B 强制改密完成 → 落 #/（Dashboard，不是 /account）",
+      "ok": true,
+      "detail": "#/"
+    },
+    {
+      "name": "A-01/M-01 侧栏顶级导航项数 = 4（提醒规则已移入下拉）",
+      "ok": true,
+      "detail": "n=4"
+    },
+    {
+      "name": "A-01 侧栏导航文案 = {Dashboard,组合管理,自选行情,日志}",
+      "ok": true,
+      "detail": "[\"Dashboard\",\"组合管理\",\"自选行情\",\"日志\"]"
+    },
+    {
+      "name": "A-01 侧栏不含「提醒规则」（入口已移至下拉）",
+      "ok": true,
+      "detail": "[\"Dashboard\",\"组合管理\",\"自选行情\",\"日志\"]"
+    },
+    {
+      "name": "A-01 「自选行情」保留「监控」badge（FS-asset-price-consolidation §导航）",
+      "ok": true,
+      "detail": "badge=监控"
+    },
+    {
+      "name": "A-07/M-02 侧栏 .s-exit = 0 且 .s-user = 0（假按钮已删）",
+      "ok": true,
+      "detail": "sExit=0 sUser=0"
+    },
+    {
+      "name": "A-07/M-02 侧栏底部只剩版本号（无账户入口残字）",
+      "ok": true,
+      "detail": "v2.1 · 自托管"
+    },
+    {
+      "name": "A-15 头像可点开且 aria-expanded=\"true\"",
+      "ok": true,
+      "detail": "expanded=true visible=true"
+    },
+    {
+      "name": "A-15 aria-haspopup / aria-controls 齐备",
+      "ok": true,
+      "detail": "haspopup=menu controls=umPanel"
+    },
+    {
+      "name": "D13 admin 下拉动作项 = 4 且顺序为「账户设置」「系统设置」「提醒规则」「退出登录」",
+      "ok": true,
+      "detail": "[\"账户设置\",\"系统设置\",\"提醒规则\",\"退出登录\"]"
+    },
+    {
+      "name": "2026-10-27 提醒规则在下拉末位（退出登录之前；danger 项固定最后）",
+      "ok": true,
+      "detail": "[\"账户设置\",\"系统设置\",\"提醒规则\",\"退出登录\"]"
+    },
+    {
+      "name": "身份行：用户名与角色同一行",
+      "ok": true,
+      "detail": "{\"missing\":false,\"sameRow\":true,\"roleText\":\"管理员\",\"roleHasChip\":false,\"roleColor\":\"rgb(138, 149, 165)\",\"nameColor\":\"rgb(10, 37, 64)\",\"roleWeight\":\"500\"}"
+    },
+    {
+      "name": "身份行：角色弱化（无 chip、颜色 muted、字重 ≤500）",
+      "ok": true,
+      "detail": "{\"missing\":false,\"sameRow\":true,\"roleText\":\"管理员\",\"roleHasChip\":false,\"roleColor\":\"rgb(138, 149, 165)\",\"nameColor\":\"rgb(10, 37, 64)\",\"roleWeight\":\"500\"}"
+    },
+    {
+      "name": "A-15/M-03 身份行含用户名与角色且不可点击（非 a/button）",
+      "ok": true,
+      "detail": "div :: admin 管理员"
+    },
+    {
+      "name": "A-15 下拉层级：topbar(z30) < panel < mask(z90)",
+      "ok": true,
+      "detail": "topbar=30 panel=50 mask=90"
+    },
+    {
+      "name": "A-15 Esc 关闭且焦点回到触发器",
+      "ok": true,
+      "detail": "{\"expanded\":\"false\",\"focused\":\"umTrigger\"}"
+    },
+    {
+      "name": "A-15 点击面板外关闭",
+      "ok": true,
+      "detail": "expanded=false"
+    },
+    {
+      "name": "A-15/D12 点「账户设置」→ #/account（不经过侧栏）",
+      "ok": true,
+      "detail": "#/account"
+    },
+    {
+      "name": "M-04 #/account 真实承载（顶栏标题「账户设置」+ 页内标题，无 Tab）",
+      "ok": true,
+      "detail": "{\"title\":\"账户设置\",\"ptabs\":0,\"phTitle\":\"账户设置\"}"
+    },
+    {
+      "name": "A-03 已登录访问 #/login → 最终 hash = #/",
+      "ok": true,
+      "detail": "#/"
+    },
+    {
+      "name": "D13 下拉点「系统设置」→ #/account/users",
+      "ok": true,
+      "detail": "#/account/users"
+    },
+    {
+      "name": "A-08 .toolbar margin-bottom ≥ 12px",
+      "ok": true,
+      "detail": "now=14"
+    },
+    {
+      "name": "M-04 #/account/users 真实承载（用户表 + 新建）",
+      "ok": true,
+      "detail": "{\"hash\":\"#/account/users\",\"hasTable\":true,\"hasNew\":true,\"ptabs\":0,\"phTitle\":\"系统设置\",\"tbTitle\":\"系统设置\",\"acctTabLink\":false}"
+    },
+    {
+      "name": "D13 系统设置 = 独立页面：自有页头「系统设置」+ 顶栏同名 + 无页内 Tab",
+      "ok": true,
+      "detail": "{\"hash\":\"#/account/users\",\"hasTable\":true,\"hasNew\":true,\"ptabs\":0,\"phTitle\":\"系统设置\",\"tbTitle\":\"系统设置\",\"acctTabLink\":false}"
+    },
+    {
+      "name": "A-05 self 行无「重置密码」按钮",
+      "ok": true,
+      "detail": "[\"改密码\",\"停用\"]"
+    },
+    {
+      "name": "A-05 self 行有「改密码」按钮（跳 /account）",
+      "ok": true,
+      "detail": "[\"改密码\",\"停用\"]"
+    },
+    {
+      "name": "A-12 用户名填 A → 输入框 .err 且存在 .ferr",
+      "ok": true,
+      "detail": "{\"err\":true,\"msg\":\"用户名需 3–32 字符，仅小写字母 / 数字 / 下划线 / 点 / 连字符\"}"
+    },
+    {
+      "name": "A-13 USERS=[] 时表格区显示空态文案",
+      "ok": true,
+      "detail": "{\"hasEmpty\":true,\"text\":\"👥还没有其他账号＋ 新建用户\"}"
+    },
+    {
+      "name": "A-13 S.usersLoading=true → 渲染 4 行骨架且带动画",
+      "ok": true,
+      "detail": "{\"n\":4,\"animated\":\"sk\"}"
+    },
+    {
+      "name": "A-04 #/login 用 member/member 登录 → 最终 hash = #/",
+      "ok": true,
+      "detail": "#/"
+    },
+    {
+      "name": "D13 member #/account 无页内 Tab 且页面内不含「系统设置」字样",
+      "ok": true,
+      "detail": "{\"ptabs\":0,\"usersEntry\":false}"
+    },
+    {
+      "name": "D13 member 下拉恰 3 项、无「系统设置」、含「提醒规则」",
+      "ok": true,
+      "detail": "{\"labels\":[\"账户设置\",\"提醒规则\",\"退出登录\"],\"sysHidden\":true}"
+    },
+    {
+      "name": "A-15/D12 member 点「账户设置」也能到 #/account",
+      "ok": true,
+      "detail": "#/account"
+    },
+    {
+      "name": "A-01/member 直访 #/account/users → 403 说明屏",
+      "ok": true,
+      "detail": "{\"hash\":\"#/account/users\",\"has403\":true}"
+    },
+    {
+      "name": "M-04 退出登录 → #/login",
+      "ok": true,
+      "detail": "#/login"
+    },
+    {
+      "name": "M-04 未登录直访深链 → #/login?next=%2Fportfolios（next 仅 1 次）",
+      "ok": true,
+      "detail": "#/login?next=%2Fportfolios"
+    },
+    {
+      "name": "M-04 登录后回跳 next（#/portfolios）",
+      "ok": true,
+      "detail": "#/portfolios"
+    },
+    {
+      "name": "合并后单文件无 JS 运行时错误",
+      "ok": true,
+      "detail": ""
+    }
+  ]
+}

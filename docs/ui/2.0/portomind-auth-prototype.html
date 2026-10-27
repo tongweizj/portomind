@@ -3,488 +3,67 @@
 <head>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-<title>PortoMind · 账号与访问控制 · 产品设计原型</title>
+<title>PortoMind · 账号与访问控制 · 已合并</title>
+<!--
+  ⚠️ 本文件已退役（2026-10-27）
+  账号与访问控制的三屏（登录 / 账户设置 / 系统设置）已整体并入主原型
+  docs/ui/2.0/portomind-prototype.html —— 该文件现在同时承载「全量产品」与「认证模块」，
+  两者共用同一套路由、守卫与 mock 会话，不再存在两份实现。
+
+  保留本文件的原因：TASK-060、FS-authentication §13 与若干历史记录里引用了这个路径。
+  落地实现时不要参考本文件的旧结构 —— 以主原型 + FS 为准。
+
+  断言：node _audit-auth.cjs（已改为只对准主原型）
+-->
+<meta http-equiv="refresh" content="0; url=./portomind-prototype.html#/login"/>
 <style>
   :root{
-    --brand:#635BFF; --brand-hov:#5247DB; --brand-surf:#EEEDFF; --brand-surf-hov:#E0DEFF;
-    --bg:#F6F8FA; --card:#FFFFFF; --border:#E3E8EE; --border-strong:#D7DEE6;
-    --ink:#0A2540; --ink2:#5E6B7E; --muted:#8A95A5;
-    --up:#DF1B41; --down:#0E9F6E; --warn:#F5A524; --warn-t:#B26A00; --warn-bg:#FEF6E7; --danger:#E0254B;
-    --r-sm:6px; --r-md:8px; --r-lg:10px;
+    --brand:#635BFF; --bg:#F6F8FA; --card:#FFFFFF; --border:#E3E8EE;
+    --ink:#0A2540; --ink2:#5E6B7E; --muted:#8A95A5; --r-lg:10px;
   }
-  *{box-sizing:border-box; margin:0; padding:0;}
-  html,body{height:100%;}
-  body{font-family:"Noto Sans SC","Inter",-apple-system,BlinkMacSystemFont,"Segoe UI",system-ui,sans-serif;background:var(--bg);color:var(--ink);font-size:14px;line-height:1.55;-webkit-font-smoothing:antialiased;}
-  .num{font-family:"Inter","Noto Sans SC",system-ui,sans-serif;font-variant-numeric:tabular-nums;}
-  a{color:var(--brand);text-decoration:none;} a:hover{text-decoration:underline;}
-
-  /* ===== 登录页（无 AppLayout） ===== */
-  .login-wrap{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px;background:linear-gradient(160deg,#F6F8FA 0%,#EEEDFF 100%);}
-  .login-card{width:400px;max-width:100%;background:var(--card);border:1px solid var(--border);border-radius:14px;box-shadow:0 20px 48px rgba(10,37,64,.12);overflow:hidden;}
-  .login-head{padding:28px 28px 8px;display:flex;align-items:center;gap:12px;}
-  .login-head .mark{width:36px;height:36px;background:var(--brand);border-radius:8px;display:flex;align-items:center;justify-content:center;color:#fff;font-size:20px;}
-  .login-head .t{font-size:19px;font-weight:700;}
-  .login-head .s{font-size:12px;color:var(--muted);}
-  .login-body{padding:8px 28px 28px;}
-  .demo-note{background:var(--brand-surf);border:1px solid #D9D6FF;border-radius:8px;padding:10px 12px;font-size:12px;color:var(--brand-hov);margin-bottom:18px;line-height:1.6;}
-  .demo-note b{color:var(--brand);}
-
-  /* ===== AppLayout ===== */
-  .app{display:flex;min-height:100vh;}
-  .sidebar{width:232px;flex:0 0 232px;background:var(--bg);border-right:1px solid var(--border);position:fixed;top:0;left:0;bottom:0;z-index:40;display:flex;flex-direction:column;}
-  .s-logo{display:flex;align-items:center;gap:10px;padding:24px 24px 8px;}
-  .s-logo .mark{width:28px;height:28px;background:var(--brand);border-radius:var(--r-sm);display:flex;align-items:center;justify-content:center;color:#fff;font-size:16px;}
-  .s-logo .name{font-size:18px;font-weight:700;letter-spacing:.2px;}
-  .s-group{color:var(--muted);font-size:12px;padding:20px 24px 8px;}
-  .s-nav{flex:1;padding:0 12px;display:flex;flex-direction:column;gap:4px;overflow:auto;}
-  .s-item{display:flex;align-items:center;gap:12px;padding:8px 12px;border-radius:var(--r-md);color:var(--ink2);font-weight:500;cursor:pointer;transition:all .15s;user-select:none;font-size:14px;}
-  .s-item:hover{color:var(--ink);background:#EEF1F5;}
-  .s-item.on{color:var(--brand);font-weight:600;background:var(--brand-surf);}
-  .s-bottom{padding:0 12px 16px;}
-  .s-sep{height:1px;background:var(--border);margin:0 12px 12px;}
-  .s-user{display:flex;align-items:center;gap:10px;padding:8px 12px;border-radius:var(--r-md);cursor:pointer;}
-  .s-user:hover{background:#EEF1F5;}
-  .s-user .u-name{font-size:13px;font-weight:600;color:var(--ink);}
-  .s-user .u-role{font-size:11px;color:var(--muted);}
-  .s-exit{display:flex;align-items:center;gap:12px;padding:8px 12px;border-radius:var(--r-md);color:var(--ink2);font-weight:500;cursor:pointer;font-size:14px;}
-  .s-exit:hover{background:#EEF1F5;}
-  .s-ver{color:var(--muted);font-size:12px;padding:8px 16px 0;}
-  .avatar{width:30px;height:30px;border-radius:50%;background:var(--brand);color:#fff;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;flex:0 0 30px;}
-
-  .main{flex:1;margin-left:232px;min-width:0;display:flex;flex-direction:column;}
-  .topbar{height:64px;flex:0 0 64px;background:var(--card);border-bottom:1px solid var(--border);display:flex;align-items:center;gap:16px;padding:0 32px;position:sticky;top:0;z-index:30;}
-  .tb-title{font-size:16px;font-weight:700;}
-  .tb-spacer{flex:1;}
-  .content{padding:24px 32px 64px;flex:1;min-width:0;}
-
-  /* ===== 通用 ===== */
-  .card{background:var(--card);border:1px solid var(--border);border-radius:var(--r-lg);}
-  .card-h{display:flex;align-items:center;gap:10px;padding:14px 18px;border-bottom:1px solid var(--border);}
-  .card-t{font-size:14px;font-weight:700;}
-  .card-sub{font-size:12px;color:var(--muted);}
-  .card-b{padding:16px 18px;}
-  .page-head{margin-bottom:18px;}
-  .ph-title{font-size:22px;font-weight:700;letter-spacing:.2px;}
-  .ph-desc{color:var(--ink2);font-size:13px;margin-top:2px;}
-  .spacer{flex:1;}
-  .btn{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--border);background:var(--card);color:var(--ink);border-radius:var(--r-md);padding:8px 14px;font-size:13px;font-weight:500;cursor:pointer;transition:all .15s;white-space:nowrap;font-family:inherit;}
-  .btn:hover{border-color:var(--brand);color:var(--brand);}
-  .btn-pri{background:var(--brand);border-color:var(--brand);color:#fff;}
-  .btn-pri:hover{background:var(--brand-hov);border-color:var(--brand-hov);color:#fff;}
-  .btn-pri:disabled{opacity:.45;cursor:not-allowed;}
-  .btn-sm{padding:5px 10px;font-size:12px;border-radius:var(--r-sm);}
-  .btn-danger{color:var(--danger);} .btn-danger:hover{border-color:var(--danger);color:var(--danger);}
-  .chip{display:inline-flex;align-items:center;gap:4px;font-size:11px;font-weight:600;padding:2px 9px;border-radius:999px;background:#F1F3F7;color:var(--ink2);white-space:nowrap;}
-  .c-purple{background:var(--brand-surf);color:var(--brand);}
-  .c-green{background:#E8F7F0;color:var(--down);}
-  .c-blue{background:#E5F4FB;color:#0284C7;}
-  .c-amber{background:var(--warn-bg);color:var(--warn-t);}
-  .c-gray{background:#F1F3F7;color:var(--muted);}
-  .c-red{background:#FDECEF;color:var(--danger);}
-
-  .field{margin-bottom:14px;}
-  .flabel{display:block;font-size:12px;font-weight:600;color:var(--ink2);margin-bottom:6px;}
-  .input{border:1px solid var(--border);border-radius:var(--r-md);padding:9px 12px;font-size:13px;outline:none;background:var(--card);color:var(--ink);transition:border .15s;font-family:inherit;width:100%;}
-  .input:focus{border-color:var(--brand);}
-  .input.err{border-color:var(--danger);}
-  .fhint{font-size:12px;color:var(--muted);margin-top:4px;}
-  .ferr{font-size:12px;color:var(--danger);margin-top:4px;font-weight:600;}
-
-  .tbl-wrap{background:var(--card);border:1px solid var(--border);border-radius:var(--r-lg);overflow:hidden;}
-  table.tb{width:100%;border-collapse:collapse;font-size:13px;}
-  .tb th{text-align:left;font-size:12px;color:var(--ink2);font-weight:600;padding:10px 14px;background:#FBFCFD;border-bottom:1px solid var(--border);white-space:nowrap;}
-  .tb td{padding:11px 14px;border-bottom:1px solid #F1F3F7;vertical-align:middle;}
-  .tb tr:last-child td{border-bottom:none;}
-  .tbl-foot{display:flex;align-items:center;padding:10px 14px;font-size:12px;color:var(--muted);border-top:1px solid var(--border);background:#FBFCFD;}
-
-  .banner{display:flex;align-items:center;gap:10px;border-radius:var(--r-md);padding:12px 16px;font-size:13px;margin-bottom:16px;}
-  .banner-warn{background:#FDECEF;color:#9F1239;border:1px solid #F8C9D4;}
-  .banner-amber{background:var(--warn-bg);color:var(--warn-t);border:1px solid #F5E3B8;}
-  .banner .t{font-weight:600;}
-
-  /* Modal / Toast */
-  .mask{position:fixed;inset:0;background:rgba(10,37,64,.4);z-index:90;display:none;align-items:flex-start;justify-content:center;padding:60px 20px;overflow:auto;}
-  .mask.show{display:flex;}
-  .modal{background:var(--card);border-radius:12px;width:480px;max-width:100%;box-shadow:0 24px 64px rgba(10,37,64,.25);animation:pop .18s ease;}
-  @keyframes pop{from{opacity:0;transform:translateY(10px);}to{opacity:1;transform:none;}}
-  .m-head{display:flex;align-items:center;padding:16px 20px;border-bottom:1px solid var(--border);}
-  .m-title{font-size:15px;font-weight:700;}
-  .m-x{margin-left:auto;cursor:pointer;color:var(--muted);font-size:16px;line-height:1;padding:4px;}
-  .m-x:hover{color:var(--ink);}
-  .m-body{padding:18px 20px;max-height:62vh;overflow:auto;}
-  .m-foot{display:flex;justify-content:flex-end;gap:10px;padding:14px 20px;border-top:1px solid var(--border);}
-  .toast-wrap{position:fixed;right:24px;bottom:24px;z-index:120;display:flex;flex-direction:column;gap:10px;}
-  .toast{background:var(--ink);color:#fff;padding:11px 16px;border-radius:10px;font-size:13px;max-width:380px;box-shadow:0 10px 30px rgba(0,0,0,.25);animation:tin .25s ease;}
-  .toast.err{background:var(--danger);} .toast.ok{background:var(--down);}
-  @keyframes tin{from{opacity:0;transform:translateY(10px);}to{opacity:1;transform:none;}}
-
-  .center-screen{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px;flex-direction:column;gap:14px;text-align:center;}
-  .center-screen .big{font-size:48px;}
-  .kv{display:grid;grid-template-columns:120px 1fr;gap:10px 14px;font-size:13px;align-items:center;}
-  .kv .k{color:var(--muted);}
-  .kv .v{font-weight:600;}
-  .row-acts{display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end;}
-  .sel{border:1px solid var(--border);border-radius:var(--r-sm);padding:5px 8px;font-size:12px;font-family:inherit;background:var(--card);color:var(--ink);}
-  .muted{color:var(--muted);}
-  .sep-line{height:1px;background:var(--border);margin:18px 0;}
+  *{box-sizing:border-box;margin:0;padding:0;}
+  body{font-family:"Noto Sans SC","Inter",-apple-system,BlinkMacSystemFont,"Segoe UI",system-ui,sans-serif;
+    background:linear-gradient(160deg,#F6F8FA 0%,#EEEDFF 100%);color:var(--ink);font-size:14px;line-height:1.6;
+    min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px;}
+  .card{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:28px 32px;
+    width:520px;max-width:100%;box-shadow:0 20px 48px rgba(10,37,64,.12);}
+  .head{display:flex;align-items:center;gap:12px;margin-bottom:16px;}
+  .mark{width:36px;height:36px;background:var(--brand);border-radius:8px;display:flex;align-items:center;
+    justify-content:center;color:#fff;font-size:18px;font-weight:700;}
+  .t{font-size:19px;font-weight:700;}
+  .s{font-size:12px;color:var(--muted);}
+  p{font-size:13px;color:var(--ink2);margin-bottom:10px;}
+  b{color:var(--ink);}
+  code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12px;background:#F1F3F7;
+    padding:1px 6px;border-radius:4px;color:#0A2540;}
+  a.btn{display:inline-flex;align-items:center;gap:6px;background:var(--brand);color:#fff;text-decoration:none;
+    padding:9px 16px;border-radius:8px;font-size:13px;font-weight:600;margin-top:6px;}
+  a.btn:hover{background:#5247DB;}
+  .note{margin-top:16px;padding-top:14px;border-top:1px solid var(--border);font-size:12px;color:var(--muted);}
 </style>
 </head>
 <body>
 
-<!-- 登录页挂载点 -->
-<div id="root"></div>
-
-<!-- Modal / Toast 容器 -->
-<div class="mask" id="mask"></div>
-<div class="toast-wrap" id="toasts"></div>
-
-<script>
-/* =====================================================
-   Mock 数据（演示用，明文仅原型内）
-===================================================== */
-const USERS = [
-  {username:'admin',   password:'admin',    role:'admin',  active:true,  mustChangePassword:true,  lastLoginAt:'—',            createdAt:'2026-10-26 09:00'},
-  {username:'member',  password:'member',   role:'member', active:true,  mustChangePassword:false, lastLoginAt:'2026-10-25 21:10', createdAt:'2026-10-25 20:00'},
-  {username:'tongwei', password:'tw123456', role:'member', active:true,  mustChangePassword:false, lastLoginAt:'2026-10-24 19:30', createdAt:'2026-10-25 20:05'},
-  {username:'guest',   password:'guest1234',role:'member', active:false, mustChangePassword:false, lastLoginAt:'2026-10-20 10:00', createdAt:'2026-10-19 12:00'},
-];
-
-const state = { session:null };
-
-/* =====================================================
-   工具
-===================================================== */
-const $ = id => document.getElementById(id);
-function esc(s){return String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));}
-function nowStr(){const d=new Date();const p=n=>String(n).padStart(2,'0');return `${d.getFullYear()}-${p(d.getMonth()+1)}-${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}`;}
-function roleLabel(r){return r==='admin'?'管理员':'成员';}
-function roleChip(r){return r==='admin'?'<span class="chip c-purple">管理员</span>':'<span class="chip c-blue">成员</span>';}
-function go(h){if(location.hash===h){render();}else{location.hash=h;}}
-function activeAdminCount(){return USERS.filter(u=>u.role==='admin'&&u.active).length;}
-
-function toast(msg,type){const el=document.createElement('div');el.className='toast'+(type?(' '+type):'');el.textContent=msg;$('toasts').appendChild(el);setTimeout(()=>el.remove(),3200);}
-
-function openModal(title,bodyHtml,footHtml){
-  $('mask').innerHTML=`<div class="modal"><div class="m-head"><div class="m-title">${esc(title)}</div><div class="m-x" onclick="closeModal()">✕</div></div><div class="m-body">${bodyHtml}</div><div class="m-foot">${footHtml}</div></div>`;
-  $('mask').classList.add('show');
-}
-function closeModal(){$('mask').classList.remove('show');$('mask').innerHTML='';}
-
-/* =====================================================
-   认证逻辑（演示）
-===================================================== */
-function doLogin(u,p){
-  const user = USERS.find(x=>x.username===String(u).toLowerCase().trim());
-  if(!user || user.password!==p) return {ok:false,err:'用户名或密码错误'};          // 不区分"不存在"与"密码错"
-  if(!user.active) return {ok:false,err:'该账号已停用，请联系管理员'};
-  state.session = {username:user.username, role:user.role, mustChangePassword:user.mustChangePassword, isAdmin:user.role==='admin'};
-  user.lastLoginAt = nowStr();
-  return {ok:true};
-}
-function doLogout(){state.session=null;closeModal();go('#/login');toast('已退出登录','ok');}
-function changeSelfPassword(cur,next){
-  const me = USERS.find(u=>u.username===state.session.username);
-  if(me.password!==cur) return {ok:false,err:'当前密码不正确'};
-  if(next.length<8||next.length>72) return {ok:false,err:'密码长度需 8–72 字符'};
-  me.password=next; me.mustChangePassword=false; state.session.mustChangePassword=false;
-  return {ok:true};
-}
-function createUser(username,password,role){
-  if(!/^[a-z0-9][a-z0-9_.-]{2,31}$/.test(username)) return {ok:false,err:'用户名不合法（小写字母/数字，3–32 字符）'};
-  if(USERS.some(u=>u.username===username)) return {ok:false,err:'用户名已存在'};
-  if(password.length<8||password.length>72) return {ok:false,err:'初始密码长度需 8–72 字符'};
-  USERS.push({username,password,role,active:true,mustChangePassword:true,lastLoginAt:'—',createdAt:nowStr()});
-  return {ok:true};
-}
-function resetPassword(username,newPwd){
-  const u=USERS.find(x=>x.username===username); if(!u) return {ok:false,err:'用户不存在'};
-  if(newPwd.length<8||newPwd.length>72) return {ok:false,err:'密码长度需 8–72 字符'};
-  u.password=newPwd; u.mustChangePassword=true;            // 对方全部会话失效 + 强制改密
-  return {ok:true};
-}
-function toggleActive(username){
-  const u=USERS.find(x=>x.username===username); if(!u) return;
-  if(u.username===state.session.username) return toast('不能停用自己','err');
-  if(u.active && u.role==='admin' && activeAdminCount()<=1) return toast('不能停用最后一个启用管理员','err');
-  u.active=!u.active;
-  if(!u.active) toast(`已停用 ${username}，其现有会话立即失效`,'ok'); else toast(`已启用 ${username}`,'ok');
-  render();
-}
-function changeRole(username,newRole){
-  const u=USERS.find(x=>x.username===username); if(!u) return;
-  if(u.active && u.role==='admin' && newRole==='member' && activeAdminCount()<=1) return toast('不能把最后一个启用管理员降级','err');
-  u.role=newRole; toast(`${username} 角色已改为 ${roleLabel(newRole)}`,'ok'); render();
-}
-
-/* =====================================================
-   路由 + 守卫
-===================================================== */
-function currentHash(){return (location.hash||'#/login').replace(/^#/,'');}
-function nextOf(){const m=location.hash.match(/next=([^&]+)/);return m?decodeURIComponent(m[1]):'/';}
-
-function render(){
-  const h=currentHash();
-  if(!state.session){
-    if(h!=='/login'){ location.hash='#/login?next='+encodeURIComponent(h); }
-    return renderLogin();
-  }
-  // 强制改密：仅允许 /account（含改密）与登出；其余一律 403
-  if(state.session.mustChangePassword && !['/account'].includes(h)){
-    return renderForced();
-  }
-  if(h==='/account/users' && !state.session.isAdmin){
-    return render403('无权访问用户管理','当前账号为「成员」角色，无法管理用户。如需管理请联系管理员。');
-  }
-  renderShell(h);
-}
-
-/* =====================================================
-   屏 1 · 登录页（无 AppLayout）
-===================================================== */
-function renderLogin(){
-  const err = state._loginErr ? `<div class="ferr" style="margin-bottom:12px;">${esc(state._loginErr)}</div>` : '';
-  $('root').innerHTML = `
-  <div class="login-wrap">
-    <div class="login-card">
-      <div class="login-head">
-        <div class="mark">P</div>
-        <div><div class="t">PortoMind</div><div class="s">家庭投资组合 · 登录</div></div>
-      </div>
-      <div class="login-body">
-        <div class="demo-note">
-          <b>原型演示提示（真实产品不显示）</b>：FS §4.1 规定登录页<strong>不得</strong>提示默认账号。下方仅为便于走通流程。
-          可用 <b>admin / admin</b>（首登强制改密）或 <b>member / member</b>（成员视角）。
-        </div>
-        ${err}
-        <div class="field"><label class="flabel">用户名</label><input class="input" id="lgUser" placeholder="用户名（小写）" value="admin"/></div>
-        <div class="field"><label class="flabel">密码</label><input class="input" id="lgPwd" type="password" placeholder="密码" value="admin"/></div>
-        <button class="btn btn-pri" style="width:100%;justify-content:center;" onclick="submitLogin()">登 录</button>
-        <div class="fhint" style="margin-top:12px;text-align:center;">错误提示统一为「用户名或密码错误」，不泄露账号是否存在（§U2-R1）</div>
-      </div>
-    </div>
-  </div>`;
-}
-function submitLogin(){
-  const r=doLogin($('lgUser').value,$('lgPwd').value);
-  if(!r.ok){state._loginErr=r.err;renderLogin();return;}
-  state._loginErr=null;
-  const dest = state.session.mustChangePassword ? '/account' : (nextOf()||'/account');
-  toast(`欢迎，${state.session.username}`,'ok');
-  go('#'+dest);
-}
-
-/* =====================================================
-   屏 2 · AppLayout 外壳（主界面示意 + 侧栏用户区）
-===================================================== */
-function renderShell(h){
-  const s=state.session;
-  // 侧栏 5 项（示意）+ 用户区
-  const nav=[
-    {k:'/',t:'Dashboard'},{k:'/portfolios',t:'组合管理'},{k:'/prices',t:'今日行情'},{k:'/alerts',t:'提醒规则'},{k:'/logs',t:'日志'},
-  ];
-  const navHtml=nav.map(n=>`<div class="s-item ${h===n.k?'on':''}" onclick="go('#${n.k}')">${n.t}</div>`).join('');
-  const settingsItem = s.isAdmin?`<div class="s-item ${h==='/account/users'?'on':''}" onclick="go('#/account/users')">系统设置</div>`:'';
-  $('root').innerHTML=`
-  <div class="app">
-    <div class="sidebar">
-      <div class="s-logo"><div class="mark">P</div><div class="name">PortoMind</div></div>
-      <div class="s-group">主菜单</div>
-      <div class="s-nav">
-        ${navHtml}
-        <div class="s-item ${h==='/account'?'on':''}" onclick="go('#/account')">账户</div>
-        ${settingsItem}
-      </div>
-      <div class="s-bottom">
-        <div class="s-sep"></div>
-        <div class="s-user" onclick="go('#/account')">
-          <div class="avatar">${esc(s.username[0].toUpperCase())}</div>
-          <div><div class="u-name">${esc(s.username)}</div><div class="u-role">${roleLabel(s.role)}</div></div>
-        </div>
-        <div class="s-exit" onclick="doLogout()">⏻ 退出登录</div>
-        <div class="s-ver">v2.0 · 账号与访问控制原型</div>
-      </div>
-    </div>
-    <div class="main">
-      <div class="topbar"><div class="tb-title">${shellTitle(h)}</div><div class="tb-spacer"></div>
-        <div class="avatar">${esc(s.username[0].toUpperCase())}</div></div>
-      <div class="content" id="content"></div>
-    </div>
-  </div>`;
-  if(h==='/account') renderAccount();
-  else if(h==='/account/users') renderUsers();
-  else renderPlaceholder(h);
-}
-function shellTitle(h){
-  if(h==='/account') return '账户';
-  if(h==='/account/users') return '系统设置 · 用户管理';
-  return '主界面示意';
-}
-function renderPlaceholder(h){
-  $('content').innerHTML=`<div class="card"><div class="card-b" style="text-align:center;padding:60px 20px;color:var(--muted);">
-    <div style="font-size:30px;opacity:.4;margin-bottom:8px;">🗂️</div>
-    本原型聚焦「账号与访问控制」，<b>${shellTitle(h)}</b> 为示意占位。<br/>右侧侧栏底部已显示当前用户「${esc(state.session.username)}」与角色徽标，并可「退出登录」。
-  </div></div>`;
-}
-
-/* =====================================================
-   屏 3 · 账户页 /account
-===================================================== */
-function renderAccount(){
-  const s=state.session, me=USERS.find(u=>u.username===s.username);
-  const forced = s.mustChangePassword;
-  const banner = forced?`<div class="banner banner-warn"><span class="big" style="font-size:18px;">🔒</span><div><div class="t">首次登录需修改密码</div>除「修改密码」「退出登录」外，其余功能已锁定（§4.2）。</div></div>`:'';
-  $('content').innerHTML=`
-  ${banner}
-  <div class="page-head"><div class="ph-title">账户</div><div class="ph-desc">管理你的身份与登录信息</div></div>
-  <div class="card" style="margin-bottom:16px;">
-    <div class="card-h"><span class="card-t">身份</span><span class="card-sub">只读</span></div>
-    <div class="card-b">
-      <div class="kv">
-        <div class="k">用户名</div><div class="v">${esc(me.username)}</div>
-        <div class="k">角色</div><div class="v">${roleLabel(me.role)} ${roleChip(me.role)}</div>
-        <div class="k">状态</div><div class="v">${me.active?'<span class="chip c-green">启用</span>':'<span class="chip c-gray">停用</span>'}</div>
-        <div class="k">上次登录</div><div class="v num">${esc(me.lastLoginAt)}</div>
-      </div>
+<div class="card">
+  <div class="head">
+    <div class="mark">P</div>
+    <div>
+      <div class="t">已合并到全量原型</div>
+      <div class="s">PortoMind · 账号与访问控制</div>
     </div>
   </div>
-  <div class="card" style="margin-bottom:16px;${forced?'opacity:.5;':''}">
-    <div class="card-h"><span class="card-t">修改用户名</span>${forced?'<span class="card-sub">强制改密期间不可用</span>':''}</div>
-    <div class="card-b">
-      <div class="field"><label class="flabel">新用户名</label><input class="input" id="accName" value="${esc(me.username)}" ${forced?'disabled':''}/></div>
-      <button class="btn" onclick="saveName()" ${forced?'disabled':''}>保存用户名</button>
-      <div class="fhint">唯一性校验；保存后当前会话保持有效、界面即时刷新。</div>
-    </div>
+
+  <p>登录 / 账户设置 / 系统设置三屏已整体并入
+    <b>全量产品原型</b>，与业务屏共用同一套路由、守卫与 mock 会话。</p>
+  <p>正在跳转：<code>portomind-prototype.html#/login</code></p>
+  <a class="btn" href="./portomind-prototype.html#/login">前往全量原型 →</a>
+
+  <div class="note">
+    本文件仅保留路径兼容（TASK-060 / FS-authentication §13 曾引用）。
+    落地请以主原型 + FS 为准，不要参考本文件的旧结构。<br/>
+    断言：<code>node _audit-auth.cjs</code>（只对准主原型）。
   </div>
-  <div class="card">
-    <div class="card-h"><span class="card-t">修改密码</span><span class="card-sub">${forced?'必须优先完成':'需校验当前密码'}</span></div>
-    <div class="card-b">
-      ${forced?'':`<div class="field"><label class="flabel">当前密码</label><input class="input" id="pwCur" type="password"/></div>`}
-      <div class="field"><label class="flabel">新密码</label><input class="input" id="pwNew" type="password" placeholder="8–72 字符"/></div>
-      <div class="field"><label class="flabel">确认新密码</label><input class="input" id="pwNew2" type="password"/></div>
-      <button class="btn btn-pri" onclick="savePw()">${forced?'设定新密码并进入':'保存密码'}</button>
-      <div class="fhint">保存后，<b>该账号其他设备的会话立即失效</b>（当前会话保留）。</div>
-    </div>
-  </div>`;
-}
-function saveName(){
-  const v=$('accName').value.trim().toLowerCase();
-  if(!/^[a-z0-9][a-z0-9_.-]{2,31}$/.test(v)) return toast('用户名不合法','err');
-  if(v!==state.session.username && USERS.some(u=>u.username===v)) return toast('用户名已存在','err');
-  const me=USERS.find(u=>u.username===state.session.username);
-  me.username=v; state.session.username=v;
-  toast('用户名已更新','ok'); render();
-}
-function savePw(){
-  const forced=state.session.mustChangePassword;
-  const cur=forced?null:$('pwCur').value;
-  const nw=$('pwNew').value, nw2=$('pwNew2').value;
-  if(!forced && !cur) return toast('请输入当前密码','err');
-  if(nw.length<8) return toast('新密码至少 8 字符','err');
-  if(nw!==nw2) return toast('两次输入不一致','err');
-  const r = forced ? (()=>{const me=USERS.find(u=>u.username===state.session.username);me.password=nw;me.mustChangePassword=false;state.session.mustChangePassword=false;return {ok:true};})() : changeSelfPassword(cur,nw);
-  if(!r.ok) return toast(r.err,'err');
-  toast('密码已修改，其他设备会话已失效','ok');
-  if(forced){ go('#/account'); } else render();
-}
+</div>
 
-/* =====================================================
-   屏 4 · 系统设置 /account/users（管理员）
-===================================================== */
-function renderUsers(){
-  const lastAdmin = activeAdminCount()<=1;
-  const rows=USERS.slice().sort((a,b)=>b.createdAt.localeCompare(a.createdAt)).map(u=>{
-    const isLastAdmin = u.active && u.role==='admin' && lastAdmin;
-    const stopDisabled = !u.active || isLastAdmin || u.username===state.session.username;
-    const roleDisabled = isLastAdmin;
-    const acts=`
-      <div class="row-acts">
-        <button class="btn btn-sm" onclick="openReset('${u.username}')">重置密码</button>
-        <select class="sel" onchange="changeRole('${u.username}',this.value)" ${roleDisabled?'disabled title="最后一个启用管理员，不可降级"':''}>
-          <option value="admin" ${u.role==='admin'?'selected':''}>管理员</option>
-          <option value="member" ${u.role==='member'?'selected':''}>成员</option>
-        </select>
-        <button class="btn btn-sm ${u.active?'btn-danger':''}" onclick="toggleActive('${u.username}')" ${stopDisabled?'disabled':''} title="${isLastAdmin?'最后一个启用管理员，不可停用':(u.username===state.session.username?'不能停用自己':'')}">${u.active?'停用':'启用'}</button>
-      </div>`;
-    return `<tr>
-      <td><b>${esc(u.username)}</b></td>
-      <td>${roleChip(u.role)}</td>
-      <td>${u.active?'<span class="chip c-green">启用</span>':'<span class="chip c-gray">停用</span>'}</td>
-      <td class="num">${esc(u.lastLoginAt)}</td>
-      <td class="num">${esc(u.createdAt)}</td>
-      <td>${u.mustChangePassword?'<span class="chip c-amber">待改密</span>':''}</td>
-      <td>${acts}</td>
-    </tr>`;
-  }).join('');
-  $('content').innerHTML=`
-  <div class="page-head"><div class="ph-title">系统设置 · 用户管理</div><div class="ph-desc">账号仅由管理员创建；用户只可停用，不可删除</div></div>
-  <div class="toolbar"><button class="btn btn-pri" onclick="openCreate()">＋ 新建用户</button>
-    <span class="count">共 ${USERS.length} 个账号 · 启用管理员 ${activeAdminCount()} 个</span></div>
-  <div class="tbl-wrap"><table class="tb">
-    <thead><tr><th>用户名</th><th>角色</th><th>状态</th><th>上次登录</th><th>创建时间</th><th>改密</th><th style="text-align:right;">操作</th></tr></thead>
-    <tbody>${rows}</tbody>
-  </table></div>
-  <div class="banner banner-amber" style="margin-top:16px;"><span>🛡️</span><div><div class="t">系统不变量</div>任意时刻至少有一个<b>启用状态的管理员</b>。停用 / 降级唯一管理员的操作按钮会被禁用并提示原因（不会静默失败）。</div></div>`;
-}
-function openCreate(){
-  openModal('新建用户',''
-    +'<div class="field"><label class="flabel">用户名</label><input class="input" id="cuName" placeholder="小写字母/数字，3–32 字符"/></div>'
-    +'<div class="field"><label class="flabel">初始密码</label><input class="input" id="cuPwd" type="password" placeholder="8–72 字符"/></div>'
-    +'<div class="field"><label class="flabel">角色</label><select class="sel" id="cuRole" style="width:100%;padding:9px 12px;"><option value="member">成员</option><option value="admin">管理员</option></select></div>'
-    +'<div class="fhint">初始密码由管理员设定，对方首次登录需强制改密。</div>',
-    '<button class="btn" onclick="closeModal()">取消</button><button class="btn btn-pri" onclick="doCreate()">创建</button>');
-}
-function doCreate(){
-  const r=createUser($('cuName').value,$('cuPwd').value,$('cuRole').value);
-  if(!r.ok) return toast(r.err,'err');
-  closeModal(); toast('已创建用户，对方首次登录需改密','ok'); render();
-}
-function openReset(username){
-  openModal('重置密码 · '+username,''
-    +'<div class="field"><label class="flabel">新密码</label><input class="input" id="rsPwd" type="password" placeholder="8–72 字符"/></div>'
-    +'<div class="fhint">重置后，该用户全部会话立即失效，且下次登录必须改密。</div>',
-    '<button class="btn" onclick="closeModal()">取消</button><button class="btn btn-pri" onclick="doReset(\''+username+'\')">重置</button>');
-}
-function doReset(username){
-  const r=resetPassword(username,$('rsPwd').value);
-  if(!r.ok) return toast(r.err,'err');
-  closeModal(); toast(`${username} 密码已重置，会话已失效`,'ok'); render();
-}
-
-/* =====================================================
-   强制改密闸门 / 403 屏
-===================================================== */
-function renderForced(){
-  const forced=state.session.mustChangePassword;
-  $('root').innerHTML=`
-  <div class="app"><div class="main" style="margin-left:0;"><div class="content">
-    <div class="center-screen" style="min-height:auto;padding-top:80px;">
-      <div style="font-size:40px;">🔒</div>
-      <div class="ph-title">需要修改密码后才能继续</div>
-      <div class="muted" style="max-width:420px;">根据安全策略，你的账号需先设置自己的密码。请完成修改（§4.2）。</div>
-      <button class="btn btn-pri" onclick="go('#/account')">前往修改密码</button>
-      <button class="btn" onclick="doLogout()">退出登录</button>
-    </div>
-  </div></div></div>`;
-}
-function render403(title,desc){
-  $('root').innerHTML=`
-  <div class="app"><div class="main" style="margin-left:0;"><div class="content">
-    <div class="center-screen" style="min-height:auto;padding-top:80px;">
-      <div style="font-size:40px;">🚫</div>
-      <div class="ph-title">${esc(title)}</div>
-      <div class="muted" style="max-width:460px;">${esc(desc)}</div>
-      <button class="btn btn-pri" onclick="go('#/account')">返回账户</button>
-    </div>
-  </div></div></div>`;
-}
-
-/* =====================================================
-   启动
-===================================================== */
-window.addEventListener('hashchange',render);
-// 初始：未登录默认落到 /login
-if(!location.hash) location.hash='#/login';
-render();
-</script>
 </body>
 </html>

@@ -55,7 +55,7 @@ Human 2026-10-26 直接立项（议题起点：「注册、登录算不算产品
 | 单元 | 内容 | 端 | 依赖 |
 |---|---|---|---|
 | **U1** | `User` / `Session` 模型 · 密码哈希 · 会话 · `requireAuth` / `requireAdmin` · `/api/auth/*` · `/api/users/*` · 默认 admin seed · 登录限速 · **CORS 白名单同批** | `shared` + `server` | 无（前置） |
-| **U2** | `/login` · `/account`（改用户名/密码/登出）· 会话 Provider · 路由守卫 · axios 401 拦截 · 侧栏登出接线 | `client` | U1 |
+| **U2** | `/login` · `/account`（改用户名/密码）· 会话 Provider · 路由守卫 · axios 401 拦截 · **顶栏头像下拉（账户设置 + 退出登录，`D11`/`D12`）** | `client` | U1 |
 | **U3** | `/account/users` 系统设置 Tab：列表 / 新建 / 停用启用 / 重置密码 / 改角色 | `client` | U1 |
 
 ## 4. Out of Scope
