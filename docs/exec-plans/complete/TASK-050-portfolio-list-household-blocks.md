@@ -4,11 +4,11 @@
 
 Current status:
 
-`Approved`（2026-10-21 Human 批准「按 §5 W1–W10 实施」）→ `Implemented`（见 §12）→ **`Reviewing`（2026-10-21 有条件通过；AC14 空态边界待修，见 §13）** → **R-1 返修（见 §14）** → **复验通过（2026-10-21，R-1 闭环，见 §15）** → 待 `Orchestrator` 置 `Integrating` → Human 最终验收
+`Approved`（2026-10-21 Human 批准「按 §5 W1–W10 实施」）→ `Implemented`（见 §12）→ `Reviewing`（2026-10-21 有条件通过；AC14 空态边界待修，见 §13）→ R-1 返修（见 §14）→ 复验通过（2026-10-21，R-1 闭环，见 §15）→ **`Completed`（2026-10-26，已合并入 `main` `cafcc5d` / PR #35，见 §16）**
 
 Owner:
 
-`Planner`（2026-10-21 起草）/ `Human`（2026-10-21 Plan Review 批准）/ `Implementer`（2026-10-21 实施 + R-1 返修）/ 独立 `Reviewer`（2026-10-21 复核 §13 + 复验 §15；R-1 已闭环）
+`Planner`（2026-10-21 起草）/ `Human`（2026-10-21 Plan Review 批准；2026-10-26 合并入 `main` 并结案）/ `Implementer`（2026-10-21 实施 + R-1 返修）/ 独立 `Reviewer`（2026-10-21 复核 §13 + 复验 §15；R-1 已闭环）
 
 Priority:
 
@@ -16,7 +16,7 @@ Priority:
 
 Related task:
 
-`docs/tasks/active/TASK-050-portfolio-list-household-blocks.md`
+[`docs/tasks/complete/TASK-050-portfolio-list-household-blocks.md`](../../tasks/complete/TASK-050-portfolio-list-household-blocks.md)
 
 Related spec:
 
@@ -24,7 +24,7 @@ Related spec:
 
 Branch / Base:
 
-`feature/TASK-050` / `c463c85`（已于 2026-10-21 rebase 到 `feature/TASK-048-family-dividend-label` 顶端，含 `TASK-044` + `TASK-049` + `TASK-048` 全部前置）
+`feature/TASK-050`（已合并入 `main` = `cafcc5d`，PR #35）/ 开发基线 `c463c85`（2026-10-21 rebase 到 `feature/TASK-048-family-dividend-label` 顶端，含 `TASK-044` + `TASK-049` + `TASK-048` 全部前置）
 
 > 说明：`docs/templates/EXEC_PLAN_TEMPLATE.md` 仍为 0 字节空文件（2026-10-19 实读）。本文结构依据
 > `docs/process/EXECUTION_PLANS.md` §8，并参照 `docs/exec-plans/complete/TASK-048-family-dividend-label.md` 的既有格式。
@@ -94,7 +94,7 @@ Branch / Base:
 ## 2. Context
 
 - 产品需求：`docs/product/specs/FS-household-view-split.md`（G2，R8–R18）
-- 任务卡：`docs/tasks/active/TASK-050-portfolio-list-household-blocks.md`
+- 任务卡：`docs/tasks/complete/TASK-050-portfolio-list-household-blocks.md`（结案归档后位置；开发期为 `tasks/active/`）
 - 已完成的前置：`docs/exec-plans/complete/TASK-049-dashboard-household-total.md`（总资产卡已进 `/`）、`docs/exec-plans/complete/TASK-048-family-dividend-label.md`（`TRANSACTION_ACTION_LABELS` 单一导出）
 - 家庭汇总服务：`shared/services/familySummary.service.js`（一次返回 `totalCny` / `buckets` / `fxRates` / `portfolioContributions` / `recentTransactions` / `recentRebalanceRecords` / `asOf`；排除 `archived`）
 - 前端 hook：`client/src/hooks/useFamily.js`（`useFamilySummary` / `useFxRates` / `useSyncFxRates` / `useUpsertFxRate`）
@@ -958,3 +958,40 @@ if (list.length === 0) return (<div className="space-y-2"><EmptyState /><p class
 - `docs/issues.md` 仍是 **0 字节未跟踪文件**（mtime 10:30，上轮已提未处理）；`git add -A` 会把它带进库。
 - `client/scripts/_check-contributionbar-empty.mjs` 已在 §14.6 申报，仍是未跟踪文件。若要随任务入库，建议改名为 `e2e-*` 并在 `TASKS.md` 登记；否则删掉，避免 `git add -A` 夹带一次性脚本。
 - §13.6 的 A-1 ~ A-4（`PL-0-platform-foundation.md` 三处失效落点、`DEPLOYMENT.md:302` / `SERVER.md:102` 旧名「家庭视图」、首屏布局抖动）**本轮未动**，仍待裁决。
+
+---
+
+## 16. Completion Record（Orchestrator，2026-10-26）
+
+### 16.1 结案依据
+
+| 项 | 内容 |
+|---|---|
+| Human 指令 | 2026-10-26「TASK-050 已经完成，请修改文档」 |
+| 合并落点 | `feature/TASK-050` 已推送并按 **PR #35** 合并入 `main` → **`cafcc5d`**（含 `9baa4cd` + `a9fad6e`）。`main` 现同时含 `TASK-044` / `TASK-048` / `TASK-049` / `TASK-050` |
+| 归档前复跑（在 `main` 上执行） | `npm run build --workspace client` → **exit 0**，2408 modules，5.42s（仅既有「chunk > 500 kB」性能警告）· `cd client && ../node_modules/.bin/eslint "src/**/*.{js,jsx}"` → **exit 0，输出 0 行** · `npm run test:server` → **152 pass / 0 fail** · `npm run test:worker` → **77 pass / 0 fail**（合计 **229 / 0**） |
+| AC 静态复查 | AC15 三条（`pages/Family` 0 / `'/family'` 0 / 侧栏 5 项）· AC16 两条（`ACTION_LABELS = {` 0 / `Object.fromEntries(TRANSACTION_ACTIONS` 恰 1 行 `enums.js:29`）· OD-2（`{rec.status}` 0）· AC19（`server shared cron-worker` 空）全部达标；`pages/Family.jsx` 已删、`components/Household/` 5 组件在位 |
+
+> 复跑是在 **`main`**（即已合并的实测基线）上做的，比 2026-10-21 在 `feature/TASK-050` 工作树上的自评更强：本次验证的是**真正入主线的那份代码**。
+
+### 16.2 归档动作
+
+| 对象 | 动作 |
+|---|---|
+| 本 ExecPlan | `git mv` `exec-plans/active/` → `exec-plans/complete/`；Status → `Completed`；`Related task` 改指 `tasks/complete/`；`Branch / Base` 补合并落点 |
+| 任务卡 | `git mv` `tasks/active/` → `tasks/complete/`；Status → `COMPLETED`；§6 的 B5（独立 Reviewer 复核）由「⏳ 交付时」改为已解除；补 **§14 Completion Record**（含 §14.1 遗留现状核对） |
+| `docs/tasks/TASKS.md` | Active 清空（写「无活跃任务」）；Blocked 改为「无」；Done 新增 TASK-050 行；Roadmap 第 3 项标记完成 |
+| `docs/readme.md` | 活跃任务 → 无；已完成任务补 TASK-050；归档段 `exec-plans/active/` 改为「当前为空」 |
+| 交叉引用 | `FS-household-view-split.md`（状态行补「两交付单元全部完成」、§9 Phasing）；`FS-portfolio-ia-cleanup.md`（D-1 依赖解除）；`TASK-052` 卡内指向 `exec-plans/active/TASK-050` 的相对链接改指 `complete/` |
+
+### 16.3 遗留与移交
+
+| # | 内容 | 去向 |
+|---|---|---|
+| A-2 | `PL-0-platform-foundation.md:209` 架构图「家庭视图 (8)」、`:427` 承载表仍写 `client/src/pages/Family.jsx`（**文件已删，死引用**）；`:342`/`:348` 已在本任务落地时修好 | 建议随 `TASK-052` docs 治理批清理 |
+| A-3 | `DEPLOYMENT.md:302`「跨币种折算仅发生在家庭视图」、`SERVER.md:102`「家庭视图没有录入入口」—— 所指页面已不存在 | 同上 |
+| A-4 | 首屏布局抖动（`familyLoading` 期间卡片下移约 250px，与 TASK-049 §11.7 同型） | 另立卡，涉全站 `LoadingState` |
+| 脚本 | `client/scripts/_check-contributionbar-empty.mjs`（R-1 验证用，9,891 字节）已随 PR #35 **原样入库**，未改名 `e2e-*`、未登记 `npm run e2e:*` | 建议删除或按 `e2e-task-049.mjs` 先例规范化 |
+| 业务 | `TASK-051`（汇率方向反了）仍待 Human 裁决 OQ1/OQ2；本任务交付的 `FxPanel` 文案「1 外币 = ¥人民币 / 如 7.20」在当前数据下自相矛盾 | 已在 `TASK-051` 卡登记，**本任务不处理** |
+
+> 本 ExecPlan 归档后不再变更。

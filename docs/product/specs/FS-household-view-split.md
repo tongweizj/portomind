@@ -2,7 +2,7 @@
 
 | 项 | 内容 |
 |---|---|
-| 状态 | **`Approved`**（2026-10-19 Human 批准；§8 三个 OQ 一并采纳推荐）→ **`Implemented`**（`TASK-049` 2026-10-19 结案；`TASK-050` 2026-10-21 实施完成，待独立 Reviewer 与 Human 最终验收） |
+| 状态 | **`Approved`**（2026-10-19 Human 批准；§8 三个 OQ 一并采纳推荐）→ **`Implemented`**（`TASK-049` 2026-10-19、`TASK-050` 2026-10-21）→ **`Delivered`**（2026-10-26）—— **两交付单元全部结案并已合入 `main`**：`TASK-049`（含 PR #35）、`TASK-050`（PR #35 → `main` = `cafcc5d`） |
 | 作者 | Orchestrator（按 Human 2026-10-19 裁决起草） |
 | 日期 | `2026-10-19` |
 | 交付单元 | **两个实施任务**：`TASK-049`（Dashboard 承接总资产卡）· `TASK-050`（组合列表页承接其余五块 + `/family` 下线） |
@@ -220,9 +220,9 @@
 
 | 阶段 | 内容 | 交付物 |
 |---|---|---|
-| 阶段 1 | **`TASK-049`**：总资产卡抽组件 + 搬入 `/` + 命名调整 | ExecPlan + 代码 + 审查 |
-| 阶段 2 | **`TASK-050`**：五块搬入 `/portfolios` + `/family` 下线 + 文档 | ExecPlan + 代码 + 审查 |
-| 收尾 | Human 提交 + 最终验收；Ardot 设计稿 Dashboard / 组合管理两屏同步改版 | 提交 + 设计稿更新 |
+| 阶段 1 | **`TASK-049`**：总资产卡抽组件 + 搬入 `/` + 命名调整 | ✅ **已完成 2026-10-19**（ExecPlan + 代码 + 审查） |
+| 阶段 2 | **`TASK-050`**：五块搬入 `/portfolios` + `/family` 下线 + 文档 | ✅ **已完成 2026-10-26**（ExecPlan + 代码 + 两轮独立审查 + 合入 `main` `cafcc5d`） |
+| 收尾 | Human 提交 + 最终验收；Ardot 设计稿 Dashboard / 组合管理两屏同步改版 | 提交 ✅ 2026-10-26（PR #34 / #35）；设计稿改版 ⏳ 未跟踪 |
 
 **顺序不可颠倒**：阶段 2 删除 `/family` 的前提是阶段 1 已把总资产卡搬到 `/`，否则会出现「总资产消失」的中间态。
 
@@ -234,9 +234,9 @@
 
 | 编号 | 依赖 | 状态 |
 |---|---|---|
-| D-1 | `TASK-048`（分红标签）完成 | ✅ **已 `Completed`（2026-10-20）** — 独立评审通过（AC1–AC8），任务卡与 ExecPlan 已归档 `complete/`（改动仍在 `feature/TASK-048-family-dividend-label` 工作树，未提交）。产出 `client/src/constants/enums.js` 的 `TRANSACTION_ACTION_LABELS` 单一导出（全仓同类派生 3 处 → 1 处），`RECENT-TX` 搬迁时**必须 import 该导出**（R15 / AC16 的落点） |
-| D-2 | `TASK-049` 完成 | ✅ **已 `Completed`（2026-10-19）** — 提交 `69576ad`+`56c6507`（`feature/TASK-049-dashboard-household-total`，未合入 `main`）；任务卡与 ExecPlan 已归档 `complete/`。G2 可启动 |
-| D-3 | Planner 为两任务各产出 `Approved` ExecPlan | ⏳ 按纪律，改 `client/` 亦需批准 |
+| D-1 | `TASK-048`（分红标签）完成 | ✅ **已 `Completed`（2026-10-20）** — 独立评审通过（AC1–AC8），任务卡与 ExecPlan 已归档 `complete/`，改动已随 PR #34 合入 `main`。产出 `client/src/constants/enums.js` 的 `TRANSACTION_ACTION_LABELS` 单一导出（全仓同类派生 3 处 → 1 处），`RECENT-TX` 搬迁时**必须 import 该导出**（R15 / AC16 的落点） |
+| D-2 | `TASK-049` 完成 | ✅ **已 `Completed`（2026-10-19）** — 提交 `69576ad`+`56c6507`，已随 PR #35 合入 `main`；任务卡与 ExecPlan 已归档 `complete/`。G2 随之完成 |
+| D-3 | Planner 为两任务各产出 `Approved` ExecPlan | ✅ 两任务均已于 2026-10-19 / 2026-10-21 批准并实施完毕 |
 
 ### 风险
 

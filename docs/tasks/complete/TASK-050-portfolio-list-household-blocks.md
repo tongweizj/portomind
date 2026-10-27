@@ -3,19 +3,19 @@
 ## Metadata
 
 **Status:**  
-`REVIEWING`（2026-10-21）—— 独立评审**有条件通过**：AC9–AC13、AC15–AC20 满足；AC14 曾在「贡献列表为空」边界不满足（R-1，见 ExecPlan §13.5）。**R-1 已返修（本卡 §12）并由独立 Reviewer 复验通过（本卡 §13 / ExecPlan §15，自写 25 断言 25 PASS + 两轮负向对照）→ AC1–AC20 全部满足，可进 `Integrating`。** 最终验收属 Human。
+`COMPLETED`（2026-10-26）—— AC1–AC20 全部满足，已合并入 `main`（`cafcc5d`，PR #35），任务卡与 ExecPlan 归档 `complete/`。完整证据链见本卡 §10–§13 与 ExecPlan §12–§15，结案记录见本卡 §14。
 
 **Priority:**  
 `High`（信息架构收尾：`/family` 页面与路由删除）
 
 **Owner:**  
-`Implementer`（2026-10-21 实施完成 + R-1 返修）→ 独立 `Reviewer`（2026-10-21 复核 §11 + **R-1 已复验通过，见 §13**）→ `Orchestrator`（置 `Integrating`）→ `Human`（最终验收）
+`Implementer`（2026-10-21 实施完成 + R-1 返修）→ 独立 `Reviewer`（2026-10-21 复核 §11 + R-1 复验通过，见 §13）→ `Human`（2026-10-26 合并 `main` 并声明完成）→ **已结案**
 
 **Created:**  
 `2026-10-19`
 
 **Updated:**  
-`2026-10-21`（独立评审完成见 §11；R-1 返修见 §12；**R-1 复验通过见 §13**）
+`2026-10-26`（**结案归档**，见 §14；此前 2026-10-21 独立评审 §11 / R-1 返修 §12 / R-1 复验 §13）
 
 **Type:**  
 `Feature`（信息架构 / 组件搬迁 + 页面下线，纯客户端）
@@ -27,7 +27,7 @@
 `None`
 
 **Execution Plan:**  
-`docs/exec-plans/active/TASK-050-portfolio-list-household-blocks.md`（`Approved` 2026-10-21 → 已实施，见其 §12）
+[`docs/exec-plans/complete/TASK-050-portfolio-list-household-blocks.md`](../../exec-plans/complete/TASK-050-portfolio-list-household-blocks.md)（`Approved` 2026-10-21 → 已实施 §12 → 结案 §16）
 
 **来源：**  
 Human 于 2026-10-19 裁决「家庭视图拆分式搬迁」，并要求拆成两个任务：本任务负责组合列表页部分。
@@ -124,7 +124,7 @@ Human 于 2026-10-19 裁决「家庭视图拆分式搬迁」，并要求拆成�
 | **B2** | `TASK-048` 完成（分红标签） | ✅ **已解除**（2026-10-20 `Completed`，归档 `complete/`）。产出 `client/src/constants/enums.js` 的 `TRANSACTION_ACTION_LABELS` 单一导出，本任务的 `RECENT-TX` 可直接 import（对应 AC16）。⚠️ 改动**未提交**，尚在 `feature/TASK-048-family-dividend-label` 工作树 |
 | B3 | Human 批准 `FS-household-view-split.md` | ✅ **已解除**（2026-10-19） |
 | B4 | Planner 产出 ExecPlan 并经 Plan Review | ✅ **已解除**（2026-10-21，`Plan Review`，见 §9）；待 Human 批准 |
-| B5 | 独立 Reviewer 复核 | ⏳ 交付时 |
+| B5 | 独立 Reviewer 复核 | ✅ **已解除**（2026-10-21 首轮有条件通过 → R-1 返修 → 同日复验通过，见 §13） |
 
 > **B1 基线备注（2026-10-19 核实，2026-10-20 更新）**：`TASK-049` 与 `TASK-048` 的产出分别在 `feature/TASK-049-dashboard-household-total`（`56c6507`）与 `feature/TASK-048-family-dividend-label`（未提交）分支，`main` 仍停在 `891d0f7`（不含 TASK-044 / 048 / 049）。现有 `feature/TASK-050` 是从 `main` 拉出的**空基线**（`git log feature/TASK-049..feature/TASK-050` 为空，反向差 3 个提交），直接开工会在缺少前置的状态下改 `Portfolio/List.jsx`。**开工前必须先重建分支**：把 `feature/TASK-050` rebase 到 `feature/TASK-048-family-dividend-label`（该分支已含 044 + 049 + 048 全部前置），或由 Human 先按 044 → 048 → 049 顺序合并入 `main` 再从 `main` 拉出。
 
@@ -265,7 +265,7 @@ Human 于 2026-10-21 指令「开始做 TASK-050」。本节记录前置核查�
 - **静态**：build exit 0（**2408 modules**）· eslint 0 error/0 warning · AC15 三条 grep 全 0 · AC16 两条达标（`ACTION_LABELS = {` 0 行、`Object.fromEntries(TRANSACTION_ACTIONS` 恰 1 行）· OD-2 `{rec.status}` 0 行 · 侧栏 5 项。
 - **运行时**（1440×900，`portomind_e2e` 副本 + `page.route` 构造数据）：AC9 七段顺序 · AC10 两段合计 80% · AC11 图例跳转 · AC12 12→5 行 · AC13 收起态 0 次请求 / 展开 1 次 / 同步与录入后两 query 均刷新 · AC14 两态均有说明 · AC16 分红浅紫 + 无空 badge · AC17 `/family` → `/portfolios` · OD-2 状态列中文 · R-3 汇总 500 时卡片仍渲染。
 - **差异**：D-1 `FxPanel` 不再手动 `refetch()`（由 hook 的 invalidate 保证）；D-2 折算不完整项图例用中性灰；D-3 标题改「组合占比」；D-4 `CLIENT.md` 另清 4 处失效名词；D-5 `PREVIEW_LIMIT` 提常量；D-6 同步状态行（未动 AC/Scope）。
-- **⚠️ 新发现 F-1（需立项，未修）→ ✅ 已立项 [`TASK-051`](./TASK-051-fx-rate-direction.md)（2026-10-21）**：家庭折算的**汇率方向疑似反了** —— 采集端取的是「以 CNY 为基准」的 `1 CNY = X 外币`，却当 `rateToCny` 入库并用乘法折算，导致家庭总资产被系统性低估（实测 CAD `13836.49 × 0.2112 = 2922.5`，正确应约 `65,509`），且与手动录入示例 `7.20` 的语义矛盾。属服务端 + 折算口径，超出本任务边界（NG-5 / AC19）。
+- **⚠️ 新发现 F-1（需立项，未修）→ ✅ 已立项 [`TASK-051`](../active/TASK-051-fx-rate-direction.md)（2026-10-21）**：家庭折算的**汇率方向疑似反了** —— 采集端取的是「以 CNY 为基准」的 `1 CNY = X 外币`，却当 `rateToCny` 入库并用乘法折算，导致家庭总资产被系统性低估（实测 CAD `13836.49 × 0.2112 = 2922.5`，正确应约 `65,509`），且与手动录入示例 `7.20` 的语义矛盾。属服务端 + 折算口径，超出本任务边界（NG-5 / AC19）。
 - 改动**未提交**，位于 `feature/TASK-050` 工作树；真实库 `portomind` 未被读写。
 
 ---
@@ -385,3 +385,34 @@ Reviewer 给的是双分支 `return`（两个 JSX 树各自写一遍说明）。
 - `client/scripts/_check-contributionbar-empty.mjs` 已申报但仍未跟踪；入库需改名为 `e2e-*` 并登记，否则建议删除。
 - ExecPlan §13.6 的 A-1 ~ A-4（`PL-0` 三处失效落点、`DEPLOYMENT.md:302` / `SERVER.md:102` 旧名、首屏抖动）本轮未动。
 - `TASKS.md:30`、`:47` 原写「待修 R-1」与本卡矛盾，已由 Reviewer 按事实改正（纯状态簿记）。
+
+---
+
+## 14. Completion Record（2026-10-26）
+
+| 项 | 内容 |
+|---|---|
+| 状态流转 | `PLANNING`（2026-10-19 立项）→ `Plan Review`（2026-10-21，ExecPlan `Approved`）→ `Implementing` → `Reviewing`（2026-10-21 有条件通过，R-1）→ R-1 返修 → 独立复验通过 → `Integrating`（Human 合并 `main`）→ **`COMPLETED`（2026-10-26）** |
+| 结案依据 | Human 于 2026-10-26 声明「TASK-050 已经完成」并已自行提交分支、合并入 `main`。依 `EXECUTION_PLANS.md §7 Ownership`，最终验收属 Human，此为一次有效表达 |
+| 合并落点 | PR #35 → `main` = **`cafcc5d`**（含 `9baa4cd` + `a9fad6e`）。`main` 现同时含 `TASK-044` / `TASK-048` / `TASK-049` / `TASK-050`（PR #34 已合 048）。**堆叠分支时代结束** |
+| 归档位置 | 任务卡 `docs/tasks/complete/TASK-050-portfolio-list-household-blocks.md`；ExecPlan `docs/exec-plans/complete/TASK-050-portfolio-list-household-blocks.md`（均 `git mv`，保留历史） |
+| 归档前复跑（在 `main` 上，不采信 2026-10-21 的自评） | `npm run build --workspace client` → **exit 0**，2408 modules，5.42s；`cd client && ../node_modules/.bin/eslint "src/**/*.{js,jsx}"` → **exit 0，输出 0 行**；`npm run test:server` → **152 pass / 0 fail**；`npm run test:worker` → **77 pass / 0 fail**（合计 **229 / 0**） |
+| AC 静态复查（本分支实测） | AC15：`grep -rn "pages/Family" client/src` **0 行**、`grep -rn "'/family'" client/src` **0 行**、`Sidebar.jsx` 顶层 navItems **5 项**；AC16：`grep -rn "ACTION_LABELS = {"` **0 行**、`grep -rn "Object.fromEntries(TRANSACTION_ACTIONS\b"` **恰 1 行**（`enums.js:29`）；OD-2：`grep -rn "{rec.status}"` **0 行**；AC19：`git status --short server shared cron-worker` **空**。`client/src/pages/Family.jsx` 确认已删除；`components/Household/` 5 个新组件在位 |
+| 用户可见结果 | 侧栏由 6 项变 **5 项**（「家庭视图」消失）；`/portfolios` 自上而下为「标题行 → 币种分桶 → 组合占比条 → 组合卡片 → 最近交易 5 条 → 最近再平衡 10 条 → 家庭汇率（默认收起）」；旧书签 `/family` 由 `*` 通配落 `/portfolios`（无显式重定向） |
+| 遗留移交（见 §14.1） | A-2 / A-3 文档旧名词残留（4 处）、A-4 首屏布局抖动、`_check-contributionbar-empty.mjs` 随 PR 原样入库未改名、`TASK-051` 汇率方向仍待裁决 |
+
+### 14.1 遗留现状核对（2026-10-26 亲读，纠正两处过期陈述）
+
+§13.4 记的两条「未跟踪文件」陈述**已过期**，以此处为准：
+
+| 项 | 2026-10-21 记录 | 2026-10-26 实测 |
+|---|---|---|
+| `docs/issues.md` | 「0 字节未跟踪文件」 | **已入库**，207 字节 / 8 行（内容为 4 条零散意见，尚未转任务卡） |
+| `client/scripts/_check-contributionbar-empty.mjs` | 「已申报但仍未跟踪」 | **已随 PR #35 原样入库**（9,891 字节），**未**改名为 `e2e-*`、未在 `TASKS.md` 登记，也未进 `npm run e2e:*` 脚本 —— 仍是一次性调试脚本驻留在仓库里 |
+| A-2 `PL-0-platform-foundation.md` 三处失效落点 | `:343` 路由表 / `:435` 承载表 / `:225` 架构图 | **部分已修**：`:342` 路由表已改为「家庭五区块（TASK-050 承接）」并在 `:348` 补「`/family` 已下线」说明。**仍残留 2 处**：`:209` 架构图「家庭视图 (8)」、`:427` 承载表仍写 `client/src/pages/Family.jsx`（**该文件已删除，现为死引用**） |
+| A-3 旧名词 | `DEPLOYMENT.md:302` / `SERVER.md:102` | **均未修**：`DEPLOYMENT.md:302`「跨币种折算仅发生在家庭视图」、`SERVER.md:102`「家庭视图没有录入入口」—— 两处所指页面已不存在 |
+| A-4 首屏布局抖动 | 约 250px 下移 | **未修**（与 TASK-049 §11.7 同型，需另立卡，涉全站 `LoadingState`） |
+
+> 上述 A-2 / A-3 共 4 处属**产品文档中指向已删除页面/文件的失效陈述**，本次结案**未擅自改动**（超出 AC18 范围，且 Human 此前明示「仍待裁决」）。建议随 `TASK-052`（docs 治理批）一并清理，或单独立一张小卡。
+
+> 本卡归档后不再变更。后续问题一律在对应任务卡内跟踪，不回写本文。
