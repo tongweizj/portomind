@@ -4,13 +4,13 @@
 
 Current status:
 
-`Completed`（2026-10-27：两轮独立复核通过，整改完成；待 Human 合入 `main` 后归档 `complete/`）
+`Completed`（2026-10-27 归档：两轮独立复核 + 第四轮回归复核全部 PASS，8 条 MINOR 已整改，余 2 条 FX 适配器边界项移交 `TASK-057`；**代码尚未合入 `main`**，合并属 Human 职权，见 §13）
 
-> 实施记录见 §11.3。状态流：`Approved`（2026-10-26 Human Plan Review 通过）→ `Implementing` → `Verifying`（180/0、77/0）→ `Reviewing`（两轮独立复核通过）→ `Completed`（2026-10-27；待 Human 合入 `main` 后归档）。
+> 实施记录见 §11.3，复核记录见 §12。状态流：`Approved`（2026-10-26 Human Plan Review 通过）→ `Implementing` → `Verifying`（176/0、77/0）→ `Reviewing`（两轮独立复核通过）→ `REVIEWED`（2026-10-27）→ `Completed`（2026-10-27 第四轮回归复核 PASS 后归档）。
 
 Owner:
 
-`Planner`（2026-10-26 起草 → 2026-10-26 依 Human 裁决修订为 Approved）/ `Implementer`（2026-10-26 实施）/ 独立 `Reviewer`（2026-10-26 复核）
+`Planner`（2026-10-26 起草 → 2026-10-26 依 Human 裁决修订为 Approved）/ `Implementer`（2026-10-26 实施）/ 独立 `Reviewer`（2026-10-26/27 三轮复核 + 2026-10-27 回归复核 §12.5）
 
 Priority:
 
@@ -18,7 +18,7 @@ Priority:
 
 Related task:
 
-[`docs/tasks/active/TASK-054-cron-status-aggregate-api.md`](../../tasks/active/TASK-054-cron-status-aggregate-api.md)（同日已同步为 `APPROVED`）
+[`docs/tasks/complete/TASK-054-cron-status-aggregate-api.md`](../../tasks/complete/TASK-054-cron-status-aggregate-api.md)（`COMPLETED`，2026-10-27 归档）
 
 Related spec:
 
@@ -30,7 +30,9 @@ Related ADR:
 
 Branch / Base:
 
-`feature/TASK-054-cron-status-aggregate-api`（**已建，2026-10-26**）/ 基线 = 该分支 HEAD（`main` `cafcc5d` + 两份文档基线提交 `97ccfc7`、`1895530`）
+`feature/TASK-054-cron-status-aggregate-api`（**已建，2026-10-26**；顶端 = **`c7389d1`**）/ 基线 = `main` `cafcc5d` + 两份文档基线提交（`97ccfc7`、`1895530`）
+
+> **合并落点（2026-10-27 归档时实测）**：分支 HEAD `c7389d1` **尚未**进入 `main`（`main` = `origin/main` = `1895530`）。归档只搬文档，未做提交与合并。
 
 > **2026-10-26 修订说明（Human Plan Review 后）**：本版相对 2026-10-26 初稿的改动 = ①采纳 OD-4/OD-5/OD-6；②新增并采纳 4 项裁决（D-16 目标日锚点 / D-17 多市场 `expected` 口径 / D-18 `fxCount` 来源 / D-19 AC7 范围）；③修复初稿的 9 处硬伤（M-1~M-9，见 §11.2 修订对照）；④用 2026-10-26 **只读实库探测**（§3.6 / §7.4）关闭原计划唯一的证据缺口，并据实修正 3 条事实（F-2 / F-9 / F-10）。
 >
@@ -998,4 +1000,104 @@ node --check server/routes/cronStatus.routes.js
 3. 任务卡 §9.5 的「Reviewer 复检」勾选并注明第二轮 PASS；
 4. §5 Work Breakdown 的 W1–W11 / W13 全部勾选，并补记 W3 的真实红形态（`MODULE_NOT_FOUND` → 实现后 15/15 → 整改后 17/17）。
 
-> 未执行项：Human 合入 `main` 与归档 `complete/`（属 Human 验收，不在 Agent 范围）。
+> ~~未执行项：Human 合入 `main` 与归档 `complete/`。~~ **2026-10-27 更新**：归档已由 `Orchestrator` 完成（`git mv` → `exec-plans/complete/`）；**合入 `main` 仍未执行**（分支 `c7389d1`，`main`/`origin/main` = `1895530`），属 Human 职权，见 §13.3。
+
+### 12.5 第四轮（回归复核，2026-10-27，Human 指令「审核 TASK-054 的代码」）
+
+**结论：PASS（AC1–AC14 全部满足）**，无 BLOCKER / 无 MAJOR；新增 **2 条 MINOR（P1/P2）**，都不在 `C-05` 落地前的生效路径上，**不阻塞合入**，建议随 `TASK-057` 一并处理。
+
+#### 12.5.1 我独立复跑的证据（不采信 §12.1–12.4 台账）
+
+| 项 | 我的做法 | 结果 |
+|---|---|---|
+| server 全量 | `npm run test:server` | ✅ **180 pass / 0 fail**（与台账一致） |
+| worker 全量 | `npm run test:worker` | ✅ **77 pass / 0 fail** |
+| AC10 只读 | `grep -E "\.create\(|updateOne|deleteOne|findOneAndUpdate|bulkWrite|save\(\)"` 两份文件 | ✅ 0 行 |
+| AC11 不改调度 | `git diff --stat main...HEAD -- cron-worker/ shared/models/ shared/services/taskRunner.js` | ✅ 空 |
+| AC7 阈值归位 | controller 内 `24\|48\|threshold\|STALE` | ✅ 无命中 |
+| 结构 | `app.use('/api` 计数 / `shared` 反向 require | ✅ **10** / 0 |
+| AC13 文档 | 逐份 diff | ✅ API_CONTRACT、SERVER、ARCHITECTURE（3 处）、PRODUCT_LINES、readme 均已改 |
+
+#### 12.5.2 真机端到端（起 `server` 连开发库，全程只读）
+
+`GET /api/cron/status` → **200**，5 条任务按冻结顺序（`timezone=America/Toronto`、`staleThresholdHours=48`）：
+
+| 任务 | level | contractReady | lastRun |
+|---|---|---|---|
+| `daily-price-sync` | **bad** | true | PARTIAL · `2026-10-20` · 41/44 |
+| `price-integrity-check` | unknown | false | SUCCEEDED · 0/44 |
+| `alert-evaluate` | unknown | false | SUCCEEDED |
+| `fx-rate-sync` | unknown | false | SUCCEEDED |
+| `rebalance-check` | unknown | false | **null**（父任务尚无记录，符合 AC6） |
+
+- 价格数据态：`targetMarketDate=2026-10-26` / `calendarPrevOpenDay=2026-10-26` / `expected=44` / `fetched=0` / `missing=44` / `byMarket` = CN-FUND 29 + CA 11 + US 4 / `notListed=[]` / `dayPriceSymbolCount=0` → **0/44 判红，正是「停摆真实信号」**（开发库最新有价日 10-20）。
+- 完整性/提醒/汇率/再平衡：四项 `contractReady=false` + `CONTRACT_NOT_READY`，数值全 `null`（**没有用 `status` 冒充**，R-4 成立）；`fxCount=3` 只读得到、`currencies=null`（AC5 成立）。
+- 再平衡：`perPortfolioDate=2026-10-20`、`perPortfolio=4`（= 未归档组合数）、`due=null`；**`failures` 在 `C-05` 前就真实透出**：`A股-长钱组合 / INTERNAL / "Latest price is required for 000191.CN"`（AC6 后半段成立，且正是 `TASK-051`/symbol 双写法那条老账）。
+- detail：缺省 `date=2026-10-20`、`rows=4`、`failed=1`；`?date=2026-10-20` 同结果。
+- 参数分支实测：`detail=foo` **400** · `date=2026-13-40` **400** · `portfolioId=bad-id` **200 + `PORTFOLIO_ID_INVALID`** · 合法但不存在 **200 + `PORTFOLIO_NOT_FOUND`** · `/api/cron` **404**（AC8 / A9 全对）。
+
+#### 12.5.3 负向对照（我自己注入，验证 AC12「先红后绿」不是纸面承诺）
+
+把 `pickTargetInfo` 的有效目标日换回**初稿口径**（`targetMarketDate = calendarPrevOpenDay`），跑 17 条 service 测试：
+
+- **14/17**：`U2`（CN 长假）、`U12`（周末）、`U13`（03:00 前）**变红** —— D-16 确实被测试钉住；
+- 还原后 md5 一致（`RESTORE_OK`），17/17 恢复全绿，工作树无残留。
+
+#### 12.5.4 新增 MINOR（不阻塞）
+
+| # | 问题 | 证据 | 建议 |
+|---|---|---|---|
+| **P1** | **汇率数字形态被判「全币种失败」**：`result.rates={USD:7.1,…}` → 每币种 `ok:false` → `dataStateLevel='bad'` 且 **`notes` 为空**（我实测）。适配器本身接受数字形态（`rateToCny: numOrNull(value)`），却把它判成失败，自相矛盾；`C-05` 若按数字形态落库，看板会直接全红且无任何解释 | `service.js:464-481`，实测输出 `{"USD":{"ok":false,"rateToCny":7.1},…}` + `notes=[]` | 数字 > 0 视为 `ok:true`，或至少补 `CONTRACT_NOT_READY` 之外的一条说明性 note |
+| **P2** | **空对象被判 bad**：`currencies:{}` → `contractReady=true`、`level='bad'`、`notes=[]` | 同上实测 | 空对象应 `unknown` + note（「无币种记录」≠「全部失败」） |
+
+#### 12.5.5 观测（不阻塞，不必改）
+
+- `getRebalanceDetail` 对**格式合法但不存在**的 `portfolioId` 仍先跑 3 次查询才早退；§12.2 的「无效 portfolioId 0 次」只对格式非法成立（口径差异，非缺陷）。
+- `buildRunSummary` 把 `totalCount:null` 归一为 `0`，与文件头「null ≠ 0」原则轻微不一致（实库该字段恒为数字，暂无影响）。
+- `docs/manual/SERVER.md` 的 `CORS_ORIGINS` 行仍写「该变量**未被读取**」，与实测（`app.js:21-24` 读了、`:34` 走 `origin:true`）不符 —— **既有事实错误**，不在本卡 AC13 范围，建议随 `TASK-052` 清。
+- 本轮为**只读复核**：起 `server` 连开发库、调用端点、随后停止；未写任何集合，`git status shared/ server/` 干净。
+
+---
+
+## 13. Completion Record（Orchestrator，2026-10-27）
+
+### 13.1 结案依据
+
+| 项 | 内容 |
+|---|---|
+| Human 指令 | 2026-10-27「TASK-054 任务完成，请修改状态，搬迁文档」 |
+| 复核结论 | 三轮独立复核 + 第四轮回归复核：**无 BLOCKER / 无 MAJOR**，AC1–AC14 全满足（§12.1–§12.5） |
+| 归档前复跑（本分支实测） | `test:server` **180-0** · `test:worker` **77-0** · AC1 路由 `app.use('/api` 计数 10 且 `/api/cron` 恰 1 行 · AC8 单端点 `router.get` 恰 1 · AC10 零写 0 行 · AC11 `cron-worker` 零 diff · AC7 controller 无阈值 · `shared` 零反向 require · AC13 五份文档全改 |
+
+> 复跑在本任务分支（`c7389d1`）上执行——即**尚未合入主线的那份代码**。这与 `TASK-050`（在 `main` 上复跑）不同，原因见 13.3。
+
+### 13.2 归档动作
+
+| 对象 | 动作 |
+|---|---|
+| 本 ExecPlan | `git mv` `exec-plans/active/` → `exec-plans/complete/`；Status → `Completed`；`Related task` 改指 `tasks/complete/`；`Branch / Base` 补合并状态；§12.4「未执行项」改写 |
+| 任务卡 | `git mv` `tasks/active/` → `tasks/complete/`；Status → `COMPLETED`；Owner 关闭；`Execution Plan` 指针改 `complete/`；§9.5 进度表补两行（归档 ✅ / 合入 ⏳）；补 **§11 Completion Record** |
+| `docs/tasks/TASKS.md` | Active 移除本卡（封面段改写为「在途 = TASK-058 + TASK-060」）；Done 新增 TASK-054 行；Blocked 的批次说明与「五卡均未开工」更新 |
+| `docs/readme.md` | 活跃任务行改指剩余在途；Done 补 TASK-054；执行计划归档段与活跃段更新 |
+| 交叉引用 | `docs/dev/API_CONTRACT.md` 的 ExecPlan 链接改指 `complete/`；`FS-cron-worker-status-board-tasks.md` 映射行补完成状态；`TASK-055` B4 硬前置解除；`TASK-053` B4 表述更新 |
+
+### 13.3 合并状态（需 Human 处理）
+
+| 项 | 实测 |
+|---|---|
+| 分支 | `feature/TASK-054-cron-status-aggregate-api` = **`c7389d1`** |
+| `main` / `origin/main` | **`1895530`**；`git merge-base --is-ancestor c7389d1 main` → **不成立** |
+| 结论 | 任务**已完成**（实施 + 复核 + 文档），但**未进主线**。本次归档只动文档，无 `git commit` / `git merge` / `git push` |
+| 提交时隔离 | 工作树内 `FS-authentication.md`、`TASK-058/059/060` 卡、`docs/ui/2.0/*` 是他人在途改动，勿混入本批 |
+
+### 13.4 遗留移交
+
+| # | 内容 | 去向 |
+|---|---|---|
+| P1 / P2 | FX 适配器的数字形态与空对象误判为 `bad`（§12.5.4） | `TASK-057` |
+| 数据态 | `C-05` 落地前四项数值恒 `null`（设计内降级） | `TASK-057` |
+| FS 旧名 | FS §4.3 的 `{ok,gap,skippedNoLaunchDate}` / `alertsFired` / 币种标志 | PM 回改（§9 T-1/T-2） |
+| 文档错述 | `SERVER.md` 的 `CORS_ORIGINS`「未被读取」 | `TASK-052` |
+| 下游 | `TASK-055` 硬前置解除；`TASK-053` 可空态先行 | 两卡已登记 |
+
+> 本 ExecPlan 归档后不再变更。
