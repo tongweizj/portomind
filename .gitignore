@@ -130,3 +130,6 @@ dist
 .pnp.*
 .DS_Store
 .write-test
+
+# Agent workspace (local only, never committed)
+.workbuddy/
