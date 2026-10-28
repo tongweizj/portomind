@@ -1,0 +1,651 @@
+{
+  "range": "501-1000",
+  "entries": [
+    {
+      "zh": "dataLevel: green 好 / amber 关注 / red 坏 / gray 跳过未跑 —— 红=坏、绿=好，与行情「红涨绿跌」无关",
+      "en": "dataLevel: green Good / amber Watch / red Bad / gray Skipped, not run —— red=Bad, green=Good, unrelated to the market convention of red up, green down"
+    },
+    {
+      "zh": "价格 targetDay 是「上一开市日」而非运行日（OQ2）—— 2026-10-26 07:00 跑的活，目标是 2026-10-25",
+      "en": "The price targetDay is the 「previous trading day」, not the run day (OQ2) —— the job run at 2026-10-26 07:00 targets 2026-10-25"
+    },
+    {
+      "zh": "价格 38/40 · 完整性 完整40/缺口2/跳过1 · 提醒 命中3 · CN-稳钱 FAILED · CA-长钱 SKIPPED。",
+      "en": "Prices 38/40 · Integrity: complete 40 / gaps 2 / skipped 1 · Alerts: 3 fired · CN-Stable FAILED · CA-Long SKIPPED."
+    },
+    {
+      "zh": "曾出现「看板 FAILED / 任务日志 SUCCEEDED」的自相矛盾：从 FAILED 行点「查看原始日志」反看到绿灯，",
+      "en": "There used to be a self-contradiction of 「board FAILED / task log SUCCEEDED」: clicking 「view raw log」 from the FAILED row showed a green light,"
+    },
+    {
+      "zh": "系统设置 —— 独立页面（非 /account 子 Tab）；入口在顶栏下拉「账户设置」下方，仅 admin（D13）。",
+      "en": "System settings —— a standalone page (not a sub-Tab of /account); its entry sits below 「Account settings」 in the top bar dropdown, admin only (D13)."
+    },
+    {
+      "zh": "形态对齐 TASK-054 的 GET /api/cron/status：**数据态**为主信号，运行态只作辅助解释。",
+      "en": "Shape aligned with TASK-054 GET /api/cron/status: **data state** is the primary signal, and run state only serves as an auxiliary explanation."
+    },
+    {
+      "zh": "next 是不可信输入：必须是站内路径，且不得自身含 next=（防自我嵌套，TASK-060 A-02 / R-2）",
+      "en": "next is untrusted input: it must be an in-site path and must not itself contain next= (to prevent self-nesting, TASK-060 A-02 / R-2)"
+    },
+    {
+      "zh": "本表与 CRON_STATUS（看板）必须是**同一套数据宇宙** —— 同一个 2026-10-26 的跑批结果。",
+      "en": "This table and CRON_STATUS (the board) must be **the same data universe** —— the same 2026-10-26 batch run result."
+    },
+    {
+      "zh": "默认落「任务运行看板」；runs→task、logs→server（旧深链不再支持，见 TASK-061 R-2）",
+      "en": "Defaults to the 「task run board」; runs→task, logs→server (old deep links are no longer supported, see TASK-061 R-2)"
+    },
+    {
+      "zh": "运行态 SUCCEEDED ≠ 数据到位（价格 03:00 写的是上一开市日；完整性检查每天绿但有缺口）",
+      "en": "Run state SUCCEEDED ≠ data in place (the 03:00 price sync writes the previous trading day; the integrity check is green every day but has gaps)"
+    },
+    {
+      "zh": "任务运行看板 mock（TASK-061 / FS-cron-worker-status-board）",
+      "en": "Task run board mock (TASK-061 / FS-cron-worker-status-board)"
+    },
+    {
+      "zh": "强制改密闸门：除 /account 外一律拦到「需先修改密码」屏，无可跳过入口（§4.2 / D10）",
+      "en": "Forced password change gate: everything except /account is blocked to the 「change your password first」 screen, with no way to skip it (§4.2 / D10)"
+    },
+    {
+      "zh": "已登录访问 /login → 回 Dashboard（用 replace，避免回退键回到登录页）",
+      "en": "A signed-in user visiting /login → back to Dashboard (using replace, so the back button does not return to the login page)"
+    },
+    {
+      "zh": "账户设置 —— M-04 补齐的三条路由之一，不占侧栏导航位。系统设置已独立成页，不再挂 Tab",
+      "en": "Account settings —— one of the three routes added by M-04, it takes no sidebar nav slot. System settings is now a standalone page, no longer a Tab"
+    },
+    {
+      "zh": "大类级目标 → 资产级目标（按目标大类占比 × 类内当前市值结构摊分；绝不用实际占比冒充目标）",
+      "en": "Asset-class-level targets → instrument-level targets (allocate by target class weight × the current market value structure inside the class; never pass the actual weight off as the target)"
+    },
+    {
+      "zh": "目标为 0 时相对偏离无意义（分母为 0），只按绝对偏离判定；否则 -999 会误报「相对」",
+      "en": "When the target is 0 the relative drift is meaningless (the denominator is 0), so judge only by absolute drift; otherwise -999 would be falsely reported as relative"
+    },
+    {
+      "zh": "等于把本功能要根除的「全绿误导」当众演一遍。下列数字与 CRON_STATUS 逐项对齐：",
+      "en": "which is equivalent to publicly reenacting the 「all-green misleading」 that this feature exists to eliminate. The following figures are aligned with CRON_STATUS item by item:"
+    },
+    {
+      "zh": "单租户 · 多账号 · admin/member 两角色 · 无自助注册 · 只停用不删除",
+      "en": "Single tenant · multiple accounts · two roles admin/member · no self-service signup · deactivate only, never delete"
+    },
+    {
+      "zh": "会话（TASK-060 / FS-authentication）。默认给一个演示登录态：",
+      "en": "Session (TASK-060 / FS-authentication). A demo signed-in state is given by default:"
+    },
+    {
+      "zh": "progress===null 的任务（提醒/汇率/再平衡）：不画进度条，只显关键数字",
+      "en": "Tasks with progress===null (alerts / FX / rebalance): no progress bar, only key numbers"
+    },
+    {
+      "zh": "路由（path + query 双段解析；?sub= / ?record= 驱动深链）",
+      "en": "Routing (two-segment path + query parsing; ?sub= / ?record= drive the deep links)"
+    },
+    {
+      "zh": "白名单回落：未知 tab（含历史遗留的 basic）一律落「总览」，不静默渲染交易记录",
+      "en": "Allowlist fallback: unknown tabs (including the legacy basic) all fall back to Overview and never silently render transactions"
+    },
+    {
+      "zh": "next 只编码 path（不含 query、不含 next=），从根上避免自我嵌套",
+      "en": "next encodes only the path (no query, no next=), which avoids self-nesting at the root"
+    },
+    {
+      "zh": "再平衡看板详情筛选（/logs/rebalance）—— 只读排障，无任何执行动作",
+      "en": "Rebalance board detail filters (/logs/rebalance) —— read-only troubleshooting, no execution actions"
+    },
+    {
+      "zh": "本批截断：INTEGRITY_REPAIR_TRUNCATED（上限 50 条）",
+      "en": "This batch truncated: INTEGRITY_REPAIR_TRUNCATED (limit 50)"
+    },
+    {
+      "zh": "用户与认证 mock（TASK-060 / FS-authentication）",
+      "en": "User and auth mock (TASK-060 / FS-authentication)"
+    },
+    {
+      "zh": "缺口：000191、510510；另有 1 个无 launchDate 被跳过",
+      "en": "Gaps: 000191, 510510; another 1 with no launchDate was skipped"
+    },
+    {
+      "zh": "未登录守卫（M-04 / FS §4.5）：除 /login 外一律重定向。",
+      "en": "Not-signed-in guard (M-04 / FS §4.5): everything except /login is redirected."
+    },
+    {
+      "zh": "再平衡子 Tab 单一数据源 = URL；非法值回落 suggestions",
+      "en": "The single source of truth for the rebalance sub-Tab = the URL; invalid values fall back to suggestions"
+    },
+    {
+      "zh": "518880 · 买入信号：黄金回调加仓（有效期至 2026-11-15）",
+      "en": "518880 · Buy signal: gold pullback add (valid until 2026-11-15)"
+    },
+    {
+      "zh": "0700.HK 拉取失败：Yahoo HK 超时（已重试 3 次，放弃）",
+      "en": "0700.HK fetch failed: Yahoo HK timed out (retried 3 times, gave up)"
+    },
+    {
+      "zh": "否则打开文件就落登录页，全产品走查与 TASK-059 的断言都会被挡。",
+      "en": "Otherwise opening the file lands on the login page, and the full-product walkthrough and the TASK-059 assertions would all be blocked."
+    },
+    {
+      "zh": "overN 的口径必须与展示表一致：大类模式数「类」，资产模式数「标的」",
+      "en": "The overN count must match the display table: class mode counts classes, instrument mode counts instruments"
+    },
+    {
+      "zh": "AAPL · 最新价 US$275.10 高于阈值 US$270.00",
+      "en": "AAPL · latest price US$275.10 is above the threshold US$270.00"
+    },
+    {
+      "zh": "真实产品首次访问必落 #/login；退出登录后守卫即按真实规则工作。",
+      "en": "In the real product the first visit always lands on #/login; after sign-out the guard works by the real rules."
+    },
+    {
+      "zh": "成功 38 · 失败 2（0700.HK 超时、VBG.TO 无价）",
+      "en": "Succeeded 38 · Failed 2 (0700.HK timed out, VBG.TO no price)"
+    },
+    {
+      "zh": "510500 · 触发价格低于阈值 ¥5.80（当日 ¥5.79）",
+      "en": "510500 · triggered price below threshold ¥5.80 (¥5.79 that day)"
+    },
+    {
+      "zh": "真实字段以 TASK-054/057 契约为准；此处为原型演示值",
+      "en": "The real fields follow the TASK-054/057 contract; these are prototype demo values"
+    },
+    {
+      "zh": "目标 2026-10-25（上一开市日）：38/40 · 95%",
+      "en": "Target 2026-10-25 (previous trading day): 38/40 · 95%"
+    },
+    {
+      "zh": "缺 0700.HK（超时未采）、VBG.TO（无价 61 天）",
+      "en": "Missing 0700.HK (timed out, not collected), VBG.TO (no price for 61 days)"
+    },
+    {
+      "zh": "评估 8 条规则，新增 3 条提醒（cooldown 生效）",
+      "en": "Evaluated 8 rules, added 3 new alerts (cooldown in effect)"
+    },
+    {
+      "zh": "—— 明文口令仅原型内演示，落地绝不可照搬（真实库只存哈希）",
+      "en": "—— plaintext passwords are for in-prototype demo only, never copy this in production (the real database stores hashes only)"
+    },
+    {
+      "zh": "CN-长钱 · 再平衡建议待确认（3 项超阈 · 已到期）",
+      "en": "CN-Long · Rebalance suggestion pending (3 over threshold · Due)"
+    },
+    {
+      "zh": "根路径不带 next（登录后本来就落 Dashboard）",
+      "en": "The root path carries no next (it lands on Dashboard after sign-in anyway)"
+    },
+    {
+      "zh": "0700.HK · 5 个交易日无最新价（行情采集滞后）",
+      "en": "0700.HK · no latest price for 5 trading days (quote collection lagging)"
+    },
+    {
+      "zh": "强制改密闸门在其上方，故 forced 态不会到达此处。",
+      "en": "The forced password change gate sits above it, so the forced state never reaches here."
+    },
+    {
+      "zh": "检查 43 · 完整 40 · 缺口 2 · 跳过 1",
+      "en": "Checked 43 · Complete 40 · Gaps 2 · Skipped 1"
+    },
+    {
+      "zh": "0700.HK 第 3 次重试（指数退避 + 抖动）…",
+      "en": "0700.HK retry #3 (exponential backoff + jitter)…"
+    },
+    {
+      "zh": "同步 USD/CAD/HKD 汇率成功（er-api）",
+      "en": "Synced USD/CAD/HKD FX rates successfully (er-api)"
+    },
+    {
+      "zh": "系统设置用户表加载骨架（原 auth 原型 A-13）",
+      "en": "System settings user table loading skeleton (from the original auth prototype A-13)"
+    },
+    {
+      "zh": "开始同步 40 个启用资产（active only）",
+      "en": "Start syncing 40 active instruments (active only)"
+    },
+    {
+      "zh": "TFSA 免税账户，加股与美股 ETF 长期定投。",
+      "en": "TFSA tax-free account, long-term regular investing in Canadian and US ETFs."
+    },
+    {
+      "zh": "以宽基指数为核心的长钱账户，覆盖A股与美股敞口。",
+      "en": "A long-term account built around broad-based index funds, covering A-share and US equity exposure."
+    },
+    {
+      "zh": "XIC · 突破 52 周新高 CA$48.90",
+      "en": "XIC · broke 52-week high CA$48.90"
+    },
+    {
+      "zh": "检查完成：缺口 2（000191、510510）",
+      "en": "Check complete: gaps 2 (000191, 510510)"
+    },
+    {
+      "zh": "大类级口径：首列显示大类中文名（FS A15）",
+      "en": "Class-level convention: the first column shows the Chinese name of the asset class (FS A15)"
+    },
+    {
+      "zh": "债券与货币基金为主，控制回撤，追求稳定收益。",
+      "en": "Focuses on bonds and money market funds, keeps drawdowns under control, and pursues steady returns."
+    },
+    {
+      "zh": "A4 五种触发原因（常量集中，文案唯一来源）",
+      "en": "A4 five trigger reasons (constants centralized, the single source of the copy)"
+    },
+    {
+      "zh": "配置正常(ok)；未设目标(none) 独立",
+      "en": "Normal(ok); no targets(none) is separate"
+    },
+    {
+      "zh": "同步 3 个币种（USD/CAD/HKD）",
+      "en": "Synced 3 currencies (USD/CAD/HKD)"
+    },
+    {
+      "zh": "生成 3 笔建议（3 项超阈 · 已到期）",
+      "en": "Generated 3 suggestions (3 over threshold · Due)"
+    },
+    {
+      "zh": "完整 40 / 缺口 2 / 跳过 1",
+      "en": "Complete 40 / Gaps 2 / Skipped 1"
+    },
+    {
+      "zh": "评估 8 · 命中 3 · 归档 0",
+      "en": "Evaluated 8 · Fired 3 · Archived 0"
+    },
+    {
+      "zh": "目标/持仓 symbol 写法不一致",
+      "en": "Inconsistent symbol notation between target and holding"
+    },
+    {
+      "zh": "到期 2 / 生成 1 / 失败 1",
+      "en": "Due 2 / Generated 1 / Failed 1"
+    },
+    {
+      "zh": "510500 价格低于 ¥5.80",
+      "en": "510500 price below ¥5.80"
+    },
+    {
+      "zh": "金价回调至 60 日线下方分批加仓",
+      "en": "Gold price pulled back below the 60-day line; add in tranches"
+    },
+    {
+      "zh": "0700.HK 浮亏超过 -5%",
+      "en": "0700.HK unrealized loss over -5%"
+    },
+    {
+      "zh": "组合总市值为 0，无法判定偏离",
+      "en": "Portfolio total market value is 0, cannot determine drift"
+    },
+    {
+      "zh": "AAPL 价格高于 $270",
+      "en": "AAPL price above $270"
+    },
+    {
+      "zh": "生成 3 笔建议（待确认）",
+      "en": "Generated 3 suggestions (pending)"
+    },
+    {
+      "zh": "距上次再平衡已超过时间间隔",
+      "en": "Time since the last rebalance exceeds the interval"
+    },
+    {
+      "zh": "价格历史（确定性随机游走）",
+      "en": "Price history (deterministic random walk)"
+    },
+    {
+      "zh": "TSLA 52 周新低",
+      "en": "TSLA 52-week low"
+    },
+    {
+      "zh": "沪深300 PE 分位",
+      "en": "CSI 300 PE percentile"
+    },
+    {
+      "zh": "四态：超阈(over)",
+      "en": "Four states: over threshold(over)"
+    },
+    {
+      "zh": "从未执行(never)",
+      "en": "never run(never)"
+    },
+    {
+      "zh": "CN-长钱 组合偏离",
+      "en": "CN-Long portfolio drift"
+    },
+    {
+      "zh": "XIC 52 周新高",
+      "en": "XIC 52-week high"
+    },
+    {
+      "zh": "日期序列：自然日回溯",
+      "en": "Date series: backtrack by calendar days"
+    },
+    {
+      "zh": "未设目标配置，跳过",
+      "en": "No target configuration set, skipped"
+    },
+    {
+      "zh": "黄金回调加仓信号",
+      "en": "Gold pullback add-position signal"
+    },
+    {
+      "zh": "回看 365 天",
+      "en": "Look back 365 days"
+    },
+    {
+      "zh": "今天 09:00",
+      "en": "Today 09:00"
+    },
+    {
+      "zh": "昨天 21:14",
+      "en": "Yesterday 21:14"
+    },
+    {
+      "zh": "昨天 03:05",
+      "en": "Yesterday 03:05"
+    },
+    {
+      "zh": "命中 3 条提醒",
+      "en": "3 alerts fired"
+    },
+    {
+      "zh": "全局 UI 状态",
+      "en": "Global UI state"
+    },
+    {
+      "zh": "从未执行过再平衡",
+      "en": "Never rebalanced"
+    },
+    {
+      "zh": "绝对偏离超过阈值",
+      "en": "Absolute drift exceeds threshold"
+    },
+    {
+      "zh": "相对偏离超过阈值",
+      "en": "Relative drift exceeds threshold"
+    },
+    {
+      "zh": "已到期(due)",
+      "en": "Due(due)"
+    },
+    {
+      "zh": "未设目标配置",
+      "en": "No target configuration set"
+    },
+    {
+      "zh": "ETF-场内",
+      "en": "ETF-listed"
+    },
+    {
+      "zh": "组合派生计算",
+      "en": "Portfolio derived calculations"
+    },
+    {
+      "zh": "图表 SVG",
+      "en": "Chart SVG"
+    },
+    {
+      "zh": "需要修改密码",
+      "en": "Password change required"
+    },
+    {
+      "zh": "· 价格历史",
+      "en": "· price history"
+    },
+    {
+      "zh": "· 标的详情",
+      "en": "· instrument details"
+    },
+    {
+      "zh": "CN-稳钱",
+      "en": "CN-Stable"
+    },
+    {
+      "zh": "CN-长钱",
+      "en": "CN-Long"
+    },
+    {
+      "zh": "CA-长钱",
+      "en": "CA-Long"
+    },
+    {
+      "zh": "52周新高",
+      "en": "52-week high"
+    },
+    {
+      "zh": "52周新低",
+      "en": "52-week low"
+    },
+    {
+      "zh": "2 小时前",
+      "en": "2 hours ago"
+    },
+    {
+      "zh": "完整性检查",
+      "en": "Integrity check"
+    },
+    {
+      "zh": "再平衡分发",
+      "en": "Rebalance dispatch"
+    },
+    {
+      "zh": "生成的建议",
+      "en": "generated suggestions"
+    },
+    {
+      "zh": "绝对+相对",
+      "en": "Absolute+Relative"
+    },
+    {
+      "zh": "天天基金",
+      "en": "Tiantian Fund"
+    },
+    {
+      "zh": "（高估）",
+      "en": "(overvalued)"
+    },
+    {
+      "zh": "（指数）",
+      "en": "(index)"
+    },
+    {
+      "zh": "价格高于",
+      "en": "Price above"
+    },
+    {
+      "zh": "价格低于",
+      "en": "Price below"
+    },
+    {
+      "zh": "盈亏比例",
+      "en": "P&L ratio"
+    },
+    {
+      "zh": "组合偏离",
+      "en": "Portfolio drift"
+    },
+    {
+      "zh": "人工信号",
+      "en": "Manual signal"
+    },
+    {
+      "zh": "估值分位",
+      "en": "Valuation percentile"
+    },
+    {
+      "zh": "价格同步",
+      "en": "Price sync"
+    },
+    {
+      "zh": "提醒评估",
+      "en": "Alert evaluation"
+    },
+    {
+      "zh": "汇率同步",
+      "en": "FX sync"
+    },
+    {
+      "zh": "基础工具",
+      "en": "Basic utilities"
+    },
+    {
+      "zh": "未设目标",
+      "en": "No targets"
+    },
+    {
+      "zh": "配置正常",
+      "en": "Normal"
+    },
+    {
+      "zh": "账户设置",
+      "en": "Account settings"
+    },
+    {
+      "zh": "无权访问",
+      "en": "No access"
+    },
+    {
+      "zh": "系统设置",
+      "en": "System settings"
+    },
+    {
+      "zh": "全部交易",
+      "en": "All transactions"
+    },
+    {
+      "zh": "组合管理",
+      "en": "Portfolios"
+    },
+    {
+      "zh": "自选行情",
+      "en": "Watchlist"
+    },
+    {
+      "zh": "标的列表",
+      "en": "Instruments"
+    },
+    {
+      "zh": "提醒规则",
+      "en": "Alert rules"
+    },
+    {
+      "zh": "从未执行",
+      "en": "Never run"
+    },
+    {
+      "zh": "个月前",
+      "en": "months ago"
+    },
+    {
+      "zh": "股票类",
+      "en": "Equity class"
+    },
+    {
+      "zh": "债券类",
+      "en": "Bond class"
+    },
+    {
+      "zh": "黄金类",
+      "en": "Gold class"
+    },
+    {
+      "zh": "现金类",
+      "en": "Cash class"
+    },
+    {
+      "zh": "未分类",
+      "en": "Unclassified"
+    },
+    {
+      "zh": "项超阈",
+      "en": "over threshold"
+    },
+    {
+      "zh": "已到期",
+      "en": "Due"
+    },
+    {
+      "zh": "稳健",
+      "en": "Steady"
+    },
+    {
+      "zh": "长期",
+      "en": "Long-term"
+    },
+    {
+      "zh": "雪球",
+      "en": "Xueqiu"
+    },
+    {
+      "zh": "手动",
+      "en": "Manual"
+    },
+    {
+      "zh": "买入",
+      "en": "Buy"
+    },
+    {
+      "zh": "从未",
+      "en": "Never"
+    },
+    {
+      "zh": "今天",
+      "en": "Today"
+    },
+    {
+      "zh": "天前",
+      "en": "days ago"
+    },
+    {
+      "zh": "年前",
+      "en": "years ago"
+    },
+    {
+      "zh": "股票",
+      "en": "Equity"
+    },
+    {
+      "zh": "基金",
+      "en": "Fund"
+    },
+    {
+      "zh": "债券",
+      "en": "Bond"
+    },
+    {
+      "zh": "现金",
+      "en": "Cash"
+    },
+    {
+      "zh": "活钱",
+      "en": "Cash-flow"
+    },
+    {
+      "zh": "缺价",
+      "en": "Missing price"
+    },
+    {
+      "zh": "绝对",
+      "en": "Absolute"
+    },
+    {
+      "zh": "相对",
+      "en": "Relative"
+    },
+    {
+      "zh": "正常",
+      "en": "Normal"
+    },
+    {
+      "zh": "登录",
+      "en": "Sign in"
+    }
+  ],
+  "notes": [
+    "L558（CN-长钱 组合偏离 > 5%）、L562（沪深300 PE 分位 > 80%（高估））、L790（四态... > ...）、L993 / L997（title = parts[1]+' · ...）等行被 > 或 ASCII 引号切断，已按规则切条；被切掉的 > 5% 、>80% 、活跃代码部分不含中文，故不另立条目。",
+    "mode 字段的中文值 手动 按 MANUAL 的写法译为 Manual（与同字段的 AUTO 大小写风格一致），便于英文版保持枚举配对。",
+    "L612 的 USD ✓ CAD ✓ HKD ✓ 与 L639 的 data-demo=\"1\" 不含中文，未处理。",
+    "存在互相包含的短 key（绝对 / 相对 / 正常 / 未设目标 / 从未 / 今天 / 登录 / 账户设置 / 系统设置 / 价格历史 / 标的 / 项超阈 / 已到期 / 配置正常 等），需由替换脚本按 key 长度从长到短依次替换，否则短 key 会破坏包含它的长 key 所在位置。"
+  ]
+}

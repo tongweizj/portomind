@@ -22,7 +22,7 @@
     "mongodb"
   ],
   "author": "bezkoder",
-  "license": "ISC",
+  "license": "MIT",
   "dependencies": {
     "@portomind/shared": "*",
     "bcryptjs": "^3.0.3",

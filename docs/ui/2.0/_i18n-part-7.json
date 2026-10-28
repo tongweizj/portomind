@@ -1,0 +1,25 @@
+{
+  "range": "补漏",
+  "entries": [
+    {"zh": " 项超阈", "en": " items over threshold"},
+    {"zh": "超阈", "en": "over threshold"},
+    {"zh": " 的再平衡执行？将自动生成反向交易流水，之后可重做。", "en": "'s rebalance execution? Reverse transaction records will be generated automatically, and you can redo it afterwards."},
+    {"zh": " 笔 · 所属组合已由页面上下文锁定，无需手选", "en": " transactions · the owning portfolio is fixed by page context, no manual selection needed"},
+    {"zh": "所属组合已由页面上下文锁定，无需手选", "en": "the owning portfolio is fixed by page context, no manual selection needed"},
+    {"zh": "PortoMind · 产品原型 v2.0", "en": "PortoMind · Product Prototype v2.0"},
+
+    {"zh": "组合管理", "en": "Portfolios"},
+    {"zh": "未设目标", "en": "No targets"},
+    {"zh": "从未执行过再平衡", "en": "Never rebalanced"},
+    {"zh": "交易记录", "en": "Transactions"},
+    {"zh": "与", "en": " and "},
+
+    {"zh": ".length} 项资产", "en": ".length} instruments"},
+
+    {"zh": "CNY:'人民币', USD:'美元', CAD:'加元', HKD:'港币'", "en": "CNY:'Chinese Yuan', USD:'US Dollar', CAD:'Canadian Dollar', HKD:'Hong Kong Dollar'"}
+  ],
+  "notes": [
+    "本分片用于兜底：正则「最左匹配优先」，分片里带前导空格的短 key（如 ` 的`、 ` 项`）会抢在长 key 之前命中，把长句切碎。这里为被切碎的残余重新登记带前导空格的等价长 key。",
+    "`PortoMind · 产品原型 v2.0` 同时被 _apply-i18n.cjs 的头部硬替换处理，这里登记仅为消除未命中告警。"
+  ]
+}

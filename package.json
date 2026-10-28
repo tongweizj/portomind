@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "private": true,
   "description": "PortoMind — 自托管家庭投资组合管理（monorepo：client / server / cron-worker / shared）",
-  "license": "ISC",
+  "license": "MIT",
   "workspaces": [
     "shared",
     "server",

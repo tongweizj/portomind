@@ -87,7 +87,7 @@
 
 ## 项目根
 
-- [仓库 README](../README.md)
-- [中文说明（旧入口，已并入本索引）](./README.zh-CN.md)
+- [仓库 README（English）](../README.md) — 面向读者 / 招聘的项目说明（技术特性 + 截图画廊）
+- [中文说明 README.zh-CN](./README.zh-CN.md) — 与英文版一一对应，二者相互交叉引用；图片统一放 `docs/ui/en/`
 
 > 早期版本需求文件（requirements_*.md、需求清单.numbers 等）已被 PRD 取代，已于 2026-08-31 清理。

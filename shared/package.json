@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "private": true,
   "description": "PortoMind 共享内核：Mongoose 模型、业务引擎、行情适配器、交易日历与工具。server 与 cron-worker 的唯一实现来源。",
-  "license": "ISC",
+  "license": "MIT",
   "type": "commonjs",
   "main": "index.js",
   "dependencies": {
