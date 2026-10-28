@@ -9,7 +9,7 @@
 - **结案三处同步**：`git mv` → `complete/`、文件内 Status + Completion Record、索引与**全部**交叉引用；归档后必跑 docs 链接校验（`complete/` 深一层最易漏）。
 - 任务编号**立项才占号**（进 `active/` 才算）；FS 里不预写 `TASK-0xx`。
 - `docs/exec-plans/` 新文件常 untracked，`git commit -am` 会静默丢；提交前 `git ls-files` 确认。
-- 分支 `feature/TASK-<id>-<desc>`；commit `<type>(<scope>): <summary>` + body 附 `TASK-<id>`。
+- 分支 `feature/TASK-<id>-<desc>`；commit `<type>(<scope>): <summary>` + body 附 `TASK-<id>`。**commit message 一律英文**（2026-10-27 Max 明确要求；summary 与 body 全英文，中文解释留在文档里）。
 - 动手前 `git branch --show-current` + `git log --oneline -3 main`。**「任务完成」≠「已合并」**：结案前 `git merge-base --is-ancestor <sha> main` 验一次。
 - 文档欠账：`agents/REVIEWER.md` 空、`EXEC_PLAN_TEMPLATE.md` 0 字节、`EXECUTION_PLANS.md §3` 写 `completed/`（实为 `complete/`）。
 - **原型类任务（`docs/ui/2.0/*`）免 ExecPlan**（TASK-059/060/061 先例），但须独立 Reviewer 断言脚本复核。
