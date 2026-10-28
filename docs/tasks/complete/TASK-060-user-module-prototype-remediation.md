@@ -25,7 +25,7 @@
 `docs/product/specs/FS-authentication.md`（**`Approved`** v1.2；U1/U2/U3 三单元 + 逐单元 AC；`D8`~`D11` 即本卡裁决的落地）
 
 **Related Task:**  
-`docs/tasks/active/TASK-058-authentication-and-accounts.md`（U2 前端登录与账户页 / U3 管理员用户管理 —— 本卡的 A/M 组清单即这两单元的**视觉与交互前置**）
+`docs/tasks/complete/TASK-058-authentication-and-accounts.md`（U2 前端登录与账户页 / U3 管理员用户管理 —— 本卡的 A/M 组清单即这两单元的**视觉与交互前置**）
 
 **Related Design:**  
 `docs/ui/2.0/portomind-prototype.html`（**3092 行 · 合并后唯一的可走通原型**：全量产品 + 登录 / 账户设置（页内 Tab）/ 强制改密 / 403 四屏）· `docs/ui/2.0/portomind-auth-prototype.html`（**69 行 · 已退役为跳转壳**，见 §11）· `docs/ui/2.0/_audit-auth.cjs`（462 行 · 本卡断言脚本，合并后 51 条）· `docs/ui/README.md` §6

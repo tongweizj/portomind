@@ -3,7 +3,7 @@
 ## Metadata
 
 **Status:**  
-`REVIEWED`（2026-10-27 晚）—— **U1（后端认证内核）三轮复核 PASS；U2（前端登录 / 账户 / 守卫 / 401 / 顶栏下拉）+ U3（管理员系统设置页）已实施完成，独立 Reviewer 真实浏览器验收 28/28 PASS、代码复核无 BLOCKER/MAJOR**（三轮 E2E：19→25→28；失败全部先归因 Reviewer 脚本 bug/时序，未放宽 AC）。**待 Human 合入 `main` 后归档 `complete/`**。**发布约束：U1 与 U2 必须同批发布**（U1 单独上线 = 全站 401）
+`COMPLETED`（2026-10-28）—— **U1（后端认证内核）+ U2（前端登录 / 账户 / 守卫 / 401 / 顶栏下拉）+ U3（管理员系统设置页）全部实施并复核通过，本卡归档 `complete/`**。结案证据：U1 三轮复核 PASS（`211/0` + `77/0` + 真实 Mongo E2E 15/15）；U2/U3 四轮真实浏览器验收（19→25→28→28 PASS）+ 2026-10-28 对 `dd388ac` 全量复验（build 0 / `211-0` / `77-0` / eslint `0-0` / E2E 28/28 + 2 条负向对照成立，见 §12）；本轮结案独立复跑 `211-0` · `77-0` · build exit 0 · eslint `0-0`（见 §13）。**⚠️ 代码仍在分支 `feature/TASK-058-auth-kernel` = `dd388ac`，未合入 `main`**（`git merge-base --is-ancestor dd388ac main` = 否）—— 与 `TASK-054` 同样按「实现+复核完成即归档、合入单列」处理。**发布约束不变：U1 与 U2 必须同批发布**（U1 单独上线 = 全站 401）
 
 > ℹ️ **历史记录（2026-10-27 首次 U2 验收 `FAIL`）**：提交 `68f040c` 的 message 声称 `feat(client)` 已加 `/login` 与会话外壳，但 `client/` **零文件**（实为 TASK-059/060/061 结案 + 原型重导）——取证见 §10。U2/U3 已于同日晚按 `docs/exec-plans/active/TASK-058-authentication-client.md` 重新实施，实施与验收记录见 §11。
 
@@ -11,13 +11,13 @@
 `Critical`（P0 安全闸门。当前任何人访问 IP 即可看到全部家庭资产，且侧栏存在一个无 handler 的「退出登录」假按钮）
 
 **Owner:**  
-`Planner`（已交付）→ `Implementer`（U1 2026-10-27；U2/U3 由 Lead + `users-admin` 于 2026-10-27 晚实施）→ 独立 `Reviewer`（U1 三轮 PASS；U2/U3 `ui-verify` 真实浏览器 28/28 PASS）→ `Human`（待合入）
+`Planner`（已交付）→ `Implementer`（U1 2026-10-27；U2/U3 由 Lead + `users-admin` 于 2026-10-27 晚实施）→ 独立 `Reviewer`（U1 三轮 PASS；U2/U3 `ui-verify` 真实浏览器 28/28 PASS ×2）→ `Human`（**合入动作待执行**；卡已结案）
 
 **Created:**  
 `2026-10-26`
 
 **Updated:**  
-`2026-10-26`（立项 + 实码核查；同日 U1 ExecPlan 通过 Plan Review → `Approved`）· **`2026-10-27`（U1 实施完成 → `REVIEWED`；U2 首次验收 `FAIL`，见 §10；同日晚按 Human 指令「继续完成未完成代码」补 U2/U3 ExecPlan 并实施完成，独立验收 28/28 PASS → `REVIEWED`，见 §11）**
+`2026-10-26`（立项 + 实码核查；同日 U1 ExecPlan 通过 Plan Review → `Approved`）· `2026-10-27`（U1 实施完成 → `REVIEWED`；U2 首次验收 `FAIL`，见 §10；同日晚按 Human 指令「继续完成未完成代码」补 U2/U3 ExecPlan 并实施完成，独立验收 28/28 PASS → `REVIEWED`，见 §11）· **`2026-10-28`（第二轮全量复验 `dd388ac` PASS → `COMPLETED` 并归档，见 §12 / §13）**
 
 **Type:**  
 `Feature + Security`（`shared` + `server` + `client` 三端）
@@ -29,8 +29,8 @@
 `docs/architecture/adr/ADR-001-authentication.md`（`Accepted`，2026-10-26）
 
 **Execution Plan:**  
-U1 → `docs/exec-plans/active/TASK-058-authentication-kernel.md`（**`Approved` 2026-10-26**，§9 的 5 项实施裁决已全部确认；`Completed` 待归档）  
-U2 / U3 → `docs/exec-plans/active/TASK-058-authentication-client.md`（**`Approved` 2026-10-27**；授权依据＝Human 同日指令「检查完成了多少，把没有完成的代码继续完成」，范围严格等于 FS §6.2 / §6.3；实施记录见其 §11）
+U1 → [`docs/exec-plans/complete/TASK-058-authentication-kernel.md`](../../exec-plans/complete/TASK-058-authentication-kernel.md)（`Approved` 2026-10-26，§9 的 5 项实施裁决已全部确认；**`Completed`，2026-10-28 已归档**）  
+U2 / U3 → [`docs/exec-plans/complete/TASK-058-authentication-client.md`](../../exec-plans/complete/TASK-058-authentication-client.md)（`Approved` 2026-10-27；授权依据＝Human 同日指令「检查完成了多少，把没有完成的代码继续完成」，范围严格等于 FS §6.2 / §6.3；**`Completed`，2026-10-28 已归档**，实施记录见其 §11）
 
 **来源：**  
 Human 2026-10-26 直接立项（议题起点：「注册、登录算不算产品线」→ 结论：不是产品线，是 `PL-0 M0.2d` 的准入约束）
@@ -101,7 +101,7 @@ Human 2026-10-26 直接立项（议题起点：「注册、登录算不算产品
 
 ## 9. 实施裁决（2026-10-26，Human 采纳全部建议）
 
-明细与实施要点见 [ExecPlan §9](../../exec-plans/active/TASK-058-authentication-kernel.md)。摘要：
+明细与实施要点见 [ExecPlan §9](../../exec-plans/complete/TASK-058-authentication-kernel.md)。摘要：
 
 | # | 裁决 |
 |---|---|
@@ -200,7 +200,7 @@ Human 2026-10-26 直接立项（议题起点：「注册、登录算不算产品
 
 **结论：U2 / U3 已实施完成，独立 Reviewer 真实浏览器验收 28/28 PASS、代码复核无 BLOCKER/MAJOR（6 条 MINOR 不阻塞）。待 Human 合入 `main`（U1 + U2 必须同批）。**
 
-ExecPlan：[`docs/exec-plans/active/TASK-058-authentication-client.md`](../../exec-plans/active/TASK-058-authentication-client.md)（`Completed` 2026-10-27，实施记录见 §11、复核记录见 §12）。
+ExecPlan：[`docs/exec-plans/complete/TASK-058-authentication-client.md`](../../exec-plans/complete/TASK-058-authentication-client.md)（`Completed` 2026-10-27，**2026-10-28 随本卡归档**；实施记录见 §11、复核记录见 §12）。
 
 ### 11.1 交付（21 个文件：13 新增 / 8 修改）
 
@@ -254,3 +254,99 @@ D-1 强制改密态仍要求「当前密码」（服务端强校验，原型曾�
 - **MINOR（不阻塞，ExecPlan §12.4）**：强制改密成功后不回收登录时的 `next`；login `lastLoginAt` 毫秒差异；banner 不自动消失；强制态铃铛可点；`server/.env` 需本地同步 6600；仅 Chrome 验证。
 - **发布**：本分支现为 U1+U2 发布候选；**U1 与 U2 必须同批上线**。首次部署 `admin/admin` 首登强制改密；生产需配 `CORS_ORIGINS`（缺省 fail-fast）；开发态推荐 `VITE_API_URL` 留空走同源 proxy。
 - **合入后**：本卡 `git mv` → `complete/`，两份 ExecPlan 归档，并同步 `TASKS.md` / `readme`。
+
+---
+
+## 12. 第二轮独立复核（2026-10-28，Reviewer 全量复验 `dd388ac`）
+
+**结论：`PASS` — U2/U3 满足 FS §7 与卡内 §1 硬性项，可交 Human 合入（U1 + U2 必须同批）。** 与 §10 的关系：§10 判定针对的是提交 `68f040c`（当时确无 `client/` 代码，全量取证见 §10.7）；实施方随后以 `dd388ac` 补齐 U2/U3，本节为对**该提交**的独立复验，不推翻 §10 的方法论结论。
+
+### 12.1 复验对象与范围
+
+| 项 | 内容 |
+|---|---|
+| 提交 | `dd388ac feat(auth): implement client login, session guards and user management`（39 文件，+4461/−123） |
+| 工作区 | `git status` 空；`git diff --quiet HEAD` = 0（复验全程未改动实现代码） |
+| 范围 | 全量：提交内容 + 工作树 + 构建产物 + 真实浏览器端到端 |
+
+### 12.2 静态与回归（本轮独立复跑）
+
+| 项 | 命令 | 结果 |
+|---|---|---|
+| 构建 | `npm run build --workspace client` | **exit 0** |
+| Lint | `cd client && ../node_modules/.bin/eslint "src/**/*.{js,jsx}"` | **0 error / 0 warning** |
+| 服务端回归 | `npm run test:server` | **211 pass / 0 fail** |
+| Worker 回归 | `npm run test:worker` | **77 pass / 0 fail** |
+| 构建产物物理证据 | `grep -o` 检索 `client/dist/assets/*.js` | `auth/login` 2 · `auth/session` 2 · `mustChangePassword` 9 · `账户菜单` 3 · `无权访问用户管理` 1 · `设定新密码并进入` 1 —— 与 §10.7 的「零命中」形成正反对照 |
+
+### 12.3 真实浏览器端到端（本轮独立执行）
+
+- 命令：`node client/scripts/e2e-task-058-u2.mjs`（自起 server 8080 + vite dev 6600 + 本机 Chrome + 真实 Mongo 临时库 `portomind_u2_e2e`，脚本 finally 已 drop）
+- 结果：**`28/28 PASS`，EXIT=0**，`pageerror=0`，24 张截图
+- 关键观察值（摘）：`/login?next=%2Fportfolios` 深链回跳成功；错误密码 URL 不变（无重定向循环）；强制改密态下拉 4 项且「系统设置」`title=请先完成密码修改`；侧栏 `Dashboard/组合管理/今日行情/日志` 4 项无登出；member 下拉 3 项无「系统设置」；唯一启用 admin 的停用/降级 `title` 均给出原因；改密后另一会话下一次请求 401 → `/login?next=/portfolios`；停用账号文案「该账号已停用，请联系管理员」
+
+### 12.4 负向对照（证明断言可失败，非恒真）
+
+| # | 注入缺陷 | 期望 | 实测 | 还原 |
+|---|---|---|---|---|
+| N-1 | 删除 `utils/safeNext.js` 中 `//` 与 `/\` 的拒绝分支（开放重定向） | AC8 变红 | **27/28，AC8 FAIL** | `cp` 还原，md5 与提交一致 |
+| N-2 | `AppLayout` 的强制改密闸门改为 `false`（可跳过改密访问业务页） | AC4b 变红 | **25/28，AC4b/AC4d/AC9b FAIL** | `cp` 还原，`git diff --quiet HEAD` = 0 |
+
+两条对照说明：E2E 的安全类断言确实落在**运行时行为**上，不是形式断言。
+
+### 12.5 本轮新增发现（MINOR，不阻塞）
+
+| # | 级别 | 内容 |
+|---|---|---|
+| R-1 | MINOR | `login` 返回的 `lastLoginAt` 是**本次**登录时间（`markLogin` 刚落库），账户页标为「上次登录」，实测显示的就是刚刚；语义上更像「本次登录」。若要真「上次」，需在 `markLogin` **之前**取值。 |
+| R-2 | MINOR | E2E `AC5b` 的「成功提示」未真正断言（脚本记为「未捕获到提示文案，以会话状态为准」）—— 该条 AC 目前只验到会话状态，未验 UI 反馈。 |
+| R-3 | MINOR | `safeNext` 只拦 `/login`、`/login?`、`/login/` 三种形态，`/login/foo` 会放行（落到 `*` → `/portfolios`，无开放重定向风险，仅语义不严）。 |
+| R-4 | MINOR | 验收脚本由实施方一侧编写、由 Lead 会话执行（ExecPlan §12 已声明独立性受限）。本轮由 Reviewer 独立重跑 + 负向对照补强，结论可信度已提升，但**脚本本身仍是实现方资产**。 |
+| R-5 | MINOR | `RequireAuth` 在会话查询**网络失败**（非 401）时也按未登录处理，弱网下会闪回登录页；当前 `retry:false` 放大了该行为。 |
+
+### 12.6 放行与后续
+
+1. **可合入**：`feature/TASK-058-auth-kernel`（U1 `c571f91` + `dd388ac`）作为**同一批**发布候选；单独合入 U1 会造成全站 401，禁止。
+2. 合入后按 §11.5 收尾：本卡 `git mv` → `complete/`，两份 ExecPlan 归档，同步 `TASKS.md` / `readme` / 交叉引用。
+3. R-1 / R-3 / R-5 建议并入后续「认证体验优化」小任务；R-2 建议在下一轮 E2E 补断言。
+
+---
+
+## 13. 完成记录（Completion Record · 2026-10-28）
+
+**结论：`COMPLETED`。** U1 + U2 + U3 全部交付并通过独立复核，本卡归档 `complete/`，两份 ExecPlan 一并归档。**代码未合入 `main`**——与 `TASK-054` 同构：归档依据是「实现 + 独立复核完成」，合入与发布是 Human 的独立动作。
+
+### 13.1 结案前本轮独立复跑（不采信历史记录）
+
+| 项 | 命令 | 结果 |
+|---|---|---|
+| 服务端回归 | `LOG_DIR=$TEMP npm run test --workspace server` | **`tests 211` · `pass 211` · `fail 0`** |
+| Worker 回归 | `LOG_DIR=$TEMP npm run test --workspace cron-worker` | **`tests 77` · `pass 77` · `fail 0`** |
+| 前端构建 | `npm run build --workspace client` | **exit 0**，`✓ built in 3.72s`（969.59 kB / gzip 279.56 kB） |
+| 前端 Lint | `cd client && ../node_modules/.bin/eslint "src/**/*.{js,jsx}"` | **exit 0，0 error / 0 warning** |
+| 合并状态 | `git merge-base --is-ancestor dd388ac main` | **否（未合入）** —— `main` = `0d95319`，分支 = `dd388ac` |
+
+产物存在性核对（非仅看日志）：`shared/models/{user,session}.js` · `shared/services/{user,session}.service.js` · `server/middleware/{auth,loginThrottle}.js` · `server/routes/{auth,user}.routes.js` · `server/test/helpers/auth.js` · `client/src/components/auth/{AuthProvider,RequireAuth}.jsx` · `client/src/pages/{Login,Account,AccountUsers}.jsx` · `client/src/utils/safeNext.js` · `client/src/services/auth.service.js` · `client/scripts/e2e-task-058-u2.mjs` 全部存在；`server/package.json` 含 `bcryptjs ^3.0.3` + `cookie-parser ^1.4.7`；`client/src/router.jsx` 的 `/login` 公开 + `RequireAuth` 包裹其余路由均已在位。
+
+> 真实浏览器 E2E（`28/28`）与两条负向对照未在本轮重跑——今天（2026-10-28）Reviewer 已对**同一提交 `dd388ac`**独立执行并记录于 §12.3 / §12.4，工作树自那之后未改动实现代码（`git status` 中仅文档改动）。
+
+### 13.2 归档动作（三处同步）
+
+| # | 动作 | 结果 |
+|---|---|---|
+| 1 | 本卡 `git mv` → `docs/tasks/complete/` | ✅ |
+| 2 | `docs/exec-plans/active/TASK-058-authentication-kernel.md` → `complete/` | ✅ |
+| 3 | `docs/exec-plans/active/TASK-058-authentication-client.md` → `complete/` | ✅ |
+| 4 | 卡内 `Status` → `COMPLETED`；本 §13 为完成记录 | ✅ |
+| 5 | `docs/tasks/TASKS.md`：Active 段移除 058、Done 表新增一行；「`Approved` ExecPlan 现有 2 份」改写为已归档 | ✅ |
+| 6 | `docs/readme.md`：058 由「活跃任务」移入「已完成任务」 | ✅ |
+| 7 | 交叉引用：`ADR-001` 的 ExecPlan 链接、`CLIENT.md` / `PL-0` 中「U2/U3 待做 / 尚未上线」的陈旧陈述 | ✅ |
+
+### 13.3 遗留（不阻断结案，均已有归属）
+
+| # | 项 | 处置 |
+|---|---|---|
+| 1 | **合入 `main` 与发布** | Human 动作。U1 `c571f91` + U2/U3 `dd388ac` **必须同批**；单独合 U1 = 全站 401 |
+| 2 | `R-1`~`R-5`（§12.5，5 条 MINOR） | R-1/R-3/R-5 建议并入后续「认证体验优化」小任务；R-2 在下一轮 E2E 补「成功提示」断言 |
+| 3 | 真实前端仅 Chrome，未覆盖 Firefox/WebKit、多实例与反代部署 | 已记为已知限制（U2 ExecPlan §12.4-6） |
+| 4 | 限速为单实例内存 `Map` | 多实例部署时须改 Mongo，已在 U1 ExecPlan §4.5 登记 |

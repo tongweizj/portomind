@@ -4,11 +4,11 @@
 
 Current status:
 
-`Completed`（2026-10-27）—— 实施完成（§11）；独立 Reviewer 真实浏览器验收 **28/28 PASS**、EXIT=0，代码复核 **PASS（无 BLOCKER / 无 MAJOR，6 条 MINOR 不阻塞）**（§12）；**待 Human 合入 `main`**（U1+U2 必须同批）。**授权依据**：Human 2026-10-27 直接指令「请阅读 task58 任务卡以及相关的文档！检查当前完成了多少，把没有完成的代码继续完成」。本计划范围严格等于 `FS-authentication.md §6.2 / §6.3` 与任务卡 `§3` 的 U2 / U3，不含任何新增产品裁决；U1（`docs/exec-plans/active/TASK-058-authentication-kernel.md`）判定不变。
+`Completed`（2026-10-27 实施完成；**2026-10-28 随 `TASK-058` 结案归档 `complete/`**）—— 实施完成（§11）；独立 Reviewer 真实浏览器验收 **28/28 PASS**、EXIT=0，代码复核 **PASS（无 BLOCKER / 无 MAJOR，6 条 MINOR 不阻塞）**（§12），2026-10-28 对 `dd388ac` 全量复验再次 28/28 + 2 条负向对照成立（见任务卡 §12）；**代码仍在分支 `dd388ac`，未合入 `main`**（合入属 Human 动作；U1+U2 必须同批）。**授权依据**：Human 2026-10-27 直接指令「请阅读 task58 任务卡以及相关的文档！检查当前完成了多少，把没有完成的代码继续完成」。本计划范围严格等于 `FS-authentication.md §6.2 / §6.3` 与任务卡 `§3` 的 U2 / U3，不含任何新增产品裁决；U1（`docs/exec-plans/complete/TASK-058-authentication-kernel.md`）判定不变。
 
 Owner:
 
-`Planner`（2026-10-27）→ `Implementer`（Lead + `users-admin`）→ 独立 `Reviewer`（`ui-verify`，真实浏览器验收 + 代码复核）→ `Human`（待合入）
+`Planner`（2026-10-27）→ `Implementer`（Lead + `users-admin`）→ 独立 `Reviewer`（`ui-verify`，真实浏览器验收 + 代码复核）→ `Human`（**合入动作待执行**；本计划已 `Completed` 归档）
 
 Priority:
 
@@ -16,7 +16,7 @@ Priority:
 
 Related task:
 
-`docs/tasks/active/TASK-058-authentication-and-accounts.md`
+`docs/tasks/complete/TASK-058-authentication-and-accounts.md`
 
 Related spec / ADR:
 

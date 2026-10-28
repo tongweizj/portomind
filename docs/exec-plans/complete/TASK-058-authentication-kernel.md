@@ -4,7 +4,7 @@
 
 Current status:
 
-`Completed`（2026-10-27：W1–W9 实施 + 验证完成；独立 Reviewer **三轮复核 PASS**（第一轮 PASS WITH FINDINGS → 3 MAJOR + 8 MINOR 全整改；第二/三轮复检无 BLOCKER/MAJOR/MINOR 遗留）。**待 Human 合入 `main` 后归档 `complete/`**）—— 实施记录见 §11；发布约束不变：**U1 与 U2 必须同批发布**
+`Completed`（2026-10-27：W1–W9 实施 + 验证完成；独立 Reviewer **三轮复核 PASS**（第一轮 PASS WITH FINDINGS → 3 MAJOR + 8 MINOR 全整改；第二/三轮复检无 BLOCKER/MAJOR/MINOR 遗留）。**2026-10-28 随 `TASK-058` 结案归档 `complete/`**；代码仍在分支 `dd388ac`，未合入 `main`（合入属 Human 动作）—— 实施记录见 §11；发布约束不变：**U1 与 U2 必须同批发布**
 
 Owner:
 
@@ -16,7 +16,7 @@ Priority:
 
 Related task:
 
-`TASK-058`（`docs/tasks/active/TASK-058-authentication-and-accounts.md`）
+`TASK-058`（`docs/tasks/complete/TASK-058-authentication-and-accounts.md`）
 
 Related spec / ADR:
 

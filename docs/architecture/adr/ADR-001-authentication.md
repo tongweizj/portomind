@@ -18,7 +18,8 @@ Related Task:
 
 Related ExecPlan:
 
-`docs/exec-plans/active/TASK-058-authentication-kernel.md`（U1，`Approved` 2026-10-26）
+`docs/exec-plans/complete/TASK-058-authentication-kernel.md`（U1，`Approved` 2026-10-26 · `Completed` 2026-10-28 已归档）  
+`docs/exec-plans/complete/TASK-058-authentication-client.md`（U2/U3，`Approved` 2026-10-27 · `Completed` 2026-10-28 已归档）
 
 Supersedes:
 

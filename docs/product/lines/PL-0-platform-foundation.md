@@ -2,7 +2,7 @@
 
 > 版本：v1.7 · 日期：2026-10-26
 > 归属：[PRODUCT_LINES.md](../PRODUCT_LINES.md)「产品线 INDEX」中 **PL-0** 的明细子文件
-> v1.7 修订（**M0.2d 认证形态裁决**）：Human 2026-10-26 裁决账号与访问控制的产品形态（单租户多账号 / `admin`+`member` / admin 建号无自助注册 / 只停用不删除 / 首登强制改密 / 会话存 Mongo），已写成 [FS-authentication](../specs/FS-authentication.md) + [ADR-001](../../architecture/adr/ADR-001-authentication.md) + [TASK-058](../../tasks/active/TASK-058-authentication-and-accounts.md)。本文件同步两条判定的事实描述：`M0.2c` 补「`CORS_ORIGINS` 读了不生效」的准确成因、`M0.2d` 由「公网前完成认证」细化为已裁决形态。**优先级未变（两者仍为 P0）**。
+> v1.7 修订（**M0.2d 认证形态裁决**）：Human 2026-10-26 裁决账号与访问控制的产品形态（单租户多账号 / `admin`+`member` / admin 建号无自助注册 / 只停用不删除 / 首登强制改密 / 会话存 Mongo），已写成 [FS-authentication](../specs/FS-authentication.md) + [ADR-001](../../architecture/adr/ADR-001-authentication.md) + [TASK-058](../../tasks/complete/TASK-058-authentication-and-accounts.md)。本文件同步两条判定的事实描述：`M0.2c` 补「`CORS_ORIGINS` 读了不生效」的准确成因、`M0.2d` 由「公网前完成认证」细化为已裁决形态。**优先级未变（两者仍为 P0）**。
 > v1.6 修订（**内容迁移批次 3/3：删除副本，本文件回归产品文档**）：按 [DOCS.md §1](../../standards/DOCS.md)（`product/` 不放实现细节）与 §2（每主题只在一处详述）删除全部**已在他处详述或被新文档取代**的内容——§6.1 调研方法、§6.2 运行时形态表（→ [DEPLOYMENT.md §1](../../manual/DEPLOYMENT.md)）、§6.4 调度与日历机制（→ [CRON_WORKER_DEV.md](../../dev/CRON_WORKER_DEV.md)）、§6.5 运维横切（→ [SERVER.md](../../manual/SERVER.md)）、§7.1 API 总表（→ [API_CONTRACT.md](../../dev/API_CONTRACT.md)，已是超集）、§7.2 数据模型（→ [DATA_MODEL.md](../../dev/DATA_MODEL.md)）、§7.3 路由与组件（→ [CLIENT_DEV.md](../../dev/CLIENT_DEV.md)）、§7.4 业务规则速查（→ [CLIENT.md §5](../../manual/CLIENT.md)）、§7.5 需求编码索引（与 §6 编码对照重复，细粒度归 [PRD.md](../specs/PRD.md)）、§8.2 死代码清单（→ [CLIENT_DEV.md §2](../../dev/CLIENT_DEV.md)）、§8.3 已关闭的文档争议。§5 由「功能点 + 实现入口」压成**能力级清单**。**全部判定与优先级一字未改**；删除项的落点均已在文内给出链接。518 → 197 行（实测）。
 > v1.5 修订（**批次 2/3：技术栈与外部集成迁入 ARCHITECTURE**）：[`ARCHITECTURE.md`](../../architecture/ARCHITECTURE.md) 原为未填充的通用英文模板（含 PostgreSQL / Prisma / OAuth / Teams 等本项目不存在的设定），已按实际代码重写为 v2.0；§6.2 的两张表**整表迁出并删除本地副本**，迁移时修正 3 处事实错误（东方财富 `push2`+`push2delay` 主备对；天天基金真实 API 是 `api.fund.eastmoney.com/f10/lsjz`；MongoDB 由 `MONGO_URI` 决定、非本地内嵌），并补记「`shared/` 与 `client/` 无独立测试」。
 > v1.4 修订（**批次 1/3：先建后删**）：新建 [`dev/DATA_MODEL.md`](../../dev/DATA_MODEL.md) 与 [`dev/CLIENT_DEV.md`](../../dev/CLIENT_DEV.md)，两位是**扩展版而非复制**（均先与源码对账，并补入 PL-0 缺的内容）。当时仅对旧副本加「已迁出」标注，删除动作即本轮 v1.6。
@@ -35,11 +35,11 @@
 |---|---|---|
 | 功能覆盖 | 中 | 调度 / 防重 / 日历 / 容错 / 可观测性 / 设计 token 均具备 |
 | 用户体验 | — | 面向自持运维者而非终端用户 |
-| 数据可信 | 中 | ✅ 双份调度已收口（TASK-005）；✅ 枚举降为两份；✅ 认证 + CORS 已闭环（TASK-058 U1，2026-10-27）；余：前端登录/账户页（U2/U3）未上线 |
+| 数据可信 | 中 | ✅ 双份调度已收口（TASK-005）；✅ 枚举降为两份；✅ 认证 + CORS 已闭环（TASK-058 U1+U2+U3，2026-10-28 结案）；余：代码待合入 `main` |
 
 **主要短板**：
 
-① ✅ ~~无认证授权 + CORS 开放~~ 已闭环（TASK-058 U1：后端认证内核 + CORS 白名单；前端 U2/U3 待做，**U1 不得单独发布**）；
+① ✅ ~~无认证授权 + CORS 开放~~ 已闭环（TASK-058 U1 后端认证内核 + CORS 白名单，U2/U3 前端登录/账户/用户管理页，2026-10-28 结案；**U1 与 U2 必须同批发布**，代码待合入 `main`）；
 
 ② 缺数据质量看板；
 
@@ -73,7 +73,7 @@
 | M0.2a | 统一响应 / traceId / 脱敏 | 保留 | 横切能力齐全，可观测性到位 | — | — |
 | M0.2b | 日志查看页 | **修改** | 手写 `useState/useEffect`，与全站 Query 数据层不一致 | 统一到 Query 数据层（与前端数据层合并一并处理） | P2 |
 | M0.2c | CORS `origin:true` | ✅ **已完成**（TASK-058 U1，2026-10-27） | 已改为白名单 + `credentials:true`（`CORS_ORIGINS` 生效），生产未配 `CORS_ORIGINS` 启动 fail-fast；开发态有本地默认来源 | 已完成 | ~~P0~~ 已闭环 |
-| M0.2d | 无认证授权 | ✅ **后端已实现**（TASK-058 U1，2026-10-27；U2/U3 待做） | 已落地：单租户多账号（`User`/`Session`）+ `admin`/`member` 两角色 + 服务端会话（Mongo，绝对 7 天 TTL）+ 首登强制改密 + 默认 `admin/admin` seed + 登录限速 + 全部业务端点 401 闸门。**2026-10-26 裁决**：无自助注册、用户只停用不删除、不加 `tenantId` | 前端 `/login`、`/account`、`/account/users` 与 401 拦截由 U2/U3 实施（[FS-authentication](../specs/FS-authentication.md)）；**U1 与 U2 必须同批发布** | **P0**（公网前置；后端已闭环） |
+| M0.2d | 无认证授权 | ✅ **已完成**（TASK-058 U1+U2+U3，2026-10-28 结案） | 已落地：单租户多账号（`User`/`Session`）+ `admin`/`member` 两角色 + 服务端会话（Mongo，绝对 7 天 TTL）+ 首登强制改密 + 默认 `admin/admin` seed + 登录限速 + 全部业务端点 401 闸门 + 前端 `/login`、`/account`、`/account/users` 与 401 拦截、顶栏头像下拉（账户设置/系统设置/提醒规则/退出登录，侧栏 5→4）。**2026-10-26 裁决**：无自助注册、用户只停用不删除、不加 `tenantId` | 见 [FS-authentication](../specs/FS-authentication.md) 与 [TASK-058 完成记录](../../tasks/complete/TASK-058-authentication-and-accounts.md)；**U1 与 U2 必须同批发布**，代码仍在分支 `dd388ac` 待合入 `main` | **P0**（公网前置；已闭环） |
 | M0.3a | Design token | 保留 | 主色 / 涨跌色等已固化，语义一致 | — | — |
 | M0.3b | 双轨样式 | **合并** | 内联 token style 与 Tailwind 两套并存，长期维护成本高 | 明确单一主路径（建议 token + 组件封装），逐步收敛 | P2 |
 | M0.3c | 通用状态组件 | 保留 | DataState 三态全站复用 | — | — |
