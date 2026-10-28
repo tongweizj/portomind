@@ -1,4 +1,8 @@
 export const ROUTE_PATTERNS = Object.freeze({
+  // TASK-058 U2/U3：认证与账户（/login 不套 AppLayout；/account/users 是独立管理页）
+  LOGIN: '/login',
+  ACCOUNT: '/account',
+  ACCOUNT_USERS: '/account/users',
   PORTFOLIO_LIST: '/portfolios',
   PORTFOLIO_NEW: '/portfolios/new',
   // ⚠️ 路由歧义约束（TASK-044 / FS §4.2 / AC4）：
@@ -16,6 +20,9 @@ export const ROUTE_PATTERNS = Object.freeze({
 });
 
 export const ROUTES = Object.freeze({
+  LOGIN: ROUTE_PATTERNS.LOGIN,
+  ACCOUNT: ROUTE_PATTERNS.ACCOUNT,
+  ACCOUNT_USERS: ROUTE_PATTERNS.ACCOUNT_USERS,
   PORTFOLIO_LIST: ROUTE_PATTERNS.PORTFOLIO_LIST,
   PORTFOLIO_NEW: ROUTE_PATTERNS.PORTFOLIO_NEW,
   // 「全部交易」跨组合聚合页（只读）

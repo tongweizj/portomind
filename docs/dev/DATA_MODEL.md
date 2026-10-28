@@ -39,6 +39,8 @@ const Asset = require('@portomind/shared/models/asset');
 | **AlertEvent** | 提醒事件（审计，不可删） | 无（三条查询索引） | [PL-5](../product/lines/PL-5-alerting.md) |
 | **FxRate** | 外币兑 CNY 汇率 | `{currency, date}` | [PL-6](../product/lines/PL-6-household.md) |
 | **TaskRun** | 定时任务运行记录 | `{taskName, runKey}` | [PL-0](../product/lines/PL-0-platform-foundation.md) |
+| **User** | 登录账号（单租户多账号；`admin`/`member`） | `username` | [PL-0](../product/lines/PL-0-platform-foundation.md)（认证内核） |
+| **Session** | 服务端会话（绝对 7 天 TTL，存 Mongo） | `sid` | [PL-0](../product/lines/PL-0-platform-foundation.md)（认证内核） |
 
 ---
 
@@ -284,6 +286,38 @@ AlertRule ──_id──> AlertEvent.ruleId（**可空**：再平衡通知没�
 - 索引：`{taskName: 1, runKey: 1}` **unique**（两层防重的第二层）；`{startedAt: -1, taskName: 1}`（按时间倒序巡检）。
 - **语义边界**：`successCount` 计的是「处理动作调用成功」，**不等于「有新数据入库」**——见 §5.6。
 - 契约细节（runKey 构造、四态含义、退出码）的唯一归属是 [CRON_WORKER_DEV.md §5](./CRON_WORKER_DEV.md)，此处不重复。
+
+---
+
+### 4.11 User（`shared/models/user.js`，TASK-058 U1）
+
+| 字段 | 定义 |
+|---|---|
+| `username` | String，required，unique，**lowercase**，trim，3–32；`match: /^[a-z0-9][a-z0-9_.-]{2,31}$/`（ED-4：登录时同样先归一化） |
+| `passwordHash` | String，required，**`select:false`**（只有登录校验/改密/重置显式 `select('+passwordHash')`）；bcryptjs cost 10 |
+| `role` | String，enum `admin`/`member`，= `member` |
+| `active` | Boolean，= `true`（用户只停用不删除，FS NG8） |
+| `mustChangePassword` | Boolean，= `false`；首部署 seed / 管理员建号 / 重置密码后为 `true`，硬拦截业务端点（403 `PASSWORD_CHANGE_REQUIRED`） |
+| `lastLoginAt` | Date，= `null`（登录成功更新；本期唯一审计字段） |
+| `createdAt` / `updatedAt` | `timestamps: true` |
+
+- 索引：`{username: 1}` **unique**。
+- 不变量：任意时刻至少一个 `active=true && role='admin'`；停用/降级唯一 admin → `409 LAST_ADMIN_PROTECTED`；管理员不能停用自己（`409 CANNOT_DEACTIVATE_SELF`），不能重置自己密码（`409 SELF_RESET_FORBIDDEN`，D9）。
+- 业务模型**零改动**：账号与数据归属无关，不加 `ownerId`/`tenantId`（FS NG2）。
+
+### 4.12 Session（`shared/models/session.js`，TASK-058 U1）
+
+| 字段 | 定义 |
+|---|---|
+| `sid` | String，required，unique（服务端生成 32 字节随机数 base64url，即 cookie `pm_sid`） |
+| `userId` | ObjectId ref `User`，required，index |
+| `createdAt` | Date，= `Date.now`，**`expires: SESSION_TTL_DAYS*86400`**（全仓首个 TTL 索引，绝对过期；ED-3） |
+| `lastSeenAt` | Date，= `Date.now`（**仅审计，不续期**） |
+| `ip` / `ua` | String，= `null`（ua 截断 200） |
+
+- 索引：`{sid:1}` unique；`{userId:1}`；`{createdAt:1}` TTL（Mongo 清理，最长延迟约 60s）。
+- 停用用户 / 重置密码 / 本人改密（保留当前会话）→ `Session.deleteMany({userId})` / `{userId, sid:{$ne:current}}`；登出删除当前 `sid`。
+- Cookie：`httpOnly` + `SameSite=Lax` + `Path=/` + 生产 `Secure` + `maxAge=TTL`（`COOKIE_SECURE` 可覆盖）。
 
 ---
 

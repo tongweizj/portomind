@@ -3,7 +3,8 @@
 ## Metadata
 
 **Status:**  
-`FIXES APPLIED — F1~F3 已修（2026-10-27 15:12），待 REVIEWER 确认后 APPROVED 归档`（2026-10-27 立项 → UI agent 实施 → 独立 Reviewer 复核：结构层 AC1~AC11 全过 + `F4` 已裁决落实，遗留 `F1`~`F3` → 同日执行方修复并自测（专项 `_audit-cron-board-f13.cjs` 23/23；Reviewer 脚本原样重跑 44/44；回归 37/37 + 59/59）。修复明细见 §12；按 §11.4 预授权，Reviewer 确认后直接 `APPROVED` + `git mv` 归档，无需再开一轮）
+`COMPLETED`（2026-10-27）
+`FIXES APPLIED`（F1~F3 已修，15:12）→ **按 §11.4 预授权结案**：F1~F3 由执行方修复并写专项脚本 `_audit-cron-f13.cjs`（23/23），Reviewer 脚本 `_audit-cron-board.cjs` 原样重跑 **44/44**，回归 `_audit.cjs` 48/48 + `_audit-auth.cjs` 59/59 —— 三项独立证据齐备，未再开一轮复核。`F4`（Human 裁决「更彻底」）已落实；`F5`（资产基数三处）与 `F6`（卡内行号漂移）为记录项，不阻断。完成记录见 §13。
 
 **Priority:**  
 `High`（P0 Must Have 的可视化落地；是 `FS-cron-worker-status-board` 在原型层的唯一入口，下游 C-03/C-06/C-07 行为均挂载其上）
@@ -424,7 +425,7 @@ L601 `'缺口：000191、510510（无 launchDate，跳过 1）'` → 易被读�
 
 ### 12.2 验证
 
-- 新增执行方专项脚本 **`_audit-cron-board-f13.cjs`（23/23 PASS）**：核心是 **F1-a 回归钉死——「从详情页 CN-稳钱（FAILED）行点『查看原始日志』，任务日志过滤结果仍是 FAILED + SYMBOL_NOT_FOUND」**；另覆盖价格/完整性/提醒/CA-长钱逐项对齐、四态着色、四态筛选真实生效、服务器日志三处数字、F2 间距（getBoundingClientRect 实测）、F3 文案正反两面。不动 Reviewer 的 `_audit-cron-board.cjs`。
+- 新增执行方专项脚本 **`_audit-cron-f13.cjs`（23/23 PASS）**：核心是 **F1-a 回归钉死——「从详情页 CN-稳钱（FAILED）行点『查看原始日志』，任务日志过滤结果仍是 FAILED + SYMBOL_NOT_FOUND」**；另覆盖价格/完整性/提醒/CA-长钱逐项对齐、四态着色、四态筛选真实生效、服务器日志三处数字、F2 间距（getBoundingClientRect 实测）、F3 文案正反两面。不动 Reviewer 的 `_audit-cron-board.cjs`。
 - Reviewer 脚本原样重跑 **`_audit-cron-board.cjs` 44/44 PASS**；回归 `_audit.cjs` 37/37、`_audit-auth.cjs` 59/59。
 - 截图：`_audit-cron/tasklog-f13.png`（四态任务日志）、`_audit-cron/rebalance-f13.png`（F2 间距）。
 
@@ -435,3 +436,35 @@ L601 `'缺口：000191、510510（无 launchDate，跳过 1）'` → 易被读�
 ### 12.4 结论
 
 F1~F3 全部修复并自测通过；按 §11.4 预授权，**待 Reviewer 确认后即可置 `APPROVED` 并 `git mv` 至 `complete/`**（本执行方不自行归档）。
+
+---
+
+## 13. 完成记录（2026-10-27 结案）
+
+### 13.1 结案依据（不采信自述，只认独立重跑）
+
+| 证据 | 结果 |
+|---|---|
+| `_audit-cron-board.cjs`（Reviewer 脚本，**原样重跑**） | **44/44 PASS · 0 FAIL** |
+| `_audit-cron-f13.cjs`（执行方专项，核心是 F1-a 回归钉死） | **23/23 PASS · 0 FAIL** |
+| 回归 `_audit.cjs`（TASK-059 原型整改） | 48/48 PASS |
+| 回归 `_audit-auth.cjs`（TASK-060 用户模块） | 59/59 PASS |
+| 截图 | `_audit-cron/board.png` · `rebalance.png` · `server-log.png` · `tasklog-f13.png` · `rebalance-f13.png` |
+
+### 13.2 交付物
+
+| 落点 | 内容 |
+|---|---|
+| `docs/ui/2.0/portomind-prototype.html` | `S.logs.tab` 默认 `board`；`CRON_STATUS` mock（5 任务 + 3 组合逐组合结果）；`vLogs()` 三段 tab（任务运行看板 / 任务日志 / 服务器日志）+ 总览条 + 5 卡网格 + 四态图例 + 手动「↻ 刷新」；`vRebalanceBoard()` 独立子路由 `#/logs/rebalance`（4 筛选器 + 8 列只读表 + 只读声明 + TASK-057 契约降级注记）；`.cron-*` / `.pbar` / `.cron-ro` / `.crumbs` 样式 |
+| `docs/ui/2.0/_audit-cron-board.cjs` | 44 条断言（AC1~AC11 + OQ8 深链 + R-3 边界 + AC9 负向对照 + AC10 token 实测） |
+| `docs/ui/2.0/_audit-cron-f13.cjs` | 23 条 F1~F3 专项断言 |
+| 侧栏 | 「日志」入口未动（OQ1 / AC11）；`/logs` 全频道只读，无执行/撤销/重做/触发/编辑阈值控件 |
+
+### 13.3 遗留（不阻断，已指派去处）
+
+| 项 | 去处 |
+|---|---|
+| 真实 `client/src` 看板实现 | `TASK-053`（tab 骨架）/ `TASK-055`（价格数据态）/ `TASK-056`（状态色）/ `TASK-057`（数据契约）；本卡交付的 tab key（`board/task/server`）与深链格式为其交互口径参考 |
+| `contractReady=false` 时的降级形态（数值 `null`） | 原型 mock 全量可算、未演示；实现侧按 `FS §4.5.2` 处理 |
+| 价格卡副行「运行态 SUCCEEDED」vs 任务日志「PARTIAL」的枚举粒度差 | 见 §12.3；数字一致，仅粒度不同，未擅自统一（会改动 Reviewer 断言口径） |
+| `F5` 资产基数三处不齐（40 / 43 / 生产 44） | 记录项，随真实数据落地时统一 |

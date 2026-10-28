@@ -137,12 +137,12 @@
   {
     "name": "U-06 大类目标 60/40 vs 实际 80/20 → 非零偏离且判超阈",
     "ok": true,
-    "detail": "{\"rows\":[{\"name\":\"股票类\",\"target\":60,\"actual\":78.33,\"abs\":18.33,\"flag\":\"绝对+相对\"},{\"name\":\"债券类\",\"target\":40,\"actual\":0,\"abs\":-40,\"flag\":\"绝对+相对\"},{\"name\":\"黄金类\",\"target\":0,\"actual\":21.67,\"abs\":21.67,\"flag\":\"绝对\"},{\"name\":\"现金类\",\"target\":0,\"actual\":0,\"abs\":0,\"flag\":\"正常\"}],\"hasNonZero\":true,\"overN\":3,\"kind\":\"over\",\"flaggedClasses\":3,\"zeroTargetZeroActual\":\"正常\"}"
+    "detail": "{\"rows\":[{\"name\":\"股票类\",\"target\":60,\"actual\":78.33,\"abs\":18.33,\"flag\":\"绝对+相对\"},{\"name\":\"债券类\",\"target\":40,\"actual\":0,\"abs\":-40,\"flag\":\"绝对+相对\"},{\"name\":\"黄金类\",\"target\":0,\"actual\":21.67,\"abs\":21.67,\"flag\":\"绝对\"},{\"name\":\"现金类\",\"target\":0,\"actual\":0,\"abs\":0,\"flag\":\"正常\"}],\"hasNonZero\":true,\"overN\":4,\"kind\":\"over\",\"flaggedClasses\":3,\"zeroTargetZeroActual\":\"正常\"}"
   },
   {
-    "name": "U-06 overN 与展示口径一致（大类模式数类）",
+    "name": "U-06 overN = 超标「标的」数（FS B8 量纲）；大类模式表内另有类数，两者允许不等",
     "ok": true,
-    "detail": "overN=3 flagged=3"
+    "detail": "overN=4 flaggedClasses=3"
   },
   {
     "name": "U-06 目标 0 且实际 0 的类不误报（相对偏离无意义）",
@@ -178,6 +178,61 @@
     "name": "U-17 缺价行 → 偏离「—」且表尾提示，总市值不被污染",
     "ok": true,
     "detail": "{\"flag\":\"缺价\",\"abs\":null,\"footer\":true,\"mvOk\":true}"
+  },
+  {
+    "name": "V-1a 全缺价 → 「无法估值」（不得报「配置正常」）",
+    "ok": true,
+    "detail": "{\"kind\":\"unvaluable\",\"label\":\"无法估值\",\"kpiNormal\":false,\"kpi\":\"再平衡状态无法估值全部持仓缺最新价，偏离不可判定\"}"
+  },
+  {
+    "name": "V-1b 部分缺价 → 「部分缺价」且不出现「N 项超阈」",
+    "ok": true,
+    "detail": "{\"kind\":\"missing\",\"label\":\"部分缺价\",\"missing\":1,\"overChip\":false,\"chip\":true}"
+  },
+  {
+    "name": "V-2 「N 条未读」点击后用户可见结果变化（下拉生效 + DOM 重绘）",
+    "ok": true,
+    "detail": "{\"selVal\":\"cn-long\",\"redrawn\":true}"
+  },
+  {
+    "name": "V-4 到期文案用「已达 N 天（阈值 M 天）」，不再出现「N 天 > 阈值 N 天」",
+    "ok": true,
+    "detail": "{\"txt\":\"再平衡状态已到期已达 20 天（阈值 20 天）\",\"bad\":false,\"good\":true}"
+  },
+  {
+    "name": "V-5 目标=实际时绝对偏离不产生「-0.0」",
+    "ok": true,
+    "detail": "{\"negZero\":0,\"renderedNegZero\":false}"
+  },
+  {
+    "name": "VI-1 Topbar 与页内标题不同名（组合总览/组合列表/行情/提醒规则 四屏）",
+    "ok": true,
+    "detail": "[{\"h\":\"#/portfolios/view/cn-long/overview\",\"tb\":\"组合管理 · 总览\",\"ph\":\"CN-长钱\",\"same\":false},{\"h\":\"#/portfolios\",\"tb\":\"组合管理\",\"ph\":\"我的组合 3 个组合\",\"same\":false},{\"h\":\"#/prices\",\"tb\":\"行情数据\",\"ph\":\"自选行情\",\"same\":false},{\"h\":\"#/alerts\",\"tb\":\"提醒\",\"ph\":\"提醒规则\",\"same\":false}]"
+  },
+  {
+    "name": "VI-2 非总览 Tab 用单行身份条，表格进入首屏（< 350px）",
+    "ok": true,
+    "detail": "{\"slim\":1,\"firstTableY\":284,\"hasBigCard\":0}"
+  },
+  {
+    "name": "VI-3 「最近交易」表有完整表头（6 列）",
+    "ok": true,
+    "detail": "{\"ths\":6}"
+  },
+  {
+    "name": "VI-6 交易记录 Tab 恰 1 个主按钮（无同义双入口）",
+    "ok": true,
+    "detail": "[\"＋ 添加交易\"]"
+  },
+  {
+    "name": "VI-23 硬编码色不再散落（三色均 ≤ 2 处，仅 token 定义与镜像）",
+    "ok": true,
+    "detail": "{\"brand\":2,\"surf\":2,\"border\":1}"
+  },
+  {
+    "name": "N-2 safeNext 拒绝 //host 与 /\\ 变体，正常站内路径仍放行",
+    "ok": true,
+    "detail": "{\"evil\":null,\"slash\":null,\"ok\":\"/portfolios\",\"nested\":null}"
   },
   {
     "name": "无 JS 报错",

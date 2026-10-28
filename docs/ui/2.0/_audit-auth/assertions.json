@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-10-27T19:16:31.372Z",
+  "generatedAt": "2026-10-28T01:38:35.323Z",
   "total": 59,
   "pass": 59,
   "fail": 0,
@@ -87,7 +87,7 @@
     {
       "name": "D13 admin #/account 无页内 Tab（系统设置已独立成页）",
       "ok": true,
-      "detail": "{\"ptabs\":0,\"title\":\"账户设置\"}"
+      "detail": "{\"ptabs\":0,\"title\":\"账户\"}"
     },
     {
       "name": "A-09 身份区块无「管理员 管理员」重复",
@@ -200,9 +200,9 @@
       "detail": "#/account"
     },
     {
-      "name": "M-04 #/account 真实承载（顶栏标题「账户设置」+ 页内标题，无 Tab）",
+      "name": "M-04 #/account 真实承载（顶栏为分组名、页内为「账户设置」，两者不同名，无 Tab）",
       "ok": true,
-      "detail": "{\"title\":\"账户设置\",\"ptabs\":0,\"phTitle\":\"账户设置\"}"
+      "detail": "{\"title\":\"账户\",\"ptabs\":0,\"phTitle\":\"账户设置\"}"
     },
     {
       "name": "A-03 已登录访问 #/login → 最终 hash = #/",
@@ -222,12 +222,12 @@
     {
       "name": "M-04 #/account/users 真实承载（用户表 + 新建）",
       "ok": true,
-      "detail": "{\"hash\":\"#/account/users\",\"hasTable\":true,\"hasNew\":true,\"ptabs\":0,\"phTitle\":\"系统设置\",\"tbTitle\":\"系统设置\",\"acctTabLink\":false}"
+      "detail": "{\"hash\":\"#/account/users\",\"hasTable\":true,\"hasNew\":true,\"ptabs\":0,\"phTitle\":\"系统设置\",\"tbTitle\":\"账户\",\"acctTabLink\":false}"
     },
     {
-      "name": "D13 系统设置 = 独立页面：自有页头「系统设置」+ 顶栏同名 + 无页内 Tab",
+      "name": "D13 系统设置 = 独立页面：自有页头「系统设置」+ 顶栏为分组名（不同名）+ 无页内 Tab",
       "ok": true,
-      "detail": "{\"hash\":\"#/account/users\",\"hasTable\":true,\"hasNew\":true,\"ptabs\":0,\"phTitle\":\"系统设置\",\"tbTitle\":\"系统设置\",\"acctTabLink\":false}"
+      "detail": "{\"hash\":\"#/account/users\",\"hasTable\":true,\"hasNew\":true,\"ptabs\":0,\"phTitle\":\"系统设置\",\"tbTitle\":\"账户\",\"acctTabLink\":false}"
     },
     {
       "name": "A-05 self 行无「重置密码」按钮",

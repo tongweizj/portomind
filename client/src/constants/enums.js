@@ -98,3 +98,17 @@ export const PORTFOLIO_ACCOUNT_TYPES = Object.freeze([
   { value: 'taxable', label: '应税账户' },
   { value: 'other', label: '其他' },
 ]);
+
+/**
+ * 用户角色（TASK-058 U3）。取值来自 shared/models/user.js 的 role 枚举（admin | member）。
+ * 展示口径的唯一权威：顶栏头像下拉身份行、账户页、系统设置页共用本表，不得就地另写一份中文映射。
+ */
+export const USER_ROLES = Object.freeze([
+  { value: 'admin', label: '管理员' },
+  { value: 'member', label: '成员' },
+]);
+
+/** 用户角色 → 中文标签的唯一派生（禁止就地重写，参照 TRANSACTION_ACTION_LABELS 的既有约定）。 */
+export const USER_ROLE_LABELS = Object.freeze(
+  Object.fromEntries(USER_ROLES.map(({ value, label }) => [value, label]))
+);

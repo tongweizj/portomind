@@ -125,11 +125,13 @@ export_nodes(..., format: "pdf", nodeIds: [全部 9 个 Frame])
 
 | 文件 | 角色 | 说明 |
 |---|---|---|
-| `2.0/portomind-prototype.html` | **唯一可走通原型** | 全量产品（PL-1~PL-6 前端）+ 账号与访问控制三屏，单文件、零依赖、hash 路由、内存 mock。侧栏 5 项，账户唯一入口 = 顶栏头像下拉 |
+| `2.0/portomind-prototype.html` | **唯一可走通原型** | 全量产品（PL-1~PL-6 前端）+ 账号与访问控制三屏 + `/logs` 任务运行看板，单文件、零依赖、hash 路由、内存 mock。侧栏 5 项，账户唯一入口 = 顶栏头像下拉 |
 | `2.0/portomind-auth-prototype.html` | **已退役**（2026-10-27） | 曾独立承载登录 / 账户 / 系统设置三屏，现整体并入上一行；本文件退为跳转壳，仅保留路径兼容（TASK-060、`FS-authentication` §13 曾引用） |
-| `2.0/_audit.cjs` | 断言脚本（37 条） | TASK-059 组合 IA 整改；`node _audit.cjs`，有 FAIL 则退出码 1 |
-| `2.0/_audit-auth.cjs` | 断言脚本（51 条） | TASK-060 用户模块整改；合并后只对准主原型 |
-| `2.0/_audit/`·`2.0/_audit-auth/` | 截图基线 + `assertions.json` | 每次跑脚本刷新 |
+| `2.0/_audit.cjs` | 断言脚本（**48 条**） | TASK-059 组合 IA 整改（二轮扩至 48 条：新增 V-1a/V-1b/V-2/V-4/V-5/VI-1/VI-2/VI-3/VI-6/VI-23/N-2，全部断言**渲染结果**）；`node _audit.cjs`，有 FAIL 则退出码 1 |
+| `2.0/_audit-auth.cjs` | 断言脚本（**59 条**） | TASK-060 用户模块整改；合并后只对准主原型 |
+| `2.0/_audit-cron-board.cjs` | 断言脚本（**44 条**） | TASK-061 `/logs` 任务运行看板（AC1~AC11 + OQ8 深链 + 只读负向对照） |
+| `2.0/_audit-cron-f13.cjs` | 断言脚本（**23 条**） | TASK-061 的 F1~F3 专项修复（核心是「从 FAILED 行点进原始日志仍是 FAILED」的回归钉死） |
+| `2.0/_audit/`·`2.0/_audit-auth/`·`2.0/_audit-cron/` | 截图基线 + `assertions.json` | 每次跑脚本刷新 |
 
 **演示登录态**：主原型 `S.session` 默认带一个 admin 演示会话——否则打开文件即被拦到登录页，全产品走查与 TASK-059 的断言会全部失效。守卫逻辑本身是完整的（退出登录后深链会真实重定向），**落地实现时不得保留这个默认会话**。
 

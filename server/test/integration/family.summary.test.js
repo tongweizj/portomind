@@ -84,12 +84,14 @@ test('无组合与无持仓：总额 0，占比为空', () => {
 // ───────────────────────── HTTP 契约 ─────────────────────────
 
 const app = require('../../app');
+const { installAdminSession, uninstallSessionStub, authHeaders } = require('../helpers/auth');
 const familySummaryService = require('@portomind/shared/services/familySummary.service');
 const fxRateService = require('@portomind/shared/services/fxRate.service');
 let server;
 let baseUrl;
 
 test.before(async () => {
+  installAdminSession();
   await new Promise((resolve) => {
     server = app.listen(0, '127.0.0.1', resolve);
   });
@@ -97,13 +99,14 @@ test.before(async () => {
 });
 
 test.after(async () => {
+  uninstallSessionStub();
   await new Promise((resolve, reject) => server.close((error) => error ? reject(error) : resolve()));
 });
 
 async function request(path, options = {}) {
   const response = await fetch(`${baseUrl}${path}`, {
     method: options.method || 'GET',
-    headers: { 'Content-Type': 'application/json' },
+    headers: { 'Content-Type': 'application/json', cookie: authHeaders().cookie },
     body: options.body ? JSON.stringify(options.body) : undefined
   });
   return { status: response.status, body: await response.json() };

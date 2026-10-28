@@ -11,7 +11,8 @@
     "seed:baseline": "node scripts/seedBaseline.js",
     "validate": "node scripts/validate.js",
     "verify:baseline": "node scripts/verifyBaseline.js",
-    "verify": "npm run validate && npm run verify:baseline"
+    "verify": "npm run validate && npm run verify:baseline",
+    "e2e:auth": "node scripts/e2e-auth-058.cjs"
   },
   "keywords": [
     "nodejs",
@@ -24,7 +25,9 @@
   "license": "ISC",
   "dependencies": {
     "@portomind/shared": "*",
+    "bcryptjs": "^3.0.3",
     "body-parser": "^1.20.6",
+    "cookie-parser": "^1.4.7",
     "cors": "^2.8.6",
     "dotenv": "^16.6.1",
     "express": "^4.22.2",

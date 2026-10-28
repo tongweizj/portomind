@@ -349,8 +349,9 @@ const CHROME = 'C:/Program Files/Google/Chrome/Application/chrome.exe';
     ptabs: document.querySelectorAll('.ptabs').length,
     phTitle: (document.querySelector('#view .ph-title') || {}).textContent,
   }));
-  check('M-04 #/account 真实承载（顶栏标题「账户设置」+ 页内标题，无 Tab）',
-    /账户设置/.test(acctTitle.title || '') && acctTitle.ptabs === 0 && /账户设置/.test(acctTitle.phTitle || ''),
+  check('M-04 #/account 真实承载（顶栏为分组名、页内为「账户设置」，两者不同名，无 Tab）',
+    acctTitle.ptabs === 0 && /账户设置/.test(acctTitle.phTitle || '') &&
+    /^账户$/.test((acctTitle.title || '').trim()) && (acctTitle.title || '').trim() !== (acctTitle.phTitle || '').trim(),
     JSON.stringify(acctTitle));
 
   // A-03：已登录访问 #/login → 回 #
@@ -390,9 +391,9 @@ const CHROME = 'C:/Program Files/Google/Chrome/Application/chrome.exe';
   }));
   check('M-04 #/account/users 真实承载（用户表 + 新建）',
     mainUsers.hash === '#/account/users' && mainUsers.hasTable && mainUsers.hasNew, JSON.stringify(mainUsers));
-  check('D13 系统设置 = 独立页面：自有页头「系统设置」+ 顶栏同名 + 无页内 Tab',
+  check('D13 系统设置 = 独立页面：自有页头「系统设置」+ 顶栏为分组名（不同名）+ 无页内 Tab',
     mainUsers.ptabs === 0 && mainUsers.phTitle === '系统设置' &&
-    mainUsers.tbTitle === '系统设置' && mainUsers.acctTabLink === false, JSON.stringify(mainUsers));
+    /^账户$/.test((mainUsers.tbTitle || '').trim()) && mainUsers.acctTabLink === false, JSON.stringify(mainUsers));
 
   // A-05 / D9：self 行不得有「重置密码」，应有「改密码」
   const selfRow = await page.evaluate(() => {
