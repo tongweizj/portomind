@@ -2,7 +2,7 @@
   "name": "@portomind/cron-worker",
   "version": "1.0.0",
   "description": "PortoMind 唯一调度进程：价格同步、完整性检查、提醒评估、汇率同步、再平衡分发（纯 Node，无 Web 框架）",
-  "license": "ISC",
+  "license": "MIT",
   "type": "commonjs",
   "main": "index.js",
   "scripts": {
