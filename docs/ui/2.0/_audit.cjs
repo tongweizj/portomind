@@ -240,8 +240,9 @@ function check(name, ok, detail) {
   });
   check('U-06 大类目标 60/40 vs 实际 80/20 → 非零偏离且判超阈',
     classMode.hasNonZero && classMode.overN > 0 && classMode.kind === 'over', JSON.stringify(classMode));
-  check('U-06 overN 与展示口径一致（大类模式数类）',
-    classMode.overN === classMode.flaggedClasses && classMode.flaggedClasses === 3, `overN=${classMode.overN} flagged=${classMode.flaggedClasses}`);
+  check('U-06 overN = 超标「标的」数（FS B8 量纲）；大类模式表内另有类数，两者允许不等',
+    classMode.hasNonZero && classMode.overN === 4 && classMode.flaggedClasses === 3 && classMode.kind === 'over',
+    `overN=${classMode.overN} flaggedClasses=${classMode.flaggedClasses}`);
   check('U-06 目标 0 且实际 0 的类不误报（相对偏离无意义）', classMode.zeroTargetZeroActual === '正常', String(classMode.zeroTargetZeroActual));
 
   /* ---------- 10. U-21 健康表偏离列文案 ---------- */
@@ -293,6 +294,145 @@ function check(name, ok, detail) {
   check('U-17 缺价行 → 偏离「—」且表尾提示，总市值不被污染',
     missingCase.flag === '缺价' && missingCase.abs === null && missingCase.footer === true && missingCase.mvOk === true,
     JSON.stringify(missingCase));
+
+  /* ---------- 15. 二轮验收回归（TASK-059 V-1~V-5 / VI 级 + TASK-060 N-2） ---------- */
+  // V-1a 全缺价 + 未到期：必须落「无法估值」，绝不能「配置正常」
+  await page.goto(FILE + '#/portfolios/view/cn-stable/overview'); await page.waitForTimeout(250);
+  const v1a = await page.evaluate(() => {
+    const p = P('cn-stable');
+    const bak = p.holdings.map((h) => A(h.sym).price);
+    const lx = p.lastExecutedAt;
+    p.holdings.forEach((h) => { A(h.sym).price = null; });
+    p.lastExecutedAt = '2026-10-26';           // 必然未到期
+    route();
+    const d = driftOf(p);
+    const kpi = (document.querySelector('#view .kpi:last-child') || {}).textContent || '';
+    const r = { kind: d.kind, label: d.label, kpiNormal: /配置正常/.test(kpi), kpi: kpi.replace(/\s+/g, ' ').trim() };
+    p.holdings.forEach((h, i) => { A(h.sym).price = bak[i]; }); p.lastExecutedAt = lx; route();
+    return r;
+  });
+  check('V-1a 全缺价 → 「无法估值」（不得报「配置正常」）',
+    v1a.kind === 'unvaluable' && v1a.kpiNormal === false && /无法估值/.test(v1a.kpi), JSON.stringify(v1a));
+
+  // V-1b 1/4 缺价：必须落「部分缺价」，且不得在页面上假报「N 项超阈」
+  const v1b = await page.evaluate(() => {
+    const p = P('cn-stable');
+    const h0 = p.holdings[0], bak = A(h0.sym).price;
+    A(h0.sym).price = null;
+    const d = driftOf(p); route();
+    const html = document.getElementById('view').innerHTML;
+    const r = { kind: d.kind, label: d.label, missing: d.missing, overChip: /项超阈/.test(html), chip: /部分缺价/.test(html) };
+    A(h0.sym).price = bak; route();
+    return r;
+  });
+  check('V-1b 部分缺价 → 「部分缺价」且不出现「N 项超阈」',
+    v1b.kind === 'missing' && v1b.missing === 1 && v1b.overChip === false && v1b.chip === true, JSON.stringify(v1b));
+
+  // V-2 点「N 条未读」：DOM 必须真的重绘（不能只改内部状态）
+  await page.goto(FILE + '#/'); await page.waitForTimeout(250);
+  const v2 = await page.evaluate(() => {
+    const before = document.getElementById('view').innerHTML;
+    const u = [...document.querySelectorAll('#view *')].filter((e) => e.children.length === 0 && /条未读/.test(e.textContent))[0];
+    if (!u) return { noUnread: true };
+    u.click();
+    const sel = document.querySelector('#view select');
+    return { selVal: sel ? sel.value : null, redrawn: document.getElementById('view').innerHTML !== before };
+  });
+  check('V-2 「N 条未读」点击后用户可见结果变化（下拉生效 + DOM 重绘）',
+    v2.selVal === 'cn-long' && v2.redrawn === true, JSON.stringify(v2));
+
+  // V-4 边界到期：ds == interval 时文案不得写成「N 天 > 阈值 N 天」
+  await page.goto(FILE + '#/portfolios/view/cn-stable/overview'); await page.waitForTimeout(250);
+  const v4 = await page.evaluate(() => {
+    const p = P('cn-stable');
+    const lx = p.lastExecutedAt, iv = p.cfg.interval;
+    p.lastExecutedAt = '2026-10-06'; p.cfg.interval = 20;   // 20 天整，恰好等于阈值
+    route();
+    const txt = ((document.querySelector('#view .kpi:last-child') || {}).textContent || '').replace(/\s+/g, ' ').trim();
+    const r = { txt, bad: /天 > 阈值/.test(txt), good: /已达 20 天（阈值 20 天）/.test(txt) };
+    p.lastExecutedAt = lx; p.cfg.interval = iv; route();
+    return r;
+  });
+  check('V-4 到期文案用「已达 N 天（阈值 M 天）」，不再出现「N 天 > 阈值 N 天」',
+    v4.good === true && v4.bad === false, JSON.stringify(v4));
+
+  // V-5 目标 == 实际：绝对偏离不得渲染成「-0.0」
+  const v5 = await page.evaluate(() => {
+    const p = P('cn-stable');
+    const bak = p.targets ? JSON.parse(JSON.stringify(p.targets)) : null;
+    const rows = devRows(p);
+    const total = pValue(p);
+    p.holdings.forEach((h) => { p.targets[h.sym] = +(h.qty * A(h.sym).price / total * 100).toFixed(4); });
+    const r2 = devRows(p);
+    const negZero = r2.filter((r) => r.abs !== null && (Object.is(r.abs, -0) || (r.abs < 0 && r.abs > -0.05))).length;
+    const rendered = tabOverview(p, driftOf(p));
+    if (bak) p.targets = bak; else delete p.targets;
+    route();
+    return { negZero, renderedNegZero: /-0\.0/.test(rendered) };
+  });
+  check('V-5 目标=实际时绝对偏离不产生「-0.0」',
+    v5.negZero === 0 && v5.renderedNegZero === false, JSON.stringify(v5));
+
+  // VI-1 Topbar 是「位置」、页内是「标题」，4 屏不得同名
+  const vi1 = await page.evaluate(async () => {
+    const shots = [
+      ['#/portfolios/view/cn-long/overview', 1],
+      ['#/portfolios', 1],
+      ['#/prices', 1],
+      ['#/alerts', 1],
+    ];
+    const out = [];
+    for (const [h] of shots) {
+      location.hash = h;
+      await new Promise((r) => setTimeout(r, 60));
+      const tb = (document.getElementById('tbTitle').textContent || '').replace(/\s+/g, ' ').trim();
+      const ph = ((document.querySelector('#view .ph-title') || {}).textContent || '').replace(/\s+/g, ' ').trim();
+      out.push({ h, tb, ph, same: tb === ph });
+    }
+    return out;
+  });
+  check('VI-1 Topbar 与页内标题不同名（组合总览/组合列表/行情/提醒规则 四屏）',
+    vi1.every((x) => x.ph && !x.same), JSON.stringify(vi1));
+
+  // VI-2 非总览 Tab 不再背 130px 组合标题卡
+  await page.goto(FILE + '#/portfolios/view/cn-long/positions'); await page.waitForTimeout(250);
+  const vi2 = await page.evaluate(() => {
+    const slim = document.querySelectorAll('#view .detail-slim').length;
+    const firstTableY = Math.round((document.querySelector('#view table') || { getBoundingClientRect: () => ({ top: 0 }) }).getBoundingClientRect().top);
+    return { slim, firstTableY, hasBigCard: document.querySelectorAll('#view .card .ph-title').length };
+  });
+  check('VI-2 非总览 Tab 用单行身份条，表格进入首屏（< 350px）',
+    vi2.slim === 1 && vi2.hasBigCard === 0 && vi2.firstTableY < 350, JSON.stringify(vi2));
+
+  // VI-3 组合列表「最近交易」必须有表头
+  await page.goto(FILE + '#/portfolios'); await page.waitForTimeout(250);
+  const vi3 = await page.evaluate(() => {
+    const card = [...document.querySelectorAll('#view .card')].find((c) => /最近交易/.test(((c.querySelector('.card-t') || {}).textContent || '')));
+    if (!card) return { noCard: true };
+    const t = card.querySelector('table');
+    return { ths: t.querySelectorAll('thead th').length };
+  });
+  check('VI-3 「最近交易」表有完整表头（6 列）', vi3.ths === 6, JSON.stringify(vi3));
+
+  // VI-6 组合交易记录 Tab 只有一个主按钮（不再「添加交易 + 新建交易」双入口）
+  await page.goto(FILE + '#/portfolios/view/cn-long/transactions'); await page.waitForTimeout(250);
+  const vi6 = await page.evaluate(() => [...document.querySelectorAll('#view .btn-pri')].map((b) => b.textContent.trim()));
+  check('VI-6 交易记录 Tab 恰 1 个主按钮（无同义双入口）', vi6.length === 1, JSON.stringify(vi6));
+
+  // VI-23 硬编码色只剩 token 定义处（出现次数 ≤ 2：:root 定义 + JS token 镜像）
+  const vi23 = { brand: count(/#635BFF/g), surf: count(/#EEEDFF/g), border: count(/#E3E8EE/g) };
+  check('VI-23 硬编码色不再散落（三色均 ≤ 2 处，仅 token 定义与镜像）',
+    vi23.brand <= 2 && vi23.surf <= 2 && vi23.border <= 2, JSON.stringify(vi23));
+
+  // N-2（TASK-060）safeNext 必须拒绝协议相对地址与反斜杠变体
+  const n2 = await page.evaluate(() => ({
+    evil: safeNext('//evil.example.com'),
+    slash: safeNext('/\\evil.example.com'),
+    ok: safeNext('/portfolios'),
+    nested: safeNext('/x?next=/y'),
+  }));
+  check('N-2 safeNext 拒绝 //host 与 /\\ 变体，正常站内路径仍放行',
+    n2.evil === null && n2.slash === null && n2.ok === '/portfolios' && n2.nested === null, JSON.stringify(n2));
 
   /* ---------- 14. 无 JS 报错 ---------- */
   check('无 JS 报错', errs.length === 0, errs.join(' | '));

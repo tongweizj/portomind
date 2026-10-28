@@ -2,7 +2,7 @@
 
 > 版本：v1.7 · 日期：2026-10-26
 > 归属：[PRODUCT_LINES.md](../PRODUCT_LINES.md)「产品线 INDEX」中 **PL-0** 的明细子文件
-> v1.7 修订（**M0.2d 认证形态裁决**）：Human 2026-10-26 裁决账号与访问控制的产品形态（单租户多账号 / `admin`+`member` / admin 建号无自助注册 / 只停用不删除 / 首登强制改密 / 会话存 Mongo），已写成 [FS-authentication](../specs/FS-authentication.md) + [ADR-001](../../architecture/adr/ADR-001-authentication.md) + [TASK-058](../../tasks/active/TASK-058-authentication-and-accounts.md)。本文件同步两条判定的事实描述：`M0.2c` 补「`CORS_ORIGINS` 读了不生效」的准确成因、`M0.2d` 由「公网前完成认证」细化为已裁决形态。**优先级未变（两者仍为 P0）**。
+> v1.7 修订（**M0.2d 认证形态裁决**）：Human 2026-10-26 裁决账号与访问控制的产品形态（单租户多账号 / `admin`+`member` / admin 建号无自助注册 / 只停用不删除 / 首登强制改密 / 会话存 Mongo），已写成 [FS-authentication](../specs/FS-authentication.md) + [ADR-001](../../architecture/adr/ADR-001-authentication.md) + [TASK-058](../../tasks/complete/TASK-058-authentication-and-accounts.md)。本文件同步两条判定的事实描述：`M0.2c` 补「`CORS_ORIGINS` 读了不生效」的准确成因、`M0.2d` 由「公网前完成认证」细化为已裁决形态。**优先级未变（两者仍为 P0）**。
 > v1.6 修订（**内容迁移批次 3/3：删除副本，本文件回归产品文档**）：按 [DOCS.md §1](../../standards/DOCS.md)（`product/` 不放实现细节）与 §2（每主题只在一处详述）删除全部**已在他处详述或被新文档取代**的内容——§6.1 调研方法、§6.2 运行时形态表（→ [DEPLOYMENT.md §1](../../manual/DEPLOYMENT.md)）、§6.4 调度与日历机制（→ [CRON_WORKER_DEV.md](../../dev/CRON_WORKER_DEV.md)）、§6.5 运维横切（→ [SERVER.md](../../manual/SERVER.md)）、§7.1 API 总表（→ [API_CONTRACT.md](../../dev/API_CONTRACT.md)，已是超集）、§7.2 数据模型（→ [DATA_MODEL.md](../../dev/DATA_MODEL.md)）、§7.3 路由与组件（→ [CLIENT_DEV.md](../../dev/CLIENT_DEV.md)）、§7.4 业务规则速查（→ [CLIENT.md §5](../../manual/CLIENT.md)）、§7.5 需求编码索引（与 §6 编码对照重复，细粒度归 [PRD.md](../specs/PRD.md)）、§8.2 死代码清单（→ [CLIENT_DEV.md §2](../../dev/CLIENT_DEV.md)）、§8.3 已关闭的文档争议。§5 由「功能点 + 实现入口」压成**能力级清单**。**全部判定与优先级一字未改**；删除项的落点均已在文内给出链接。518 → 197 行（实测）。
 > v1.5 修订（**批次 2/3：技术栈与外部集成迁入 ARCHITECTURE**）：[`ARCHITECTURE.md`](../../architecture/ARCHITECTURE.md) 原为未填充的通用英文模板（含 PostgreSQL / Prisma / OAuth / Teams 等本项目不存在的设定），已按实际代码重写为 v2.0；§6.2 的两张表**整表迁出并删除本地副本**，迁移时修正 3 处事实错误（东方财富 `push2`+`push2delay` 主备对；天天基金真实 API 是 `api.fund.eastmoney.com/f10/lsjz`；MongoDB 由 `MONGO_URI` 决定、非本地内嵌），并补记「`shared/` 与 `client/` 无独立测试」。
 > v1.4 修订（**批次 1/3：先建后删**）：新建 [`dev/DATA_MODEL.md`](../../dev/DATA_MODEL.md) 与 [`dev/CLIENT_DEV.md`](../../dev/CLIENT_DEV.md)，两位是**扩展版而非复制**（均先与源码对账，并补入 PL-0 缺的内容）。当时仅对旧副本加「已迁出」标注，删除动作即本轮 v1.6。
@@ -35,11 +35,11 @@
 |---|---|---|
 | 功能覆盖 | 中 | 调度 / 防重 / 日历 / 容错 / 可观测性 / 设计 token 均具备 |
 | 用户体验 | — | 面向自持运维者而非终端用户 |
-| 数据可信 | 中 | ✅ 双份调度已收口（TASK-005）；✅ 枚举降为两份；余：无认证、CORS 过宽 |
+| 数据可信 | 中 | ✅ 双份调度已收口（TASK-005）；✅ 枚举降为两份；✅ 认证 + CORS 已闭环（TASK-058 U1+U2+U3，2026-10-28 结案）；余：代码待合入 `main` |
 
 **主要短板**：
 
-① 无认证授权 + CORS 开放（P0，公网前必须闭环）；
+① ✅ ~~无认证授权 + CORS 开放~~ 已闭环（TASK-058 U1 后端认证内核 + CORS 白名单，U2/U3 前端登录/账户/用户管理页，2026-10-28 结案；**U1 与 U2 必须同批发布**，代码待合入 `main`）；
 
 ② 缺数据质量看板；
 
@@ -72,8 +72,8 @@
 | M0.1e | 完整性检查 | **修改** | 检查逻辑本身正确，但三点让结论不可信：① 文件偏大；② 截断（`INTEGRITY_REPAIR_TRUNCATED`）与延迟回补（`INTEGRITY_REPAIR_DEFERRED`）**只写任务日志**，未进 `TaskRun`/`AlertEvent` → 使用者不可见；③ `successCount` 只统计「无缺口」资产，缺口资产 `status=GAP` 既不计成功也不计失败 → **全组合都有缺口时任务仍报 `SUCCEEDED`**（CLI 退出码同为 0） | 拆分 + 把截断 / 延迟回补 / 缺口提升为可见信号（与 AS-07 同一动作） | P1 |
 | M0.2a | 统一响应 / traceId / 脱敏 | 保留 | 横切能力齐全，可观测性到位 | — | — |
 | M0.2b | 日志查看页 | **修改** | 手写 `useState/useEffect`，与全站 Query 数据层不一致 | 统一到 Query 数据层（与前端数据层合并一并处理） | P2 |
-| M0.2c | CORS `origin:true` | **修改** | 实际允许任意来源——`app.js:21-24` 确实读了 `CORS_ORIGINS` 构造出 `allowedOrigins`，但使用它的白名单 `cors()` 整段被注释，最终 `cors({origin:true})` → **读了不生效**。虽仅可信网络部署，但与「不暴露公网」的定位不一致，属底线风险 | 收紧为白名单（配置化）+ 生产未配 `CORS_ORIGINS` 启动 fail-fast；**必须与 M0.2d 同批**（`origin:true` 与 `credentials:true` 不可共存） | **P0** |
-| M0.2d | 无认证授权 | **强化**（形态已裁决） | 无登录 / 无多用户 / 无资源级授权；侧栏「退出登录」是**无 handler 的假按钮** → 界面承诺了不存在的能力。**2026-10-26 已裁决**：单租户多账号（所有账号共享**同一份家庭数据**，不加 `tenantId`）+ `admin`/`member` 两角色 + **admin 建号（无自助注册）** + 用户只停用不删除 + 首登强制改密 + 会话存 Mongo | 按 [FS-authentication](../specs/FS-authentication.md) 实施（[TASK-058](../../tasks/active/TASK-058-authentication-and-accounts.md) 拆 U1/U2/U3）；技术依据 [ADR-001](../../architecture/adr/ADR-001-authentication.md)。**注册属 Non-goal**——多用户 ≠ 多租户 | **P0**（公网前置） |
+| M0.2c | CORS `origin:true` | ✅ **已完成**（TASK-058 U1，2026-10-27） | 已改为白名单 + `credentials:true`（`CORS_ORIGINS` 生效），生产未配 `CORS_ORIGINS` 启动 fail-fast；开发态有本地默认来源 | 已完成 | ~~P0~~ 已闭环 |
+| M0.2d | 无认证授权 | ✅ **已完成**（TASK-058 U1+U2+U3，2026-10-28 结案） | 已落地：单租户多账号（`User`/`Session`）+ `admin`/`member` 两角色 + 服务端会话（Mongo，绝对 7 天 TTL）+ 首登强制改密 + 默认 `admin/admin` seed + 登录限速 + 全部业务端点 401 闸门 + 前端 `/login`、`/account`、`/account/users` 与 401 拦截、顶栏头像下拉（账户设置/系统设置/提醒规则/退出登录，侧栏 5→4）。**2026-10-26 裁决**：无自助注册、用户只停用不删除、不加 `tenantId` | 见 [FS-authentication](../specs/FS-authentication.md) 与 [TASK-058 完成记录](../../tasks/complete/TASK-058-authentication-and-accounts.md)；**U1 与 U2 必须同批发布**，代码仍在分支 `dd388ac` 待合入 `main` | **P0**（公网前置；已闭环） |
 | M0.3a | Design token | 保留 | 主色 / 涨跌色等已固化，语义一致 | — | — |
 | M0.3b | 双轨样式 | **合并** | 内联 token style 与 Tailwind 两套并存，长期维护成本高 | 明确单一主路径（建议 token + 组件封装），逐步收敛 | P2 |
 | M0.3c | 通用状态组件 | 保留 | DataState 三态全站复用 | — | — |
@@ -156,7 +156,7 @@
 | ~~双份调度实现~~ ✅ | ~~同一任务行为不一致 → 价格 / 提醒结果在不同部署下不同~~ | ✅ 已解决（TASK-005）：`shared/` 唯一实现 + 单一调度所有者 |
 | **完整性检查的异常「只进日志、不进产品」** | 缺口被截断或延后回补时，**界面看不出来**；全组合都有缺口，任务仍报 `SUCCEEDED` → 用户以为数据是完整的，实际不是 | 把「截断 / 延迟回补 / 缺口」提升为可见信号（进 `TaskRun` 字段 + 事件表 + 看板红点），与 AS-07 同一动作（见 §4 M0.1e） |
 | **再平衡单日分发的隐式契约** | 新增一个再平衡频率后，该频率**静默永不触发**——用户配了却不生效，且没有任何报错 | 到期规则与频率取值必须同源；新增频率时补规则，并加「未识别频率」告警（机制见 [CRON_WORKER_DEV.md](../../dev/CRON_WORKER_DEV.md) §3） |
-| 无认证 + CORS 过宽 | 数据暴露风险（家庭资产全量可见） | 视为**部署前置条件**而非普通功能；公网前必须闭环（见 §4 M0.2c / M0.2d） |
+| ~~无认证 + CORS 过宽~~ ✅ | ~~数据暴露风险（家庭资产全量可见）~~ | ✅ 已闭环（TASK-058 U1，2026-10-27）：后端认证内核 + CORS 白名单；**余**：前端 `/login`、`/account`、`/account/users`（U2/U3）未上线，U1 不得单独发布（见 §4 M0.2c / M0.2d） |
 | 前端数据层不统一 | 页面加载 / 刷新行为不一致，改一处易漏另一处 | 决定「是否全站迁移 Query」后再动手，不为统一而统一（见 §4 M0.2b） |
 | 节假日表逐年维护 | 某年节后误判开市 → 抓到空数据 / 误报缺口 | 把「年度维护」列为固定运维动作（可用到期提醒），见 §4 M0.1c |
 | 枚举两份 | 新增市场 / 币种时漏改一端 → 前端选不到、后端拒收 | `shared/constants` ↔ `client/src/constants/enums.js` 双向同步；根治方向是「前端由后端驱动」（详见 [ARCHITECTURE.md §8](../../architecture/ARCHITECTURE.md)） |

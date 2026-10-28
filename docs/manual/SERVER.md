@@ -15,7 +15,7 @@
 
 - **不持有任何调度**：没有 `SCHEDULER_ENABLED`，也没有 `*_CRON`（见 [cron-worker 总览](./CRON_WORKER.md) §1）。所有自动任务都由 cron-worker 触发。
 - **不连券商、不自动交易**：再平衡只生成建议，执行需人工确认。
-- **无认证授权**（ADR-001 仅模板）：API 不可暴露公网，仅限可信局域网。安全边界见 [系统部署手册](./DEPLOYMENT.md) §「安全边界」。
+- **认证/授权已实现（TASK-058 U1）**：全部业务端点要求会话 cookie；`admin`/`member` 两角色，`/api/users/*` 仅 admin。前端登录页/账户页（U2/U3）未上线前 **U1 不得单独发布**（否则全站 401）。CORS 为白名单 + `credentials:true`。安全边界见 [系统部署手册](./DEPLOYMENT.md) §「安全边界」。
 
 ---
 
@@ -64,7 +64,15 @@ curl "http://localhost:8080/api/prices/date/$(date +%F)?page=1&pageSize=20"
 | `SCHEDULER_TIMEZONE` | `America/Toronto` | 只读/查询类端点解析“当天”所用时区（`GET /api/cron/status` 的目标市场日、`GET /api/logs` 的默认日期），需与 worker 一致 |
 | `MARKET_TIMEZONE` | `America/Toronto` | 价格归桶时区（改动前务必评估既有数据） |
 | `LOG_DIR` | 仓库根 `logs/` | 可选；默认与 cron-worker 共用 |
-| `CORS_ORIGINS` | 不生效 | 当前 `server/app.js` 用 `cors({ origin: true })` 接受任意来源；该变量**未被读取**（见安全边界） |
+| `CORS_ORIGINS` | 开发默认见 `app.js` | **白名单**（逗号分隔）+ `credentials:true`；`NODE_ENV=production` 未配置时启动 fail-fast（TASK-058） |
+| `SESSION_TTL_DAYS` | `7` | 会话绝对过期天数（不做滑动续期；TTL 索引在 `sessions.createdAt`） |
+| `COOKIE_SECURE` | 生产 `true` / 其他 `false` | 会话 cookie 是否要求 HTTPS（局域网 HTTP 调试可显式设 `false`） |
+| `NODE_ENV` | 未设置 | 生产**必须**显式 `production`：否则 CORS fail-fast 与 Secure cookie 默认不生效（启动会打 `NODE_ENV_NOT_SET` warn） |
+| `TRUST_PROXY` | 未设置 | 经 Nginx 等可信反代时设 `1`（让 `req.ip` 取 `X-Forwarded-For`，登录限速与审计才准确）；直连不要设 |
+
+> 认证写端点只接受 `application/json`：非 JSON（含表单编码）→ `415 UNSUPPORTED_MEDIA_TYPE`；`server` 不挂 `urlencoded` 解析器（FS §8 CSRF 约束）。
+
+> 认证相关：除 `/api/auth/login`、`/api/auth/logout`、`/api/auth/session` 外，**全部 `/api/*` 端点要求会话 cookie `pm_sid`**；`/api/users/*` 额外要求 `admin`。会话存 Mongo，服务重启不掉线；`USER`/`SESSION` 模型见 [DATA_MODEL](../dev/DATA_MODEL.md)。
 
 ---
 
@@ -80,6 +88,8 @@ curl "http://localhost:8080/api/prices/date/$(date +%F)?page=1&pageSize=20"
 
 这些端点中，除标注「只读」的 `GET /api/cron/status` 外，其余提供**手动触发**能力，与 cron-worker 的定时任务**共用同一业务引擎**（`@portomind/shared`），
 结果口径一致。自动触发由 cron-worker 负责（见 [cron-worker 总览](./CRON_WORKER.md) §2）。
+
+> ⚠️ 自 TASK-058 U1 起，下表端点除 `GET /api/cron/status` 外均需先登录（会话 cookie `pm_sid`）；直接用 `curl` 调试时先 `POST /api/auth/login` 取 cookie（详见 [DEPLOYMENT §9](./DEPLOYMENT.md) 与 [API 契约](../dev/API_CONTRACT.md)「认证与错误码」）。
 
 | 方法 | 路径 | 作用 |
 |---|---|---|
@@ -116,7 +126,8 @@ curl 'http://localhost:8080/api/cron/status?detail=rebalance&date=2026-10-26'
 |---|---|
 | 启动报端口占用 | 另一进程占了 `PORT`；改 `PORT` 或释放占用 |
 | 数据页空白 / 接口 500 | 多半是 `MONGO_URI` 连不上或库未初始化；先 `npm run verify`（见 [系统部署手册](./DEPLOYMENT.md) §「验证与测试命令」） |
-| CORS 报错 | 当前 `cors({ origin: true })` 应接受任意来源；若前端仍报 CORS，检查 `VITE_API_URL` 是否带 `/api` 前缀、Nginx 是否透传 `/api/` |
+| CORS 报错 | CORS 已收敛为白名单（`CORS_ORIGINS`，TASK-058）：确认前端来源在名单内；`NODE_ENV=production` 未配 `CORS_ORIGINS` 时进程会启动失败。另检查 `VITE_API_URL` 是否带 `/api` 前缀、Nginx 是否透传 `/api/` |
+| 前端 401 一片 | 检查是否已带会话 cookie（`pm_sid`）以及 `U2` 登录页是否上线；U1 单独部署会导致全站 401 |
 | 看不到后台任务日志 | `server` 与 `cron-worker` 必须共享同一 `logs/` 目录 |
 | API 暴露到公网 | 危险。确保反向代理/防火墙不对外暴露；认证见 [系统部署手册](./DEPLOYMENT.md) §「安全边界」 |
 

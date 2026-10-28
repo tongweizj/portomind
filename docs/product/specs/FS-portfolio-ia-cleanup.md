@@ -429,7 +429,7 @@
 | HD-9 | 2026-10-26 | **再平衡提醒的详情归组合域，不落日志频道**（日志频道写死"只读排障、永不放执行动作"）；提醒点击必须带 `?record=` 精确落点，**并入本 FS 的 A 单元（A16），不新开任务**。与 [FS-cron-worker-status-board](./FS-cron-worker-status-board.md) 的 OQ6 / OQ7 / OQ8 同批裁决 |
 | **HD-10** | 2026-10-26 | **健康表「偏离」列保留 N**（`OQ-A`）。`B3` 增 `drift.overThresholdCount`；`B8` 改为「N 项超阈」；**`B8a` 作废**；`R-7` 关闭。起因：原型审查发现「不带 N」这条为回避量纲而牺牲了信息量，正解是补对字段 |
 | **HD-11** | 2026-10-26 | **详情 Header 去掉「再平衡」按钮、保留「设置目标」**（`OQ-B`）。实码 Header 本来就没有「再平衡」按钮（只有 编辑 / 添加交易）→ 删它对代码零影响；但「设置目标」实码也没有 → **新增 `A17`**（跳 `PortfolioForm` 目标区，`NG-9` 不变），AC40 锁定 Header 恰 4 个动作 |
-| **HD-12** | 2026-10-26 | **原型与需求的所有偏差一次性全改，不分批**（`OQ-C`）。清单见 [TASK-059](../../tasks/active/TASK-059-prototype-alignment-portfolio-ia.md)（29 项 U + 9 项 D；其中 D 组已于同日回写完毕） |
+| **HD-12** | 2026-10-26 | **原型与需求的所有偏差一次性全改，不分批**（`OQ-C`）。清单见 [TASK-059](../../tasks/complete/TASK-059-prototype-alignment-portfolio-ia.md)（29 项 U + 9 项 D；其中 D 组已于同日回写完毕） |
 | **HD-13** | 2026-10-26 | **组合列表卡新增四格（总市值 / 持仓资产 / 待办 / 上次再平衡）纳入本期**（`OQ-D` → `B15`）。理由：数据已在 `usePortfolios()` 的 `stats` 上（零新增请求），且卡片与健康表若口径分裂，正是本线要消灭的形态 |
 | **HD-14** | 2026-10-26 | **删除组合后，其全部提醒事件「全部隐藏」**（`OQ-E` → `B16`）：查询层过滤、三处出口同源、**库里保留不物理删除**；资产级（`portfolioId=null`）事件必须保留。同时确定「Ardot 管视觉 / Web 原型管行为」的双标尺（见 §9） |
 
@@ -487,4 +487,4 @@
 |---|---|
 | 本文件 | `B3` 增 `overThresholdCount`；`B8` 改「N 项超阈」；**`B8a` 作废**；新增 `A17`（设置目标按钮）/ `B15`（组合卡四格）/ `B16`（删组合后事件隐藏）；`A9` 补「归档」、`A10` 纠正数据源（`GET /:id` 无该字段，改用 `usePortfolios()` 的 `stats`）并登记**第三消费方**；`AC13/20/23/26` 重写；新增 `AC40/41/42`；`R-7` 关闭、新增 `R-9/R-10`；§4.1 四态表与 §4.3 线框图补正（去掉不存在的「同步汇率」）；§9 补双标尺；§11 补 `HD-10`~`HD-14`；Appendix A 补 6 条实码事实 |
 | `product/lines/PL-3-portfolio.md` | §6.3 字段表由三字段扩为**四字段**（加 `drift.overThresholdCount`，注明 N 是标的数、与「已到期 N 天」的天数不可混用）；§6.3「同名不同义」约定补一句「文案里的 N 一律取 `overThresholdCount`，不用 `triggeredThresholds.length`」 |
-| `tasks/active/TASK-059-prototype-alignment-portfolio-ia.md` | 原型整改清单（29 项 U + 9 项 D）作为本 FS 的**行为比对标尺**；本轮只更新需求，原型改动由该卡执行 |
+| `tasks/complete/TASK-059-prototype-alignment-portfolio-ia.md` | 原型整改清单（29 项 U + 9 项 D + 二轮 `V-1`~`V-5`/`VI-1`~`VI-23`）作为本 FS 的**行为比对标尺**；**2026-10-27 已结案**（断言 48/48） |

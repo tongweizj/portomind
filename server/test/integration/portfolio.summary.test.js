@@ -136,10 +136,12 @@ test('存在缺价持仓时不评估漂移', () => {
 // ───────────────────────── HTTP 契约测试 ─────────────────────────
 
 const app = require('../../app');
+const { installAdminSession, uninstallSessionStub, authHeaders } = require('../helpers/auth');
 let server;
 let baseUrl;
 
 test.before(async () => {
+  installAdminSession();
   await new Promise((resolve) => {
     server = app.listen(0, '127.0.0.1', resolve);
   });
@@ -147,11 +149,12 @@ test.before(async () => {
 });
 
 test.after(async () => {
+  uninstallSessionStub();
   await new Promise((resolve, reject) => server.close((error) => error ? reject(error) : resolve()));
 });
 
 async function request(path) {
-  const response = await fetch(`${baseUrl}${path}`);
+  const response = await fetch(`${baseUrl}${path}`, { headers: { cookie: authHeaders().cookie } });
   return { status: response.status, body: await response.json() };
 }
 

@@ -10,6 +10,7 @@
     --bg:#F6F8FA; --card:#FFFFFF; --border:#E3E8EE; --border-strong:#D7DEE6;
     --ink:#0A2540; --ink2:#5E6B7E; --muted:#8A95A5;
     --up:#DF1B41; --down:#0E9F6E; --warn:#F5A524; --warn-t:#B26A00; --warn-bg:#FEF6E7; --danger:#E0254B;
+    --hover-bg:#EEF1F5; --row-line:#F1F3F7; --thead-bg:#FBFCFD;
     --r-sm:6px; --r-md:8px; --r-lg:10px;
   }
   *{box-sizing:border-box; margin:0; padding:0;}
@@ -38,12 +39,14 @@
     display:flex;align-items:center;gap:12px;padding:8px 12px;border-radius:var(--r-md);
     color:var(--ink2);font-weight:500;cursor:pointer;transition:all .15s;user-select:none;font-size:14px;
   }
-  .s-item:hover{color:var(--ink);background:#EEF1F5;}
+  .s-item:hover{color:var(--ink);background:var(--hover-bg);}
   .s-item.on{color:var(--brand);font-weight:600;background:var(--brand-surf);}
   .s-item svg{width:18px;height:18px;flex:0 0 18px;}
-  .s-badge{margin-left:auto;font-size:10px;line-height:1.6;padding:0 7px;border-radius:999px;background:var(--border);color:var(--ink2);}
+  /* VI-10：badge / chevron 不得被推到（或推出）侧栏右缘 —— 由 label 吸收剩余宽度 */
+  .s-item .lbl{flex:1 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .s-badge{margin-left:auto;flex:0 0 auto;font-size:10px;line-height:1.6;padding:0 7px;border-radius:999px;background:var(--border);color:var(--ink2);}
   .s-item.on .s-badge{background:var(--card);color:var(--brand);}
-  .s-chev{margin-left:auto;transition:transform .15s;color:var(--muted);font-size:11px;}
+  .s-chev{margin-left:auto;flex:0 0 auto;transition:transform .15s;color:var(--muted);font-size:11px;}
   .s-chev.open{transform:rotate(90deg);}
   .s-item.on .s-chev{color:var(--brand);}
   .s-child{padding:6px 0 6px 44px;border-radius:var(--r-md);color:var(--ink2);font-weight:500;font-size:13px;cursor:pointer;}
@@ -86,7 +89,7 @@
   .user-menu{position:relative;}
   .um-trigger{background:none;border:none;padding:0;cursor:pointer;display:flex;border-radius:50%;font-family:inherit;}
   .um-trigger:focus-visible{outline:2px solid var(--brand);outline-offset:3px;}
-  .um-panel{position:absolute;right:0;top:calc(100% + 8px);width:200px;background:var(--card);border:1px solid var(--border);border-radius:var(--r-lg);box-shadow:0 12px 32px rgba(10,37,64,.14);padding:6px;display:none;z-index:50;}
+  .um-panel{position:absolute;right:0;top:calc(100% + 18px);width:200px;background:var(--card);border:1px solid var(--border);border-radius:var(--r-lg);box-shadow:0 12px 32px rgba(10,37,64,.14);padding:6px;display:none;z-index:50;}
   .um-panel.show{display:block;}
   /* 身份行：用户名 + 角色同一行；角色弱化（muted，不用 chip 强调） */
   .um-id{padding:9px 12px 8px;display:flex;align-items:center;gap:8px;cursor:default;}
@@ -94,7 +97,7 @@
   .um-role{font-size:12px;font-weight:500;color:var(--muted);}
   .um-sep{height:1px;background:var(--border);margin:4px 6px;}
   .um-row{display:block;width:100%;text-align:left;padding:8px 12px;border-radius:var(--r-sm);font-size:13px;font-weight:500;color:var(--ink2);cursor:pointer;border:none;background:none;font-family:inherit;transition:all .15s;}
-  .um-row:hover{background:#EEF1F5;color:var(--ink);}
+  .um-row:hover{background:var(--hover-bg);color:var(--ink);}
   .um-row:disabled{opacity:.45;cursor:not-allowed;}
   .um-row:disabled:hover{background:none;color:var(--ink2);}
   .um-row[hidden]{display:none;}
@@ -106,7 +109,7 @@
   body.authed-off .topbar{display:none;}
   body.authed-off .main{margin-left:0;}
   body.authed-off .content{padding:0;}
-  .login-wrap{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px;background:linear-gradient(160deg,#F6F8FA 0%,#EEEDFF 100%);}
+  .login-wrap{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px;background:linear-gradient(160deg,var(--bg) 0%,var(--brand-surf) 100%);}
   .login-card{width:400px;max-width:100%;background:var(--card);border:1px solid var(--border);border-radius:14px;box-shadow:0 20px 48px rgba(10,37,64,.12);overflow:hidden;}
   .login-head{padding:28px 28px 8px;display:flex;align-items:center;gap:12px;}
   .login-head .mark{width:36px;height:36px;background:var(--brand);border-radius:8px;display:flex;align-items:center;justify-content:center;color:#fff;font-size:20px;}
@@ -146,13 +149,13 @@
   .btn-sm{padding:5px 10px;font-size:12px;border-radius:var(--r-sm);}
   .btn-danger{color:var(--danger);}
   .btn-danger:hover{border-color:var(--danger);color:var(--danger);}
-  .chip{display:inline-flex;align-items:center;gap:4px;font-size:11px;font-weight:600;padding:2px 9px;border-radius:999px;background:#F1F3F7;color:var(--ink2);white-space:nowrap;}
+  .chip{display:inline-flex;align-items:center;gap:4px;font-size:11px;font-weight:600;padding:2px 9px;border-radius:999px;background:var(--row-line);color:var(--ink2);white-space:nowrap;}
   .c-purple{background:var(--brand-surf);color:var(--brand);}
   .c-green{background:#E8F7F0;color:var(--down);}
   .c-blue{background:#E5F4FB;color:#0284C7;}
   .c-amber{background:var(--warn-bg);color:var(--warn-t);}
   .c-red{background:#FDECEF;color:var(--danger);}
-  .c-gray{background:#F1F3F7;color:var(--muted);}
+  .c-gray{background:var(--row-line);color:var(--muted);}
   .dot{width:8px;height:8px;border-radius:50%;display:inline-block;flex:0 0 8px;}
 
   .chg-up{color:var(--up);font-weight:600;}
@@ -160,15 +163,26 @@
   .chg-flat{color:var(--muted);}
   .muted{color:var(--muted);}
   .warn-text{color:var(--warn-t);font-weight:600;}
+  .danger-text{color:var(--danger);font-weight:600;}
+  /* 非总览 Tab 的单行身份条（VI-2：不再 5 个 Tab 都背 130px 标题卡） */
+  .detail-slim{display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:10px 0 14px;}
+  .detail-slim .ds-name{font-size:17px;font-weight:700;}
+  /* 只读判据行（VI-7：左栏不再塌陷；U-08 仍不允许第二编辑入口） */
+  .crit{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:7px 0;border-bottom:1px dashed var(--border);font-size:13px;}
+  .crit:last-child{border-bottom:0;}
+  .crit .k{color:var(--ink2);}
+  /* VI-19：原型注记用中性底，不抢主体注意力（警示黄只留给真警示） */
+  .proto-note{display:flex;align-items:flex-start;gap:8px;padding:10px 12px;border-radius:var(--r-md);
+    background:var(--hover-bg);border:1px solid var(--border);color:var(--ink2);font-size:12.5px;line-height:1.5;}
 
   /* 表格 */
   .tbl-wrap{background:var(--card);border:1px solid var(--border);border-radius:var(--r-lg);overflow:hidden;}
   table.tb{width:100%;border-collapse:collapse;font-size:13px;}
   .tb th{
     text-align:left;font-size:12px;color:var(--ink2);font-weight:600;padding:10px 14px;
-    background:#FBFCFD;border-bottom:1px solid var(--border);white-space:nowrap;
+    background:var(--thead-bg);border-bottom:1px solid var(--border);white-space:nowrap;
   }
-  .tb td{padding:11px 14px;border-bottom:1px solid #F1F3F7;vertical-align:middle;}
+  .tb td{padding:11px 14px;border-bottom:1px solid var(--row-line);vertical-align:middle;}
   .tb tr:last-child td{border-bottom:none;}
   .tb tbody tr.rowlink{cursor:pointer;transition:background .12s;}
   .tb tbody tr.rowlink:hover{background:var(--bg);}
@@ -176,7 +190,7 @@
   .tb th.r{text-align:right;}
   .asset-cell .n{font-weight:600;}
   .asset-cell .s{font-size:12px;color:var(--muted);}
-  .tbl-foot{display:flex;align-items:center;padding:10px 14px;font-size:12px;color:var(--muted);border-top:1px solid var(--border);background:#FBFCFD;}
+  .tbl-foot{display:flex;align-items:center;padding:10px 14px;font-size:12px;color:var(--muted);border-top:1px solid var(--border);background:var(--thead-bg);}
   .pager{margin-left:auto;display:flex;gap:6px;align-items:center;}
   .pager .pg{min-width:26px;height:26px;border:1px solid var(--border);border-radius:var(--r-sm);display:flex;align-items:center;justify-content:center;cursor:pointer;background:var(--card);color:var(--ink2);font-size:12px;padding:0 6px;}
   .pager .pg.on{background:var(--brand);border-color:var(--brand);color:#fff;}
@@ -193,7 +207,7 @@
   .tab{padding:9px 14px;font-size:14px;font-weight:500;color:var(--ink2);cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-1px;transition:all .15s;}
   .tab:hover{color:var(--ink);}
   .tab.on{color:var(--brand);font-weight:600;border-bottom-color:var(--brand);}
-  .seg{display:inline-flex;background:#F1F3F7;border-radius:var(--r-md);padding:3px;gap:2px;}
+  .seg{display:inline-flex;background:var(--row-line);border-radius:var(--r-md);padding:3px;gap:2px;}
   .seg-btn{padding:6px 14px;font-size:13px;font-weight:500;color:var(--ink2);border-radius:6px;cursor:pointer;transition:all .15s;border:none;background:transparent;}
   .seg-btn.on{background:var(--card);color:var(--ink);font-weight:600;box-shadow:0 1px 3px rgba(10,37,64,.08);}
 
@@ -210,7 +224,7 @@
   .search-box .input{padding-left:30px;width:240px;}
   .count{font-size:12px;color:var(--muted);}
   /* 加载骨架（原 auth 原型 A-13，合并后统一在此定义） */
-  .skel-row{display:flex;gap:14px;padding:12px 14px;border-bottom:1px solid #F1F3F7;}
+  .skel-row{display:flex;gap:14px;padding:12px 14px;border-bottom:1px solid var(--row-line);}
   .skel{height:12px;border-radius:6px;background:linear-gradient(90deg,#EDF0F4 25%,#F6F8FA 37%,#EDF0F4 63%);background-size:400% 100%;animation:sk 1.4s ease infinite;}
   @keyframes sk{0%{background-position:100% 50%}100%{background-position:0 50%}}
 
@@ -225,12 +239,12 @@
   .cron-card .note{font-size:12px;color:var(--warn-t);background:var(--warn-bg);padding:4px 8px;border-radius:6px;margin:4px 0;}
   .cron-card .card-actions{margin-top:8px;display:flex;gap:14px;}
   .cron-card .run-state{font-size:11px;color:var(--muted);margin:2px 0 6px;letter-spacing:.02em;}
-  .pbar{height:8px;background:#F1F3F7;border-radius:999px;overflow:hidden;margin:8px 0;}
+  .pbar{height:8px;background:var(--row-line);border-radius:999px;overflow:hidden;margin:8px 0;}
   .pbar-f{height:100%;background:var(--brand);border-radius:999px;}
   .cron-legend{font-size:12px;color:var(--muted);display:flex;align-items:center;gap:6px;flex-wrap:wrap;padding:8px 0;border-top:1px solid var(--border);margin-top:6px;}
   .link{color:var(--brand);cursor:pointer;font-size:13px;font-weight:500;}
   .link:hover{text-decoration:underline;}
-  .cron-ro{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--muted);margin-top:10px;padding:8px 12px;background:#FBFCFD;border:1px solid var(--border);border-radius:var(--r-md);}
+  .cron-ro{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--muted);margin-top:10px;padding:8px 12px;background:var(--thead-bg);border:1px solid var(--border);border-radius:var(--r-md);}
   .crumbs{font-size:13px;color:var(--muted);margin-bottom:10px;}
   /* F2：详情页操作列两个链接同格并排，须留间距（否则粘连成一个） */
   .act-cell{display:flex;gap:12px;align-items:center;}
@@ -297,8 +311,9 @@
   .empty .em{font-size:30px;display:block;margin-bottom:8px;opacity:.5;}
 
   /* Dashboard 桶卡/健康表 */
-  .bucket-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;}
-  .pgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:16px;}
+  .bucket-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:14px;}
+  /* VI-18：组合卡与「新建组合」虚线卡同一行排完（4 列），不再让虚线卡掉第二行 */
+  .pgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:16px;}
   .pcard{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:18px;display:flex;flex-direction:column;gap:10px;transition:box-shadow .15s;}
   .pcard:hover{box-shadow:0 8px 24px rgba(10,37,64,.08);}
   .pcard.new{align-items:center;justify-content:center;color:var(--muted);cursor:pointer;border-style:dashed;min-height:220px;}
@@ -307,7 +322,7 @@
   .p-meta{display:grid;grid-template-columns:1fr 1fr;gap:8px 14px;font-size:12px;}
   .p-meta .k{color:var(--muted);}
   .p-meta .v{font-weight:600;}
-  .bar-stack{display:flex;height:14px;border-radius:999px;overflow:hidden;background:#F1F3F7;}
+  .bar-stack{display:flex;height:14px;border-radius:999px;overflow:hidden;background:var(--row-line);}
   .bar-seg{cursor:pointer;transition:opacity .15s;}
   .bar-seg:hover{opacity:.8;}
   .legend-row{display:flex;gap:18px;flex-wrap:wrap;margin-top:10px;}
@@ -315,7 +330,7 @@
   .legend-item:hover{color:var(--ink);}
 
   /* 事件列表 */
-  .ev-row{display:flex;gap:10px;align-items:flex-start;padding:11px 18px;border-bottom:1px solid #F1F3F7;cursor:pointer;}
+  .ev-row{display:flex;gap:10px;align-items:flex-start;padding:11px 18px;border-bottom:1px solid var(--row-line);cursor:pointer;}
   .ev-row:last-child{border-bottom:none;}
   .ev-row:hover{background:var(--bg);}
   .ev-row.unread .ev-text{font-weight:600;}
@@ -347,9 +362,9 @@
   .detail-back a:hover{color:var(--brand);}
   /* ?record= 命中行高亮 + 明细展开行 */
   .rb-hit td{background:var(--brand-surf) !important;}
-  .rb-detail td{padding:0 !important;border-bottom:1px solid #F1F3F7;}
+  .rb-detail td{padding:0 !important;border-bottom:1px solid var(--row-line);}
   @media(max-width:1100px){.two-col{grid-template-columns:1fr !important;}}
-  .log-line{font-family:"Inter",monospace;font-size:12px;padding:6px 14px;border-bottom:1px solid #F1F3F7;white-space:pre-wrap;}
+  .log-line{font-family:"Inter",monospace;font-size:12px;padding:6px 14px;border-bottom:1px solid var(--row-line);white-space:pre-wrap;}
   .log-line.lv-ERROR{color:var(--danger);}
   .log-line.lv-WARN{color:var(--warn-t);}
   .log-line.lv-INFO{color:var(--ink2);}
@@ -671,7 +686,8 @@ const S = {
 const $ = (id)=>document.getElementById(id);
 const A = (sym)=>ASSETS.find(a=>a.sym===sym);
 const P = (pid)=>PORTFOLIOS.find(p=>p.id===pid);
-function go(h){ location.hash = h; }
+/* V-2：hash 未变时浏览器不触发 hashchange，点击会「零反馈」——必须手动重绘 */
+function go(h){ if(location.hash === h){ route(); } else { location.hash = h; } }
 function esc(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
 function money(v, ccy, dec){
   if(v===null || v===undefined || isNaN(v)) return '—';
@@ -695,18 +711,17 @@ function daysBetween(d1, d2){
   return Math.round((new Date(d2) - new Date(d1)) / 86400000);
 }
 function todayCN(){ return TODAY; }
+/* VI-13：颜色语义分域 —— 类型（标的/组合/大类）一律中性灰；彩色只保留给「状态」与「方向」 */
 function typeLabel(a){
-  if(a.type==='etf') return a.market.startsWith('CN') ? {t:'ETF-场内', c:'c-green'} : {t:'ETF', c:'c-purple'};
-  if(a.type==='stock') return {t:'股票', c:'c-blue'};
-  if(a.type==='fund') return {t:'基金', c:'c-amber'};
+  if(a.type==='etf') return a.market.startsWith('CN') ? {t:'ETF-场内', c:'c-gray'} : {t:'ETF', c:'c-gray'};
+  if(a.type==='stock') return {t:'股票', c:'c-gray'};
+  if(a.type==='fund') return {t:'基金', c:'c-gray'};
   if(a.type==='bond') return {t:'债券', c:'c-gray'};
   return {t:'现金', c:'c-gray'};
 }
 function clsLabel(c){ return {equity:'股票类', bond:'债券类', gold:'黄金类', cash:'现金类'}[c] || '未分类'; }
 function ptypeChip(t){
-  if(t==='长期') return '<span class="chip c-purple">长期</span>';
-  if(t==='稳健') return '<span class="chip c-green">稳健</span>';
-  return '<span class="chip c-blue">活钱</span>';
+  return `<span class="chip c-gray">${esc(t)}</span>`;
 }
 
 /* ---------- 组合派生计算 ---------- */
@@ -744,7 +759,9 @@ function devRows(p){
         overAbs:false, overRel:false, missing:true, flag:'缺价' };
     }
     const actual = total>0 ? (h.qty*a.price)/total*100 : 0;
-    const abs = actual - target;
+    // V-5：目标=实际时浮点差会渲染成「-0.0」，先做亚显示精度归零，再算相对偏离
+    let abs = actual - target;
+    if(Math.abs(abs) < 0.05) abs = 0;
     // 目标为 0 时相对偏离无意义（分母为 0），只按绝对偏离判定；否则 -999 会误报「相对」
     const rel = target>0 ? abs/target*100 : null;
     const overAbs = Math.abs(abs) > p.cfg.abs, overRel = rel!==null && Math.abs(rel) > p.cfg.rel;
@@ -789,17 +806,35 @@ function driftReasons(p){
 }
 /* 四态：超阈(over) > 从未执行(never) > 已到期(due) > 配置正常(ok)；未设目标(none) 独立
    overN 的口径必须与展示表一致：大类模式数「类」，资产模式数「标的」 */
+/* 状态 chip 唯一渲染入口（TASK-059 V-1：六态，缺价不再落「配置正常」） */
+function driftChipHTML(d){
+  if(d.kind==='over')       return `<span class="chip c-amber">${d.label}</span>`;
+  if(d.kind==='missing')    return `<span class="chip c-amber" title="${d.missing} 项持仓缺最新价，未参与偏离判定">部分缺价</span>`;
+  if(d.kind==='unvaluable') return `<span class="chip c-red" title="全部持仓缺最新价，市值与偏离均不可判定">无法估值</span>`;
+  if(d.kind==='never')      return '<span class="chip c-blue">从未执行</span>';
+  if(d.kind==='due')        return '<span class="chip c-amber">已到期</span>';
+  if(d.kind==='none')       return '<span class="chip c-gray">未设目标</span>';
+  return '<span class="chip c-green">配置正常</span>';
+}
 function driftOf(p){
   const targetMap = assetTargetsFor(p);
-  if(!targetMap) return { kind:'none', label:'未设目标', chip:'c-gray', overN:0, due:false, ds:null, never:false, missing:0 };
+  if(!targetMap) return { kind:'none', label:'未设目标', chip:'c-gray', overN:0, due:false, ds:null, never:false, missing:0, overClasses:0 };
   const assetRows = devRows(p) || [];
   const displayRows = (p.targetLevel==='asset_class' && p.classTargets) ? (classDevRows(p) || assetRows) : assetRows;
   const missing = assetRows.filter(r=>r.missing).length;
-  const overN = displayRows.filter(r=>r.flag!=='正常' && r.flag!=='缺价').length;
+  const valued = pValue(p);
+  // 量纲（V-3 裁 A = 照 FS B8）：徽标 N 一律 = 有 triggeredThresholds 的「标的」数；
+  // 大类模式下表内行是「类」，两者允许不同，卡片头用 overClasses 说明，不再让同一字段两种量纲。
+  const overN = assetRows.filter(r=>r.flag!=='正常' && r.flag!=='缺价').length;
+  const overClasses = displayRows.filter(r=>r.flag!=='正常' && r.flag!=='缺价').length;
   const ds = daysSinceRebal(p);
   const never = p.lastExecutedAt === null;
   const due = !never && ds!==null && ds >= p.cfg.interval;
-  const base = { overN, due, ds, never, missing };
+  const base = { overN, overClasses, due, ds, never, missing };
+  // 缺价优先于超阈：实码 summary.drift 在任一持仓缺价时为 null（!hasMissingPrice 守卫），
+  // 此时报「N 项超阈」是假超阈（缺价标的的份额被摊给有价标的，其余占比虚高）。
+  if(missing>0 && valued===0) return { kind:'unvaluable', label:'无法估值', chip:'c-red', ...base };
+  if(missing>0)               return { kind:'missing', label:'部分缺价', chip:'c-amber', ...base };
   if(overN>0) return { kind:'over', label: overN+' 项超阈', chip:'c-amber', ...base };
   if(never)   return { kind:'never', label:'从未执行', chip:'c-blue', ...base };
   if(due)     return { kind:'due', label:'已到期', chip:'c-amber', ...base };
@@ -854,7 +889,7 @@ function lineChartSVG(data, w, h, opts){
   for(let g=0; g<=4; g++){
     const gv = min + (max-min)*g/4;
     const gy = Y(gv);
-    grid += `<line x1="${padL}" y1="${gy}" x2="${w-padR}" y2="${gy}" stroke="#F1F3F7"/>`
+    grid += `<line x1="${padL}" y1="${gy}" x2="${w-padR}" y2="${gy}" stroke="var(--row-line)"/>`
       + `<text x="${padL-8}" y="${gy+4}" text-anchor="end" font-size="11" fill="${C.muted}">${opts.yFmt?opts.yFmt(gv):gv.toFixed(0)}</text>`;
   }
   const xi = [0, Math.floor((data.length-1)*0.2), Math.floor((data.length-1)*0.4), Math.floor((data.length-1)*0.6), Math.floor((data.length-1)*0.8), data.length-1];
@@ -882,7 +917,7 @@ function sparkSVG(arr, w, h){
   const col = arr[arr.length-1]>=arr[0] ? C.up : C.down;
   return `<svg viewBox="0 0 ${w} ${h}" style="width:100%;height:${h}px;"><polyline points="${pts}" fill="none" stroke="${col}" stroke-width="2" stroke-linejoin="round"/></svg>`;
 }
-const PALETTE = ['#635BFF','#0EA5E9','#0E9F6E','#F5A524','#8B5CF6','#E0254B','#94A3B8','#14B8A6'];
+const PALETTE = [C.brand,'#0EA5E9','#0E9F6E','#F5A524','#8B5CF6','#E0254B','#94A3B8','#14B8A6'];
 function donutSVG(items, size, thick){
   const total = items.reduce((s,i)=>s+i.value,0) || 1;
   const r = (size-thick)/2 - 2, cx = size/2, cy = size/2, circ = 2*Math.PI*r;
@@ -917,11 +952,14 @@ function parseHash(){
   });
   return { parts: pathPart.split('/').filter(Boolean), q };
 }
-/* next 是不可信输入：必须是站内路径，且不得自身含 next=（防自我嵌套，TASK-060 A-02 / R-2） */
+/* next 是不可信输入：必须是站内路径，且不得自身含 next=（防自我嵌套，TASK-060 A-02 / R-2）
+   N-2：startsWith('/') 挡不住协议相对 URL —— '//evil.com' 在浏览器里等同外站，必须一并拒绝 */
 function safeNext(raw){
   if(!raw) return null;
   const v = String(raw).trim();
   if(!v.startsWith('/')) return null;
+  if(v.startsWith('//') || v.startsWith('/\\')) return null;   // 协议相对 / 反斜杠变体
+  if(/[\u0000-\u001F\\]/.test(v)) return null;                  // 控制字符与反斜杠一律不收
   if(v.indexOf('next=') >= 0) return null;
   if(v === '/login' || v.startsWith('/login?') || v === '/login/') return null;
   return v;
@@ -962,20 +1000,23 @@ function route(){
   /* 账户设置 —— M-04 补齐的三条路由之一，不占侧栏导航位。系统设置已独立成页，不再挂 Tab */
   if(parts[0] === 'account' && !parts[1]){
     setNav('acct');
-    return finish('账户设置', vAccount);
+    return finish('账户', vAccount);
   }
   /* 系统设置 —— 独立页面（非 /account 子 Tab）；入口在顶栏下拉「账户设置」下方，仅 admin（D13）。
      强制改密闸门在其上方，故 forced 态不会到达此处。 */
   if(parts[0] === 'account' && parts[1] === 'users'){
     if(S.session.role !== 'admin') return finish('无权访问', vForbiddenUsers);
     setNav('acct');
-    return finish('系统设置', vUsers);
+    return finish('账户', vUsers);
   }
 
+  /* Topbar 语义 = 所在位置（VI-1）：页内大标题才是「这一屏是什么」。
+     两者不得同名 —— 1.0 的 `再平衡 · 长期投资组合` / `再平衡` 即此规则。 */
+  const DETAIL_TAB_LABEL = { overview:'总览', positions:'持仓概览', 'position-history':'持仓历史', rebalance:'再平衡', transactions:'交易记录' };
   let title = 'Dashboard';
   if(parts.length===0){ setNav('root'); render(vDashboard); }
   else if(parts[0]==='portfolios'){
-    if(parts[1]==='transactions'){ setNav('ptx'); title='全部交易'; render(vTxAll); }
+    if(parts[1]==='transactions'){ setNav('ptx'); title='组合管理'; render(vTxAll); }
     else if(parts[1]==='view' && P(parts[2])){
       const pid = parts[2];
       const tabRaw = parts[3] || 'overview';
@@ -985,19 +1026,19 @@ function route(){
       const sub = q.sub==='history' ? 'history' : 'suggestions';
       const recordId = q.record || null;
       S.detail.pid = pid; S.detail.tab = tab;
-      setNav('plist'); title = P(pid).name;
+      setNav('plist'); title = '组合管理 · ' + (DETAIL_TAB_LABEL[tab] || '总览');
       render(()=>vPortfolioDetail(pid, tab, sub, recordId));
     } else { setNav('plist'); title='组合管理'; render(vPortfolioList); }
   }
   else if(parts[0]==='prices'){
-    if(parts[1] && parts[2]==='history' && A(parts[1])){ setNav('prices'); title = parts[1]+' · 价格历史'; render(()=>vPriceHistory(parts[1])); }
-    else { setNav('prices'); title='自选行情'; render(vPrices); }
+    if(parts[1] && parts[2]==='history' && A(parts[1])){ setNav('prices'); title = '行情数据 · 价格历史'; render(()=>vPriceHistory(parts[1])); }
+    else { setNav('prices'); title='行情数据'; render(vPrices); }
   }
   else if(parts[0]==='instruments'){
-    if(parts[1] && A(parts[1])){ setNav('prices'); title = parts[1]+' · 标的详情'; render(()=>vInstrumentDetail(parts[1])); }
-    else { setNav('prices'); title='标的列表'; render(vInstruments); }
+    if(parts[1] && A(parts[1])){ setNav('prices'); title = '行情数据 · 标的详情'; render(()=>vInstrumentDetail(parts[1])); }
+    else { setNav('prices'); title='行情数据'; render(vInstruments); }
   }
-  else if(parts[0]==='alerts'){ setNav('alerts'); title='提醒规则'; render(vAlertRules); }
+  else if(parts[0]==='alerts'){ setNav('alerts'); title='提醒'; render(vAlertRules); }
   else if(parts[0]==='logs'){
     /* /logs/rebalance —— 再平衡分发详情（OQ8 独立子路由，非看板卡内展开） */
     if(parts[1]==='rebalance'){
@@ -1220,7 +1261,7 @@ function vLogin(){
           <input class="input input-full" id="lgPwd" type="password" placeholder="密码" value="admin1234" data-demo="1" oninput="clearField('lgPwd')"/></div>
         <button class="btn btn-pri" type="submit" style="width:100%;justify-content:center;">登 录</button>
       </form>
-      <div class="fhint" style="margin-top:12px;text-align:center;">错误提示统一为「用户名或密码错误」，不泄露账号是否存在（§U2-R1）</div>
+      <!-- N-6：规范注记（§U2-R1）已移除，不再显示给真实用户 -->
     </div>
   </div></div>`;
 }
@@ -1244,19 +1285,29 @@ function vAccount(){
   const s = S.session;
   const forced = s.mustChangePassword;
   const me = USERS.find(u=>u.username === s.username) || {username:s.username, role:s.role, active:true, lastLoginAt:'—'};
-  const banner = forced ? `<div class="banner banner-warn"><span>🔒</span><div><b>首次登录需修改密码</b>　除「修改密码」与顶栏下拉外，其余功能已锁定（§4.2 / D10）。</div></div>` : '';
+  // N-3：强制改密是「必经步骤」不是错误，用琥珀；危险红只留给失败与危险确认
+  const banner = forced ? `<div class="banner banner-amber"><span>🔒</span><div><b>首次登录需修改密码</b>　除「修改密码」与顶栏下拉外，其余功能已锁定（§4.2 / D10）。</div></div>` : '';
   const head = `<div class="page-head"><div class="ph-title">账户设置</div>
     <div class="ph-desc">管理你的身份与登录信息${s.role === 'admin' ? '　·　账号与权限在顶栏下拉「系统设置」' : ''}</div></div>`;
   return banner + head + accountSelfSection(me, forced);
 }
 /* 系统设置：独立页面，自有页头，不复用 vAccount 容器（D13） */
 function vUsers(){
-  const head = `<div class="page-head"><div class="ph-title">系统设置</div>
-    <div class="ph-desc">账号仅由管理员创建；用户只可停用，不可删除</div></div>`;
+  const head = `<div class="page-head head-row"><div><div class="ph-title">系统设置</div>
+    <div class="ph-desc">账号仅由管理员创建；用户只可停用，不可删除</div></div>
+    <div class="spacer"></div>
+    <button class="btn" ${S.usersLoading?'disabled':''} onclick="reloadUsers()">↻ 刷新</button></div>`;
   return head + accountUsersSection();
 }
+/* N-5：加载骨架原本永不可达（S.usersLoading 从未置 true）。这里给它一条真实触发路径：
+   点「刷新」→ 骨架 600ms → 回到表格；真实实现由请求驱动，形态一致。 */
+function reloadUsers(){
+  if(S.usersLoading) return;
+  S.usersLoading = true; route();
+  setTimeout(()=>{ S.usersLoading = false; route(); }, 600);
+}
 function accountSelfSection(me, forced){
-  return `
+  const idCard = `
   <div class="card" style="margin-bottom:16px;">
     <div class="card-h"><span class="card-t">身份</span><span class="card-sub">只读</span></div>
     <div class="card-b"><div class="kv">
@@ -1265,17 +1316,19 @@ function accountSelfSection(me, forced){
       <div class="k">状态</div><div class="v">${me.active?'<span class="chip c-green">启用</span>':'<span class="chip c-gray">停用</span>'}</div>
       <div class="k">上次登录</div><div class="v num">${esc(me.lastLoginAt)}</div>
     </div></div>
-  </div>
-  <div class="card" style="margin-bottom:16px;${forced?'opacity:.5;':''}">
-    <div class="card-h"><span class="card-t">修改用户名</span>${forced?'<span class="card-sub">强制改密期间不可用</span>':''}</div>
+  </div>`;
+  const nameCard = `
+  <div class="card" style="margin-bottom:16px;${forced?'display:none;':''}">
+    <div class="card-h"><span class="card-t">修改用户名</span></div>
     <div class="card-b">
       <div class="field"><label class="flabel" for="accName">新用户名</label>
         <input class="input input-full" id="accName" value="${esc(me.username)}" ${forced?'disabled':''} oninput="clearField('accName')"/></div>
       <button class="btn" onclick="saveAccName()" ${forced?'disabled':''}>保存用户名</button>
       <div class="fhint">唯一性校验；保存后当前会话保持有效、界面即时刷新。</div>
     </div>
-  </div>
-  <div class="card">
+  </div>`;
+  const pwCard = `
+  <div class="card" style="margin-bottom:16px;">
     <div class="card-h"><span class="card-t">修改密码</span><span class="card-sub">${forced?'必须优先完成':'需校验当前密码'}</span></div>
     <div class="card-b">
       ${forced?'':`<div class="field"><label class="flabel" for="pwCur">当前密码</label><input class="input input-full" id="pwCur" type="password" oninput="clearField('pwCur')"/></div>`}
@@ -1285,6 +1338,9 @@ function accountSelfSection(me, forced){
       <div class="fhint">保存后，<b>该账号其他设备的会话立即失效</b>（当前会话保留）。</div>
     </div>
   </div>`;
+  /* N-4：强制改密态首屏必须看得到输入框。做法 = 把此态下不可用的「修改用户名」卡整卡隐藏
+     （而不是调换卡片顺序），改密表单因此上移到首屏；非强制态三卡顺序不变。 */
+  return idCard + nameCard + pwCard;
 }
 function accountUsersSection(){
   // 加载骨架（原 auth 原型 A-13）：默认 false，断言可注入验证
@@ -1357,7 +1413,7 @@ function vDashboard(){
   }).sort((x,y)=>{
     const todo = o=> (o.pending+o.un)>0 ? 0 : 1;
     if(todo(x)!==todo(y)) return todo(x)-todo(y);
-    const rank = k=> k==='over'?0:(k==='due'?1:(k==='never'?2:(k==='ok'?3:4)));
+    const rank = k=> k==='over'?0:(k==='unvaluable'?1:(k==='missing'?2:(k==='due'?3:(k==='never'?4:(k==='ok'?5:6)))));
     if(rank(x.d.kind)!==rank(y.d.kind)) return rank(x.d.kind)-rank(y.d.kind);
     return String(y.p.createdAt).localeCompare(String(x.p.createdAt));
   });
@@ -1366,15 +1422,11 @@ function vDashboard(){
     // 徽标必须阻止冒泡，否则被整行 handler 覆盖成总览
     if(pending) todo.push(`<a onclick="event.stopPropagation();go('#/portfolios/view/${p.id}/rebalance?sub=suggestions')">${pending} 条待确认</a>`);
     if(un) todo.push(`<a onclick="event.stopPropagation();S.dashEvPid='${p.id}';S.dashEv='unread';go('#/')">${un} 条未读</a>`);
-    const chip = d.kind==='over' ? `<span class="chip c-amber">${d.label}</span>`
-      : d.kind==='due' ? '<span class="chip c-amber">已到期</span>'
-      : d.kind==='never' ? '<span class="chip c-blue">从未执行</span>'
-      : d.kind==='none' ? '<span class="chip c-gray">未设目标</span>'
-      : '<span class="chip c-green">配置正常</span>';
+    const chip = driftChipHTML(d);
     const miss = missingPriceHoldings(p).length;
     return `<tr class="rowlink" onclick="go('#/portfolios/view/${p.id}/overview')">
       <td style="font-weight:600">${esc(p.name)}</td>
-      <td class="num">${money(pValue(p),p.ccy)}${miss?' <span class="muted" title="部分持仓缺最新价，未计入市值">ⓘ</span>':''}</td>
+      <td class="num r">${money(pValue(p),p.ccy)}${miss?' <span class="muted" title="部分持仓缺最新价，未计入市值">ⓘ</span>':''}</td>
       <td>${chip}</td>
       <td>${todo.length?todo.join(' · '):'—'}</td>
       <td class="muted">${daysAgoLabel(d.ds)}</td>
@@ -1418,7 +1470,7 @@ function vDashboard(){
   <div class="card" style="margin-bottom:16px;">
     <div class="card-h"><span class="card-t">组合健康</span><span class="card-sub">市值单币种简化</span><span class="card-link" onclick="go('#/portfolios')">组合管理 →</span></div>
     <table class="tb">
-      <thead><tr><th>组合</th><th>市值</th><th>偏离</th><th>待办</th><th>上次再平衡</th></tr></thead>
+      <thead><tr><th>组合</th><th class="r" style="width:130px">市值</th><th style="width:140px">偏离</th><th style="width:190px">待办</th><th style="width:120px">上次再平衡</th></tr></thead>
       <tbody>${healthRows || `<tr><td colspan="5"><div class="empty"><span class="em">📁</span>暂无组合，先创建一个<br/><button class="btn btn-pri btn-sm" style="margin-top:10px" onclick="openPortfolioForm(null)">＋ 新建组合</button></div></td></tr>`}</tbody>
     </table>
   </div>
@@ -1472,14 +1524,19 @@ function vPortfolioList(){
   const shown = PORTFOLIOS.filter(p=>S.plShowArchived || !p.archived);
   const total = fb.totalCny;
 
-  // 币种分桶
-  const buckets = ['USD','CAD','CNY','HKD'].map(c=>{
+  // 币种分桶：VI-16/17 —— 空桶整卡不渲染（不留「—／暂无持仓」占版面），CNY 卡不再把同一数值写两遍
+  const ccyHasP = c => actives.some(p=>p.ccy===c);
+  const buckets = ['CNY','USD','CAD','HKD'].filter(c=>fb.b[c]>0 || ccyHasP(c)).map(c=>{
     const v = fb.b[c];
     const conv = c==='CNY' ? v : v*FX[c].rate;
+    const share = total>0 ? conv/total*100 : 0;
+    const sub = c==='CNY'
+      ? `占家庭总资产 ${share.toFixed(1)}%`
+      : (v>0 ? '≈ '+money(conv,'CNY')+'（1 '+c+' = '+FX[c].rate+' CNY）' : '有持仓但缺最新价，未能折算');
     return `<div class="kpi">
       <div class="l">${CCY_NAME[c]} · ${c}</div>
       <div class="v num">${v>0 ? money(v,c) : '—'}</div>
-      <div class="s num">${c==='CNY' ? 'RMB '+money(v,'CNY') : (v>0 ? '≈ '+money(conv,'CNY')+'（1 '+c+' = '+FX[c].rate+' CNY）' : '暂无该币种持仓')}</div>
+      <div class="s num">${sub}</div>
     </div>`;
   }).join('');
 
@@ -1500,17 +1557,13 @@ function vPortfolioList(){
     const d = driftOf(p);
     const pending = REBALS.filter(r=>r.pid===p.id && r.status==='PENDING').length;
     const ccyChip = `<span class="chip c-gray">${p.ccy}</span>`;
-    const driftChip = d.kind==='over' ? `<span class="chip c-amber">${d.label}</span>`
-      : d.kind==='due' ? '<span class="chip c-amber">已到期</span>'
-      : d.kind==='never' ? '<span class="chip c-blue">从未执行</span>'
-      : d.kind==='none' ? '<span class="chip c-gray">未设目标</span>'
-      : '<span class="chip c-green">配置正常</span>';
+    const driftChip = driftChipHTML(d);
     const archChip = p.archived ? `<span class="chip c-gray">已归档</span>` : '';
     return `<div class="pcard ${p.archived?'archived':''}">
       <div style="display:flex;gap:6px;flex-wrap:wrap;">${ptypeChip(p.ptype)}${ccyChip}${driftChip}${archChip}</div>
       <div style="font-size:17px;font-weight:700;">${esc(p.name)}</div>
       <div style="font-size:12px;color:var(--ink2);min-height:36px;">${esc(p.desc)}</div>
-      <div style="border-top:1px solid #F1F3F7;padding-top:10px;">
+      <div style="border-top:1px solid var(--row-line);padding-top:10px;">
         <div class="p-meta">
           <div><div class="k">总市值</div><div class="v num">${money(pValue(p),p.ccy)}</div></div>
           <div><div class="k">持仓资产</div><div class="v num">${p.holdings.filter(h=>h.qty>0).length} 项</div></div>
@@ -1534,9 +1587,8 @@ function vPortfolioList(){
     const al = ACTION_LABEL[t.action];
     const cls = t.action==='buy'?'chg-up':(t.action==='sell'?'chg-down':'');
     return `<tr class="rowlink" onclick="go('#/portfolios/view/${t.pid}/transactions')">
-      <td class="num muted">${t.date}</td>
-      <td><div class="asset-cell"><div class="n">${t.sym}</div><div class="s">${esc(a?a.name:'')}</div></div></td>
-      <td>${typeChip(t.sym)}</td>
+      <td class="num muted" style="white-space:nowrap;">${t.date}</td>
+      <td><div class="asset-cell"><div class="n" style="max-width:150px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${esc(a?a.name:'')}">${esc(a?a.name:'')}</div><div class="s">${t.sym}</div></div></td>
       <td class="${cls}">${al}</td>
       <td class="num r">${t.action==='div_cash'||t.action==='div_reinvest' ? money(amt,t.payCcy||p.ccy) : t.qty.toLocaleString('en-US')}</td>
       <td class="num r">${money(amt, p.ccy)}</td>
@@ -1586,7 +1638,10 @@ function vPortfolioList(){
   <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px;" class="two-col">
     <div class="card">
       <div class="card-h"><span class="card-t">最近交易</span><span class="card-sub">仅 5 条预览</span><span class="card-link" onclick="go('#/portfolios/transactions')">查看全部 →</span></div>
-      <table class="tb"><tbody>${recentTx || '<tr><td><div class="empty"><span class="em">📭</span>暂无交易记录</div></td></tr>'}</tbody></table>
+      <table class="tb">
+        <thead><tr><th style="width:96px">日期</th><th>资产</th><th style="width:56px">方向</th><th class="r" style="width:66px">数量</th><th class="r" style="width:96px">金额</th><th style="width:84px">组合</th></tr></thead>
+        <tbody>${recentTx || '<tr><td colspan="6"><div class="empty"><span class="em">📭</span>暂无交易记录</div></td></tr>'}</tbody>
+      </table>
     </div>
     <div class="card">
       <div class="card-h"><span class="card-t">最近再平衡</span><span class="card-sub">最近 10 条</span></div>
@@ -1643,7 +1698,7 @@ function vTxAll(){
     const amt = t.qty*t.price;
     return `<tr>
       <td class="num muted">${t.date}</td>
-      <td><div class="asset-cell"><div class="n">${t.sym}</div><div class="s">${esc(a?a.name:'')}</div></div></td>
+      <td><div class="asset-cell"><div class="n">${esc(a?a.name:'')}</div><div class="s">${t.sym}</div></div></td>
       <td>${typeChip(t.sym)}</td>
       <td class="${cls}">${ACTION_LABEL[t.action]}</td>
       <td class="num r">${t.qty.toLocaleString('en-US')}</td>
@@ -1689,11 +1744,11 @@ function vPrices(){
     const gap = a.days>=3;
     return `<tr class="rowlink" onclick="go('#/instruments/${encodeURIComponent(a.sym)}')">
       <td><div class="asset-cell"><div class="n">${esc(a.name)}</div><div class="s">${a.sym} · ${MARKET_NAME[a.market]||a.market}</div></div></td>
-      <td class="num" style="font-weight:600">${priceFmt(a)}</td>
-      <td class="num ${chgCls(a.chg)}">${chgArrow(a.chg)} ${Math.abs(a.chg).toFixed(2)}%</td>
+      <td class="num r" style="font-weight:600">${priceFmt(a)}</td>
+      <td class="num r ${chgCls(a.chg)}">${chgArrow(a.chg)} ${Math.abs(a.chg).toFixed(2)}%</td>
       <td>${typeChip(a.sym)}</td>
       <td><span class="chip ${gap?'c-red':'c-gray'}">${clsLabel(a.cls)}</span></td>
-      <td class="${gap?'warn-text':'muted'}">${a.days<=0?'今天':a.days+' 天前'+(gap?' · 缺口':'')}</td>
+      <td class="muted" style="white-space:nowrap;">${a.days<=0?'今天':a.days+' 天前'}${gap?' <span class="warn-text">· 缺口</span>':''}</td>
     </tr>`;
   }).join('') : `<tr><td colspan="6"><div class="empty"><span class="em">📭</span>暂无持仓行情<br/><button class="btn btn-pri btn-sm" style="margin-top:10px" onclick="go('#/instruments')">去添加标的</button></div></td></tr>`;
 
@@ -1717,7 +1772,7 @@ function vPrices(){
   </div>
   <div class="tbl-wrap">
     <table class="tb">
-      <thead><tr><th>名称 / 代码</th><th class="r">今日价</th><th class="r">当日涨跌幅</th><th>类型</th><th>大类</th><th>最近更新</th></tr></thead>
+      <thead><tr><th style="width:100%">名称 / 代码</th><th class="r">今日价</th><th class="r">当日涨跌幅</th><th>类型</th><th>大类</th><th>最近更新</th></tr></thead>
       <tbody>${rows}</tbody>
     </table>
   </div>
@@ -1739,7 +1794,9 @@ function vInstruments(){
   if(f.status==='off') list = list.filter(a=>!a.active);
   if(f.status==='watch') list = list.filter(a=>a.watch);
   const rows = list.map(a=>{
-    const st = !a.active ? '<span class="chip c-gray">停用</span>' : (a.watch?'<span class="chip c-amber">关注</span>':'<span class="chip c-green">启用</span>');
+    // VI-14：启用（是否参与同步）与监控（是否进自选）是两个维度，必须能同时表达
+    const st = (!a.active ? '<span class="chip c-gray">停用</span>' : '<span class="chip c-green">启用</span>')
+      + (a.watch ? ' <span class="chip c-amber">监控</span>' : ' <span class="muted">未监控</span>');
     return `<tr>
       <td><input type="checkbox" style="accent-color:${C.brand}"/></td>
       <td style="font-weight:600">${a.sym}</td>
@@ -1775,11 +1832,10 @@ function vInstruments(){
       <option value="">全部状态</option><option value="on" ${f.status==='on'?'selected':''}>启用</option>
       <option value="off" ${f.status==='off'?'selected':''}>停用</option><option value="watch" ${f.status==='watch'?'selected':''}>关注</option>
     </select>
-    <span class="count">☑ 多选为批量分类预留（P2）</span>
   </div>
   <div class="tbl-wrap">
     <table class="tb">
-      <thead><tr><th style="width:36px"><input type="checkbox" style="accent-color:${C.brand}"/></th><th>代码</th><th>名称</th><th>市场</th><th>币种</th><th>类型</th><th>大类</th><th>状态</th><th>操作</th></tr></thead>
+      <thead><tr><th style="width:36px"><input type="checkbox" style="accent-color:${C.brand}"/></th><th>代码</th><th>名称</th><th>市场 / 渠道</th><th>币种</th><th>类型</th><th>大类</th><th>状态</th><th>操作</th></tr></thead>
       <tbody>${rows}</tbody>
     </table>
   </div>`;
@@ -1835,7 +1891,7 @@ function vInstrumentDetail(sym){
         <div class="card-sub" style="margin-bottom:6px;">近 30 日迷你走势</div>
         ${sparkSVG(s.map(x=>x.v), 800, 44)}
       </div>
-      <div style="margin-top:14px;border-top:1px solid #F1F3F7;padding-top:12px;">
+      <div style="margin-top:14px;border-top:1px solid var(--row-line);padding-top:12px;">
         <div style="display:flex;align-items:center;">
           <span class="card-sub">完整历史走势（复用 History 渲染）</span>
           <span class="card-link"><a onclick="go('#/prices/${encodeURIComponent(a.sym)}/history')">查看完整历史 →</a></span>
@@ -1911,9 +1967,15 @@ function vAlertRules(){
   const rows = RULES.map(r=>{
     const scope = r.pid ? `组合 · ${P(r.pid).name}` : `资产 · ${r.asset}`;
     const hist = EVENTS.filter(e=>e.ruleId===r.id);
+    /* VI-21：名称里已经写了阈值，副行不再把同一个数字写第二遍（按数值比对，忽略 $270 / $270.00 的写法差） */
+    const subTxt = r.type==='signal' ? (r.dir+' · '+r.reason) : (r.param||'');
+    const nums = (String(subTxt).match(/\d+(?:\.\d+)?/g) || []).map(x => String(parseFloat(x)));
+    const nameNums = (String(r.name).match(/\d+(?:\.\d+)?/g) || []).map(x => String(parseFloat(x)));
+    const dupThreshold = nums.length > 0 && nums.every(n => nameNums.includes(n));
+    const sub = subTxt && !dupThreshold ? `<div class="s">${esc(subTxt)}</div>` : '';
     return `<tr>
-      <td><div class="asset-cell"><div class="n">${esc(r.name)}</div><div class="s">${r.type==='signal'?esc(r.dir+' · '+r.reason):esc(r.param||'')}</div></div></td>
-      <td><span class="chip c-purple">${RULE_TYPE_LABEL[r.type]}</span>${r.needData?'<span class="chip c-gray" title="需先录入分位数据">需数据</span>':''}</td>
+      <td><div class="asset-cell"><div class="n">${esc(r.name)}</div>${sub}</div></td>
+      <td><span class="chip c-gray">${RULE_TYPE_LABEL[r.type]}</span>${r.needData?'<span class="chip c-gray" title="需先录入分位数据">需数据</span>':''}</td>
       <td class="muted">${esc(scope)}</td>
       <td class="num r muted">${r.type==='signal'?'—':r.cooldown+' 天'}</td>
       <td><label class="switch"><input type="checkbox" ${r.on?'checked':''} onchange="toggleRule('${r.id}')"/><span class="sl"></span></label></td>
@@ -2097,8 +2159,7 @@ function vLogs(){
     </div>
     <div class="tbl-wrap"><table class="tb">
       <thead><tr><th>任务</th><th>状态</th><th>开始时间</th><th class="r">时长</th><th>结果摘要</th></tr></thead>
-      <tbody>${rows}</tbody></table></div>
-    <div class="fhint" style="margin-top:10px;">注：successCount 在 persistPrice 后计数 —— 任务全绿 ≠ 有新数据；缺口以完整性检查为准。</div>`;
+      <tbody>${rows}</tbody></table></div>`;
   }
   /* ---- 服务器日志（原 logs 分支，逻辑未动，仅 tab key 改名） ---- */
   let lines = LOGLINES.filter(l=>f.level==='ALL'||l.lv===f.level);
@@ -2160,7 +2221,7 @@ function vPortfolioDetail(pid, tab, sub, recordId){
   // Tab key 必须与实码 Detail.jsx 一致：position-history（不是 history），避免破坏旧深链
   const tabs = [['overview','总览'],['positions','持仓概览'],['position-history','持仓历史'],['rebalance','再平衡'],['transactions','交易记录']];
   const tabBar = `<div class="tabs">${tabs.map(([k,l])=>`<div class="tab ${tab===k?'on':''}" onclick="go('#/portfolios/view/${pid}/${k}')">${l}</div>`).join('')}</div>`;
-  const header = vDetailHeader(p, d);
+  const header = vDetailHeader(p, d, tab!=='overview');
   let body = '';
   if(tab==='overview') body = tabOverview(p, d);
   else if(tab==='positions') body = tabPositions(p);
@@ -2169,8 +2230,31 @@ function vPortfolioDetail(pid, tab, sub, recordId){
   else body = tabTxns(p);
   return header + tabBar + body;
 }
-function vDetailHeader(p, d){
+function vDetailHeader(p, d, slim){
   const menuId = 'pmenu-'+p.id;
+  const actions = `<div style="display:flex;gap:8px;position:relative;flex-wrap:wrap;">
+          <button class="btn btn-pri" onclick="openTxForm('${p.id}',null)">＋ 添加交易</button>
+          <button class="btn" onclick="openPortfolioForm('${p.id}')">编辑</button>
+          <button class="btn" onclick="openTargetForm('${p.id}')">设置目标</button>
+          <button class="btn" onclick="toggleMenu('${menuId}')">⋯</button>
+          <div class="menu" id="${menuId}">
+            <div class="menu-item" onclick="toggleArchive('${p.id}')">${p.archived?'取消归档':'归档组合'}</div>
+            <div class="menu-item danger" onclick="openDelPortfolio('${p.id}')">删除组合</div>
+          </div>
+        </div>`;
+  /* VI-2：130px 标题卡只在「总览」出现（对齐 1.0：只有总览屏有该卡）。
+     其余 4 个 Tab 用单行身份条 —— 保留同样的 4 个动作，但不再把内容整体下推。 */
+  if(slim){
+    return `
+  <div class="detail-back"><a onclick="go('#/portfolios')">← 返回组合列表</a></div>
+  <div class="detail-slim">
+    <span class="ds-name">${esc(p.name)}</span>
+    ${p.archived?'<span class="chip c-gray">已归档</span>':''}
+    <span class="chip c-gray">${p.ccy}</span>
+    <span class="spacer"></span>
+    ${actions}
+  </div>`;
+  }
   return `
   <div class="detail-back"><a onclick="go('#/portfolios')">← 返回组合列表</a></div>
   <div class="card" style="margin:6px 0 16px;">
@@ -2186,16 +2270,7 @@ function vDetailHeader(p, d){
           </div>
         </div>
         <div class="spacer"></div>
-        <div style="display:flex;gap:8px;position:relative;flex-wrap:wrap;">
-          <button class="btn btn-pri" onclick="openTxForm('${p.id}',null)">＋ 添加交易</button>
-          <button class="btn" onclick="openPortfolioForm('${p.id}')">编辑</button>
-          <button class="btn" onclick="openTargetForm('${p.id}')">设置目标</button>
-          <button class="btn" onclick="toggleMenu('${menuId}')">⋯</button>
-          <div class="menu" id="${menuId}">
-            <div class="menu-item" onclick="toggleArchive('${p.id}')">${p.archived?'取消归档':'归档组合'}</div>
-            <div class="menu-item danger" onclick="openDelPortfolio('${p.id}')">删除组合</div>
-          </div>
-        </div>
+        ${actions}
       </div>
     </div>
   </div>`;
@@ -2227,9 +2302,11 @@ function kpiRow(p){
   const pl = pPL(p), plPct = pPLPct(p);
   let rbVal, rbSub;
   if(d.kind==='none'){ rbVal='<span class="muted" style="font-size:18px;">未设目标</span>'; rbSub='<a onclick="openTargetForm(\''+p.id+'\')">去设置目标 →</a>'; }
+  else if(d.kind==='unvaluable'){ rbVal='<span class="danger-text" style="font-size:20px;">无法估值</span>'; rbSub='<span class="danger-text">全部持仓缺最新价，偏离不可判定</span>'; }
+  else if(d.kind==='missing'){ rbVal='<span class="warn-text" style="font-size:20px;">部分缺价</span>'; rbSub=`<span class="warn-text">${d.missing} 项缺最新价，未参与偏离判定</span>`; }
   else if(d.kind==='over'){ rbVal=`<span class="warn-text" style="font-size:20px;">${d.overN} 项超阈</span>`; rbSub=`<span class="warn-text">${d.due?'已到期 · '+d.ds+' 天未调仓':'偏离超阈'}</span>`; }
   else if(d.kind==='never'){ rbVal='<span style="font-size:20px;color:#0284C7;font-weight:700;">从未执行</span>'; rbSub='<span class="muted">尚未执行过任何一次再平衡</span>'; }
-  else if(d.kind==='due'){ rbVal='<span class="warn-text" style="font-size:20px;">已到期</span>'; rbSub=`<span class="warn-text">距上次再平衡 ${d.ds} 天 &gt; 阈值 ${p.cfg.interval} 天</span>`; }
+  else if(d.kind==='due'){ rbVal='<span class="warn-text" style="font-size:20px;">已到期</span>'; rbSub=`<span class="warn-text">已达 ${d.ds} 天（阈值 ${p.cfg.interval} 天）</span>`; }
   else { rbVal='<span style="font-size:20px;color:var(--down);font-weight:700;">配置正常</span>'; rbSub='<span class="muted">未超阈且未到期</span>'; }
   return `<div class="kpi-row" style="margin-bottom:16px;">
     <div class="kpi"><div class="l">持仓总市值（${p.ccy}）</div><div class="v num">${money(pValue(p),p.ccy)}</div></div>
@@ -2263,13 +2340,13 @@ function tabOverview(p, d){
     const missing = rows.filter(r=>r.missing).length;
     const reasons = driftReasons(p);
     const reasonText = reasons.length ? reasons.map(k=>DRIFT_REASON_LABEL[k]).join(' · ') : '未触发任何阈值';
-    const chip = d.kind==='over' ? `<span class="chip c-amber">${d.overN} 项超阈${d.due?' · 已到期':''}</span>`
-      : d.kind==='never' ? '<span class="chip c-blue">从未执行</span>'
-      : d.kind==='due' ? '<span class="chip c-amber">已到期</span>'
-      : '<span class="chip c-green">配置正常</span>';
+    const chip = driftChipHTML(d);
+    const classNote = isClass
+      ? `<span class="card-sub">大类级口径 · 首列为大类${d.overN>0?` · 徽标 ${d.overN} = 超标标的数（表内 ${d.overClasses} 类超阈）`:''}</span>`
+      : '';
     targetCard = `<div class="card" style="margin-bottom:16px;">
       <div class="card-h"><span class="card-t">目标 vs 实际</span>
-        ${isClass?'<span class="card-sub">大类级口径 · 首列为大类</span>':''}
+        ${classNote}
         <span class="spacer"></span>${chip}
       </div>
       <table class="tb">
@@ -2393,12 +2470,23 @@ function rebSugg(p, d){
   const cfg = p.cfg;
   const left = `
     <div class="fhint" style="margin-bottom:12px;">触发阈值与 AUTO 频率在「总览 · 再平衡配置」维护，本页不设第二入口。</div>
+    <div class="card" style="margin-bottom:14px;">
+      <div class="card-h"><span class="card-t">再平衡判据（只读）</span></div>
+      <div class="card-b">
+        <div class="crit"><span class="k">绝对偏离阈值</span><b class="num">${cfg.abs}%</b></div>
+        <div class="crit"><span class="k">相对偏离阈值</span><b class="num">${cfg.rel}%</b></div>
+        <div class="crit"><span class="k">时间间隔</span><b class="num">${cfg.interval} 天</b></div>
+        <div class="crit"><span class="k">AUTO 调度频率</span><b>${{daily:'每日',weekly:'每周',monthly:'每月'}[cfg.freq]||cfg.freq}</b></div>
+        <div class="crit"><span class="k">当前状态</span>${driftChipHTML(d)}</div>
+      </div>
+    </div>
     <div class="card">
       <div class="card-h"><span class="card-t">再平衡建议参数</span></div>
       <div class="card-b">
         <div class="fhint" style="margin-bottom:12px;">调整以下参数以影响建议生成逻辑。</div>
         <div class="field"><label class="flabel">本次可投入现金（${p.ccy}）</label><input class="input input-full num" id="rbCash" value="10000"/></div>
-        <div class="field"><label class="flabel">预估手续费率</label><input class="input input-full num" id="rbFee" value="0.05"/></div>
+        <div class="field"><label class="flabel">预估手续费率（%）</label><input class="input input-full num" id="rbFee" value="0.05"/></div>
+        <div class="fhint" style="margin-bottom:10px;">按成交金额的百分比计，0.05 = 万分之五。</div>
         <button class="btn btn-pri" style="width:100%;justify-content:center;" onclick="genRebal('${p.id}')">生成再平衡建议</button>
       </div>
     </div>`;
@@ -2408,17 +2496,24 @@ function rebSugg(p, d){
     right = `<div class="card" style="min-height:300px;"><div class="empty"><span class="em">🎯</span>未设目标配置 —— 无法生成建议<br/>
       <button class="btn btn-pri btn-sm" style="margin-top:12px" onclick="openTargetForm('${p.id}')">去设置目标</button></div></div>`;
   } else {
-    // 四态 banner：超阈 / 已到期 / 从未执行 / 正常。到期态绝不再报「当前配置在阈值内」
+    // 六态 banner：无法估值 / 部分缺价 / 超阈 / 已到期 / 从未执行 / 正常。到期态绝不再报「当前配置在阈值内」
     let banner;
-    if(d.kind==='over'){
-      banner = `<div class="banner banner-warn" style="margin-bottom:14px;">
+    if(d.kind==='unvaluable' || d.kind==='missing'){
+      const t = d.kind==='unvaluable'
+        ? '该组合全部持仓缺最新价，市值与偏离均不可判定 —— 先修数据再谈再平衡。'
+        : `${d.missing} 项持仓缺最新价，未参与偏离判定 → 此状态下不生成建议，避免按失真占比下单。`;
+      banner = `<div class="banner ${d.kind==='unvaluable'?'banner-warn':'banner-amber'}" style="margin-bottom:14px;">
+        <span>⚠</span><span class="t">${t}</span>
+      </div>`;
+    } else if(d.kind==='over'){
+      banner = `<div class="banner banner-amber" style="margin-bottom:14px;">
         <span>⚠</span><span class="t">组合偏离已超出阈值，建议立即再平衡以恢复目标配置。</span>
         <span class="spacer"></span>
         <button class="btn btn-sm" onclick="this.closest('.banner').remove()">✕</button>
       </div>`;
     } else if(d.kind==='due'){
       banner = `<div class="banner banner-amber" style="margin-bottom:14px;">
-        <span>⚠</span><span class="t">距上次再平衡 ${d.ds} 天，已超过时间间隔阈值 ${cfg.interval} 天，建议检查配置。</span>
+        <span>⚠</span><span class="t">距上次再平衡已达 ${d.ds} 天（阈值 ${cfg.interval} 天），建议检查配置。</span>
       </div>`;
     } else if(d.kind==='never'){
       banner = `<div class="banner banner-amber" style="margin-bottom:14px;">
@@ -2589,7 +2684,7 @@ function rebHist(p, recordId){
           <td class="num r">${money(s.price||0,p.ccy)}</td></tr>`;
       }).join('');
       html += `<tr class="rb-detail"><td colspan="5">
-        <div style="padding:12px 18px;background:#FBFCFD;border-top:1px dashed var(--border);">
+        <div style="padding:12px 18px;background:var(--thead-bg);border-top:1px dashed var(--border);">
           <div class="card-sub" style="margin-bottom:8px;">该记录的建议明细（只读 · ${r.suggestions.length} 条）</div>
           <table class="tb" style="border:1px solid var(--border);border-radius:8px;overflow:hidden;">
             <thead><tr><th>标的</th><th>操作</th><th class="r">数量</th><th class="r">价格</th></tr></thead>
@@ -2616,9 +2711,9 @@ function tabTxns(p){
     const actCls = t.action==='div_cash'||t.action==='div_reinvest' ? 'c-purple' : '';
     return `<tr>
       <td class="num muted">${t.date}</td>
-      <td><div class="asset-cell"><div class="n">${t.sym}</div><div class="s">${esc(a?a.name:'')}</div></div></td>
+      <td><div class="asset-cell"><div class="n">${esc(a?a.name:'')}</div><div class="s">${t.sym}</div></div></td>
       <td>${typeChip(t.sym)}</td>
-      <td>${actCls?`<span class="chip ${actCls}">${ACTION_LABEL[t.action]}</span>`:`<span class="${cls}">${ACTION_LABEL[t.action]}</span>`}</td>
+      <td>${actCls?`<span class="${actCls==='c-purple'?'muted':cls}">${ACTION_LABEL[t.action]}</span>`:`<span class="${cls}">${ACTION_LABEL[t.action]}</span>`}</td>
       <td class="num r">${t.qty.toLocaleString('en-US')}</td>
       <td class="num r">${t.action==='div_cash'?money(t.price,p.ccy,3)+'/份':money(t.price,p.ccy,a&&a.type==='fund'?3:2)}</td>
       <td class="num r muted">${t.fee?money(t.fee,p.ccy):'—'}</td>
@@ -2634,7 +2729,6 @@ function tabTxns(p){
     <span class="count">${list.length} 笔 · 所属组合已由页面上下文锁定，无需手选</span>
     <div class="spacer"></div>
     <button class="btn" onclick="openCsv('${p.id}')">导入 CSV</button>
-    <button class="btn btn-pri" onclick="openTxForm('${p.id}',null)">＋ 新建交易</button>
   </div>
   <div class="tbl-wrap">
     <table class="tb">
@@ -2836,7 +2930,7 @@ function openTargetForm(pid){
   const isClass = p.targetLevel==='asset_class';
   const classVal = c => (p.classTargets && p.classTargets[c]!=null) ? p.classTargets[c] : 0;
   openModal('目标配置 · '+esc(p.name), `
-    <div class="banner banner-amber" style="margin-bottom:14px;">
+    <div class="proto-note" style="margin-bottom:14px;">
       <span>ⓘ</span><span class="t">落地形态：本入口跳转 <b>/portfolios/edit/:id</b> 的目标区维护；此弹窗仅为行为演示，实施勿照搬。</span>
     </div>
     <div class="field"><label class="flabel">模式（二选一）</label>
@@ -2973,6 +3067,8 @@ document.addEventListener('click', (e)=>{ if(!e.target.closest('.tb-search')) gs
    Modal / Toast
 ===================================================== */
 function openModal(title, bodyHtml, footHtml){
+  /* VI-8：弹窗打开时不能有下拉/搜索浮层继续悬浮在它上面 —— 先收所有浮层 */
+  closeMenu(); gsClose(); setUserMenu(false);
   $('modal').innerHTML = `
     <div class="m-head"><span class="m-title">${title}</span><span class="m-x" onclick="closeModal()">✕</span></div>
     <div class="m-body">${bodyHtml}</div>

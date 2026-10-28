@@ -33,14 +33,15 @@ export function useAlertEvents(params = {}) {
   return { data, isLoading, isError, refetch };
 }
 
-/** Dashboard 顶部未读徽标：全局轮询，5 秒刷新 */
-export function useUnreadAlertCount() {
+/** Dashboard 顶部未读徽标：全局轮询，5 秒刷新。强制改密期间（enabled=false）不请求。 */
+export function useUnreadAlertCount({ enabled = true } = {}) {
   const queryClient = useQueryClient();
   const { data = { count: 0 }, refetch } = useQuery({
     queryKey: ['alert-unread-count'],
     queryFn: getUnreadAlertCount,
     refetchInterval: 5000,
     retry: 1,
+    enabled,
   });
   return {
     count: data.count ?? 0,

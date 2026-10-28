@@ -4,12 +4,14 @@ function success(res, data, options = {}) {
   return res.status(options.status || 200).json(body);
 }
 
-function failure(req, res, status, message, details) {
+function failure(req, res, status, message, details, options = {}) {
   const body = {
     success: false,
     message,
     traceId: req.traceId || 'no-trace-id'
   };
+  // TASK-058：认证错误需要稳定的机器可读错误码（前端据此写文案，不匹配 message）
+  if (options && options.code) body.code = options.code;
   if (details !== undefined) body.details = details;
   return res.status(status).json(body);
 }
