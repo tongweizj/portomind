@@ -76,6 +76,8 @@ client/src/
 
 **已下线**：`/family`（原家庭视图页）已删除，**不设显式重定向**，书签由 `*` 通配承接落到 `/portfolios`。后端 `/api/family/*` 端点全部保留——它们仍供 Dashboard 与组合列表页取数，**不是死代码**。
 
+> **账号与访问控制（TASK-058）前端路由尚未实现**（U2/U3 待做）：`/login`（不套 `AppLayout`）、`/account`、`/account/users`（独立页，仅 admin）；未登录守卫 `→ /login?next=<原路径>`、登录后回跳、axios 401 拦截、强制改密闸门。**后端 U1 已上线能力但不得单独发布**——前端无登录入口时全站会 401。契约见 [API_CONTRACT](./API_CONTRACT.md)「认证与错误码」与 [FS-authentication](../product/specs/FS-authentication.md)。
+
 ### 2.3 组合详情 Tab
 
 `pages/Portfolio/Detail.jsx` 内定义，**4 个 Tab，默认 `positions`**：
@@ -272,9 +274,9 @@ mutation hooks：`useUpsertFxRate` / `useSyncFxRates` / `useCreateAlertRule` / `
 
 ## 8. 已知偏差（改相关代码前先看）
 
-### 8.1 「退出登录」按钮是占位
+### 8.1 认证已落地后端，前端登录/账户页待 U2
 
-`Sidebar` 底部渲染了「退出登录」按钮，**没有 onClick，也没有登录态**。系统当前无认证、无多用户。要么补最小认证，要么删掉这个按钮——保留原样等于向用户做假承诺。
+**后端**（TASK-058 U1，2026-10-27）已实现 `User`/`Session` + 全站 `401` 闸门 + `admin`/`member` 角色 + `/api/auth/*` + `/api/users/*`；**前端尚未接入**：`Sidebar` 底部的「退出登录」仍是**无 onClick 的占位**，`/login`、`/account`、`/account/users` 与 401 拦截由 **U2/U3** 实现（见 §2.2 注记）。在 U2 就绪前后端认证版本**不得单独发布**（会全站 401）。
 
 ### 8.2 `ROUTES.PORTFOLIO_VIEW(id)` 是死别名
 

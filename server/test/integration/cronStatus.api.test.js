@@ -11,6 +11,7 @@ const os = require('os');
 process.env.LOG_DIR = path.join(os.tmpdir(), 'portomind-cronstatus-api-logs');
 
 const app = require('../../app');
+const { installAdminSession, uninstallSessionStub, authHeaders } = require('../helpers/auth');
 const { applyWorld } = require('../helpers/modelStubs');
 
 const TASK_NAMES = [
@@ -30,6 +31,7 @@ function useWorld(world) {
 }
 
 test.before(async () => {
+  installAdminSession();
   await new Promise((resolve) => {
     server = app.listen(0, '127.0.0.1', resolve);
   });
@@ -37,6 +39,7 @@ test.before(async () => {
 });
 
 test.after(async () => {
+  uninstallSessionStub();
   await new Promise((resolve, reject) => server.close((error) => (error ? reject(error) : resolve())));
 });
 
@@ -48,7 +51,7 @@ test.afterEach(() => {
 async function request(pathname, options) {
   const response = await fetch(`${baseUrl}${pathname}`, {
     ...options,
-    headers: { 'content-type': 'application/json', ...(options?.headers || {}) }
+    headers: { 'content-type': 'application/json', ...(options?.headers || {}), cookie: authHeaders().cookie }
   });
   return { status: response.status, body: await response.json(), headers: response.headers };
 }

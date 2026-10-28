@@ -56,10 +56,12 @@ test('getLatestValuations：每 (indexCode, metric) 取最新一条', async (t) 
 // ───────────────────────── HTTP 契约 ─────────────────────────
 
 const app = require('../../app');
+const { installAdminSession, uninstallSessionStub, authHeaders } = require('../helpers/auth');
 let server;
 let baseUrl;
 
 test.before(async () => {
+  installAdminSession();
   await new Promise((resolve) => {
     server = app.listen(0, '127.0.0.1', resolve);
   });
@@ -67,13 +69,14 @@ test.before(async () => {
 });
 
 test.after(async () => {
+  uninstallSessionStub();
   await new Promise((resolve, reject) => server.close((error) => error ? reject(error) : resolve()));
 });
 
 async function request(path, options = {}) {
   const response = await fetch(`${baseUrl}${path}`, {
     method: options.method || 'GET',
-    headers: { 'Content-Type': 'application/json' },
+    headers: { 'Content-Type': 'application/json', cookie: authHeaders().cookie },
     body: options.body ? JSON.stringify(options.body) : undefined
   });
   return { status: response.status, body: await response.json() };

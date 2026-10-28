@@ -54,7 +54,7 @@
 | 验证与测试命令（`test`/`validate`/`verify`/`lint`/`build`） | `manual/DEPLOYMENT.md` §7 | 引用，不复制命令 |
 | 生产部署（构建 / PM2 / Nginx / 上线检查） | `manual/DEPLOYMENT.md` §6 | 一句话 + 链接 |
 | 环境变量（三份 `.env` 全表） | `manual/DEPLOYMENT.md` §4 | 各组件手册只列必需项 + 链接 |
-| 安全边界（无认证 / CORS / 日志脱敏） | `manual/DEPLOYMENT.md` §9 | README 与 CLIENT 一句话 + 链接 |
+| 安全边界（认证 / CORS / 日志脱敏） | `manual/DEPLOYMENT.md` §9 | README 与 CLIENT 一句话 + 链接 |
 | 账号与访问控制的需求形态（角色矩阵 / 页面 / Non-goals） | `product/specs/FS-authentication.md` | 只写一句 + 链接 |
 | 账号与访问控制的技术决策（会话 / 哈希 / 为何不用 JWT） | `architecture/adr/ADR-001-authentication.md` | 只写一句 + 链接 |
 | 备份与迁移 | `manual/DEPLOYMENT.md` §10 | 链接 |
@@ -81,7 +81,7 @@
 ## 3. 写作规则
 
 1. **不写会漂移的硬数字**：如测试用例数、覆盖率、依赖精确版本。改为「以 `npm test` 实际输出为准」；带日期的历史数量只放在 PRD 的需求状态条目里。
-2. **配置/行为描述必须与代码对账**：涉及开关、默认值、端点的陈述，改文档前先看源码。当前不生效的配置要**明确标注「不生效」**并说明原因（例：`server/app.js` 读 `CORS_ORIGINS` 构造了 `allowedOrigins`，但使用它的白名单 `cors()` 被整段注释，最终走 `cors({origin:true})` → **读了不生效**。注意别说成「未被读取」——两者成因与修法不同）。
+2. **配置/行为描述必须与代码对账**：涉及开关、默认值、端点的陈述，改文档前先看源码。当前不生效的配置要**明确标注「不生效」**并说明原因；若只是被读取但未接入执行路径，写「读了不生效」而不是「未被读取」——两者成因与修法不同。修复后必须同步删除该标注（历史案例：`server/app.js` 的 `CORS_ORIGINS` 曾在 TASK-058 U1 前「读了不生效」，现已生效）。
 3. **文档间链接用相对路径**，且必须指向真实存在的文件。
 4. **搬迁文件时必须同步更新所有引用方**：`docs/readme.md`、根 `README.md`、以及任何指向它的手册。
 5. **临时审查产物**放进 `manual/` 时须在文首标注「临时」与失效条件，落地后删除。

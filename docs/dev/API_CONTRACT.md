@@ -18,6 +18,15 @@ API 前缀为 `/api`。客户端只通过 `VITE_API_URL` 配置此前缀；变�
 
 价格业务日期统一使用 `MARKET_TIMEZONE`（默认 `America/Toronto`）解释，数据库始终保存 UTC `Date`。同步写入会将日价格规范到市场日边界，并通过 `{symbol, timestamp}` 唯一索引和 upsert 保证重复同步幂等。价格查询响应携带 `X-Market-Timezone`。
 
+## 认证与错误码（TASK-058 U1 起）
+
+- **默认要求登录**：除 `POST /api/auth/login`、`POST /api/auth/logout`、`GET /api/auth/session` 外，全部 `/api/*` 端点都要求会话 cookie `pm_sid`；未登录/会话失效返回 `401`（body `code: UNAUTHENTICATED` 或 `ACCOUNT_DISABLED`）。
+- **强制改密**：`mustChangePassword=true` 的账号只能访问 `change-password` / `logout` / `session`，其余返回 `403 PASSWORD_CHANGE_REQUIRED`。
+- **角色**：`/api/users/*` 全部要求 `admin`；`member` 返回 `403 FORBIDDEN`。
+- **错误码字段**：认证相关失败响应在通用结构上增加顶层 `code`（稳定机器码，前端据此写文案，**不要匹配 message**）。现有码：`INVALID_CREDENTIALS` · `ACCOUNT_DISABLED` · `ACCOUNT_LOCKED` · `PASSWORD_CHANGE_REQUIRED` · `FORBIDDEN` · `UNAUTHENTICATED` · `USERNAME_TAKEN` · `LAST_ADMIN_PROTECTED` · `CANNOT_DEACTIVATE_SELF` · `SELF_RESET_FORBIDDEN` · `PASSWORD_TOO_SHORT` · `PASSWORD_TOO_LONG` · `INVALID_USERNAME` · `INVALID_ROLE` · `INVALID_CURRENT_PASSWORD` · `INVALID_INPUT` · `INVALID_ID` · `USER_NOT_FOUND`。
+- **CORS**：白名单 + `credentials:true`；非白名单 `Origin` 返回 `403`（`CORS_FORBIDDEN`）。
+- **仅接受 `application/json`**：带请求体的写端点（`login` / `change-password` / `profile` / `users` 的 POST/PATCH）若 Content-Type 不是 JSON → `415 UNSUPPORTED_MEDIA_TYPE`（FS §8 CSRF：`SameSite=Lax` + JSON-only，配合不挂 `urlencoded` 解析器）。
+
 Asset 枚举：`type` 为 `stock | etf | fund | bond | cash`，`market` 为 `US | CA | CN-SH | CN-SZ | CN-FUND | HK`，`currency` 为 `USD | CAD | CNY | HKD`（港股 AS-08：market=HK，Yahoo 代码形如 `0700.HK`），`assetClass` 为 `equity | bond | gold | cash | null`（AS-09：大类与 type 正交，null=未分类）。`active` 控制资产能否进入交易选择、行情同步等业务流程；`watchlist` 仅表示用户关注偏好，二者互不替代。
 
 Portfolio 枚举：`type`（风险定位）为 `活钱 | 稳健 | 长期`；`accountType`（账户载体）为 `tiantian | xueqiu | tfsa | rrsp | resp | taxable | other`，二者正交。`accountType` 缺省为 `other`；存量组合未写入该字段时读取侧按 `other` 兜底。
@@ -42,7 +51,7 @@ Portfolio 枚举：`type`（风险定位）为 `活钱 | 稳健 | 长期`；`acc
 }
 ```
 
-校验错误可能额外包含 `details`。状态码语义固定为：`400` 请求参数或请求体无效，`404` 资源/路由不存在，`409` 唯一键冲突，`500` 未处理的服务器错误。创建返回 `201`，其余成功请求返回 `200`。
+校验错误可能额外包含 `details`。认证/授权/CORS 类错误可能额外包含顶层 `code`（见「认证与错误码」）；状态码语义：`400` 请求参数或请求体无效，`401` 未登录/会话失效，`403` 已登录但无权限或需先改密（`PASSWORD_CHANGE_REQUIRED` / `FORBIDDEN` / CORS 拒绝），`404` 资源/路由不存在，`409` 唯一键/不变量冲突，`429` 登录限流锁定，`500` 未处理的服务器错误。创建返回 `201`，其余成功请求返回 `200`。
 
 ## 接口清单
 
@@ -51,6 +60,15 @@ Portfolio 枚举：`type`（风险定位）为 `活钱 | 稳健 | 长期`；`acc
 | 方法与路径 | 请求参数 | 返回 data | 状态码 / 特有错误 |
 | --- | --- | --- | --- |
 | `GET /` | 无 | `{ message }` | `200` |
+| `POST /api/auth/login` | Body: `{username,password}`（用户名大小写不敏感，存小写） | `{user:{id,username,role,mustChangePassword}}` + `Set-Cookie: pm_sid=…`（httpOnly/SameSite=Lax/Path=/；生产 Secure） | `200`; 参数缺失 `400`; 非 JSON `415 UNSUPPORTED_MEDIA_TYPE`; 密码错 `401 INVALID_CREDENTIALS`; 账号停用 `401 ACCOUNT_DISABLED`; 连续 5 次失败后 `429 ACCOUNT_LOCKED` |
+| `POST /api/auth/logout` | 无（无需登录，幂等） | `{ok:true}`；删除库中会话并清 cookie | `200` |
+| `GET /api/auth/session` | 无（公开） | `{authenticated:boolean, user?:{id,username,role,mustChangePassword}}` | `200`（**未登录也 200**） |
+| `POST /api/auth/change-password` | Body: `{currentPassword,newPassword}`（8–72 字符） | `{ok:true}`；成功后 `mustChangePassword=false`、该账号**其他会话失效**（保留当前） | `200`; 当前密码错 `400 INVALID_CURRENT_PASSWORD`; 密码不合规 `400 PASSWORD_TOO_SHORT` / `PASSWORD_TOO_LONG`; 未登录 `401` |
+| `PATCH /api/auth/profile` | Body: `{username}` | `{user:{id,username,role,mustChangePassword}}` | `200`; 用户名非法 `400 INVALID_USERNAME`; 重名 `409 USERNAME_TAKEN` |
+| `GET /api/users` | 无（admin） | `{items:[{id,username,role,active,mustChangePassword,lastLoginAt,createdAt}]}`（创建时间倒序；**不含 passwordHash**） | `200`; 未登录 `401`; 非 admin `403 FORBIDDEN` |
+| `POST /api/users` | Body: `{username,password,role}`（admin） | `{user:{…}}`；`mustChangePassword=true`，对方首登强制改密 | `201`; 校验失败 `400`；重名 `409 USERNAME_TAKEN`；非 admin `403` |
+| `PATCH /api/users/:id` | Path: `id`; Body: `{username?,role?,active?}`（admin） | `{user:{…}}`；停用时该用户现存会话立即删除 | `200`; 非法 id `400 INVALID_ID`; 不变量冲突 `409 LAST_ADMIN_PROTECTED` / `CANNOT_DEACTIVATE_SELF`; 非 admin `403` |
+| `POST /api/users/:id/password` | Path: `id`; Body: `{newPassword}`（admin；**不能对自己**，D9） | `{ok:true}`；目标用户全部会话失效 + `mustChangePassword=true` | `200`; 对自己 `409 SELF_RESET_FORBIDDEN`; 校验失败 `400`; 非 admin `403` |
 | `GET /api/assets` | Query: `page,pageSize,search?,sortBy?,sortOrder?,active?,watchlist?,assetClass?`；search 匹配代码、名称、标签，状态过滤值为 true/false，assetClass 取 `equity/bond/gold/cash/unclassified`（unclassified 匹配 null=未分类） | Asset 数组 + 分页 | `200`; 查询参数无效 `400` |
 | `POST /api/assets` | Body: `{symbol,name,market,currency,type,assetClass?,tags?,watchlist?,active?}`（assetClass 空串/省略 = 未分类） | 新 Asset | `201`; `400`; symbol 重复 `409` |
 | `GET /api/assets/:id` | Path: `id` | Asset | `200`; `400`; `404` |
@@ -107,8 +125,13 @@ Portfolio 枚举：`type`（风险定位）为 `活钱 | 稳健 | 长期`；`acc
 
 > `GET /api/cron/status` 是**只读聚合**端点（FS C-02 / TASK-054）：不注册 cron、不触发任务、不写库；字段全集与派生口径（含“有效目标日”）见 [TASK-054 ExecPlan](../exec-plans/complete/TASK-054-cron-status-aggregate-api.md) §4.3/§4.4。
 
-未注册的 API 路径返回 `404` 和通用错误结构。所有响应还会携带 `X-Trace-Id` 响应头。
+未注册的 API 路径：**带合法会话**时返回 `404` 和通用错误结构；未认证请求会先被全站闸门拦为 `401`（闸门在 404 之前）。所有响应还会携带 `X-Trace-Id` 响应头。
 
 ## 当前安全边界
 
-当前 API 没有登录、身份认证和资源级授权，只适合可信本地网络。引入多用户前，所有 Portfolio、Transaction、RebalanceRecord、TaskRun 和日志查询都必须补所有权或管理员授权，不能直接把当前接口暴露到公网。
+自 TASK-058 U1（2026-10-27）起 API 已有登录、身份认证与角色授权：
+
+- 全部业务端点默认要求会话 cookie（`401`）；`admin`/`member` 都能读写业务数据，只有 `/api/users/*` 限 `admin`（`403`）。
+- 单租户：**所有账号共享同一份家庭数据**，没有 `ownerId`/`tenantId`/资源级隔离；也给不出「按用户分权」的能力。
+- 生产部署必须：TLS + `COOKIE_SECURE=true` + 配置 `CORS_ORIGINS` 白名单；**U1 不得与前端 U2 拆分发布**（否则全站 401）。
+- 其余风险（日志脱敏、备份、MongoDB 访问控制）仍按 §DEPLOYMENT 安全边界执行。

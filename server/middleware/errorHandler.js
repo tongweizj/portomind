@@ -44,7 +44,10 @@ module.exports = function errorHandler(err, req, res, next) {
       status = 409;
     }
     const message = status === 500 ? 'Internal Server Error' : err.message;
-    failure(req, res, status, message);
+    // TASK-058：4xx 的认证/CORS 等错误码需要透出稳定机器码；
+    // 5xx 不透出内部 code（避免 ECONNREFUSED 之类的实现细节泄漏）。
+    const code = status >= 400 && status < 500 && typeof err.code === 'string' ? err.code : undefined;
+    failure(req, res, status, message, undefined, code ? { code } : undefined);
   } else {
     // 如果已发送响应，则交给默认错误处理
     next(err);

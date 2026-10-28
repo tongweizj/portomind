@@ -204,6 +204,7 @@ cron-worker/index.js
 7. **跨包引用必须走 `@portomind/shared/*`**，不用相对路径穿透 workspace。
 8. **枚举双份必须同步。** `ASSET_TYPES / ASSET_CLASSES / ASSET_MARKETS / ASSET_CURRENCIES` 存在两份：`shared/constants/asset.constants.js` 与 `client/src/constants/enums.js`。改一处必须改另一处（这是当前唯一的双份定义，见 §8）。
 9. **前端不自算偏离、不折算币种。** 目标 vs 实际须走 `POST /api/portfolios/:pid/rebalance/check`（含每个标的的绝对/相对偏离），不得在前端复制阈值逻辑。
+10. **认证闸门只有一处挂载点（TASK-058 U1 起）**：`app.use('/api', requireAuth)` 覆盖全部业务路由；`/api/auth/*`（login/session 公开、logout 幂等）与 `/api/users/*`（路由级 `requireAuth + requireAdmin`）在其之前挂载。禁止逐路由复制「取 cookie / 查会话 / 判角色」逻辑；测试只允许 stub 会话查询，不得引入跳过闸门的开关。CORS 必须是**白名单 + `credentials:true`**，生产（`NODE_ENV=production`）未配 `CORS_ORIGINS` 启动 fail-fast。
 
 ---
 
@@ -213,8 +214,8 @@ cron-worker/index.js
 
 | # | 债 | 现状 | 后果 |
 |---|---|---|---|
-| 1 | **无认证、无授权** | [ADR-001](./adr/ADR-001-authentication.md) 仍是未填模板；侧栏已渲染一个**无 handler 的「退出登录」按钮** | API 不可暴露公网；界面上存在「假装有登录」的假承诺 |
-| 2 | **CORS 实际全开** | `server/app.js` 的允许名单整段被注释，改用 `cors({ origin: true })`；`CORS_ORIGINS` 是**未被读取的死变量** | 任何来源都可跨域调用；一旦误上线即全暴露（与 1 叠加） |
+| 1 | **认证已建立，账号运营界面未完成**（TASK-058 U1 已实施） | 后端：`User`/`Session` 模型 + `requireAuth`/`requireAdmin` + `/api/auth/*` + `/api/users/*` + 默认 admin seed + 登录限速已落地（[ADR-001](./adr/ADR-001-authentication.md) 已 `Accepted`）；前端：`/login`、`/account`、`/account/users`（U2/U3）**尚未实现**，侧栏「退出登录」假按钮仍在 | 后端已不可匿名访问；但 **U1 不得单独发布**（前端无登录入口会全站 401），必须与 U2 同批 |
+| 2 | **CORS 已收敛为白名单**（TASK-058 U1 已实施） | `server/app.js` 使用白名单 + `credentials:true`；生产未配 `CORS_ORIGINS` 启动 fail-fast；开发态有本地默认来源 | 原「任意来源可跨域」风险已解除 |
 | 3 | **汇率方向反向**（TASK-051） | 采集端把「1 CNY = X 外币」当 `rateToCny` 入库 | 家庭层折算整体失真，USD/CAD 低估、HKD 高估 |
 | 4 | **`symbol` 写法不统一** | 无归一化层；`assets/prices` 用裸代码，部分 `transactions/targets` 带 `.cn` 后缀 | 跨表关联不能假设字符串可直接比较；再平衡可能查不到价 |
 | 5 | **TaskRun 契约残缺** | 无 `result` 字段（`strict` 下静默丢弃）、`status` 无 `SKIPPED` | `SUCCEEDED` 只能读成「跑完没抛异常」，不能读成「有新数据」 |
@@ -233,7 +234,7 @@ cron-worker/index.js
 | ADR | 主题 | 状态 |
 |---|---|---|
 | [ADR-002](./adr/ADR-002-single-scheduler.md) | 单一调度器：全部定时任务收敛到 `cron-worker` | `Accepted` |
-| [ADR-001](./adr/ADR-001-authentication.md) | 认证机制 | **模板，未实施**（对应 §8 第 1 条） |
+| [ADR-001](./adr/ADR-001-authentication.md) | 认证机制（服务端会话 + 角色） | `Accepted`（U1 后端已实施 2026-10-27；前端 U2/U3 待做） |
 
 本文汇总**当前架构是什么**，ADR 解释**为什么这样决定**。新增结构决定时先写 ADR，再改本文。
 

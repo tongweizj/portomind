@@ -63,11 +63,13 @@ test('computeSummary：includeArchived=true 时不过滤', async (t) => {
 // ───────────────────────── HTTP 契约 ─────────────────────────
 
 const app = require('../../app');
+const { installAdminSession, uninstallSessionStub, authHeaders } = require('../helpers/auth');
 const PortfolioService = require('@portomind/shared/services/portfolio');
 let server;
 let baseUrl;
 
 test.before(async () => {
+  installAdminSession();
   await new Promise((resolve) => {
     server = app.listen(0, '127.0.0.1', resolve);
   });
@@ -75,11 +77,12 @@ test.before(async () => {
 });
 
 test.after(async () => {
+  uninstallSessionStub();
   await new Promise((resolve, reject) => server.close((error) => error ? reject(error) : resolve()));
 });
 
 async function request(path) {
-  const response = await fetch(`${baseUrl}${path}`);
+  const response = await fetch(`${baseUrl}${path}`, { headers: { cookie: authHeaders().cookie } });
   return { status: response.status, body: await response.json() };
 }
 

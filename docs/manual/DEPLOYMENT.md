@@ -72,10 +72,16 @@ npm test                 # = npm run test --workspaces --if-present（全部 wor
 ```dotenv
 MONGO_URI=mongodb://127.0.0.1:27017/portomind      # 与 cron-worker 同一库（必需）
 PORT=8080
-SCHEDULER_TIMEZONE=America/Toronto   # 仅日志查看接口按调度时区取当天日期，需与 worker 一致
+SCHEDULER_TIMEZONE=America/Toronto   # 只读/查询接口按调度时区取当天日期，需与 worker 一致
 MARKET_TIMEZONE=America/Toronto
 # LOG_DIR 可选；默认写入仓库根 logs/，与 cron-worker 共用
-# CORS_ORIGINS 当前不生效（见 §9 安全边界）
+
+# TASK-058 认证（U1）：
+CORS_ORIGINS=http://localhost:5173   # **白名单**，逗号分隔；生产必填，未配置则启动 fail-fast
+SESSION_TTL_DAYS=7                   # 会话绝对过期天数（不做滑动续期）
+COOKIE_SECURE=true                   # 生产必须 TLS；仅局域网 HTTP 调试才设 false（未设置时 production 默认 true）
+NODE_ENV=production                  # 生产必须显式设置（触发 CORS fail-fast 与 Secure cookie 默认）；开发/测试保持未设置
+TRUST_PROXY=1                        # 经 Nginx 等可信反代时设置（让 req.ip 取 X-Forwarded-For；直连保持未设置）
 ```
 
 ### 4.2 cron-worker（唯一调度进程）
@@ -205,9 +211,11 @@ npm run --workspace client build
 
 # 进程保活（PM2）
 cd cron-worker && npm ci --omit=dev && pm2 start index.js --name portomind-worker --instances 1
-cd ../server && npm ci --omit=dev && pm2 start server.js --name portomind-api --instances 1
+cd ../server && npm ci --omit=dev && NODE_ENV=production TRUST_PROXY=1 pm2 start server.js --name portomind-api --instances 1
 pm2 save
 ```
+
+> 生产必须显式 `NODE_ENV=production`：否则 CORS fail-fast 不生效、cookie 不会自动 `Secure`。经 Nginx 反代时再加 `TRUST_PROXY=1`，否则 `req.ip` 恒为代理地址（登录限速与审计失真）。
 
 将 `client/dist/` 交给 Nginx 或其他静态服务器。`VITE_API_URL` 是构建时变量；若前端和 API 同域，建议使用默认同源 `/api` 并由 Nginx 转发。
 
@@ -295,7 +303,7 @@ cd cron-worker && npm test
 
 ## 8. 已知环境说明
 
-- **CORS 当前不校验来源**：`server/app.js` 使用 `cors({ origin: true })`，任意来源都被接受；`.env` 里的 `CORS_ORIGINS` 目前**不被读取**。安全边界与上线前要求见 §9。
+- **认证与 CORS 已由 TASK-058 U1 落地**：业务端点默认要求登录（`/api/auth/login` 等公开端点除外）；CORS 使用白名单 + `credentials:true`，`CORS_ORIGINS` 生效且生产必填。前端登录页/账户页（U2）尚未上线，**U1 不得单独发布**。详见 §9。
 - 当前使用 npm workspaces monorepo：`shared`（唯一业务实现）、`server`（API）、`cron-worker`（唯一调度）、`client`（前端）。改业务逻辑时改 `shared/`，不要在 `server`/`cron-worker` 下复制实现。
 - 当前后端使用 Mongoose 6.13；跨主版本升级计划见 [`DEPENDENCY_UPGRADES.md`](../exec-plans/complete/DEPENDENCY_UPGRADES.md)。
 - 默认日志写入**仓库根 `logs/`**（由 `shared/config/logger.js` 决定，`app-*.log` 与 `task-*.log` 分文件），并被 Git 忽略；`server` 与 `cron-worker` 共用该目录。日志脱敏规则见 §9。
@@ -311,10 +319,18 @@ cd cron-worker && npm test
 
 | 项 | 当前状态 | 说明 |
 |---|---|---|
-| 认证 / 多用户 | **无** | 没有登录体系与授权。**API 不要暴露到公网**，仅限可信局域网。ADR-001 目前只是模板。 |
-| CORS | **不校验来源** | `server/app.js` 使用 `cors({ origin: true })`，**任意来源都被接受**；白名单实现被注释、`CORS_ORIGINS` 环境变量**不被读取**。单用户本地部署下可接受，但上线前必须二选一：① 恢复白名单实现并让 `CORS_ORIGINS` 生效；② 保持开放，但确保网络层（反向代理 / 防火墙）不对外暴露。 |
-| 日志脱敏 | 已实现 | 请求日志**不记录请求头**；URL 中常见 token / API key / 密码参数及日志元数据中的敏感键统一替换为 `[REDACTED]`。仍应限制 `logs/` 与 MongoDB 的访问权限。 |
-| 数据传输 | 取决于部署 | 示例使用 TLS；若在局域网内以 HTTP 直连，请自行评估风险。 |
+| 认证 / 多用户 | **已实现（TASK-058 U1，2026-10-27）** | 单租户多账号：`User` / `Session`（Mongo，绝对 7 天 TTL）+ `requireAuth` / `requireAdmin`；全部业务端点默认 401，`admin`/`member` 两角色；首次登录强制改密。前端登录页/账户页（U2/U3）未上线前 **U1 不得单独发布**。技术决策见 [ADR-001](../architecture/adr/ADR-001-authentication.md)。 |
+| CORS | **白名单 + credentials** | `server/app.js` 按 `CORS_ORIGINS`（逗号分隔）放行，其它来源 403；`NODE_ENV=production` 且未配置 `CORS_ORIGINS` 时**启动失败**。开发态未配置时使用本地默认来源（localhost:5173 / 127.0.0.1:5173 / 192.168.2.110:9000）。 |
+| 日志脱敏 | 已实现 | 请求日志**不记录请求头**；URL 中常见 token / API key / 密码参数及日志元数据中的敏感键统一替换为 `[REDACTED]`。仍应限制 `logs/` 与 MongoDB 的访问权限；认证只记 `AUTH_*` 事件（不打印密码/哈希）。 |
+| 数据传输 | 取决于部署 | 公网部署必须 TLS：`COOKIE_SECURE=true`（production 默认 true）依赖 HTTPS；局域网 HTTP 调试可显式 `COOKIE_SECURE=false`。 |
+
+### 9.1 首次部署与账号运维（TASK-058）
+
+1. 启动 `server` 时若 `users` 集合为空，自动创建 **`admin` / `admin`**（`role=admin`，`mustChangePassword=true`），日志事件 `AUTH_SEEDED_DEFAULT_ADMIN`（**不打印密码**）。已有任意用户则跳过，不覆盖。
+2. 首次登录后**必须改密**：除 `/api/auth/change-password`、`/api/auth/logout`、`/api/auth/session` 外，所有接口返回 `403 PASSWORD_CHANGE_REQUIRED`。
+3. 忘记 admin 口令属运维动作（不进产品）：连库把目标用户 `passwordHash` 改为已知 bcrypt 哈希（cost 10）并置 `mustChangePassword=true`，或直接删除 `sessions` 集合中的该用户会话。
+4. 会话存 `sessions` 集合，`createdAt` 上有 TTL 索引（`SESSION_TTL_DAYS` 天）；服务重启不掉线。
+5. 账号管理入口在 `/account/users`（U3，未上线）；当前可用 `curl`/前端调用 `GET/POST /api/users`、`PATCH /api/users/:id`、`POST /api/users/:id/password`（均需 admin 会话）。
 
 ---
 

@@ -104,7 +104,7 @@ PortoMind 从立项起就**没有认证**：`server/app.js` 的 9 个业务路�
 5. **会话存 MongoDB**，`sid` 为 32 字节随机值，`httpOnly` + `SameSite=Lax` + 生产 `Secure`，绝对 7 天 TTL。
 6. **首登强制改密**：默认 `admin/admin` 与"他人设定的初始密码"一律置 `mustChangePassword=true`，改密前除三个白名单端点外全部 403。
 7. **CORS 同批收敛**：`origin: true` → 白名单 + `credentials: true`；生产未配 `CORS_ORIGINS` 时启动 fail-fast。
-8. 认证中间件挂在 `app.js` 的 9 个业务路由**之前**，一处覆盖全站。
+8. 认证中间件挂在 `app.js` 的 10 个业务路由**之前**，一处覆盖全站（含 TASK-054 的 `/api/cron`）。
 
 ---
 
@@ -171,7 +171,7 @@ Unaffected：
 
 - **哈希算法**：`bcryptjs`（纯 JS）而非 `bcrypt`（需本机编译），cost 10。Windows 部署下零编译风险，性能对"家庭级登录频次"完全够用。
 - **`sid` 生成**：`crypto.randomBytes(32).toString('base64url')`。不做签名 cookie —— `sid` 本身无信息量，篡改只会得到一个查不到的会话。
-- **中间件顺序**：`traceId` → `requestLogger` → `cors` → `bodyParser` → **`/api/auth` 路由** → **`requireAuth` 闸门** → 9 个业务路由。auth 路由在闸门之前，内部按端点自行决定是否要求登录（`login` 不要，`logout` / `session` / `change-password` 要）。
+- **中间件顺序**：`traceId` → `requestLogger` → `cors` → `cookieParser` → `bodyParser.json`（不再挂 urlencoded，仅接受 JSON）→ **`/api/auth` 路由** + **`/api/users`（自含 requireAuth/requireAdmin）** → **`requireAuth` 闸门** → 10 个业务路由。auth 路由在闸门之前，内部按端点自行决定是否要求登录（`login` / `logout` / `session` 公开，`change-password` / `profile` 要）。反代部署需设 `TRUST_PROXY=1`，否则 `req.ip` 恒为代理地址（登录限速与审计失真）。
 - **`GET /api/auth/session` 返回 200 而非 401**：前端守卫需要一个"确定未登录"的稳定信号，401 会让拦截器把登录页自身也当成鉴权失败。
 - **强制改密的白名单**：`POST /api/auth/change-password`、`POST /api/auth/logout`、`GET /api/auth/session`。其余一律 403 `PASSWORD_CHANGE_REQUIRED`。
 - **停用/重置密码时删会话**：`Session.deleteMany({ userId })`，效果是"立刻踢下线"。
@@ -211,12 +211,12 @@ Unaffected：
 ## 12. Follow-up Actions
 
 - [x] U1 的 ExecPlan 通过 Plan Review（`Approved` 2026-10-26，含 5 项实施裁决）
-- [ ] 实施 U1（`TASK-058` + ExecPlan）
-- [ ] 实施 U2 / U3（U2 与 U1 同批发布）
-- [ ] 回写 `DEPLOYMENT §9` 与 `.env.example`（`CORS_ORIGINS` / `SESSION_TTL_DAYS` / `COOKIE_SECURE`）
-- [ ] 回写 `PL-0 §4 M0.2d`、`PRODUCT_LINES §1.1`（"多用户 SaaS" → "多租户 SaaS"）
-- [ ] 回写 `dev/DATA_MODEL.md`（`User` / `Session`）与 `dev/CLIENT_DEV.md`（3 条新路由）
-- [ ] 修 `docs/readme.md` 的 `specs/authentication.md` 死链（本 FS 即该 spec）
+- [x] 实施 U1（`TASK-058` + ExecPlan，2026-10-27）：`User`/`Session` 模型 + service + `requireAuth`/`requireAdmin` + `/api/auth/*` + `/api/users/*` + 默认 admin seed + 登录限速 + CORS 白名单；server 204/0、worker 77/0；真实 Mongo E2E 9/9（ED-5 门槛）
+- [ ] 实施 U2 / U3（U2 与 U1 同批发布；U1 已就绪待同批）
+- [x] 回写 `DEPLOYMENT §9` 与 `.env.example`（`CORS_ORIGINS` / `SESSION_TTL_DAYS` / `COOKIE_SECURE`，2026-10-27）
+- [x] 回写 `PL-0 §4 M0.2c/M0.2d`、`PRODUCT_LINES §1.1`（"多用户 SaaS" → "多租户 SaaS"，2026-10-27）
+- [x] 回写 `dev/DATA_MODEL.md`（`User` / `Session`，2026-10-27）与 `dev/API_CONTRACT.md`（认证端点/错误码）；`dev/CLIENT_DEV.md` 的 3 条新路由随 U2 落地时回写
+- [x] 修 `docs/readme.md` 的 `specs/authentication.md` 死链（本 FS 即该 spec；`docs/readme.md` 已指向 `FS-authentication.md`）
 - [ ] 后续立项：操作人留痕（`NG4`）、`viewer` 角色（`NG5`）、`taskruns`/`alertevents` TTL
 
 ---
@@ -246,3 +246,9 @@ ADR 由空模板转为 `Accepted`。人类在此之前先提出"注册/登录算
 - D7 会话存储 = **MongoDB**
 
 被否方案：B（JWT，无法即时吊销）、C（反代 Basic Auth，无角色与身份）、D（多租户，与 D5 冲突）。A 为唯一同时满足"即时吊销 + 角色区分 + 业务模型零改动"的方案。
+
+### 2026-10-27（U1 实施）
+
+U1 后端认证内核按本 ADR 落地，无方案变更：`bcryptjs`(cost 10) + `cookie-parser`，会话落 Mongo（`sessions`，`createdAt` TTL = `SESSION_TTL_DAYS` 绝对过期，`lastSeenAt` 仅审计）；全站闸门 `app.use('/api', requireAuth)` 单点挂载；CORS 收敛为白名单 + `credentials:true`，生产未配 `CORS_ORIGINS` 启动 fail-fast。
+
+实施期新增 4 个实施级错误码（`CANNOT_DEACTIVATE_SELF` / `SELF_RESET_FORBIDDEN` / `PASSWORD_TOO_LONG` / `INVALID_CURRENT_PASSWORD`），均为既有决策（D8/D9/ED-2）的必要落点，不改变产品形态。U1 与 U2 的发布耦合仍成立：**U1 已就绪但不得单独部署**。

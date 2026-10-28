@@ -167,12 +167,14 @@ test('computeActualRatios level=asset_class：按币种内大类占比返回', a
 // ───────────────────────── HTTP 契约 ─────────────────────────
 
 const app = require('../../app');
+const { installAdminSession, uninstallSessionStub, authHeaders } = require('../helpers/auth');
 const Portfolio = require('@portomind/shared/models/portfolio');
 const PortfolioService = require('@portomind/shared/services/portfolio');
 let server;
 let baseUrl;
 
 test.before(async () => {
+  installAdminSession();
   await new Promise((resolve) => {
     server = app.listen(0, '127.0.0.1', resolve);
   });
@@ -180,13 +182,14 @@ test.before(async () => {
 });
 
 test.after(async () => {
+  uninstallSessionStub();
   await new Promise((resolve, reject) => server.close((error) => error ? reject(error) : resolve()));
 });
 
 async function request(path, options = {}) {
   const response = await fetch(`${baseUrl}${path}`, {
     method: options.method || 'GET',
-    headers: { 'Content-Type': 'application/json' },
+    headers: { 'Content-Type': 'application/json', cookie: authHeaders().cookie },
     body: options.body ? JSON.stringify(options.body) : undefined
   });
   return { status: response.status, body: await response.json() };

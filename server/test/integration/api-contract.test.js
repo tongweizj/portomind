@@ -84,10 +84,12 @@ executeService.executeRebalance = async (_pid, { mode }) => ({
 });
 
 const app = require('../../app');
+const { installAdminSession, uninstallSessionStub, authHeaders } = require('../helpers/auth');
 let server;
 let baseUrl;
 
 test.before(async () => {
+  installAdminSession();
   await new Promise((resolve) => {
     server = app.listen(0, '127.0.0.1', resolve);
   });
@@ -95,13 +97,14 @@ test.before(async () => {
 });
 
 test.after(async () => {
+  uninstallSessionStub();
   await new Promise((resolve, reject) => server.close((error) => error ? reject(error) : resolve()));
 });
 
 async function request(path, options) {
   const response = await fetch(`${baseUrl}${path}`, {
     ...options,
-    headers: { 'content-type': 'application/json', ...(options?.headers || {}) }
+    headers: { 'content-type': 'application/json', ...(options?.headers || {}), cookie: authHeaders().cookie }
   });
   return { status: response.status, body: await response.json(), headers: response.headers };
 }

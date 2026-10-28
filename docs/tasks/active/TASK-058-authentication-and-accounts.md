@@ -3,19 +3,19 @@
 ## Metadata
 
 **Status:**  
-`APPROVED`（2026-10-26 立项；同日 U1 的 ExecPlan 经 Human Plan Review 通过并**采纳全部 5 项实施裁决**）—— **可开始实施 U1**；发布仍受「U1 与 U2 同批」约束。
+`REVIEWED`（2026-10-27）—— **U1 后端认证内核已实施完成，独立 Reviewer 三轮复核 PASS（无 BLOCKER/MAJOR/MINOR 遗留）**：`User`/`Session` + 认证/授权中间件 + 9 个认证/用户端点 + 默认 admin seed + 登录限速 + CORS 白名单 + 8 个既有测试改造；`test:server` **211/0**、`test:worker` **77/0**、真实 Mongo E2E **15/15**（ED-5 交付门槛）。**待 Human 合入 `main` 后归档 `complete/`**。**发布约束：U1 与 U2 必须同批发布**（U1 单独上线 = 全站 401）。
 
 **Priority:**  
 `Critical`（P0 安全闸门。当前任何人访问 IP 即可看到全部家庭资产，且侧栏存在一个无 handler 的「退出登录」假按钮）
 
 **Owner:**  
-`—`（待指派 Implementer → 独立 Reviewer；Planner 已交付）
+`Planner`（已交付）→ `Implementer`（2026-10-27 实施完成）→ 独立 `Reviewer`（2026-10-27 三轮复核 PASS）→ `Human`（待合入）
 
 **Created:**  
 `2026-10-26`
 
 **Updated:**  
-`2026-10-26`（立项 + 实码核查；同日 U1 ExecPlan 通过 Plan Review → `Approved`）
+`2026-10-26`（立项 + 实码核查；同日 U1 ExecPlan 通过 Plan Review → `Approved`）· **`2026-10-27`（U1 实施完成 → `REVIEWING`；实施记录见 ExecPlan §11）**
 
 **Type:**  
 `Feature + Security`（`shared` + `server` + `client` 三端）
@@ -74,12 +74,14 @@ Human 2026-10-26 直接立项（议题起点：「注册、登录算不算产品
 
 以 `FS-authentication.md §7` 为准，不在本卡重复。交付前至少满足：
 
-- [ ] 无 cookie 请求业务端点 → 401；`admin/admin` 登录 → 200 + 改密前业务端点 403、改密后 200
-- [ ] `member` 访问 `/api/users` → 403；`admin` → 200
-- [ ] 停用用户后其旧 cookie 立即 401
-- [ ] 唯一 admin 不可停用/降级（明确错误码 + 状态不变）
-- [ ] 跨源被 CORS 拒绝；未配 `CORS_ORIGINS` 时生产启动 fail-fast
-- [ ] `server` 既有集成测试改造后全绿；`cron-worker` 测试零回归
+- [x] 无 cookie 请求业务端点 → 401；`admin/admin` 登录 → 200 + 改密前业务端点 403、改密后 200（G1–G3 + E2E）
+- [x] `member` 访问 `/api/users` → 403；`admin` → 200（G4）
+- [x] 停用用户后其旧 cookie 立即 401，且库中会话被删除（G5 / A7）
+- [x] 唯一 admin 不可停用/降级（`LAST_ADMIN_PROTECTED` / `CANNOT_DEACTIVATE_SELF`，状态不变）（G6 / G6b）
+- [x] 跨源被 CORS 拒绝；未配 `CORS_ORIGINS` 时生产启动 fail-fast（G9 / G10）
+- [x] `server` 既有集成测试改造后全绿（211/0）；`cron-worker` 测试零回归（77/0）
+- [x] 登录限速：连续 5 次错密后第 6 次 → 429 `ACCOUNT_LOCKED`（G7）
+- [x] ED-5 交付门槛：真实 Mongo + 真实 HTTP E2E **15/15**（`npm run e2e:auth --workspace server`）
 
 ## 7. 已登记风险
 
