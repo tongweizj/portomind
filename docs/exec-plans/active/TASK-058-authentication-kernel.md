@@ -385,3 +385,12 @@ traceId → requestLogger → cors(whitelist, credentials) → bodyParser
 - N-1（活跃锁定不被洪泛驱逐，G11 新增断言）、N-2（`COOKIE_SECURE=true` 生产样例）、N-3（415 + `NODE_ENV`/`TRUST_PROXY` 文档）均复核通过；`TRUST_PROXY` 非法值告警、`requireAuth → requireJson` 路由顺序亦确认。
 - E2E 修复端口竞争后连续 **5/5 PASS**（脚本自动选空闲端口 + 临时库名护栏）。
 - **AC1–AC14（U1 范围）满足；U1 可交付，但按发布约束必须与 U2 同批上线。**
+
+### 12.4 第四轮（2026-10-27，Human 指令「TASK-058 开发完成了，请检验」）
+
+> **本计划只覆盖 U1。** 本轮被检验的提交 `68f040c`（`feat(client): add login page and session-aware app shell`）**不含任何 `client/src` 文件**，其内容是 TASK-059/060/061 三卡结案 + 原型重导；**U2 未实现**，因此本计划的 14 条 AC 没有一条被本轮改动触碰。详见任务卡 **§10**（U2 验收结论）。
+
+- **U1 无回归**（本轮独立复跑）：`test:server` **211/0**、`client` 构建 `exit 0 / 2408 modules`（客户端零改动故与上轮同值）。
+- **真机复核后端闸门仍成立**：起 `server` 连开发库，未带 cookie 访问 `portfolios` / `family/summary` / `assets` / `alerts/events` / `cron/status` → **全部 401 `UNAUTHENTICATED`**；`POST /api/auth/login`（`admin/admin`）→ 200 且 `mustChangePassword: true`。
+- **结论：U1 判定沿用 §12.3（PASS）**，本轮不改变 U1 状态；阻塞项在 U2，不在本计划范围。
+- 取证面已扩至**全量**（提交历史 / 22 个远端 ref / stash / worktree / 游离提交 / 客户端构建产物），结论不变：任务卡 **§10.7**。

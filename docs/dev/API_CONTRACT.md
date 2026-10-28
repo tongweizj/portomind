@@ -18,13 +18,15 @@ API 前缀为 `/api`。客户端只通过 `VITE_API_URL` 配置此前缀；变�
 
 价格业务日期统一使用 `MARKET_TIMEZONE`（默认 `America/Toronto`）解释，数据库始终保存 UTC `Date`。同步写入会将日价格规范到市场日边界，并通过 `{symbol, timestamp}` 唯一索引和 upsert 保证重复同步幂等。价格查询响应携带 `X-Market-Timezone`。
 
-## 认证与错误码（TASK-058 U1 起）
+## 认证与错误码（TASK-058 U1/U2/U3 起）
+
+> U2/U3 前端接入（2026-10-27）：`GET /api/auth/session` 为全站会话唯一数据源（前端 `queryKey: ['session']`）；`user.lastLoginAt` 供账户页「上次登录」；业务端点 `401` 由前端统一清缓存并跳 `/login?next=<原路径>`（`/auth/login`、`/auth/session`、`/auth/logout` 的 401 属业务结果，不触发跳转）。
 
 - **默认要求登录**：除 `POST /api/auth/login`、`POST /api/auth/logout`、`GET /api/auth/session` 外，全部 `/api/*` 端点都要求会话 cookie `pm_sid`；未登录/会话失效返回 `401`（body `code: UNAUTHENTICATED` 或 `ACCOUNT_DISABLED`）。
 - **强制改密**：`mustChangePassword=true` 的账号只能访问 `change-password` / `logout` / `session`，其余返回 `403 PASSWORD_CHANGE_REQUIRED`。
 - **角色**：`/api/users/*` 全部要求 `admin`；`member` 返回 `403 FORBIDDEN`。
 - **错误码字段**：认证相关失败响应在通用结构上增加顶层 `code`（稳定机器码，前端据此写文案，**不要匹配 message**）。现有码：`INVALID_CREDENTIALS` · `ACCOUNT_DISABLED` · `ACCOUNT_LOCKED` · `PASSWORD_CHANGE_REQUIRED` · `FORBIDDEN` · `UNAUTHENTICATED` · `USERNAME_TAKEN` · `LAST_ADMIN_PROTECTED` · `CANNOT_DEACTIVATE_SELF` · `SELF_RESET_FORBIDDEN` · `PASSWORD_TOO_SHORT` · `PASSWORD_TOO_LONG` · `INVALID_USERNAME` · `INVALID_ROLE` · `INVALID_CURRENT_PASSWORD` · `INVALID_INPUT` · `INVALID_ID` · `USER_NOT_FOUND`。
-- **CORS**：白名单 + `credentials:true`；非白名单 `Origin` 返回 `403`（`CORS_FORBIDDEN`）。
+- **CORS**：白名单 + `credentials:true`；非白名单 `Origin` 返回 `403`（`CORS_FORBIDDEN`）。开发态未配置 `CORS_ORIGINS` 时默认放行 localhost / 127.0.0.1 的 **5173 与 6600**（Vite dev 实际端口是 `client/vite.config.js` 的 6600，浏览器经代理发 POST 会带该 Origin）；生产必须显式配置，否则启动 fail-fast。
 - **仅接受 `application/json`**：带请求体的写端点（`login` / `change-password` / `profile` / `users` 的 POST/PATCH）若 Content-Type 不是 JSON → `415 UNSUPPORTED_MEDIA_TYPE`（FS §8 CSRF：`SameSite=Lax` + JSON-only，配合不挂 `urlencoded` 解析器）。
 
 Asset 枚举：`type` 为 `stock | etf | fund | bond | cash`，`market` 为 `US | CA | CN-SH | CN-SZ | CN-FUND | HK`，`currency` 为 `USD | CAD | CNY | HKD`（港股 AS-08：market=HK，Yahoo 代码形如 `0700.HK`），`assetClass` 为 `equity | bond | gold | cash | null`（AS-09：大类与 type 正交，null=未分类）。`active` 控制资产能否进入交易选择、行情同步等业务流程；`watchlist` 仅表示用户关注偏好，二者互不替代。
@@ -60,9 +62,9 @@ Portfolio 枚举：`type`（风险定位）为 `活钱 | 稳健 | 长期`；`acc
 | 方法与路径 | 请求参数 | 返回 data | 状态码 / 特有错误 |
 | --- | --- | --- | --- |
 | `GET /` | 无 | `{ message }` | `200` |
-| `POST /api/auth/login` | Body: `{username,password}`（用户名大小写不敏感，存小写） | `{user:{id,username,role,mustChangePassword}}` + `Set-Cookie: pm_sid=…`（httpOnly/SameSite=Lax/Path=/；生产 Secure） | `200`; 参数缺失 `400`; 非 JSON `415 UNSUPPORTED_MEDIA_TYPE`; 密码错 `401 INVALID_CREDENTIALS`; 账号停用 `401 ACCOUNT_DISABLED`; 连续 5 次失败后 `429 ACCOUNT_LOCKED` |
+| `POST /api/auth/login` | Body: `{username,password}`（用户名大小写不敏感，存小写） | `{user:{id,username,role,mustChangePassword,lastLoginAt}}` + `Set-Cookie: pm_sid=…`（httpOnly/SameSite=Lax/Path=/；生产 Secure） | `200`; 参数缺失 `400`; 非 JSON `415 UNSUPPORTED_MEDIA_TYPE`; 密码错 `401 INVALID_CREDENTIALS`; 账号停用 `401 ACCOUNT_DISABLED`; 连续 5 次失败后 `429 ACCOUNT_LOCKED` |
 | `POST /api/auth/logout` | 无（无需登录，幂等） | `{ok:true}`；删除库中会话并清 cookie | `200` |
-| `GET /api/auth/session` | 无（公开） | `{authenticated:boolean, user?:{id,username,role,mustChangePassword}}` | `200`（**未登录也 200**） |
+| `GET /api/auth/session` | 无（公开） | `{authenticated:boolean, user?:{id,username,role,mustChangePassword,lastLoginAt}}`（`lastLoginAt` 供账户页「上次登录」，未登录/无记录时为 `null`） | `200`（**未登录也 200**） |
 | `POST /api/auth/change-password` | Body: `{currentPassword,newPassword}`（8–72 字符） | `{ok:true}`；成功后 `mustChangePassword=false`、该账号**其他会话失效**（保留当前） | `200`; 当前密码错 `400 INVALID_CURRENT_PASSWORD`; 密码不合规 `400 PASSWORD_TOO_SHORT` / `PASSWORD_TOO_LONG`; 未登录 `401` |
 | `PATCH /api/auth/profile` | Body: `{username}` | `{user:{id,username,role,mustChangePassword}}` | `200`; 用户名非法 `400 INVALID_USERNAME`; 重名 `409 USERNAME_TAKEN` |
 | `GET /api/users` | 无（admin） | `{items:[{id,username,role,active,mustChangePassword,lastLoginAt,createdAt}]}`（创建时间倒序；**不含 passwordHash**） | `200`; 未登录 `401`; 非 admin `403 FORBIDDEN` |

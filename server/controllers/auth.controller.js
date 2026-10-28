@@ -63,7 +63,10 @@ exports.login = async (req, res, next) => {
     });
     res.cookie(sessionCookieName(), sid, sessionService.cookieOptions());
     logger.info('AUTH_LOGIN_SUCCESS', { userId: String(user._id), username, ip: req.ip });
-    return success(res, { user: userService.toPublicUser(user) });
+    // TASK-058 U2（D-2）：账户页「上次登录」需要该字段；markLogin 刚写入当前时间
+    return success(res, {
+      user: { ...userService.toPublicUser(user), lastLoginAt: new Date() }
+    });
   } catch (error) {
     return respondServiceError(req, res, next, error);
   }
@@ -98,7 +101,8 @@ exports.getSession = async (req, res, next) => {
     }
     return success(res, {
       authenticated: true,
-      user: userService.toPublicUser(resolved.user)
+      // TASK-058 U2（D-2）：账户页身份区「上次登录」的唯一数据源（追加字段，不破坏既有消费者）
+      user: { ...userService.toPublicUser(resolved.user), lastLoginAt: resolved.user.lastLoginAt || null }
     });
   } catch (error) {
     return respondServiceError(req, res, next, error);

@@ -19,10 +19,12 @@ client/src/
 │   ├── routes.js           # ROUTE_PATTERNS（path 模式）+ ROUTES（生成函数）
 │   ├── enums.js            # 枚举 ↔ 中文标签（口径单一来源）
 │   └── design-tokens.js    # 颜色 / 圆角 / 字体 / 布局尺寸
-├── hooks/                  # TanStack Query 封装（useAlerts / useFamily / usePortfolio / usePortfolios / useTransactions）
-├── services/               # axios 实例 + 各领域 service
+├── hooks/                  # TanStack Query 封装（useAlerts / useFamily / usePortfolio / usePortfolios / useTransactions / useUsers；会话在 components/auth/AuthProvider 的 ['session']）
+├── services/               # axios 实例 + 各领域 service（auth / alert / asset / …）
 ├── components/             # 跨页面复用组件
-│   ├── layout/             # AppLayout / Sidebar
+│   ├── layout/             # AppLayout / Sidebar / UserMenu（顶栏头像下拉，账户与登出唯一入口）
+│   ├── auth/               # AuthProvider / authContext / RequireAuth / ForcedChangeScreen / ForbiddenUsersScreen
+│   ├── users/              # 用户管理弹窗（CreateUserModal / ResetPasswordModal）
 │   ├── ButtonGroup/ DataState/ PortfolioCard/ TransactionTable/
 │   └── Household/          # 家庭区块 6 个（纯 props 组件）
 ├── pages/                  # 页面（按域分目录）
@@ -53,6 +55,9 @@ client/src/
 
 | 路径 | 页面 | 说明 |
 |---|---|---|
+| `/login` | `Login` | **不套 `AppLayout`**（无侧栏/顶栏）；未登录守卫的落点；已登录访问 → redirect `/`；成功落 `safeNext(next)` 或 `/`（`D10`），`mustChangePassword` → `/account` |
+| `/account` | `Account` | 账户页（身份只读 + 改用户名 + 改密码；强制改密态隐藏改用户名卡）；入口唯一来源＝顶栏头像下拉「账户设置」 |
+| `/account/users` | `AccountUsers` | **独立页面**「系统设置」（`D13`，不是 `/account` 的页内 Tab）；仅 admin 渲染入口，member 直访显示 403 屏 |
 | `/` | `Dashboard` | 提醒中心（事件流 / 筛选 / 立即评估 / 规则入口）+ 家庭总资产卡 |
 | `/alerts/rules` | `Alerts/AlertRules` | 提醒规则管理 |
 | `/portfolios` | `Portfolio/List` | 组合卡片列表 + 家庭五区块（币种分桶 / 贡献占比 / 最近交易 / 最近再平衡 / 汇率面板〔默认收起〕） |
@@ -76,7 +81,7 @@ client/src/
 
 **已下线**：`/family`（原家庭视图页）已删除，**不设显式重定向**，书签由 `*` 通配承接落到 `/portfolios`。后端 `/api/family/*` 端点全部保留——它们仍供 Dashboard 与组合列表页取数，**不是死代码**。
 
-> **账号与访问控制（TASK-058）前端路由尚未实现**（U2/U3 待做）：`/login`（不套 `AppLayout`）、`/account`、`/account/users`（独立页，仅 admin）；未登录守卫 `→ /login?next=<原路径>`、登录后回跳、axios 401 拦截、强制改密闸门。**后端 U1 已上线能力但不得单独发布**——前端无登录入口时全站会 401。契约见 [API_CONTRACT](./API_CONTRACT.md)「认证与错误码」与 [FS-authentication](../product/specs/FS-authentication.md)。
+> **账号与访问控制（TASK-058 U2/U3，2026-10-27 已实施）**：`/login`（不套 `AppLayout`）、`/account`、`/account/users`（独立页，仅 admin）；`AuthProvider`（`queryKey: ['session']`）提供会话；`RequireAuth` 做未登录守卫（→ `/login?next=<原路径>`，`next` 经 `utils/safeNext.js` 净化）；`AppLayout` 在 `mustChangePassword=true` 时把 `/account` 以外的页面替换为「需要修改密码后才能继续」屏；axios 401 拦截 → 清业务缓存 → 跳登录（排除 `/auth/login`、`/auth/session`、`/auth/logout`，否则密码错误会被误判为会话失效）。侧栏无账户入口；账户设置 / 系统设置（仅 admin）/ 提醒规则 / 退出登录都在顶栏头像下拉。契约见 [API_CONTRACT](./API_CONTRACT.md)「认证与错误码」与 [FS-authentication](../product/specs/FS-authentication.md)。
 
 ### 2.3 组合详情 Tab
 
@@ -122,7 +127,8 @@ defaultOptions: { queries: { retry: 1, staleTime: 1000 * 60 } }
 | `useFxRates()` | `['fx-rates']` | 60s | — |
 | `useAlertRules(params)` | `['alert-rules', params]` | 60s | 参数对象进 key |
 | `useAlertEvents(params)` | `['alert-events', query]` | **30s** | `enabled` 被单独摘出，不进 key |
-| `useUnreadAlertCount()` | `['alert-unread-count']` | **`refetchInterval: 5000`** | 全局 5s 轮询 |
+| `useUnreadAlertCount()` | `['alert-unread-count']` | **`refetchInterval: 5000`** | 全局 5s 轮询；可选 `{ enabled }`（强制改密期间 AppLayout 传 `false`，避免必然 403 的请求） |
+| `useUsers({ enabled })` | `['users']` | 60s | admin 用户列表；`enabled` 由页面按 `isAdmin` 控制（非 admin 不请求） |
 
 mutation hooks：`useUpsertFxRate` / `useSyncFxRates` / `useCreateAlertRule` / `useUpdateAlertRule` / `useDeleteAlertRule` / `useMarkAlertEventRead` / `useEvaluateAlerts`，各自内部负责失效相关 key（见 §3.4）。
 
@@ -149,11 +155,13 @@ mutation hooks：`useUpsertFxRate` / `useSyncFxRates` / `useCreateAlertRule` / `
 
 | 项 | 值 |
 |---|---|
-| `baseURL` | `VITE_API_URL`（去尾部斜杠）→ 空则同源 `/api` |
+| `baseURL` | `VITE_API_URL`（去尾部斜杠）→ 空则同源 `/api`。**推荐留空走 Vite proxy（同源）**；若填绝对地址则属跨源，必须同时满足 `withCredentials`（已固定）与 server `CORS_ORIGINS` 白名单含本页来源，否则会话 cookie 不会被保存/发送（登录后下一次请求 401） |
 | `timeout` | 15000 ms |
-| 默认头 | `Accept: application/json` |
-| 响应拦截器 | **成功时直接返回 `response.data`**（业务层拿到的就是 data，不要写 `res.data.data`） |
-| 错误时挂载 | `error.apiMessage` / `error.traceId` / `error.status` |
+| 默认头 | `Accept: application/json`；`withCredentials: true`（会话 cookie `pm_sid` 必须随请求发送：同源无副作用，绝对地址跨源模式必需） |
+| 响应拦截器 | **成功时直接返回 `response.data`**（业务层拿到的就是服务端响应体 `{success, data}`，各 service 再取 `.data`；不要写 `res.data.data`） |
+| 错误时挂载 | `error.apiMessage` / `error.traceId` / `error.status` / `error.code`（认证错误码，如 `INVALID_CREDENTIALS` / `PASSWORD_CHANGE_REQUIRED`） |
+| 401 处置 | 业务端点 401 → `authSession.notifyUnauthorized()` → `AuthProvider` 清业务缓存并跳 `/login?next=…`；**排除** `/auth/login`、`/auth/session`、`/auth/logout`（密码错误/未登录查询本身是 401，不能当会话失效） |
+| 403 强制改密 | `code === 'PASSWORD_CHANGE_REQUIRED'` → 让 `['session']` 失效重取，使前端闸门与服务端判定对齐 |
 
 `getApiErrorMessage(error, fallback)` 统一拼接 message 与 traceId。
 
@@ -173,8 +181,9 @@ mutation hooks：`useUpsertFxRate` / `useSyncFxRates` / `useCreateAlertRule` / `
 
 | 组件 | 职责 |
 |---|---|
-| `layout/AppLayout` | 主框架：Sidebar(232px) + 顶栏(64px，含未读铃铛) + `<Outlet/>` |
-| `layout/Sidebar` | **5 项**顶层导航：Dashboard / 组合管理〔二级：组合列表 / 全部交易〕/ 今日行情 / 提醒规则 / 日志。激活态紫底紫字，`active` 用**显式判定函数**而非前缀匹配；展开态不持久化；底部版本号写死在组件内 + 一个**无 handler 的「退出登录」按钮**（当前无登录态，属占位，见 §8.1） |
+| `layout/AppLayout` | 主框架：Sidebar(232px) + 顶栏(64px，含未读铃铛 + 用户下拉) + 强制改密闸门 + `<Outlet/>` |
+| `layout/UserMenu` | 顶栏头像下拉：身份行（用户名 + 角色同一行、角色弱化）+ 账户设置 + 系统设置（仅 admin）+ 提醒规则 + 退出登录（末位）；点击外部 / `Esc` 关闭；`aria-haspopup/expanded/controls` 齐全；强制改密态除「系统设置」disabled 外均可用（`D11`/`D12`/`D13`） |
+| `layout/Sidebar` | **4 项**顶层导航：Dashboard / 组合管理〔二级：组合列表 / 全部交易〕/ 今日行情 / 日志。激活态紫底紫字，`active` 用**显式判定函数**而非前缀匹配；展开态不持久化；底部只有版本号。**无任何账户入口、无「退出登录」**（`D12`：账户与登出唯一入口在顶栏下拉） |
 
 ### 5.2 通用
 
@@ -266,7 +275,7 @@ mutation hooks：`useUpsertFxRate` / `useSyncFxRates` / `useCreateAlertRule` / `
 2. **注册路由**：`constants/routes.js` 加 `ROUTE_PATTERNS`，若有跳转需求再加 `ROUTES`；`router.jsx` 里挂到 `<Route element={<AppLayout/>}>` 内部（**否则没有 Sidebar**）。
 3. **数据层**：优先在 `hooks/` 新增 Query hook（`queryKey` 用数组，参数对象进 key），**不要**在组件内写 `useEffect` 取数。若只是单页一次性读取，也至少用 `useQuery` 包一层以获得缓存与 `isLoading` 语义。
 4. **service**：若接口尚不存在，先在 `services/<域>.service.js` 加函数，URL 与参数与 [API_CONTRACT.md](./API_CONTRACT.md) 对齐。
-5. **导航**：只有「用户每天要看」的入口才进 Sidebar（当前 5 项已到上限，新增需先撤一项）。运维/排障类入口保留 URL 直达。
+5. **导航**：只有「用户每天要看」的入口才进 Sidebar（当前 4 项，新增需先撤一项）。运维/排障类入口保留 URL 直达；账户类入口一律放顶栏头像下拉，**不进侧栏**。
 6. **样式**：优先 token（内联）或已映射的语义 class；不要引入新的色值字面量。
 7. **空态与错误态**：用 `DataState` 的 `EmptyState` / `ErrorState`，不要各写一套。
 
@@ -274,9 +283,9 @@ mutation hooks：`useUpsertFxRate` / `useSyncFxRates` / `useCreateAlertRule` / `
 
 ## 8. 已知偏差（改相关代码前先看）
 
-### 8.1 认证已落地后端，前端登录/账户页待 U2
+### 8.1 认证：U1 后端 + U2/U3 前端均已于 2026-10-27 实施
 
-**后端**（TASK-058 U1，2026-10-27）已实现 `User`/`Session` + 全站 `401` 闸门 + `admin`/`member` 角色 + `/api/auth/*` + `/api/users/*`；**前端尚未接入**：`Sidebar` 底部的「退出登录」仍是**无 onClick 的占位**，`/login`、`/account`、`/account/users` 与 401 拦截由 **U2/U3** 实现（见 §2.2 注记）。在 U2 就绪前后端认证版本**不得单独发布**（会全站 401）。
+**后端**（TASK-058 U1）：`User`/`Session` + 全站 `401` 闸门 + `admin`/`member` 角色 + `/api/auth/*` + `/api/users/*`；**前端**（U2/U3）：`AuthProvider`（`['session']`）、`RequireAuth`、`/login`、`/account`、`/account/users`、axios 401 拦截、强制改密闸门、顶栏头像下拉，侧栏假「退出登录」已删除。发布约束不变：**U1 与 U2 必须同批上线**（U1 单独上线 = 全站 401，此时唯一回滚手段是移除 `app.js` 的 `app.use('/api', requireAuth)` 一行）。安全语义：强制改密态下 `/api/auth/change-password` **仍要求 `currentPassword`**（服务端硬校验，前端表单已含该字段；首登者可填管理员给的初始密码）。
 
 ### 8.2 `ROUTES.PORTFOLIO_VIEW(id)` 是死别名
 

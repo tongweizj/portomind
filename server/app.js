@@ -37,6 +37,11 @@ const configuredOrigins = (process.env.CORS_ORIGINS || '')
 const DEV_DEFAULT_ORIGINS = [
   'http://localhost:5173',
   'http://127.0.0.1:5173',
+  // TASK-058 U2（D-3）：client/vite.config.js 的 dev 端口是 6600（strictPort）。
+  // 浏览器经 Vite 代理发 POST 时会带 `Origin: http://localhost:6600`，同样受本白名单约束，
+  // 开发默认来源必须覆盖实际端口，否则「登录」会被 CORS 403 拒绝。
+  'http://localhost:6600',
+  'http://127.0.0.1:6600',
   'http://192.168.2.110:9000'
 ];
 

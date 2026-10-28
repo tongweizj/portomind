@@ -303,7 +303,7 @@ cd cron-worker && npm test
 
 ## 8. 已知环境说明
 
-- **认证与 CORS 已由 TASK-058 U1 落地**：业务端点默认要求登录（`/api/auth/login` 等公开端点除外）；CORS 使用白名单 + `credentials:true`，`CORS_ORIGINS` 生效且生产必填。前端登录页/账户页（U2）尚未上线，**U1 不得单独发布**。详见 §9。
+- **认证与 CORS 已由 TASK-058 落地，U2/U3 前端同批就绪**：业务端点默认要求登录（`/api/auth/login` 等公开端点除外）；CORS 使用白名单 + `credentials:true`，`CORS_ORIGINS` 生效且生产必填。前端 `/login`、`/account`、`/account/users` 已实现（独立真实浏览器验收 28/28 PASS）；**U1 与 U2 必须同批发布**（只上 U1 会全站 401）。详见 §9。
 - 当前使用 npm workspaces monorepo：`shared`（唯一业务实现）、`server`（API）、`cron-worker`（唯一调度）、`client`（前端）。改业务逻辑时改 `shared/`，不要在 `server`/`cron-worker` 下复制实现。
 - 当前后端使用 Mongoose 6.13；跨主版本升级计划见 [`DEPENDENCY_UPGRADES.md`](../exec-plans/complete/DEPENDENCY_UPGRADES.md)。
 - 默认日志写入**仓库根 `logs/`**（由 `shared/config/logger.js` 决定，`app-*.log` 与 `task-*.log` 分文件），并被 Git 忽略；`server` 与 `cron-worker` 共用该目录。日志脱敏规则见 §9。
@@ -319,8 +319,8 @@ cd cron-worker && npm test
 
 | 项 | 当前状态 | 说明 |
 |---|---|---|
-| 认证 / 多用户 | **已实现（TASK-058 U1，2026-10-27）** | 单租户多账号：`User` / `Session`（Mongo，绝对 7 天 TTL）+ `requireAuth` / `requireAdmin`；全部业务端点默认 401，`admin`/`member` 两角色；首次登录强制改密。前端登录页/账户页（U2/U3）未上线前 **U1 不得单独发布**。技术决策见 [ADR-001](../architecture/adr/ADR-001-authentication.md)。 |
-| CORS | **白名单 + credentials** | `server/app.js` 按 `CORS_ORIGINS`（逗号分隔）放行，其它来源 403；`NODE_ENV=production` 且未配置 `CORS_ORIGINS` 时**启动失败**。开发态未配置时使用本地默认来源（localhost:5173 / 127.0.0.1:5173 / 192.168.2.110:9000）。 |
+| 认证 / 多用户 | **已实现（TASK-058 U1+U2+U3，2026-10-27）** | 单租户多账号：`User` / `Session`（Mongo，绝对 7 天 TTL）+ `requireAuth` / `requireAdmin`；全部业务端点默认 401，`admin`/`member` 两角色；首次登录强制改密；前端 `/login`、`/account`、`/account/users` 已上线（顶栏头像下拉为账户/登出唯一入口）。**U1 与 U2 必须同批发布**。技术决策见 [ADR-001](../architecture/adr/ADR-001-authentication.md)。 |
+| CORS | **白名单 + credentials** | `server/app.js` 按 `CORS_ORIGINS`（逗号分隔）放行，其它来源 403；`NODE_ENV=production` 且未配置 `CORS_ORIGINS` 时**启动失败**。开发态未配置时使用本地默认来源（localhost / 127.0.0.1 的 5173 与 6600〔Vite dev 实际端口〕、192.168.2.110:9000）。 |
 | 日志脱敏 | 已实现 | 请求日志**不记录请求头**；URL 中常见 token / API key / 密码参数及日志元数据中的敏感键统一替换为 `[REDACTED]`。仍应限制 `logs/` 与 MongoDB 的访问权限；认证只记 `AUTH_*` 事件（不打印密码/哈希）。 |
 | 数据传输 | 取决于部署 | 公网部署必须 TLS：`COOKIE_SECURE=true`（production 默认 true）依赖 HTTPS；局域网 HTTP 调试可显式 `COOKIE_SECURE=false`。 |
 
@@ -330,7 +330,8 @@ cd cron-worker && npm test
 2. 首次登录后**必须改密**：除 `/api/auth/change-password`、`/api/auth/logout`、`/api/auth/session` 外，所有接口返回 `403 PASSWORD_CHANGE_REQUIRED`。
 3. 忘记 admin 口令属运维动作（不进产品）：连库把目标用户 `passwordHash` 改为已知 bcrypt 哈希（cost 10）并置 `mustChangePassword=true`，或直接删除 `sessions` 集合中的该用户会话。
 4. 会话存 `sessions` 集合，`createdAt` 上有 TTL 索引（`SESSION_TTL_DAYS` 天）；服务重启不掉线。
-5. 账号管理入口在 `/account/users`（U3，未上线）；当前可用 `curl`/前端调用 `GET/POST /api/users`、`PATCH /api/users/:id`、`POST /api/users/:id/password`（均需 admin 会话）。
+5. 账号管理入口在 `/account/users`（顶栏头像下拉 →「系统设置」，**仅 admin 可见**）：列表 / 新建（初始密码由 admin 设定，对方首登强制改密）/ 停用启用 / 重置密码（不可重置自己）/ 改角色。也可用 `curl` 调用 `GET/POST /api/users`、`PATCH /api/users/:id`、`POST /api/users/:id/password`（均需 admin 会话）。
+6. 前端开发/部署注意：生产用同源反向代理时 `VITE_API_URL` 留空（`/api`）；若直连不同源后端，需同时配置 `CORS_ORIGINS` 白名单并保持 axios `withCredentials: true`（已内置），否则会话 cookie 不会被浏览器保存。
 
 ---
 

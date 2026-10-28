@@ -212,7 +212,7 @@ Unaffected：
 
 - [x] U1 的 ExecPlan 通过 Plan Review（`Approved` 2026-10-26，含 5 项实施裁决）
 - [x] 实施 U1（`TASK-058` + ExecPlan，2026-10-27）：`User`/`Session` 模型 + service + `requireAuth`/`requireAdmin` + `/api/auth/*` + `/api/users/*` + 默认 admin seed + 登录限速 + CORS 白名单；server 204/0、worker 77/0；真实 Mongo E2E 9/9（ED-5 门槛）
-- [ ] 实施 U2 / U3（U2 与 U1 同批发布；U1 已就绪待同批）
+- [x] 实施 U2 / U3（2026-10-27，ExecPlan `TASK-058-authentication-client.md`）：`/login`、`/account`、`/account/users`、`AuthProvider`（`['session']`）、`RequireAuth` 守卫、axios 401 拦截、强制改密闸门、顶栏头像下拉；侧栏 5→4 并删除假「退出登录」。独立真实浏览器验收 **28/28 PASS**，代码复核无 BLOCKER/MAJOR。**U2 已与 U1 同批就绪，可同批发布**
 - [x] 回写 `DEPLOYMENT §9` 与 `.env.example`（`CORS_ORIGINS` / `SESSION_TTL_DAYS` / `COOKIE_SECURE`，2026-10-27）
 - [x] 回写 `PL-0 §4 M0.2c/M0.2d`、`PRODUCT_LINES §1.1`（"多用户 SaaS" → "多租户 SaaS"，2026-10-27）
 - [x] 回写 `dev/DATA_MODEL.md`（`User` / `Session`，2026-10-27）与 `dev/API_CONTRACT.md`（认证端点/错误码）；`dev/CLIENT_DEV.md` 的 3 条新路由随 U2 落地时回写
@@ -252,3 +252,7 @@ ADR 由空模板转为 `Accepted`。人类在此之前先提出"注册/登录算
 U1 后端认证内核按本 ADR 落地，无方案变更：`bcryptjs`(cost 10) + `cookie-parser`，会话落 Mongo（`sessions`，`createdAt` TTL = `SESSION_TTL_DAYS` 绝对过期，`lastSeenAt` 仅审计）；全站闸门 `app.use('/api', requireAuth)` 单点挂载；CORS 收敛为白名单 + `credentials:true`，生产未配 `CORS_ORIGINS` 启动 fail-fast。
 
 实施期新增 4 个实施级错误码（`CANNOT_DEACTIVATE_SELF` / `SELF_RESET_FORBIDDEN` / `PASSWORD_TOO_LONG` / `INVALID_CURRENT_PASSWORD`），均为既有决策（D8/D9/ED-2）的必要落点，不改变产品形态。U1 与 U2 的发布耦合仍成立：**U1 已就绪但不得单独部署**。
+
+### 2026-10-27（U2/U3 实施）
+
+U2/U3 按本 ADR 落地，无方案变更：会话仍为服务端 cookie 会话（前端只持有 `['session']` 快照）；前端增加 `AuthProvider` / `RequireAuth` / axios 401 拦截 / 强制改密闸门 / 顶栏头像下拉，`/login`、`/account`、`/account/users` 三条路由；侧栏删除账户入口与假「退出登录」（`D11`/`D12`/`D13`/v1.5）。服务端仅做两处追加：`/api/auth/session` 与 `login` 的 user 载荷补 `lastLoginAt`（账户页「上次登录」），开发态 CORS 默认来源补 Vite 6600（端口与白名单一致性）。独立 Reviewer 真实浏览器验收 28/28 PASS，无 BLOCKER/MAJOR；**U1 + U2 现可同批发布**。

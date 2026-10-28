@@ -42,7 +42,7 @@
 ## 架构（architecture/）
 
 - [架构总览 ARCHITECTURE](./architecture/ARCHITECTURE.md) — 架构风格、**技术栈**、**外部集成**、模块边界与依赖规则、数据流、持久化架构、架构约束、已知架构债
-- [ADR 目录](./architecture/adr/) — 架构决策记录：[ADR-002 单一调度器与共享内核](./architecture/adr/ADR-002-single-scheduler.md) · [ADR-001 认证（`Accepted`，U1 后端已实施）](./architecture/adr/ADR-001-authentication.md)
+- [ADR 目录](./architecture/adr/) — 架构决策记录：[ADR-002 单一调度器与共享内核](./architecture/adr/ADR-002-single-scheduler.md) · [ADR-001 认证（`Accepted`，U1+U2+U3 均已实施 2026-10-27）](./architecture/adr/ADR-001-authentication.md)
 
 > 功能全景与能力边界已归入上方的产品线文档（`product/PRODUCT_LINES.md` + `product/lines/`）。
 
@@ -68,7 +68,7 @@
 
 - [执行计划流程 EXECUTION_PLANS](./process/EXECUTION_PLANS.md)
 - [任务清单 TASKS](./tasks/TASKS.md)
-  - 活跃任务：[TASK-058 账号与访问控制（U1 认证内核）](./tasks/active/TASK-058-authentication-and-accounts.md)（`REVIEWED`：U1 后端已实施，独立 Reviewer 三轮复核 PASS；211/0 + 77/0、真实 Mongo E2E 15/15；待 Human 合入并与 U2 同批发布）—— **状态一律以 [`TASKS.md`](./tasks/TASKS.md) 为准**
+  - 活跃任务：[TASK-058 账号与访问控制（U1 认证内核 + U2 登录/账户 + U3 用户管理页）](./tasks/active/TASK-058-authentication-and-accounts.md)（`REVIEWED`：U1 三轮复核 PASS（211/0 + 77/0、真实 Mongo E2E 15/15）；U2/U3 已完成并经独立 Reviewer 真实浏览器验收 **28/28 PASS**，代码复核无 BLOCKER/MAJOR；待 Human 合入并与 U2 同批发布）—— **状态一律以 [`TASKS.md`](./tasks/TASKS.md) 为准**
   - 已结案待合入：[TASK-054 后端聚合接口 `GET /api/cron/status`](./tasks/complete/TASK-054-cron-status-aggregate-api.md)（2026-10-27 归档；**代码仍在 `feature/TASK-054-cron-status-aggregate-api` = `c7389d1`，未合入 `main`**）
   - 阻塞中：无
   - 待排期（[cron-worker 运行看板](./product/specs/FS-cron-worker-status-board.md) P0 批次；**C-02 已完成 2026-10-27**）：[TASK-053 看板 tab 骨架](./tasks/active/TASK-053-log-board-tab-skeleton.md) · [TASK-055 价格完成度展示](./tasks/active/TASK-055-price-completeness-display.md) · [TASK-056 状态色语义与图例](./tasks/active/TASK-056-status-color-semantics.md) · [TASK-057 `taskruns` 数据契约增强（`result`/`SKIPPED`/父任务）](./tasks/active/TASK-057-taskrun-result-contract.md)
@@ -83,7 +83,7 @@
 - [TASK-005 统一调度器 ExecPlan（已完成 2026-10-15）](./exec-plans/complete/TASK-005-unify-scheduler.md)
 - [docs/manual 重复与一致性整改记录（2026-10-15）](./exec-plans/complete/DOCS-DEDUP-2026-10-15.md)
 - [依赖升级评估 DEPENDENCY_UPGRADES](./exec-plans/complete/DEPENDENCY_UPGRADES.md)
-- [执行计划归档](./exec-plans/complete/)（含 TASK-054 cron 状态聚合接口 / TASK-050 家庭五区块承接 / TASK-048 分红标签 / TASK-049 Dashboard 承接 / TASK-044 交易记录收拢 / TASK-043 标的频道合并 / TASK-005 统一调度器）· [活跃执行计划](./exec-plans/active/)（[TASK-058 认证内核](./exec-plans/active/TASK-058-authentication-kernel.md) `Approved`）
+- [执行计划归档](./exec-plans/complete/)（含 TASK-054 cron 状态聚合接口 / TASK-050 家庭五区块承接 / TASK-048 分红标签 / TASK-049 Dashboard 承接 / TASK-044 交易记录收拢 / TASK-043 标的频道合并 / TASK-005 统一调度器）· [活跃执行计划](./exec-plans/active/)（[TASK-058 U1 认证内核](./exec-plans/active/TASK-058-authentication-kernel.md) `Completed` 待归档 · [TASK-058 U2/U3 前端登录与用户管理](./exec-plans/active/TASK-058-authentication-client.md) `Completed` 待归档）
 
 ## 项目根
 

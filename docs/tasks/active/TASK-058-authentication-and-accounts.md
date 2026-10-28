@@ -3,19 +3,21 @@
 ## Metadata
 
 **Status:**  
-`REVIEWED`（2026-10-27）—— **U1 后端认证内核已实施完成，独立 Reviewer 三轮复核 PASS（无 BLOCKER/MAJOR/MINOR 遗留）**：`User`/`Session` + 认证/授权中间件 + 9 个认证/用户端点 + 默认 admin seed + 登录限速 + CORS 白名单 + 8 个既有测试改造；`test:server` **211/0**、`test:worker` **77/0**、真实 Mongo E2E **15/15**（ED-5 交付门槛）。**待 Human 合入 `main` 后归档 `complete/`**。**发布约束：U1 与 U2 必须同批发布**（U1 单独上线 = 全站 401）。
+`REVIEWED`（2026-10-27 晚）—— **U1（后端认证内核）三轮复核 PASS；U2（前端登录 / 账户 / 守卫 / 401 / 顶栏下拉）+ U3（管理员系统设置页）已实施完成，独立 Reviewer 真实浏览器验收 28/28 PASS、代码复核无 BLOCKER/MAJOR**（三轮 E2E：19→25→28；失败全部先归因 Reviewer 脚本 bug/时序，未放宽 AC）。**待 Human 合入 `main` 后归档 `complete/`**。**发布约束：U1 与 U2 必须同批发布**（U1 单独上线 = 全站 401）
+
+> ℹ️ **历史记录（2026-10-27 首次 U2 验收 `FAIL`）**：提交 `68f040c` 的 message 声称 `feat(client)` 已加 `/login` 与会话外壳，但 `client/` **零文件**（实为 TASK-059/060/061 结案 + 原型重导）——取证见 §10。U2/U3 已于同日晚按 `docs/exec-plans/active/TASK-058-authentication-client.md` 重新实施，实施与验收记录见 §11。
 
 **Priority:**  
 `Critical`（P0 安全闸门。当前任何人访问 IP 即可看到全部家庭资产，且侧栏存在一个无 handler 的「退出登录」假按钮）
 
 **Owner:**  
-`Planner`（已交付）→ `Implementer`（2026-10-27 实施完成）→ 独立 `Reviewer`（2026-10-27 三轮复核 PASS）→ `Human`（待合入）
+`Planner`（已交付）→ `Implementer`（U1 2026-10-27；U2/U3 由 Lead + `users-admin` 于 2026-10-27 晚实施）→ 独立 `Reviewer`（U1 三轮 PASS；U2/U3 `ui-verify` 真实浏览器 28/28 PASS）→ `Human`（待合入）
 
 **Created:**  
 `2026-10-26`
 
 **Updated:**  
-`2026-10-26`（立项 + 实码核查；同日 U1 ExecPlan 通过 Plan Review → `Approved`）· **`2026-10-27`（U1 实施完成 → `REVIEWING`；实施记录见 ExecPlan §11）**
+`2026-10-26`（立项 + 实码核查；同日 U1 ExecPlan 通过 Plan Review → `Approved`）· **`2026-10-27`（U1 实施完成 → `REVIEWED`；U2 首次验收 `FAIL`，见 §10；同日晚按 Human 指令「继续完成未完成代码」补 U2/U3 ExecPlan 并实施完成，独立验收 28/28 PASS → `REVIEWED`，见 §11）**
 
 **Type:**  
 `Feature + Security`（`shared` + `server` + `client` 三端）
@@ -27,8 +29,8 @@
 `docs/architecture/adr/ADR-001-authentication.md`（`Accepted`，2026-10-26）
 
 **Execution Plan:**  
-U1 → `docs/exec-plans/active/TASK-058-authentication-kernel.md`（**`Approved` 2026-10-26**，§9 的 5 项实施裁决已全部确认）  
-U2 / U3 → 待 U1 实施后拆分（U2 须与 U1 同批发布）
+U1 → `docs/exec-plans/active/TASK-058-authentication-kernel.md`（**`Approved` 2026-10-26**，§9 的 5 项实施裁决已全部确认；`Completed` 待归档）  
+U2 / U3 → `docs/exec-plans/active/TASK-058-authentication-client.md`（**`Approved` 2026-10-27**；授权依据＝Human 同日指令「检查完成了多少，把没有完成的代码继续完成」，范围严格等于 FS §6.2 / §6.3；实施记录见其 §11）
 
 **来源：**  
 Human 2026-10-26 直接立项（议题起点：「注册、登录算不算产品线」→ 结论：不是产品线，是 `PL-0 M0.2d` 的准入约束）
@@ -108,3 +110,147 @@ Human 2026-10-26 直接立项（议题起点：「注册、登录算不算产品
 | ED-3 | 会话**绝对** 7 天过期，`lastSeenAt` 仅作审计，不用于续期 |
 | ED-4 | 用户名强制小写存储，登录时同样先归一化 |
 | ED-5 | 测试只 stub 会话查询、保留真实闸门；**端到端真实路径验证成为交付门槛**（未做不得声明 U1 完成） |
+
+---
+
+## 10. U2 验收结论（2026-10-27，独立 Reviewer）
+
+**结论：`FAIL` — U2「客户端认证」在 `client/` 中零实现，属 BLOCKER，不可合入。** U1 判定不变（ExecPlan §12.3 PASS）。
+
+被检验对象：分支 `feature/TASK-058-auth-kernel` 最新提交 `68f040c`，message 为 `feat(client): add login page and session-aware app shell`，body 逐条声明「加 `/login`、会话守卫、`safeNext`、顶栏头像下拉、首登强制改密」。
+
+### 10.1 决定性证据：提交里没有一个客户端文件
+
+| 核查 | 命令 | 结果 |
+|---|---|---|
+| 本次提交的 `client/` 改动 | `git show --name-only 68f040c -- client/` | **空**（44 个文件全是 docs / 原型 / 截图 / memory） |
+| 分支相对 `main` 的客户端改动 | `git diff --stat main...HEAD -- client/` | **空** |
+| 全部分支是否有登录页 | 7 个本地分支 + **22 个远端分支**逐个 `git grep -l "auth/login\|mustChangePassword\|safeNext" <ref> -- client/src` | **每个 ref 都是 0** |
+| 客户端认证代码 | `grep -rn "useAuth\|AuthContext\|AuthProvider\|/login" client/src` | **0 命中**（`client/src` 唯一的 `interceptors` 是 `api.js` 的通用错误映射，不处理 401） |
+| 页面清单 | `ls client/src/pages/` | `Alerts / Asset / Dashboard.jsx / LogViewer.jsx / Portfolio / Prices / Transaction` —— **无 `Login`、无 `Account`** |
+| stash / 其它 worktree | `git stash list` · `git worktree list` | 均为空 |
+
+### 10.2 运行时实拍（vite 6600 + server 8080，真实浏览器）
+
+| 场景 | 结果 |
+|---|---|
+| 打开 `/` | 渲染完整外壳，但两块内容区均为红条 **「数据加载失败，请稍后重试」**（截图为证） |
+| 打开 `/portfolios` | 同样「数据加载失败 / 加载组合失败」 |
+| 打开 `/login` | **被重定向到 `/portfolios`**；全页 `input[type=password]` 计数 **0** —— 路由表里没有 `/login`，落到 `*` 兜底 |
+| 经 vite 代理 `GET /api/portfolios` | **401 `UNAUTHENTICATED`**（不是代理故障，是闸门正常拒绝） |
+| 顶栏右上 `User` 图标 | `AppLayout.jsx:133` 仅有 `title="账户"`，**无 `onClick`**，不是下拉 |
+| 侧栏底部「退出登录」 | `Sidebar.jsx:252` **仍是假按钮**（无 handler）—— 本卡 §1 列出的原始症状之一，未处理 |
+
+即：**当前分支是一个"后端要求登录、前端无处可登"的状态**。用户在浏览器里永远只能看到错误条，无法自救。后端侧确认可用（`admin/admin` 登录 200 + `mustChangePassword:true`），问题纯粹在前端缺失。
+
+### 10.3 这次提交实际是什么
+
+内容 = **TASK-059 / 060 / 061 三卡结案 + `portomind-prototype.html` 重导**（44 文件，含 28 张 PNG；59/60/61 从 `active/` → `complete/`，`_audit.cjs` 37→48 条断言、`_audit-auth.cjs` 现 59 条）。这批文档改动本身**质量是好的**，但它不是 U2。
+
+而且同一提交内的 `.workbuddy/memory/2026-10-27.md` 自己写着：「**U2 真实前端登录页零代码**：… 全仓 `grep -r "login|AuthContext|useAuth" client/src` **0 命中**；`docs/ui/2.0` 里的登录页只是原型」，并明确「**不应混进 058 的 PR**」。**提交信息与提交内容、以及与其自带的记忆条目三者互相矛盾。**
+
+### 10.4 其它发现
+
+| # | 级别 | 内容 |
+|---|---|---|
+| B-1 | **BLOCKER** | U2 零实现（上文）。按 §5「发布耦合」，**本分支现状不可合入 `main`**：合入即全站 401。 |
+| M-1 | MAJOR | `68f040c` 提交信息与内容不符（`feat(client)` 却零 client 文件），且把 059/060/061 结案混进 058 分支。该提交**已推送**（`origin/feature/TASK-058-auth-kernel` = `68f040c`），不宜改写历史；建议在 PR 描述里更正，并追加一个只含本次文档批次的说明性提交。 |
+| M-2 | MAJOR | **U2 无 Approved ExecPlan**。本卡 §3/§6 明写「U2/U3 待 U1 实施后拆分」；按 `AGENTS.md §5/§6`（安全敏感、多文件、涉发布形态）U2 必须先出计划并经 Human 批准才能动代码。 |
+| m-1 | MINOR | 原型层的 auth 能力是**齐的**（`portomind-prototype.html` 内已有 login / `safeNext` / 强制改密 / 顶栏下拉，`_audit-auth.cjs` 59 条），说明设计侧已到位 —— 缺的是把它落到 `client/src`。这一点值得肯定，也意味着 U2 实施时不必再重新设计。 |
+| m-2 | MINOR | 文档侧**没有跟着吹**：`TASKS.md:5,13` 与 readme 仍写「U2 尚未拆分」、卡 Status 仍是 U1 `REVIEWED`。事实未被污染，问题只在提交信息。 |
+
+### 10.5 通过项（U1 无回归）
+
+- `npm run test:server` → **211 pass / 0 fail**
+- `npm run build --workspace client` → **exit 0 / 2408 modules**
+- 未带 cookie 访问 5 个业务端点 → 全 **401**；`POST /api/auth/login` → **200**
+- `client/src` 零改动 → 不存在「顺手改坏」的回归面
+
+### 10.6 放行条件
+
+1. **先补 U2 计划**：Planner 产出 U2 ExecPlan（范围＝本卡 §3 的 6 项：`/login`、`/account`、会话 Provider、路由守卫、axios 401 拦截、顶栏头像下拉 + 首登强制改密），Human 批准后再动 `client/`。
+2. U2 实施后按 ED-5 同等标准验收：**真实浏览器端到端**（未登录深链 → 跳 `/login?next=` → 登录 → 回落原页；首登强制改密；401 自动跳登录；退出登录真的清会话）。
+3. 在此之前，`feature/TASK-058-auth-kernel` **只能作为"U1 后端待命分支"**，不得作为发布候选；`main` 保持现状（无闸门）反而是当前唯一可用的形态。
+
+### 10.7 全量复核（2026-10-27 补充，Human 提示「已提交，须查全量」）
+
+> 起因：Human 指出本轮不应只看未提交改动。**上文 10.1–10.6 的结论本身即基于已提交内容**（`68f040c` / `c571f91` 均已 push）；本节把取证面再扩到「提交历史 + 所有 ref + 游离对象 + 构建产物」，确认结论不因查漏而变。**结论不变：`FAIL`（B-1 仍成立）。**
+
+| 取证面 | 命令 | 结果 |
+|---|---|---|
+| 工作区（含未跟踪/被忽略） | `git status --short --ignored` · `find client/src -iname "*auth*" -o -iname "*login*"` | 未提交仅 5 个 `.md`（Reviewer 自己的审查记录）；`client/` 下被忽略项只有 `.env` / `dist/` / `node_modules/`；**无 auth/login 文件** |
+| 已提交内容（本轮两个提交） | `git show --name-only 68f040c` · `git show --name-only c571f91` | `68f040c` = 44 文件（docs/原型/PNG/memory）；`c571f91` = 44 文件（server/shared/docs）。**两者 `client/` 均为 0** |
+| 分支相对 `main` | `git diff --stat main...HEAD -- client/` | **空** |
+| 全部 ref（本地 + 远端） | 逐个 ref `git grep -l "auth/login\|mustChangePassword\|safeNext" -- client/src` | **22 个远端 + 7 个本地分支，全部 0 命中** |
+| 历史是否出现过登录文件 | `git log --all --diff-filter=A --name-only -- "client/src/**" \| grep -Ei "login\|auth"` | **历史上从未出现**（不只是当前分支没有） |
+| stash / worktree / 游离提交 | `git stash list` · `git worktree list` · `git fsck --lost-found` | stash 空、单 worktree；仅 2 个 dangling commit：`ac6e9e1`（TASK-054 文档 amend 前身）、`9058982`（U1 初版，被 reset 后重提为 `c571f91`）—— **`client/` 均为 0** |
+| 远端是否有更新 | `git fetch --all --prune` + `for-each-ref --format='%(upstream:track)'` | 全部分支 **无 ahead/behind**，`origin/feature/TASK-058-auth-kernel` = `68f040c`，无「本地落后」 |
+| **构建产物**（最硬证据） | 构建后 `grep -o` 检索 `client/dist/assets/*.js` | `auth/login` **0**、`mustChangePassword` **0**、`用户名/使用密码登录` **0**；`登录` 仅 1 处且来自 `退出登录`（同一个假按钮）。**即打出来的包在物理上不具备登录能力** |
+
+补充判读：
+
+- **不是"忘记提交"**：如果只是漏 commit，工作区或 stash 里会有痕迹；实测所有面都是零，说明 U2 从未被写出来。
+- **不是"分支搞错"**：22 个远端分支全查过，历史上也从未新增过 `client/src` 下的 auth 文件；不存在「代码在别的分支」这种可能。
+- **`68f040c` 的真实内容**（44 文件）：`docs/tasks/complete/TASK-059|060|061` 三卡结案 + `docs/ui/2.0/portomind-prototype.html`（+328/−159）+ 28 张 PNG + `_audit*.cjs` 断言扩容 + `docs/readme.md`/`TASKS.md`/`FS-*` 的同步。**这批原型与文档工作本身质量过关**（原型内 login / `safeNext` / 强制改密 / 顶栏下拉齐备，`_audit-auth.cjs` 59 条），问题只在"它不是 U2、却署名 U2"。
+- **对 Human 的直接提示**：若您记忆中是"提交过 U2 代码"，请核对是否在**另一台机器/另一个 clone** 上提交；本仓库（`D:/projects/portomind`，单 worktree，无 stash，已 fetch 全部远端）确认不存在该代码。若代码在别处，请先把该分支推上来再重验。
+
+---
+
+## 11. U2/U3 实施与验收记录（2026-10-27 晚）
+
+**结论：U2 / U3 已实施完成，独立 Reviewer 真实浏览器验收 28/28 PASS、代码复核无 BLOCKER/MAJOR（6 条 MINOR 不阻塞）。待 Human 合入 `main`（U1 + U2 必须同批）。**
+
+ExecPlan：[`docs/exec-plans/active/TASK-058-authentication-client.md`](../../exec-plans/active/TASK-058-authentication-client.md)（`Completed` 2026-10-27，实施记录见 §11、复核记录见 §12）。
+
+### 11.1 交付（21 个文件：13 新增 / 8 修改）
+
+- **U2 地基与页面**：`services/auth.service.js`、`services/authSession.js`、`utils/safeNext.js`、`components/auth/{authContext.js,AuthProvider.jsx,RequireAuth.jsx,ForcedChangeScreen.jsx,ForbiddenUsersScreen.jsx}`、`pages/Login.jsx`、`pages/Account.jsx`；改 `router.jsx`（`/login` 公开 + `RequireAuth` 保护组 + 两条账户路由）、`services/api.js`（透传 `code`；401→清缓存跳登录，排除 auth 端点；403 `PASSWORD_CHANGE_REQUIRED`→刷新会话）、`constants/routes.js`。
+- **布局与导航**：`components/layout/UserMenu.jsx`（身份行 + 账户设置 + 系统设置〔仅 admin〕+ 提醒规则 + 退出登录）；改 `AppLayout.jsx`（用户下拉 + 强制改密闸门 + 强制期停未读轮询）、`Sidebar.jsx`（5→4，删假「退出登录」）、`hooks/useAlerts.js`（`enabled`）。
+- **U3（`users-admin` 实施）**：`pages/AccountUsers.jsx`、`components/users/{CreateUserModal.jsx,ResetPasswordModal.jsx}`、`hooks/useUsers.js`、`constants/enums.js`（追加 `USER_ROLES`/`USER_ROLE_LABELS`）。
+- **服务端最小补充**：`controllers/auth.controller.js`（D-2：`lastLoginAt`）、`app.js` + `server/.env.example`（D-3：开发态 CORS 补 6600）；`client/.env*`（同源 `/api` 默认 + 文档化跨源前提）。
+- **验收资产**：`client/scripts/e2e-task-058-u2.mjs`（独立 Reviewer 编写）。
+
+### 11.2 FS §7 U2 / U3 验收标准（全部满足）
+
+**U2**
+
+- [x] 未登录直访 `/portfolios` → 跳 `/login?next=/portfolios`，登录后回原页；无 `next` 落 `/`（`D10`）
+- [x] 密码错误文案不泄露账号是否存在（「用户名或密码错误」）；停用账号刻意例外「该账号已停用，请联系管理员」（`D8`）
+- [x] 改用户名后**顶栏头像下拉身份行立即**显示新名（无整页刷新；侧栏已无用户区，`D12`）
+- [x] 改密码后，另一浏览器同名会话下一次请求被登出（401 → 登录页，保留 `next`）
+- [x] 顶栏下拉真实可用：「账户设置」→ `/account`、「退出登录」→ `/login`（回退键无法回到已登录页）；侧栏**无任何**账户入口（用户名区 / 账户设置 / 退出登录全无）
+
+**U3**
+
+- [x] admin 可见「系统设置」**独立页面**（下拉入口），member 下拉无此项且直访 `/account/users` 显示 403 屏
+- [x] 新建用户后可用该账号登录，且被判为需改密（首登强制改密闸门生效）
+- [x] 唯一 admin 的「停用」「降级」按钮为禁用态，且有文字说明原因（`title`），后端 409 兜底展示
+
+**本卡 §1 / §6 的 U2 相关硬性项**
+
+- [x] 侧栏 5→4 项，假「退出登录」删除；「提醒规则」移入下拉（v1.5）
+- [x] 强制改密闸门：`mustChangePassword=true` 时除 `/account` 外一律显示「需要修改密码后才能继续」，无可跳过入口；下拉仍可用，仅「系统设置」禁用 + `title`（`D13`）
+- [x] 任意业务接口 401 → 清业务缓存 → 跳 `/login?next=<当前路径>`
+- [x] `safeNext` 拒绝 `//host`、`/\`、控制字符、含 `next=`、`/login` 自嵌套（无开放重定向）
+- [x] 首次登录开箱可用 `admin/admin` + 强制改密；登录页**不提示**默认账号（FS §4.1）
+
+### 11.3 验证证据（2026-10-27）
+
+| 项 | 命令 / 方式 | 结果 |
+|---|---|---|
+| 真实浏览器 E2E（**交付门槛**） | `node client/scripts/e2e-task-058-u2.mjs`（真实 Chrome + 真实 server 8080 + 真实 Mongo 临时库 + vite dev 6600） | **28/28 PASS，EXIT=0**；三轮 19→25→28，失败均先归因 Reviewer 脚本 bug/时序（详见 ExecPlan §12.1）；`pageerror=0` |
+| 构建 | `npm run build --workspace client` | **exit 0 / 2423 modules**；`dist` 中实测含 `auth/login` / `auth/session` / `mustChangePassword` / `账户菜单` / `设定新密码并进入` / `无权访问用户管理` 等字符串（物理证据） |
+| 静态 | `npx eslint src`（client/src 全量） | **0 error / 0 warning**（全量 `npm run lint` 仍有 2 个既有 error：`client/scripts/verify-price-display.cjs`、`client/vite.config.js`，非本卡文件、改动前已存在） |
+| 回归 | `npm run test:server` / `npm run test:worker` | **211 pass / 0 fail** · **77 pass / 0 fail** |
+| 独立代码复核 | Reviewer 对照 FS §7 + `D1–D13` 审 `git diff -- client server` | **PASS（无 BLOCKER / 无 MAJOR）**；6 条 MINOR（强制改密后不回收 `next`、login `lastLoginAt` 毫秒差异、banner 不自动消失、强制态铃铛可点、本地 `.env` 同步、仅 Chrome 验证）记入 ExecPlan §12.4 |
+| 环境清理 | Reviewer 独立复核 | 8080/6600 已停；临时库 `portomind_u2_e2e` 已 drop（未触碰 `portomind_dev`） |
+
+### 11.4 实施级裁决与偏差（详见 ExecPlan §4.4 / §11.2）
+
+D-1 强制改密态仍要求「当前密码」（服务端强校验，原型曾省略）；D-2 `/api/auth/session` 与 login 补 `lastLoginAt`；D-3 开发态 CORS 补 Vite 6600；D-4 401 拦截排除 auth 端点；D-6 member 不渲染「系统设置」；D-7 强制态下拉可用、系统设置禁用；D-8 侧栏 4 项；D-9 唯一 admin 按服务端列表事实禁用；D-10 弹窗受控实现。验收期新增：axios `withCredentials: true` + `client/.env*` 改为同源 `/api`（U1 认证暴露的配置债）。
+
+### 11.5 遗留与发布
+
+- **MINOR（不阻塞，ExecPlan §12.4）**：强制改密成功后不回收登录时的 `next`；login `lastLoginAt` 毫秒差异；banner 不自动消失；强制态铃铛可点；`server/.env` 需本地同步 6600；仅 Chrome 验证。
+- **发布**：本分支现为 U1+U2 发布候选；**U1 与 U2 必须同批上线**。首次部署 `admin/admin` 首登强制改密；生产需配 `CORS_ORIGINS`（缺省 fail-fast）；开发态推荐 `VITE_API_URL` 留空走同源 proxy。
+- **合入后**：本卡 `git mv` → `complete/`，两份 ExecPlan 归档，并同步 `TASKS.md` / `readme`。

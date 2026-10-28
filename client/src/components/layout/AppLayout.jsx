@@ -2,17 +2,26 @@
 // 与 Ardot 设计稿 Component/Topbar 对齐：
 //   - 高 64px、底色 #FFFFFF、底部 1px #E3E8EE 分隔
 //   - 左侧：Logo + 名称（移动到 Sidebar 后此处只放页签/面包屑占位）
-//   - 右侧：搜索框 + 铃铛（含未读徽标，跳 /alerts/rules）+ 用户头像
-import { Outlet, useNavigate } from 'react-router';
-import { Bell, Search, User } from 'lucide-react';
+//   - 右侧：搜索框 + 铃铛（含未读徽标，跳 /alerts/rules）+ 账户头像下拉（TASK-058 U2）
+// 强制改密闸门（TASK-058 U2 / FS §4.2）：mustChangePassword=true 时，除 /account 外的页面
+// 只渲染「需要修改密码后才能继续」屏——业务页不挂载，避免整页并行发请求全 403 的噪声。
+import { Outlet, useLocation, useNavigate } from 'react-router';
+import { Bell, Search } from 'lucide-react';
 import Sidebar from './Sidebar';
+import UserMenu from './UserMenu';
 import { useUnreadAlertCount } from '../../hooks/useAlerts';
+import { useAuth } from '../auth/authContext';
+import ForcedChangeScreen from '../auth/ForcedChangeScreen';
 import { colors, layout, fontStack } from '../../constants/design-tokens';
 import { GAP_THRESHOLD_DAYS } from '../../utils/priceDisplay';
 
 export default function AppLayout() {
   const navigate = useNavigate();
-  const { count } = useUnreadAlertCount();
+  const { pathname } = useLocation();
+  const { mustChangePassword } = useAuth();
+  // 强制改密期间只放行改密码/登出/查会话，未读徽标轮询会被 403 → 直接停掉，避免噪声请求
+  const { count } = useUnreadAlertCount({ enabled: !mustChangePassword });
+  const forcedPasswordChange = mustChangePassword && pathname !== '/account';
 
   return (
     <div
@@ -61,7 +70,7 @@ export default function AppLayout() {
             </div>
           </div>
 
-          {/* 右侧：搜索 + 铃铛 + 用户 */}
+          {/* 右侧：搜索 + 铃铛 + 账户下拉（唯一账户/登出入口） */}
           <div className="flex items-center gap-5">
             <div className="relative">
               <input
@@ -120,20 +129,8 @@ export default function AppLayout() {
               )}
             </button>
 
-            <button
-              type="button"
-              className="flex items-center justify-center transition-colors"
-              style={{
-                width: 36,
-                height: 36,
-                borderRadius: 999,
-                border: `1px solid ${colors.border}`,
-                backgroundColor: colors.bgCard,
-              }}
-              title="账户"
-            >
-              <User size={18} color={colors.textSecondary} />
-            </button>
+            {/* TASK-058 U2：账户设置 / 系统设置（仅 admin）/ 提醒规则 / 退出登录 */}
+            <UserMenu />
           </div>
         </header>
 
@@ -144,7 +141,7 @@ export default function AppLayout() {
             padding: `${layout.contentPaddingY}px ${layout.contentPaddingX}px`,
           }}
         >
-          <Outlet />
+          {forcedPasswordChange ? <ForcedChangeScreen /> : <Outlet />}
         </main>
       </div>
     </div>
