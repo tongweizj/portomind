@@ -1,7 +1,7 @@
 # AGENTS.md — PortoMind Cron Worker
 
 PortoMind **唯一的调度进程**（CommonJS、纯 Node、无 Web 框架）。注释与日志字段风格使用简体中文。
-架构决策见 [`docs/architecture/adr/ADR-002-single-scheduler.md`](../docs/architecture/adr/ADR-002-single-scheduler.md)。
+架构决策见 [`docs/os/architecture/adr/ADR-002-single-scheduler.md`](../docs/os/architecture/adr/ADR-002-single-scheduler.md)。
 
 ## 当前状态：5 类调度全部由本进程注册
 
@@ -60,7 +60,7 @@ node src/tasks/integrityCheck.js [--symbols ...] [--from ...] [--to ...] [--no-r
 
 ## 文档
 
-- 调度进程手册（cron-worker）：`../docs/manual/CRON_WORKER.md`
-- 系统部署手册（部署 / PM2 / 环境变量 / 安全边界）：`../docs/manual/DEPLOYMENT.md`
-- 系统部署手册（本地环境与验证命令）：`../docs/manual/DEPLOYMENT.md`
-- 功能全景（调度与数据质量）：`../docs/product/lines/PL-0-platform-foundation.md` §6.4
+- 调度进程手册（cron-worker）：`../docs/handbook/ops/CRON_WORKER.md`
+- 系统部署手册（部署 / PM2 / 环境变量 / 安全边界）：`../docs/handbook/ops/DEPLOYMENT.md`
+- 系统部署手册（本地环境与验证命令）：`../docs/handbook/ops/DEPLOYMENT.md`
+- 功能全景（调度与数据质量）：`../docs/handbook/product/lines/PL-0-platform-foundation.md` §6.4

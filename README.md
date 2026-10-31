@@ -2,11 +2,11 @@
 
 > Self-hosted, single-family investment portfolio manager — ledger, multi-market quotes, target allocation, rebalancing advice, and cross-currency household roll-up. Runs locally; built as a clean modular monorepo.
 
-![PortoMind Logo](./docs/logo.png)
+![PortoMind Logo](./docs/assets/logo.png)
 
 PortoMind turns "what did I buy / what is it worth now / how far am I from target / should I rebalance" — normally scattered across spreadsheets, broker apps, and quote websites — into **one local system that updates itself every day, with a single source of truth and drill-down from household → portfolio → position → instrument**.
 
-- 🇨🇳 **中文说明**：[docs/README.zh-CN.md](./docs/README.zh-CN.md)
+- 🇨🇳 **中文说明**：[docs/handbook/README.zh-CN.md](./docs/handbook/README.zh-CN.md)
 - 📚 **Full documentation index**：[docs/readme.md](./docs/readme.md)
 
 ---
@@ -61,34 +61,34 @@ Features are organized into 7 product lines, evaluated against three value pilla
 
 ## 🖼 The product at a glance
 
-![Dashboard — home screen](./docs/ui/en/en-dashboard.png)
+![Dashboard — home screen](./docs/development/prototypes/en/en-dashboard.png)
 
 *Household total assets, per-portfolio health table (issues sorted to the top), and the live alert feed.*
 
 ### Portfolios & allocation
 
-![Portfolio list](./docs/ui/en/en-portfolio-list.png)
+![Portfolio list](./docs/development/prototypes/en/en-portfolio-list.png)
 
 *Each portfolio as a card with a drift badge, market value, pending actions, and last-rebalance date.*
 
 ### Rebalancing
 
-![Portfolio overview](./docs/ui/en/en-portfolio-overview.png)
-![Rebalance advice](./docs/ui/en/en-rebalance.png)
+![Portfolio overview](./docs/development/prototypes/en/en-portfolio-overview.png)
+![Rebalance advice](./docs/development/prototypes/en/en-rebalance.png)
 
 *Overview KPIs + target-vs-actual, then a sell-then-buy suggestion you confirm (never auto-executed).*
 
 ### Ledger
 
-![Positions](./docs/ui/en/en-portfolio-positions.png)
-![Transactions](./docs/ui/en/en-transactions.png)
+![Positions](./docs/development/prototypes/en/en-portfolio-positions.png)
+![Transactions](./docs/development/prototypes/en/en-transactions.png)
 
 *Holdings table and the cross-portfolio transaction ledger (CSV batch import supported).*
 
 ### Market data
 
-![Instruments](./docs/ui/en/en-instruments.png)
-![Price history](./docs/ui/en/en-price-history.png)
+![Instruments](./docs/development/prototypes/en/en-instruments.png)
+![Price history](./docs/development/prototypes/en/en-price-history.png)
 
 *Instrument master (asset metadata) and price history — the single source of truth feeding every upstream view.*
 
@@ -197,7 +197,7 @@ npm run test:server
 npm run test:worker
 ```
 
-Full setup, production deployment (PM2 + Nginx), the full environment-variable table, and security notes are in the [System Deployment Manual](./docs/manual/DEPLOYMENT.md).
+Full setup, production deployment (PM2 + Nginx), the full environment-variable table, and security notes are in the [System Deployment Manual](./docs/handbook/ops/DEPLOYMENT.md).
 
 ---
 
@@ -211,7 +211,7 @@ Full setup, production deployment (PM2 + Nginx), the full environment-variable t
 - No database transactions / TTL / migration framework — cross-collection writes rely on service-layer ordering and idempotency keys.
 - FX collection direction bug and `symbol` normalization are tracked tech-debt items.
 
-**Next (priority order):** fix the trust baseline (auth + CORS), close the last mile of the decision loop (batch import undo, data-quality dashboard), then experience polish. Detailed evaluation is in [PRODUCT_LINES.md](./docs/product/PRODUCT_LINES.md).
+**Next (priority order):** fix the trust baseline (auth + CORS), close the last mile of the decision loop (batch import undo, data-quality dashboard), then experience polish. Detailed evaluation is in [PRODUCT_LINES.md](./docs/handbook/product/PRODUCT_LINES.md).
 
 ---
 
@@ -220,13 +220,13 @@ Full setup, production deployment (PM2 + Nginx), the full environment-variable t
 | Doc | Audience |
 |---|---|
 | [Documentation index](./docs/readme.md) | Entry point to everything |
-| [Client manual](./docs/manual/CLIENT.md) | How to use the UI |
-| [Server manual](./docs/manual/SERVER.md) | API process, manual endpoints |
-| [cron-worker (overview / ops / product / dev)](./docs/manual/CRON_WORKER.md) | Scheduler from three viewpoints |
-| [Deployment manual](./docs/manual/DEPLOYMENT.md) | Local dev, prod, env vars, security |
-| [Architecture](./docs/architecture/ARCHITECTURE.md) | Stack, boundaries, data flow, ADRs |
-| [API contract](./docs/dev/API_CONTRACT.md) · [Data model](./docs/dev/DATA_MODEL.md) · [Client dev](./docs/dev/CLIENT_DEV.md) | Developer references |
-| [Product lines](./docs/product/PRODUCT_LINES.md) | Feature panorama & roadmap |
+| [Client manual](./docs/handbook/manual/CLIENT.md) | How to use the UI |
+| [Server manual](./docs/handbook/ops/SERVER.md) | API process, manual endpoints |
+| [cron-worker (overview / ops / product / dev)](./docs/handbook/ops/CRON_WORKER.md) | Scheduler from three viewpoints |
+| [Deployment manual](./docs/handbook/ops/DEPLOYMENT.md) | Local dev, prod, env vars, security |
+| [Architecture](./docs/os/architecture/ARCHITECTURE.md) | Stack, boundaries, data flow, ADRs |
+| [API contract](./docs/handbook/technical/API_CONTRACT.md) · [Data model](./docs/handbook/technical/DATA_MODEL.md) · [Client dev](./docs/handbook/technical/CLIENT_DEV.md) | Developer references |
+| [Product lines](./docs/handbook/product/PRODUCT_LINES.md) | Feature panorama & roadmap |
 
 ---
 
@@ -237,5 +237,5 @@ Released under the [MIT License](./LICENSE).
 ---
 
 <p align="center">
-  🇨🇳 中文版说明见 <a href="./docs/README.zh-CN.md">docs/README.zh-CN.md</a>
+  🇨🇳 中文版说明见 <a href="./docs/handbook/README.zh-CN.md">docs/handbook/README.zh-CN.md</a>
 </p>

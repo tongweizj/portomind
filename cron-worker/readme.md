@@ -4,7 +4,7 @@
 > 优先级：P0=正确性/风险，建议尽快处理；P1=可维护性重构；P2=测试与增强。
 > 命令与文件路径均已核对到具体行号，处理时可从对应位置入手。
 >
-> **2026-10-15 更新（TASK-005）**：原属 cron-worker 的 `shared/fetchers/`、`shared/services/`、`src/models/`、`src/utils/` 已全部迁入 `shared/`（`@portomind/shared`），以便与 `server` 共用唯一实现；本清单中的路径已按新位置修正。cron-worker 现在只保留 `index.js`、`src/config/{env,database}.js`、`src/schedulers/`、`src/tasks/`（CLI 薄壳 + `integrityCheck`）。详见 [ADR-002](../docs/architecture/adr/ADR-002-single-scheduler.md)。
+> **2026-10-15 更新（TASK-005）**：原属 cron-worker 的 `shared/fetchers/`、`shared/services/`、`src/models/`、`src/utils/` 已全部迁入 `shared/`（`@portomind/shared`），以便与 `server` 共用唯一实现；本清单中的路径已按新位置修正。cron-worker 现在只保留 `index.js`、`src/config/{env,database}.js`、`src/schedulers/`、`src/tasks/`（CLI 薄壳 + `integrityCheck`）。详见 [ADR-002](../docs/os/architecture/adr/ADR-002-single-scheduler.md)。
 
 ---
 

@@ -1,6 +1,6 @@
 # AGENTS.md — PortoMind Client
 
-React 19 + Vite 6 单页应用（PortoMind 前端）。UI 文案与代码注释使用简体中文。后端在 `../server`，API 契约见 `../doc/API_CONTRACT.md`。
+React 19 + Vite 6 单页应用（PortoMind 前端）。UI 文案与代码注释使用简体中文。后端在 `../server`，API 契约见 `../docs/handbook/technical/API_CONTRACT.md`。
 
 ## 常用命令
 
