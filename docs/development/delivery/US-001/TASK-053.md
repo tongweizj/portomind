@@ -9,19 +9,19 @@
 **规划核对：** [Planner 回交说明](./US-001-02-planner-return.md)；新增关联不改变本卡 AC、原状态、既有批准或结案结论。
 
 **Status:**  
-`Planning`（2026-10-30，Human 已批准当前 TASK-053 设计；独立实施工作区尚未就绪，未指派或开工）。
+`Implementing`（2026-10-30，工作区已就绪，Orchestrator已指派Implementer并提交实施交接；业务代码尚未开始）。
 
 **Priority:**  
 `High`（P0 Must Have。看板是本需求唯一的用户入口：C-03 / C-06 / C-07 全部挂载在它上面，没有骨架其余卡片无处落地）
 
 **Owner:**  
-`待指派`（启动核对尚缺独立实施工作区，未派发 Implementer；独立 Reviewer 亦未指派）。
+`Implementer`（本chat下一执行角色；独立Reviewer另行安排）。
 
 **Created:**  
 `2026-10-26`
 
 **Updated:**  
-`2026-10-30`（Orchestrator记录 Human 批准及启动核对结果；原创建日期保留）。
+`2026-10-30`（Orchestrator完成工作区准备、角色指派与实施交接登记；原创建日期保留）。
 
 **Type:**  
 `Feature`（前端信息架构 / 新 tab 骨架，纯客户端）
@@ -33,7 +33,7 @@
 `None`
 
 **Execution Plan:**  
-[Approved：TASK-053](./TASK-053-plan.md)（Human 仅批准本卡当前设计；启动缺口及尚未派发的交接见计划 §10）
+[Approved：TASK-053](./TASK-053-plan.md)（Human 仅批准本卡当前设计；正式实施交接与工作区见计划 §10.4）
 
 **来源：**  
 FS 卡片 `C-01`（PM 拆分，2026-10-26）
@@ -157,3 +157,7 @@ FS 卡片 `C-01`（PM 拆分，2026-10-26）
 ## Orchestrator 启动核对记录
 
 2026-10-30，随后 Human 明确批准 TASK-053 当前 Draft，且限定不含其他任务或D-01～D-04。Orchestrator依据该决定将计划登记为Approved，已核对真实源码、基线、范围、依赖与验证入口；本轮没有修改设计、AC、Scope或业务代码。当前尚缺独立的feature/TASK-053实施工作区，按Human本轮要求保持Planning及Owner待指派，不登记Implementing、不宣布交接已派发。完整事实与剩余动作唯一记录在 [计划 §10](./TASK-053-plan.md#10-implementer-handoff)。
+
+## Orchestrator 正式实施交接
+
+2026-10-30继续启动：已从main基线准备独立feature/TASK-053工作区，离线安装依赖并核对工具入口与干净状态。此前工作区缺口已解除，沿用原Human批准，登记Task为Implementing，Owner为Implementer；正式输入、绝对路径、边界与回交要求唯一见 [计划§10.4](./TASK-053-plan.md#104-工作区就绪与正式实施交接)。未修改AC或Scope，未开始业务代码或应用验证；计划仍Approved，待Implementer实际开始后按权限推进。

@@ -3,7 +3,7 @@
 // TASK-058 U2 / U3 独立验收脚本（真实浏览器 + 真实 Mongo + 真实 server + vite dev）。
 //
 // 独立性声明：
-//   - 本文件由独立 Reviewer（ui-verify）依据 docs/product/specs/FS-authentication.md §7 U2/U3 AC、
+//   - 本文件由独立 Reviewer（ui-verify）依据 docs/development/requirements/specs/completed/FS-authentication.md §7 U2/U3 AC、
 //     TASK-058 任务卡 §3 / §10、U2/U3 ExecPlan §1 AC 编写；期望值来自 FS/任务卡，不从实现反推。
 //   - 本脚本只做「观察 + 断言」，不修改任何实现源码。
 //

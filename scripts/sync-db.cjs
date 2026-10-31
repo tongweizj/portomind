@@ -36,6 +36,20 @@ const dotenv = require('dotenv');
 const ROOT = path.resolve(__dirname, '..');
 const SAFE_DB_SUFFIX = /_dev$|_test$|_e2e$/;
 
+// 只存在于「开发库」的集合：源库（生产）没有它们，但目标库（开发）必须有。
+//
+// `users` / `sessions` 由 TASK-058 认证模块引入，只在开发环境使用（生产部署尚未带用户模块）。
+// 它们按定义就不在源库里，若照常 prune 会被当作「多余集合」删掉，后果是开发库登录表消失：
+// 服务端启动时 users 为空会重新 seed 出 admin/admin，但真实账号与全部会话一并丢失，
+// 表现为「昨天还能登录，今天密码全不对」。实测踩过一次（2026-10-30）。
+//
+// 因此这类集合：① 永不被 prune 删除；② 不计入「目标库多出集合」告警。
+const DEV_ONLY_COLLECTIONS = new Set(['users', 'sessions']);
+
+function isDevOnly(name) {
+  return DEV_ONLY_COLLECTIONS.has(name);
+}
+
 // ── 参数解析 ────────────────────────────────────────────────────────────────
 
 function parseArgs(argv) {
@@ -106,6 +120,7 @@ function printHelp() {
   --verify-only      只做校验（集合清单 / 条数 / 索引 / _id 哈希），不写入
   --no-verify        跳过事后校验（不建议）
   --no-prune         保留目标库中「源库不存在」的集合（默认会删掉）
+                     ⚠ users / sessions 属开发库专属集合，任何情况下都不会被删除
   --no-hash          跳过 _id 哈希校验（数据量大时更快）
   --force            允许目标库名不以 _dev 结尾（危险）
   -h, --help         显示本帮助
@@ -227,10 +242,15 @@ async function verify({ srcDb, dstDb, names, opts, log }) {
   const expected = new Set(names);
   const actual = new Set((await dstDb.listCollections().toArray()).map((c) => c.name));
   const missing = [...expected].filter((n) => !actual.has(n));
+  // 开发库专属集合（users / sessions）按定义不在源库，不算「多出」，也不该被 prune
+  const preserved = [...actual].filter((n) => !expected.has(n) && isDevOnly(n));
   // --only 只同步部分集合，目标库其余集合属正常存在，不能算「多出」
-  const extra = opts.prune && !opts.only ? [...actual].filter((n) => !expected.has(n)) : [];
+  const extra = opts.prune && !opts.only
+    ? [...actual].filter((n) => !expected.has(n) && !isDevOnly(n))
+    : [];
   if (missing.length === 0 && extra.length === 0) {
     log.info(`集合清单一致：${expected.size} 个`);
+    if (preserved.length) log.info(`保留开发库专属集合：${preserved.join(', ')}`);
   } else {
     ok = false;
     if (missing.length) log.warn(`目标库缺少集合：${missing.join(', ')}`);
@@ -373,17 +393,23 @@ async function main() {
     const totalDocs = sizes.reduce((s, x) => s + x.文档数, 0);
     log.info(`共 ${names.length} 个集合，${totalDocs} 条文档`);
 
-    // 目标库多出来的集合（源库没有）→ 默认删除，让开发库与真实库严格一致
+    // 目标库多出来的集合（源库没有）→ 默认删除，让开发库与真实库严格一致。
+    // 例外：开发库专属集合（users / sessions）必须保留，删掉等于抹掉全部账号与登录态。
     log.step('比对目标库集合');
     const dstColls = await dstDb.listCollections().toArray();
     const srcNames = new Set(srcColls.map((c) => c.name));
-    const extra = dstColls.map((c) => c.name).filter((n) => !srcNames.has(n));
+    const dstOnly = dstColls.map((c) => c.name).filter((n) => !srcNames.has(n));
+    const preserved = dstOnly.filter((n) => isDevOnly(n));
+    const extra = dstOnly.filter((n) => !isDevOnly(n));
     if (extra.length === 0) {
       log.info('目标库没有多余集合');
     } else if (opts.prune) {
       log.info(`将删除目标库多余集合：${extra.join(', ')}`);
     } else {
       log.warn(`目标库有 ${extra.length} 个多余集合（--no-prune 已保留）：${extra.join(', ')}`);
+    }
+    if (preserved.length) {
+      log.info(`保留开发库专属集合（不在源库，绝不删除）：${preserved.join(', ')}`);
     }
 
     if (opts.verifyOnly) {
