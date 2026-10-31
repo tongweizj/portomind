@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>PortoMind · 账号与访问控制 · 已合并</title>
+<!--
+  ⚠️ 本文件已退役（2026-10-27）
+  账号与访问控制的三屏（登录 / 账户设置 / 系统设置）已整体并入主原型
+  docs/development/prototypes/2.0/portomind-prototype.html —— 该文件现在同时承载「全量产品」与「认证模块」，
+  两者共用同一套路由、守卫与 mock 会话，不再存在两份实现。
+
+  保留本文件的原因：TASK-060、FS-authentication §13 与若干历史记录里引用了这个路径。
+  落地实现时不要参考本文件的旧结构 —— 以主原型 + FS 为准。
+
+  断言：node _audit-auth.cjs（已改为只对准主原型）
+-->
+<meta http-equiv="refresh" content="0; url=./portomind-prototype.html#/login"/>
+<style>
+  :root{
+    --brand:#635BFF; --bg:#F6F8FA; --card:#FFFFFF; --border:#E3E8EE;
+    --ink:#0A2540; --ink2:#5E6B7E; --muted:#8A95A5; --r-lg:10px;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;}
+  body{font-family:"Noto Sans SC","Inter",-apple-system,BlinkMacSystemFont,"Segoe UI",system-ui,sans-serif;
+    background:linear-gradient(160deg,#F6F8FA 0%,#EEEDFF 100%);color:var(--ink);font-size:14px;line-height:1.6;
+    min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px;}
+  .card{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:28px 32px;
+    width:520px;max-width:100%;box-shadow:0 20px 48px rgba(10,37,64,.12);}
+  .head{display:flex;align-items:center;gap:12px;margin-bottom:16px;}
+  .mark{width:36px;height:36px;background:var(--brand);border-radius:8px;display:flex;align-items:center;
+    justify-content:center;color:#fff;font-size:18px;font-weight:700;}
+  .t{font-size:19px;font-weight:700;}
+  .s{font-size:12px;color:var(--muted);}
+  p{font-size:13px;color:var(--ink2);margin-bottom:10px;}
+  b{color:var(--ink);}
+  code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12px;background:#F1F3F7;
+    padding:1px 6px;border-radius:4px;color:#0A2540;}
+  a.btn{display:inline-flex;align-items:center;gap:6px;background:var(--brand);color:#fff;text-decoration:none;
+    padding:9px 16px;border-radius:8px;font-size:13px;font-weight:600;margin-top:6px;}
+  a.btn:hover{background:#5247DB;}
+  .note{margin-top:16px;padding-top:14px;border-top:1px solid var(--border);font-size:12px;color:var(--muted);}
+</style>
+</head>
+<body>
+
+<div class="card">
+  <div class="head">
+    <div class="mark">P</div>
+    <div>
+      <div class="t">已合并到全量原型</div>
+      <div class="s">PortoMind · 账号与访问控制</div>
+    </div>
+  </div>
+
+  <p>登录 / 账户设置 / 系统设置三屏已整体并入
+    <b>全量产品原型</b>，与业务屏共用同一套路由、守卫与 mock 会话。</p>
+  <p>正在跳转：<code>portomind-prototype.html#/login</code></p>
+  <a class="btn" href="./portomind-prototype.html#/login">前往全量原型 →</a>
+
+  <div class="note">
+    本文件仅保留路径兼容（TASK-060 / FS-authentication §13 曾引用）。
+    落地请以主原型 + FS 为准，不要参考本文件的旧结构。<br/>
+    断言：<code>node _audit-auth.cjs</code>（只对准主原型）。
+  </div>
+</div>
+
+</body>
+</html>

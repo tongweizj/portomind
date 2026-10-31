@@ -2,7 +2,7 @@
 
 Express + MongoDB 后端（`@portomind/server`）。**业务引擎来自 `@portomind/shared`，本进程不持有任何定时任务。**
 
-完整运行步骤见 [系统部署手册](../docs/manual/DEPLOYMENT.md)，接口定义见 [API 契约](../docs/dev/API_CONTRACT.md)，调度归属见 [调度进程手册](../docs/manual/CRON_WORKER.md) §3。
+完整运行步骤见 [系统部署手册](../docs/handbook/ops/DEPLOYMENT.md)，接口定义见 [API 契约](../docs/handbook/technical/API_CONTRACT.md)，调度归属见 [调度进程手册](../docs/handbook/ops/CRON_WORKER.md) §3。
 
 ## 启动
 
