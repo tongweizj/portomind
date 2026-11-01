@@ -8,17 +8,17 @@
 | 项目 | 当前情况 |
 |---|---|
 | Story / 用户价值 | [US-001](./development/requirements/stories/active/US-001-cron-worker-health-and-data-completeness.md)：首屏判断五类任务运行与数据完整性（FS P0） |
-| Status | Planning（**待 PM 按 STATES.md §2.2 / §4 复核**：053 已实际启动并交付，Story 是否应登记 Implementing 属 PM 权限，Orchestrator 未代登记） |
+| Status | Planning（**待 PM 按 STATES.md §2.2 / §4 复核**：053 已实际启动、交付并提交，Story 是否应登记 Implementing 属 PM 权限，Orchestrator 未代登记） |
 | 交付目录 | [US-001 过程资料](./development/delivery/US-001)（6张专属任务卡、1份Approved计划、5份Draft、2份交接记录；复用054保持唯一原位置） |
 | PM / 验收负责人 | PM（本 chat 需求整理）/ Human |
-| 下一步 | 053 已交付并进入 Reviewing，**待 Human 结案**（未提交、未合入，提交与 `Merged` 登记归 Human）；053 遗留 F-03（计划 §10.4 引用缺口）待决策。其余：056 设计已批准但缺独立工作区；055/057/063/064 仍为 Draft，D-01～D-04 未决，见 [审阅清单](./development/delivery/US-001/US-001-02-planner-return.md#7-orchestrator-接收与-human-审阅清单) |
-| 阻塞 / 待决策 | **053 无阻塞**：实现与验证完成，Reviewer 复检 `Pass with issues`，仅待 Human 结案与提交决定。056 设计已批准但缺独立 feature 工作区（且 053 骨架尚未入库，图例无插槽）。D-01～D-04 及其他任务材料仍未决；没有新增状态或自动置 Blocked |
+| 下一步 | 053 已提交 `c858521` 并进入 Reviewing，**待 Human 结案**（未 push、未合入，`Merged` 登记归 Human）；053 遗留 F-03（计划 §10.4 引用缺口）待决策。其余：**056 已按 Human 指示退回，暂不做**（设计未批准，保持 Planning/Draft）；055/057/063/064 仍为 Draft，D-01～D-04 未决，见 [审阅清单](./development/delivery/US-001/US-001-02-planner-return.md#7-orchestrator-接收与-human-审阅清单) |
+| 阻塞 / 待决策 | **053 无阻塞**：实现与验证完成并已提交 `c858521`，Reviewer 复检 `Pass with issues`，仅待 Human 结案与合入决定。**056 已按 Human 指示退回暂不做**（保持 Planning，计划为 Draft，未批准、未开工）。D-01～D-04 及其他任务材料仍未决；没有新增状态或自动置 Blocked |
 
 ### 下挂 Task
 
 | Task | 工作 | 覆盖 Story AC | Status | Owner | 依赖 / 下一步 | ExecPlan |
 |---|---|---|---|---|---|---|
-| [TASK-053](./development/delivery/US-001/TASK-053.md) | 看板入口及骨架 | AC-01、02、07、10、11 | Reviewing | 待 Human 结案 | 实现完成（33/33 + 7/7 PASS，build 0 / eslint 0-0）；Reviewer 复检 `Pass with issues`，F-01/F-02 已修复；**交付仍是工作区未提交改动**，未合入、未关闭 | [Implementing](./development/delivery/US-001/TASK-053-plan.md)，仅053设计 |
+| [TASK-053](./development/delivery/US-001/TASK-053.md) | 看板入口及骨架 | AC-01、02、07、10、11 | Reviewing | 待 Human 结案 | 实现完成并**已提交** `c858521`（17 文件）；33/33 + 7/7 PASS，提交后复验 build 0 / eslint 0-0 / check:ignored PASS；Reviewer 复检 `Pass with issues`。**未合入 `main`、未关闭**，`Merged` 待 Human 登记 | [Implementing](./development/delivery/US-001/TASK-053-plan.md)，仅053设计 |
 | [TASK-054](./development/tasks/completed/TASK-054-cron-status-aggregate-api.md) | 聚合快照读侧（既有产出） | AC-02～08、10、11 的读侧支撑 | Completed | 既有结案记录 | 复用证据前核对真实项目版本 | [已归档计划](./development/exec-plans/completed/TASK-054-cron-status-aggregate-api.md) |
 | [TASK-055](./development/delivery/US-001/TASK-055.md) | 价格完成度 | AC-03、04、07、10 | Planning | 待指派 | 待D-04；053/056/063接入约定及计划批准 | [Draft](./development/delivery/US-001/TASK-055-plan.md)，未批准 |
 | [TASK-056](./development/delivery/US-001/TASK-056.md) | 系统状态色与图例 | AC-02、09 | Planning | 待指派 | 待Human审阅设计；与053协调插槽及顺序 | [Draft](./development/delivery/US-001/TASK-056-plan.md)，未批准 |
@@ -31,6 +31,8 @@
 > 随后Human仅批准053当前设计，Orchestrator代登记其计划Approved；真实源码只读核对已完成，但工作区未就绪，Task/Story仍Planning，未指派Implementer。其他计划、D-01～D-04、054完成及Merged记录未变。
 
 > 2026-10-31：Orchestrator 按 STATES.md §4「Task → Reviewing：Implementer 提供改动清单、自测证据、可审对象和已知妥协」核对 TASK-053，三项齐备，登记 `Implementing` → **`Reviewing`**，Owner 改为「待 Human 结案」。核对事实：分支 `feature/TASK-053` @ `6e013d7` 存在；自测 33/33 + 7/7 PASS、build exit 0、eslint 0-0；Reviewer 首轮 `Fail`（F-01/F-02）→ 修复后复检 `Pass with issues`。**本轮未重跑验证**（同基线同一交付已有独立复验证据，按复用原则引用）；未改 AC/Scope/代码；**未提交、未合入、未填 `Merged`、未关闭**——交付仍是工作区未提交改动。Story 状态未动（Story → Implementing 属 PM 权限）。
+
+> 2026-10-31（续）：Human 指示提交 TASK-053。已提交 `c858521`（17 文件，+2035/−129），工作区随之干净。**提交后复验**（此前交付仅为工作区改动，F-01 的实质风险是"提交后是否还能构建"）：`npm run build --workspace client` → exit 0 / 2429 modules；`eslint "src/**/*.{js,*.jsx}"` → 0 error 0 warning；`npm run check:ignored` → PASS。`RawLogView.jsx` 确认已入库（`git ls-tree` 命中 1），F-01 关闭。**未 push、未合入 `main`、未填 `Merged`、未关闭 Task**——`Merged` 与关闭仍归 Human。
 
 ### 进度汇总
 

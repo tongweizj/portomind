@@ -189,6 +189,29 @@ FS 卡片 `C-01`（PM 拆分，2026-10-26）
 - 未 `git add` / `commit` / `push`；**交付仍是工作区未提交改动**（`git log main..HEAD` 为空），本卡不代为提交。
 - 未登记 `Completed`，未关闭 Task 或 Story；**未填写 `Merged`**（仅 Human 可判）。
 
+### 提交记录（2026-10-31，Human 指示）
+
+Human 指示「053 已经完成，请帮提交」。本轮执行 `git add -A` + `git commit`：
+
+| 项 | 事实 |
+|---|---|
+| 提交 | `c858521` `feat(logs): add task-run board tab skeleton (TASK-053)` |
+| 分支 / 基线 | `feature/TASK-053`，父提交 `6e013d7`（= `main`） |
+| 改动规模 | **17 文件**，+2035 / −129（新增 11、修改 6） |
+| 范围核对 | 无 `server/` `shared/` `cron-worker/` 改动；无 TASK-056 文件；无 `nul` / 临时树 |
+| 工作区 | 提交后 `git status --porcelain` **空** |
+
+**提交后复验**（此前交付仅为工作区改动，F-01 的实质风险是「提交后是否还能构建」——被 gitignore 的文件本地存在但不会入库）：
+
+| 验证 | 结果 |
+|---|---|
+| `git ls-tree -r HEAD \| grep RawLog/RawLogView.jsx` | 命中 **1** → F-01 关闭 |
+| `npm run build --workspace client` | **exit 0 / 2429 modules**（2.83s） |
+| `eslint "src/**/*.{js,jsx}"` | **0 error / 0 warning** |
+| `npm run check:ignored` | **PASS** |
+
+**未做**：未 `git push`、未合入 `main`、未填 `Merged`、未登记 `Completed`、未关闭 Task / Story。这些仍归 Human。
+
 **遗留待决策（不阻塞本次登记）**
 
 - **F-03**：卡片 §Metadata「Execution Plan」与「Orchestrator 正式实施交接」共 3 处引用「计划 §10.4」，但计划只有 §10.1–§10.3，从未存在 §10.4。属文档记录缺口，待 Orchestrator 决定补写或修正引用（本轮未动，避免与 053 交付混在一起）。
