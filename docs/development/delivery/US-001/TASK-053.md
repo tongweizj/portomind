@@ -9,19 +9,19 @@
 **规划核对：** [Planner 回交说明](./US-001-02-planner-return.md)；新增关联不改变本卡 AC、原状态、既有批准或结案结论。
 
 **Status:**  
-`Implementing`（2026-10-30，工作区已就绪，Orchestrator已指派Implementer并提交实施交接；业务代码尚未开始）。
+`Reviewing`（2026-10-31，实现与验证完成、Reviewer 复检 `Pass with issues`，等待 Human 结案；**未合入、未关闭**）。
 
 **Priority:**  
 `High`（P0 Must Have。看板是本需求唯一的用户入口：C-03 / C-06 / C-07 全部挂载在它上面，没有骨架其余卡片无处落地）
 
 **Owner:**  
-`Implementer`（本chat下一执行角色；独立Reviewer另行安排）。
+`待 Human 结案`（Implementer 交付完成，Reviewer 已出结论；Task → Completed 仅 Human 可登记）。
 
 **Created:**  
 `2026-10-26`
 
 **Updated:**  
-`2026-10-30`（Orchestrator完成工作区准备、角色指派与实施交接登记；原创建日期保留）。
+`2026-10-31`（登记实现交付、审查结论与 Task → Reviewing；原创建日期保留）。
 
 **Type:**  
 `Feature`（前端信息架构 / 新 tab 骨架，纯客户端）
@@ -158,6 +158,64 @@ FS 卡片 `C-01`（PM 拆分，2026-10-26）
 
 2026-10-30，随后 Human 明确批准 TASK-053 当前 Draft，且限定不含其他任务或D-01～D-04。Orchestrator依据该决定将计划登记为Approved，已核对真实源码、基线、范围、依赖与验证入口；本轮没有修改设计、AC、Scope或业务代码。当前尚缺独立的feature/TASK-053实施工作区，按Human本轮要求保持Planning及Owner待指派，不登记Implementing、不宣布交接已派发。完整事实与剩余动作唯一记录在 [计划 §10](./TASK-053-plan.md#10-implementer-handoff)。
 
+## Reviewer 结论
+
+**2026-10-31（首轮）· Fail**：AC5 不满足（F-02 MAJOR：筛选条件跨视图切换被重置），且存在交付阻断（F-01 BLOCKER：`client/src/components/Logs/RawLogView.jsx` 被 `client/.gitignore` 的 `logs` 规则忽略、无法入库）。详见 [计划 §12 审查记录](./TASK-053-plan.md#12-review-record)。本结论不改 AC / Scope / Status，交 Orchestrator 处理返工。
+
+**2026-10-31（复检）· Pass with issues**：F-01（BLOCKER）与 F-02（MAJOR）均已修复并独立复验通过（见 [计划 §12.9 复检记录](./TASK-053-plan.md#129-reviewer-复检记录-2026-10-31复检)）。残余 MINOR：F-03（计划 §10.4 文档缺口，待 Orchestrator 决策）、F-04（验收脚本未纳入 `npm test`，check:ignored 已接入）、F-05（真实数据脚本自污染，已加头部说明）；新增工作树卫生项 F-06（残留 `nul` 文件）、F-07（越界未提交改动：TASK-056 / BOARD）、F-08（根配置改动：package.json / .gitignore）。本结论不改 AC / Scope / Status / 合入状态。
+
 ## Orchestrator 正式实施交接
 
 2026-10-30继续启动：已从main基线准备独立feature/TASK-053工作区，离线安装依赖并核对工具入口与干净状态。此前工作区缺口已解除，沿用原Human批准，登记Task为Implementing，Owner为Implementer；正式输入、绝对路径、边界与回交要求唯一见 [计划§10.4](./TASK-053-plan.md#104-工作区就绪与正式实施交接)。未修改AC或Scope，未开始业务代码或应用验证；计划仍Approved，待Implementer实际开始后按权限推进。
+
+## Orchestrator 状态登记记录（2026-10-31）
+
+依据 [STATES.md §4](../../../os/process/STATES.md#4-谁可以改变状态)：「Task → Reviewing：Implementer 提供改动清单、自测证据、可审对象和已知妥协」。上述三项均已具备，故登记 `Implementing` → `Reviewing`。
+
+**登记依据（本轮只读核对，不重跑验证）**
+
+| 项 | 事实 |
+|---|---|
+| 分支 / 基线 | `feature/TASK-053` @ `6e013d7`（= 本地 `main`）；分支已存在，工作区即实施目录 |
+| 交付清单 | 修改 2（`LogViewer.jsx`、`.gitignore`）+ 新增 10（`logTabs.js`、`CronStatus/` 4 文件、`RawLog/RawLogView.jsx`、4 个验收脚本、`scripts/check-ignored-sources.cjs`） |
+| 自测证据 | 计划 §11.3 / §11.8：`e2e-task-053-verify.cjs` **33/33 PASS**；`e2e-task-053-f02.cjs` **7/7 PASS**；build exit 0；eslint 0-0（97 文件）；`check:ignored` PASS |
+| 审查结论 | 首轮 §12.7 `Fail`（F-01 BLOCKER / F-02 MAJOR）→ 修复后 §12.9 复检 **`Pass with issues`**，无未整改 BLOCKER/MAJOR |
+| 已知妥协 | 计划 §11.6 / §12.6：生产包未跑浏览器 E2E、移动端窄屏与跨时区未验、验收脚本未纳入 `npm test` |
+
+**本轮未做的事（边界）**
+
+- 未重跑 build / lint / 浏览器 / 测试——同基线同一交付已有独立复验证据，按「复用有效证据」原则引用，不因登记状态重复执行。
+- 未修改 AC、Scope、业务代码或任何设计。
+- 未 `git add` / `commit` / `push`；**交付仍是工作区未提交改动**（`git log main..HEAD` 为空），本卡不代为提交。
+- 未登记 `Completed`，未关闭 Task 或 Story；**未填写 `Merged`**（仅 Human 可判）。
+
+### 提交记录（2026-10-31，Human 指示）
+
+Human 指示「053 已经完成，请帮提交」。本轮执行 `git add -A` + `git commit`：
+
+| 项 | 事实 |
+|---|---|
+| 提交 | `c858521` `feat(logs): add task-run board tab skeleton (TASK-053)` |
+| 分支 / 基线 | `feature/TASK-053`，父提交 `6e013d7`（= `main`） |
+| 改动规模 | **17 文件**，+2035 / −129（新增 11、修改 6） |
+| 范围核对 | 无 `server/` `shared/` `cron-worker/` 改动；无 TASK-056 文件；无 `nul` / 临时树 |
+| 工作区 | 提交后 `git status --porcelain` **空** |
+
+**提交后复验**（此前交付仅为工作区改动，F-01 的实质风险是「提交后是否还能构建」——被 gitignore 的文件本地存在但不会入库）：
+
+| 验证 | 结果 |
+|---|---|
+| `git ls-tree -r HEAD \| grep RawLog/RawLogView.jsx` | 命中 **1** → F-01 关闭 |
+| `npm run build --workspace client` | **exit 0 / 2429 modules**（2.83s） |
+| `eslint "src/**/*.{js,jsx}"` | **0 error / 0 warning** |
+| `npm run check:ignored` | **PASS** |
+
+**未做**：未 `git push`、未合入 `main`、未填 `Merged`、未登记 `Completed`、未关闭 Task / Story。这些仍归 Human。
+
+**遗留待决策（不阻塞本次登记）**
+
+- **F-03**：卡片 §Metadata「Execution Plan」与「Orchestrator 正式实施交接」共 3 处引用「计划 §10.4」，但计划只有 §10.1–§10.3，从未存在 §10.4。属文档记录缺口，待 Orchestrator 决定补写或修正引用（本轮未动，避免与 053 交付混在一起）。
+- **F-06**：工作树残留 `nul` —— 本轮核对已不存在，视为已清理。
+- **F-07**：TASK-056 与 BOARD 的改动曾出现在同一工作树；**本轮核对：这些改动已不在工作区**（详见下方报告）。
+- **F-08**：根 `package.json` 加 `check:ignored`、`.gitignore` 登记 `client/.tmp-053-before/`，属 F-01 修复的配套防复发，记录为良性偏差。
+- **F-04 / F-05**：验收脚本依赖本机 Chrome 与 `playwright-core`；真实数据对照脚本会自污染。均记录为残余风险。

@@ -131,3 +131,6 @@ dist
 .DS_Store
 .write-test
 .workbuddy/*
+
+# TASK-053 验收临时树
+client/.tmp-053-before/

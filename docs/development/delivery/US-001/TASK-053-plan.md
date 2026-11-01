@@ -2,15 +2,19 @@
 
 ## Status
 
-Status：Approved
+Status：Implementing
 
-Owner：Planner（本轮已完成规划草案；实施者及独立Reviewer待指派）
+Owner：Implementer（2026-10-30 实际开始实施）；独立Reviewer待指派
 
 Related Task：[TASK-053](./TASK-053.md)；所属 [US-001](../../requirements/stories/active/US-001-cron-worker-health-and-data-completeness.md)。
 
-Branch / Base：2026-10-30 启动核对确认真实源码目录为 D:/projects/portomind，当前分支 chore/agent-rules-refactor；HEAD、本地 main、缓存 origin/main 均为 2bde9131b8d47e4460ce9f87ea801839e37e1f7f。feature/TASK-053 尚不存在，独立实施目录尚未就绪；本轮未 fetch、切分支、创建 worktree 或改动源码。详见 §10。
+Branch / Base：实施工作区 `D:/projects/portomind`，分支 `feature/TASK-053`，基线提交 `6e013d7`（= 本地 `main` = `origin/main`，含 PR #40）。工作区起始状态干净（`git status --porcelain` 空），无需保留他人未提交改动。计划 §10.1 记录的 6 份文件 SHA256 在实施前逐一复核，**全部一致**（`LogViewer.jsx` 9dbe0c12… / `api.js` 705d0376… / `log.service.js` 998017ec… / `router.jsx` 1a28a6a8… / `Sidebar.jsx` b7351b42… / `client/package.json` 3a575006…）。
+
+> **§10.4 记录缺口（2026-10-30，实施时发现）**：Task §Metadata「Execution Plan」与 §6、§Orchestrator 正式实施交接 共 3 处引用「计划 §10.4 工作区就绪与正式实施交接」，但本文件**只有 §10.1–§10.3，从未存在 §10.4**（`git log -S "10.4 工作区就绪"` 无任何命中，本文件仅有 `37a7d17` 一次提交）。判断：这是**文档记录缺口，不是设计失效**——工作区、分支、基线与文件指纹均已逐项核对通过，交接所需的实质条件成立。故本轮按 §10/§10.1/§10.2 的现有内容实施，并在此登记该差异；**未修改 Task AC、Scope 或任何设计**，§10.4 的补写交回 Orchestrator 决定（Implementer 不自行改写计划结构）。
 
 Approval：2026-10-30，Human 在本 chat 明确：“我批准 TASK-053 当前 Draft 的设计，批准范围仅限 TASK-053，不包含其他任务或 D-01～D-04 的待决方案。”本记录由 Orchestrator 按该 Human 决定登记 Draft → Approved，不是 Orchestrator 自行批准。批准的 §1～§9 设计未改变；其 UTF-8/LF 摘要 SHA256 为 422ceff1f595304fa87c767b1f74eb669eae08bbabe58cfdb1f27ab9df2c20be。Approved 不代表已经启动实施。
+
+实施开始：2026-10-30，Implementer 按本计划 §10 交接实际开始，计划由 Approved 登记为 Implementing（依据 [STATES.md](../process/STATES.md) §4：计划实施推进归 Implementer）。进度与证据见 §11。
 
 ## 1. Intent
 
@@ -111,12 +115,400 @@ URL同步死循环、残留query覆盖原日志选择、组件重构引起分页
 
 ## 11. Implementation Record
 
-尚未实施。
+### 11.1 实施开始与基线
+
+| 项 | 事实 |
+|---|---|
+| 实施时间 | 2026-10-30 |
+| 工作区 | `D:/projects/portomind`（唯一 worktree；`git worktree list` 仅此一条） |
+| 分支 / 基线 | `feature/TASK-053` @ `6e013d7`（= 本地 `main` = `origin/main`，含 PR #40） |
+| 起始工作树 | 干净（`git status --porcelain` 空）→ 不存在需要保留的他人未提交改动 |
+| 文件指纹核对 | 计划 §10.1 的 6 份 SHA256 **全部一致**（LogViewer / api.js / log.service.js / router.jsx / Sidebar.jsx / client package.json）→ 批准设计所依据的源码未被改动 |
+| 计划状态推进 | `Approved` → `Implementing`（依据 [STATES.md](../../../os/process/STATES.md) §4：计划实施推进归 Implementer） |
+
+**边界遵守**：只改 `client/` 前端；未动 `server/` `shared/` `cron-worker/`、未动侧栏、未动两个日志接口、未创建 `/logs/rebalance`；未实施 TASK-055/056/057/063/064 或 D-01～D-04。
+
+### 11.2 改动清单
+
+**新增（5 个实现文件 + 3 个验证脚本）**
+
+| 文件 | 作用 |
+|---|---|
+| `client/src/constants/logTabs.js` | 三 tab 定义唯一来源：`LOG_TAB_PARAM='tab'`（**参数名冻结**，C-07 复用）、`LOG_TABS` 定顺序、`normalizeLogTab()` 白名单归一化 |
+| `client/src/components/CronStatus/unknownValue.js` | 「未知」语义集中处：`UNKNOWN` 常量、`BOARD_SLOTS`（恰好 5 个固定槽位）、`formatTimestamp` / `formatNumber` 安全渲染（杜绝 `Invalid Date` / `NaN`） |
+| `client/src/components/CronStatus/SummaryShell.jsx` | AC3 总览条：恰好 5 灯 + 1 整体徽章 + 1 快照位，全部 `data-state="unknown"`、中性灰 |
+| `client/src/components/CronStatus/TaskCardShell.jsx` | AC4 单卡六区域：任务名 / 上次运行 / 运行态徽章 / 数据态进度条位 / 关键数字位 / 异常入口位 |
+| `client/src/components/CronStatus/BoardShell.jsx` | 看板外壳：总览条 + 5 卡网格；自包含渲染，看板异常不外溢（AC7） |
+| `client/src/components/RawLog/RawLogView.jsx` | 原日志视图**原样抽出**（分页 / 级别 / 日期逻辑逐行等价）。目录名原为 `Logs/`，因 `.gitignore` 的 `logs` 规则（`core.ignorecase=true` 命中 `Logs/`）会静默忽略整目录，2026-10-31 按 F-01 改名。筛选状态由父级持有（F-02） |
+| `client/scripts/a11y-053-log-regression.cjs` | AC5 改动前后对照（真实数据，标签新旧兼容） |
+| `client/scripts/e2e-task-053-f02.cjs` | F-02 定向回归：跨视图切换后筛选保持（含负向对照） |
+| `scripts/check-ignored-sources.cjs` | F-01 防复发：检测源码目录内被 `.gitignore` 忽略的文件（`npm run check:ignored`） |
+| `client/scripts/a11y-053-freeze-compare.cjs` | AC5 **严格**对照：冻结数据 + 旧实现独立源码树，比对请求序列 |
+| `client/scripts/e2e-task-053-verify.cjs` | AC1–AC7 真实浏览器验收（含 AC6 负向对照） |
+
+**修改（2 个）**
+
+| 文件 | 改动 |
+|---|---|
+| `client/src/pages/LogViewer.jsx` | 134 行单页 → tab 编排（约 108 行）：`useSearchParams` 承载 `?tab=`、三 tab 顺序化渲染、看板与原始视图按 tab 条件挂载（`key={activeTab}` 保持页码重置语义） |
+| `.gitignore` | 登记验收临时树 `client/.tmp-053-before/` |
+
+### 11.3 AC 逐项证据（本轮实测，2026-10-30）
+
+浏览器验收脚本 `e2e-task-053-verify.cjs`：**33/33 PASS**（EXIT=0）。环境：独立临时库服务 `:8090`（`portomind_053_verify`，不碰日常开发库）+ vite `:6601` + 本机 Chrome。
+
+| AC | 结果 | 证据 |
+|---|---|---|
+| AC1 | ✅ | 恰好 3 tab，顺序 `["任务运行看板","服务器日志","任务日志"]`；无参数默认选中看板；看板内容可见 |
+| AC2 | ✅ | `?tab=server` / `?tab=task` 直入对应 tab；`?tab=nonsense` 回落看板；刷新保持；点选后 URL 更新；**后退→server、前进→task** 正确 |
+| AC3 | ✅ | 5 个健康灯位、1 个整体徽章、1 个快照位**各恰好命中**；5 灯 `data-state` 全为 `unknown`；灯色实测 `rgb(138,149,165)`（中性灰），**无绿色** |
+| AC4 | ✅ | 恰好 5 张卡；六区域各命中 5 次；卡片文字中 **无** `undefined` / `NaN` / `Invalid Date` / `null` |
+| AC5 | ✅ | 见 §11.4（两组对照：真实数据 + 冻结数据严格对照 0 差异） |
+| AC6 | ✅ | `/logs` 子树 `useMutation` **0 命中**、`api.post/put/patch/delete` **0 命中**；DOM 无「执行再平衡/撤销/重做/手动触发/编辑阈值/运行一次」；**负向对照**：注入假按钮后检测式成功命中（证明断言可失败） |
+| AC7 | ✅ | 看板可见且无整页错误（`boardVisible=true, globalError=false`）；从看板切到原始日志仍能加载出数据。看板不请求接口，故接口未就绪也不白屏 |
+| AC8 | ✅ | `npm run build --workspace client` → **exit 0 / 2429 modules**；`npx eslint "src/**/*.{js,jsx}"` → **0 error / 0 warning（97 文件）** |
+
+**OQ1 附带核验**：侧栏项数 4（未新增日志子项）；运行时 `pageerror=0`。
+
+### 11.4 AC5 的两组对照（这是本卡最需要讲清的一条）
+
+**第一组：真实数据对照（`a11y-053-log-regression.cjs`）**
+改动前跑一次、改动后跑一次并比对，出现 **5 处差异**，全部形如「分页总数 3 → 6」。**归因：不是行为回归，是数据增长**——验证过程本身每次请求都写一条 `HTTP_ACCESS` 日志，当日 `/api/logs` 总量从 ~50 涨到 110，页数自然翻倍。因此这一组**不能作为通过证据**，也不应被当作失败证据。
+
+**第二组：冻结数据严格对照（`a11y-053-freeze-compare.cjs`）—— 判定依据**
+
+做法：把**同一份 45 条合成日志**喂给「改动前实现」与「改动后实现」，对同一组交互逐项比对。为排除实现差异，旧实现取自 `git show HEAD:client/src/pages/LogViewer.jsx`，在仓库内临时树独立起 vite（这样模块解析能向上找到依赖）；两棵树共用同一桩服务，桩记录每次请求的 `path/page/level`。
+
+| 场景 | 改动前 | 改动后 |
+|---|---|---|
+| initial | 20 rows / 第 1/3 页 | 20 rows / 第 1/3 页 |
+| page2（下一页） | 20 rows / 第 2/3 页 | 20 rows / 第 2/3 页 |
+| backToPage1（上一页） | 20 rows / 第 1/3 页 | 20 rows / 第 1/3 页 |
+| levelError（级别→error） | 20 rows / 第 1/3 页 | 20 rows / 第 1/3 页 |
+| levelAll（级别复位） | 20 rows / 第 1/3 页 | 20 rows / 第 1/3 页 |
+| dateYesterday（日期→前一天） | 20 rows / 第 1/3 页 | 20 rows / 第 1/3 页 |
+| taskView（切任务日志） | 0 rows / 第 1/1 页 | 0 rows / 第 1/1 页 |
+| backToServer（切回） | 20 rows / 第 1/3 页 | 20 rows / 第 1/3 页 |
+
+请求序列也一致：`/api/logs|p1|all → p2|all → p1|all → p1|error → p1|all → p1|all → /api/logs/tasks|p1|all → /api/logs|p1|all`。
+
+**结论：`diffs = 0`，AC5 通过。**
+
+### 11.5 实施偏差与取舍
+
+| # | 偏差 / 取舍 | 说明 |
+|---|---|---|
+| 1 | **tab 标签语言改变**：旧实现是 `Server Log` / `Task Log`，新实现为「服务器日志」/「任务日志」 | AC1 明确要求中文三 tab 名称；属**本卡要求的行为变更**，非顺手改动。AC5 对照脚本因此对两种标签都兼容，避免把「语言变化」误判为「行为回归」 |
+| 2 | **默认 tab 从 server 改为 board** | AC1 直接要求；R-2 已登记为「显式行为变更」，需要结案说明写出 |
+| 3 | 看板未请求 `/api/cron/status` | 计划 §4 明确「本卡不发聚合数据请求」，接线归 TASK-063 |
+| 4 | 抽出 `RawLogView` 而非在原文件内加条件分支 | 计划 §4 允许「隔离为可复用视图或保留原组件分支」；抽出更符合 R-4（避免大文件），且行为已由冻结对照证明等价 |
+| 5 | 状态色只用中性灰 + `data-state="unknown"` | 状态色语义归 TASK-056；本卡不定义色板，只保证「不是绿色」 |
+| 6 | 计划 §10.4 不存在 | 见 Status 段记录：属文档记录缺口，非设计失效；本卡按 §10/§10.1/§10.2 实施，未改 AC / Scope / 设计 |
+
+### 11.6 已知妥协与未验证项（如实记录）
+
+- **未验证**：多看板并发、跨时区日期筛选、`/logs` 在移动端窄屏下的布局；这些不在本卡 AC 内。
+- **未验证**：生产构建产物在真实浏览器中的 tab 行为（本轮验证跑 dev server；build 仅验证可构建）。计划 §7 AC8 只要求 build 通过，未要求生产包 E2E。
+- **未做**：看板「手动刷新」按钮（计划 §4 归 TASK-063；本卡不实现，AC 亦未要求）。
+- **已知限制**：`e2e-task-053-verify.cjs` 与 `a11y-053-*.cjs` 依赖本机 Chrome 与 playwright-core，未纳入 `npm test`（client 无 test 脚本）。
+- **环境备注**：本轮为不改动日常开发库，使用临时库 `portomind_053_verify` + 独立端口 8090/6601；日常库 `portomind_dev` 未被写入。
+
+### 11.7 评审意见修复记录（2026-10-31，F-01 / F-02）
+
+Reviewer 提出两条实质问题，均**先复现、再修复、再做负向对照**。以下为全过程证据。
+
+#### F-01 · BLOCKER · `RawLogView.jsx` 被 `.gitignore` 静默忽略 —— 已修复
+
+**复现（确认属实）**
+
+```
+$ git check-ignore -v client/src/components/Logs/RawLogView.jsx
+client/.gitignore:2:logs    client/src/components/Logs/RawLogView.jsx
+$ git add -n client/src/components/Logs/RawLogView.jsx
+The following paths are ignored by one of your .gitignore files:
+client/src/components/Logs
+```
+
+`git config core.ignorecase` = `true`，因此 `logs` 规则命中 `Logs/`。当时 `git add -An client/src client/scripts` 只列出 **6** 个新文件（实际 7 个），少的正是它。该文件是 `LogViewer.jsx` 的静态 import 目标 —— 本地构建能过只因为文件在磁盘上，正常提交后必然构建失败。
+
+**修复**：目录改名 `components/Logs/` → `components/RawLog/`（采用 Reviewer 建议的首选方案，而非 `git add -f`）。
+
+| 动作 | 结果 |
+|---|---|
+| `git mv` 到 `client/src/components/RawLog/RawLogView.jsx` | 完成，旧目录已删除 |
+| 更新引用：`LogViewer.jsx` import、脚本里的临时树排除项、文件头注释 | 3 处全部更新，`grep components/Logs` 0 命中 |
+| 复验 `git check-ignore` | **NOT ignored** |
+| 复验 `git add -An client/src client/scripts` | **11 项**（10 新增 + 1 修改），不再有文件被吞 |
+| 全仓排查潜伏同类问题 | `git ls-files -i -c` 空；`--ignored=matching` 在 `client/src/` 下仅剩已删除的 `Logs/` 目录 → **F-01 是孤例** |
+
+**防复发（本轮新增，避免同类问题再次静默发生）**：新增 `scripts/check-ignored-sources.cjs` + `npm run check:ignored`，扫描 `client/src`、`server`、`shared`、`cron-worker`、`scripts`、`client/scripts`，用 `git check-ignore -v` 逐文件判定并打印命中规则。
+
+- 正向：当前 **PASS**（`cron-worker/logs/*.log` 等运行产物已在允许清单内）。
+- **负向对照**：临时注入 `client/src/components/Logs/_negctl.jsx` → 检查器 **exit 1** 并准确报出命中规则；删除后恢复 PASS。证明该检查**能失败**，不是恒真断言。
+
+#### F-02 · MAJOR · 跨视图切换丢失筛选条件 —— 已修复
+
+**复现（确认属实）**：缺陷形态下，服务器视图设 `error + 2026-10-29` → 切到任务日志 → 切回，控件退回 `all + 今天(2026-10-31)`，请求也从 `p1|error|2026-10-29` 变成 `p1|all|2026-10-31`。与评审描述一致。
+
+**根因**：`LogViewer.jsx` 用 `key={activeTab}` 强制重挂 `RawLogView`，而 `levelFilter` / `dateFilter` 是 `RawLogView` 的局部 state → 重挂即丢失。改造前两个视图共用同一个组件实例，切换时只有 `page` 被 `setPage(1)`，筛选是不重置的。
+
+**修复**：把 `levelFilter` / `dateFilter` 提升到 `LogViewer`（跨视图保持），`page` 仍留在 `RawLogView` 内并由 `key` 重挂重置 —— 精确复刻改造前「页码归 1、筛选保持」的语义。
+
+**验证（定向脚本 `client/scripts/e2e-task-053-f02.cjs`，真实浏览器 + 真实接口）**
+
+| 断言 | 修复后 | 缺陷形态（负向对照） |
+|---|---|---|
+| 前置：设好 error + 2026-10-29 | PASS | PASS |
+| 前置：请求含 level=error + 目标日期 | PASS | PASS |
+| 切回后级别保持 error | **PASS** | **FAIL**（level=all） |
+| 切回后日期保持 2026-10-29 | **PASS** | **FAIL**（date=2026-10-31） |
+| 切回后请求仍为 error + 目标日期 | **PASS** | **FAIL**（p1\|all\|2026-10-31） |
+| 切回后页码回到 1 | PASS | PASS |
+
+合计：修复后 **7/7 PASS**；缺陷形态 **4/7**（3 条 FAIL 精确复现评审现象）。**负向对照存在证明断言有效、不是恒真。**
+
+#### 评审 MINOR 的处置（F-03 / F-04 / F-05）
+
+| # | 处置 |
+|---|---|
+| **F-03**（§10.4 引用不存在） | 已在计划 Status 段登记为「文档记录缺口，非设计失效」；**§10.4 的补写属文档结构决策，留给 Orchestrator**，实施者不自行改写计划结构 |
+| **F-04**（验收脚本未纳入可重复入口） | 接受为残余风险。脚本依赖本机 Chrome 与 `playwright-core`，本轮**新增**了 `e2e-task-053-f02.cjs` 与 `scripts/check-ignored-sources.cjs`（后者已接入 `npm run check:ignored`，不依赖浏览器）。是否把浏览器脚本收敛为正式入口属 TESTING 层面决策，交 Orchestrator |
+| **F-05**（真实数据对照脚本会自污染数据） | **已采纳**：在 `a11y-053-log-regression.cjs` 头部显式标注「本脚本会写入访问日志，勿用于总量对照」，并指向冻结对照脚本作为 AC5 判定依据 |
+
+#### 我在上一轮验证中的盲点（如实记录）
+
+上一轮我提交 AC5「冻结对照 diffs=0」时漏掉了 F-02，原因是两处叠加：
+
+1. **对照桩没有真的按 level/date 过滤** —— 无论传什么筛选，返回结果都一样，因此「筛选被重置」与「筛选被保持」在结果上不可区分；
+2. **我的场景在切视图前把 level 复位成了 `all`**，自然无法暴露「切换后筛选丢失」。
+
+本轮已修：对照桩补上真实过滤（`a11y-053-freeze-compare.cjs`），并新增独立的 F-02 定向脚本。教训：**对照脚本的桩必须让「被观测行为」真的影响输出**，否则断言是空的。
+
+### 11.8 修复后的完整回归（2026-10-31 复跑）
+
+| 验证 | 结果 |
+|---|---|
+| `e2e-task-053-verify.cjs`（AC1–AC7 全量） | **33/33 PASS**（EXIT=0） |
+| `e2e-task-053-f02.cjs`（F-02 定向） | **7/7 PASS** |
+| `npm run build --workspace client` | **exit 0** |
+| `npx eslint "src/**/*.{js,jsx}"` | **0 error / 0 warning（97 文件）** |
+| `npm run check:ignored` | **PASS**（含负向对照验证） |
+| `git add -An client/src client/scripts` | **11 项可加入**，无文件被忽略 |
+
+### 11.9 回交状态
+
+本卡实现完成，评审的 F-01 / F-02 均已修复并验证，验证结果如上。**未将 Task 推进为 Reviewing / Completed，未自审、未合入、未发布**；等待 Orchestrator 安排独立 Reviewer 复验。
 
 ## 12. Review Record
 
-尚未独立审查；本轮Planner自检不等于Reviewer判定。
+### 12.1 审查对象与基线
+
+| 项 | 事实 |
+|---|---|
+| 审查时间 | 2026-10-31 |
+| 分支 / 基线 | `feature/TASK-053` @ `6e013d71df9a835d27abd146687dc48003df8425`（= 本地 `main`，未合入） |
+| 审查快照 | **工作区未提交改动**（非提交对象）；`git status --porcelain -uall` 见 §12.2 清单 |
+| 审查范围 | `client/src/pages/LogViewer.jsx`、`client/src/constants/logTabs.js`、`client/src/components/CronStatus/{BoardShell,SummaryShell,TaskCardShell,unknownValue}.js(x)`、`client/src/components/Logs/RawLogView.jsx`、`.gitignore`、3 个验收脚本、本计划 §11 |
+| 未审部分 | `TASK-054` 聚合接口实现与其合入状态；TASK-055/056/063/064 设计；生产构建产物在真实浏览器中的行为；移动端窄屏布局；跨时区日期筛选 |
+| 独立性声明 | 本人未参与 TASK-053 实现，未编写其验收脚本；以下结论来自独立编写的探针（`%TEMP%/review-053/verify.cjs`，临时文件、未入库）与独立执行，不复用实施者断言 |
+
+被审文件快照指纹（SHA256，2026-10-31）：
+
+| 文件 | SHA256 |
+|---|---|
+| `client/src/pages/LogViewer.jsx` | 5eef45130a61779840a28c9cf3c4e6713ca053b53c51c920ebaa9955403fc93a |
+| `client/src/constants/logTabs.js` | e1cb9f4eefed975d7f8b9c9702d50eba4a28f3f946a94096b3e5ecc5a329e711 |
+| `client/src/components/CronStatus/BoardShell.jsx` | 59e55ba01637bae5b9ee15f9495fd9ce931c37d5da680d7918b2b6af85196e09 |
+| `client/src/components/CronStatus/SummaryShell.jsx` | 94e4fcf58f1e0e7e17e9326f90bfa9fe26cd86e111e77d5cbd6956b433e7b072 |
+| `client/src/components/CronStatus/TaskCardShell.jsx` | 1d464df72e3607ab51872e7454075d87569f00eccbf4ec223173df215b1aca9a |
+| `client/src/components/CronStatus/unknownValue.js` | f500ccaa42a29f75e4695a42b03d10aadeabe84524d54f53e8a67d23264f048b |
+| `client/src/components/Logs/RawLogView.jsx` | 233ebc9a3ef255aa13a1a513ce39937884cbe44ce284873e5c11c9e387b3170e |
+
+### 12.2 交付完整性
+
+`git status --porcelain -uall` 只列出 8 个新文件，**不含 `client/src/components/Logs/RawLogView.jsx`**。核查：
+
+```
+git check-ignore -v client/src/components/Logs/RawLogView.jsx
+→ client/.gitignore:2:logs	client/src/components/Logs/RawLogView.jsx
+git add -n client/src/components/Logs/
+→ The following paths are ignored by one of your .gitignore files: client/src/components/Logs
+```
+
+`client/.gitignore:2` 的 `logs` 规则（本意忽略日志文件）在本机 `core.ignorecase=true` 下**大小写不敏感命中 `Logs/` 目录**。该文件是 `LogViewer.jsx:20` 的静态 import 目标，缺失即构建失败，属**交付阻断**（见 F-01）。
+
+### 12.3 AC 对照
+
+| AC | 判定 | 证据 |
+|---|---|---|
+| AC1 默认看板 + 顺序 | 满足 | 独立探针：3 tab，顺序 `["任务运行看板","服务器日志","任务日志"]`；无参数默认看板；侧栏 `Sidebar.jsx` 仍 4 项顶层、未加日志子项 |
+| AC2 URL 承载 tab | 满足 | `?tab=server` / `?tab=task` / `?tab=nonsense` / 空值 → 均落预期；刷新保持；后退→服务器、前进→任务；`LogViewer.jsx:26` 经 `normalizeLogTab` 白名单归一化 |
+| AC3 总览条结构 | 满足 | 5 个 `health-dot` 全 `data-state="unknown"`；实测色 `rgb(138,149,165)` 中性灰、无绿色；1 徽章 + 1 快照位 |
+| AC4 五卡六区域 | 满足 | 5 卡；六个 testid 各 ×5；看板文本无 `undefined`/`NaN`/`Invalid Date` |
+| AC5 原始视图零回归 | **不满足** | 分页/级别/日期**单视图内**行为经冻结对照 `diffs=0`（本人重跑确认）。但**筛选条件跨视图切换**回退：见 F-02 |
+| AC6 只读硬约束 | 满足 | `/logs` 子树 `useMutation` 0 命中、`api.post/put/patch/delete` 0 命中（仅注释提及）；DOM 无写入口；注入假按钮后检测式可失败 |
+| AC7 错误隔离 | 满足 | 看板不请求 `/api/cron/status`（探针记录为空）；看板可见、无整页错误；切原始日志仍加载数据 |
+| AC8 build + lint | 满足 | `npm run build --workspace client` → exit 0 / 2429 modules；`eslint "src/**/*.{js,jsx}"` → 97 文件 0 error 0 warning |
+
+### 12.4 Findings
+
+**F-01 · BLOCKER · 交付缺失：`RawLogView.jsx` 被 gitignore 忽略，无法入库**
+- 位置：`client/.gitignore:2`（`logs` 规则）× `client/src/components/Logs/RawLogView.jsx`
+- 对应 AC：AC5、AC8（二者均以该文件存在为前提）；同时影响 Scope「保留并包裹现有两个原始日志视图」
+- 现象：`git status` 不显示该文件；`git add -n` 拒绝（exit 1，`hint: Use -f`）。本机 `core.ignorecase=true` 使 `logs` 规则命中 `Logs/` 目录。
+- 后果：实施者本地构建通过是因为文件在磁盘上；一旦按正常流程提交，该文件**不会进入提交**，`LogViewer.jsx:20` 的 import 将失败 → 构建失败。当前 `dist` 由本地磁盘状态生成，不能证明提交后可构建。
+- 修法方向（交 Implementer，Reviewer 不改）：根因是 `logs` 规则过宽，应改为不与组件目录冲突的路径（如 `client/src/components/LogView/`），或在 `client/.gitignore` 增加 `!src/components/Logs/` 例外。`git add -f` 只是绕过提示的权宜手段，不消除「后续新增文件同样被静默忽略」的风险，不应作为修复。修复后以 `git status` 确认该文件出现在待提交清单，并在**提交后**基线重跑 AC8。
+- 附带：`a11y-053-freeze-compare.cjs` 把旧实现还原到 `.tmp-053-before` 时依赖 `git show HEAD:client/src/pages/LogViewer.jsx`，与 F-01 无关，但重跑时需注意临时树清理。
+
+**F-02 · MAJOR · AC5 回归：筛选条件跨原始视图切换被重置**
+- 位置：`client/src/pages/LogViewer.jsx:83-87`（`<RawLogView key={activeTab} logType={activeTab} />`）
+- 对应 AC：AC5「级别筛选、日期筛选的行为与本卡改动前完全一致」
+- 现象（独立探针，改动前 vs 改动后，同一桩数据）：
+
+  | 步骤 | 改动前 | 改动后 |
+  |---|---|---|
+  | 服务器视图设 level=error、date=2026-10-29 | error / 2026-10-29 | error / 2026-10-29 |
+  | 切到任务日志后控件值 | error / 2026-10-29 | **all / 2026-10-31（今天）** |
+  | 切回服务器后控件值 | error / 2026-10-29 | **all / 2026-10-31** |
+  | 切回后请求 | `/api/logs\|p1\|error\|2026-10-29` | `/api/logs\|p1\|all\|2026-10-31` |
+
+- 原因：`key={activeTab}` 使 `RawLogView` 在每次跨视图切换时整体重挂，`levelFilter`/`dateFilter` 局部 state 随之丢失。改造前两个视图共用同一组件实例，筛选条件跨视图保持。
+- 为何未被现有证据发现：实施者的冻结对照（`a11y-053-freeze-compare.cjs`）只比较 `rows` / `pageText` / `firstCell` / `hasError` 与请求序列，**未比较筛选控件的值**。该脚本的场景顺序是 `levelError → levelAll（先复位 all）→ dateYesterday → taskView → backToServer`，切视图前级别已被复位成 `all`；而 `requestShape` 又刻意去掉 `date`（`a11y-053-freeze-compare.cjs:206` 注释「去掉 date 与 pageSize 的绝对值差异」），于是「级别被重置为 all」和「日期被重置为今天」两个变化同时被掩盖。
+- 修法方向（交 Implementer）：把 `levelFilter` / `dateFilter` 提升到父级或独立状态源，使切换视图时保留筛选值；仅让 `page` 重置（与改动前一致）。修复后需在对照脚本中**增加「筛选值跨视图保持」断言**，并重跑改动前/后对照。
+- 备注：页码重置到第 1 页属改动前既有行为（`setPage(1)`），不构成本条问题。
+
+**F-03 · MINOR · 计划引用不存在的 §10.4**
+- 位置：`TASK-053.md:36`、`TASK-053.md:163`、`TASK-053-plan.md:13`
+- 对应 AC：无（流程记录）
+- 现象：`TASK-053.md` 两处引用「计划 §10.4 工作区就绪与正式实施交接」，但本计划仅有 §10.1–§10.3（`grep -n "^### 10\."` 无 §10.4）。实施者已在计划 Status 段登记该缺口并说明判断依据（`git log -S` 无命中、文件仅一次提交），属如实记录。
+- 处置：不需改 AC/Scope；由 Orchestrator 决定补写 §10.4 或修正 Task 卡引用。记录在案，不阻塞。
+
+**F-04 · MINOR · 验收脚本未纳入可重复执行入口**
+- 位置：`client/scripts/a11y-053-*.cjs`、`client/scripts/e2e-task-053-verify.cjs`；`client/package.json` 无 `test` 脚本
+- 对应 AC：无（AC8 只要求 build/lint）
+- 现象：三个脚本依赖本机 Chrome 与 `playwright-core`，硬编码 `C:/Program Files/Google/Chrome/Application/chrome.exe`，且默认口令 `Verify053Pass`。实施者已在 §11.6 如实登记。
+- 处置：记录为残余风险；若后续 TASK-063 需复用，建议按 TESTING.md 收敛为可配置入口。不阻塞本卡。
+
+**F-05 · MINOR · 真实数据对照组不作为通过证据的表述已正确，但脚本会自污染数据**
+- 位置：`client/scripts/a11y-053-log-regression.cjs`
+- 现象：该脚本每次请求都会让服务端写一条 `HTTP_ACCESS` 日志（实施者 §11.4 已归因为数据增长），因此「改动前跑一次、改动后跑一次」本身会改变被测数据。
+- 处置：实施者已明确不把它当通过证据、改用冻结对照，处理正确。建议在脚本头部注释中显式标注「本脚本会写入访问日志，勿用于总量对照」。不阻塞。
+
+### 12.5 实跑与引用证据
+
+**本轮实跑（2026-10-31，本人执行）**
+
+| 验证 | 命令 | 结果 |
+|---|---|---|
+| AC8 build | `npm run build --workspace client` | exit 0，2429 modules，`✓ built in 3.37s` |
+| AC8 lint | `cd client && ../node_modules/.bin/eslint "src/**/*.{js,jsx}" -f json` | 97 文件，0 error / 0 warning |
+| AC5 冻结对照（重跑实施者脚本） | `node client/scripts/a11y-053-freeze-compare.cjs` | `PASS`，`diffs=0`，请求序列一致 |
+| AC1–AC7 独立探针 | `node %TEMP%/review-053/verify.cjs` | 25/26 PASS；唯一 FAIL 即 F-02 |
+| 交付完整性 | `git check-ignore -v`、`git add -n` | F-01 成立 |
+| AC6 静态检查 | `grep -rn "useMutation"` / `grep -rnE "api\.(post\|put\|patch\|delete)"` | `/logs` 子树 0 命中（仅注释） |
+| 侧栏未新增项 | 读 `Sidebar.jsx` navItems | 顶层仍 4 项，`/logs` 无子项 |
+
+**引用证据（未重跑，采信实施者记录，已核对方法合理）**：`e2e-task-053-verify.cjs` 33/33 PASS；该脚本断言与本人独立探针结论一致（AC1/2/3/4/6/7 均满足），故不重复执行其完整链路。
+
+**环境限制说明**：本轮沙箱禁止子进程 spawn（`esbuild` 报 `spawn EPERM`），首次 build 失败；经放宽后复跑成功。此限制不影响结论，但说明「未放宽时 build 不可执行」应作为环境事实记录。
+
+### 12.6 残余风险
+
+1. F-01 修复后需在**提交后**基线重跑 AC8，当前 build 通过仅代表本地磁盘状态。
+2. F-02 修复后需扩充对照脚本断言，否则同类回归仍可能漏检。
+3. 未验证：生产构建产物在真实浏览器中的 tab 行为（本轮与实施者均只跑 dev server）。
+4. 未验证：移动端窄屏布局、跨时区日期筛选（不在本卡 AC 内）。
+5. `TASK-054` 接口未合入 `main`，AC7 的「接口未就绪」场景以「看板不请求接口」方式满足；真实接口接入后的错误隔离归 TASK-063。
+
+### 12.7 判定
+
+**Fail** — AC5 不满足（F-02，MAJOR），且存在交付阻断（F-01，BLOCKER）。
+
+不满足 `Pass`（AC 未全部满足）与 `Pass with issues`（存在 BLOCKER 与未整改的 MAJOR）。按 [REVIEWER.md](../roles/REVIEWER.md) §5.1，BLOCKER 不得据此通过或合入。
+
+### 12.8 交回 Orchestrator 的事项
+
+1. **F-01（BLOCKER）**：退回 Implementer，调整 `Logs/` 目录命名或 `.gitignore` 例外，确保 `RawLogView.jsx` 可入库；提交后重跑 AC8。
+2. **F-02（MAJOR）**：退回 Implementer，修复筛选条件跨视图保持，并扩充对照断言；修复后需重新独立复核该条。
+3. **F-03（MINOR）**：由 Orchestrator 决定补写计划 §10.4 或修正 Task 卡引用。
+4. **F-04 / F-05（MINOR）**：记录为残余风险，由 Orchestrator 决定是否纳入后续任务。
+5. 按 [STATES.md](../process/STATES.md) §4，Task 现处 `Implementing`，**尚未满足进入 `Reviewing` 的条件**（实施者未登记交付、本轮审查已给出 Fail）。是否登记 `Reviewing`、返工回 `Implementing`，由 Orchestrator 依权限处理。
+6. 本轮**未**修改 AC / Scope / 业务代码 / Status / 合入状态；**未** git add / commit / push；**未**关闭 Task、Story 或计划。
 
 ## 13. Completion Record
 
 尚未结案；无Human关闭或合入决定。
+
+---
+
+### 12.9 Reviewer 复检记录（2026-10-31，复检）
+
+**审查对象与基线**
+
+| 项 | 事实 |
+|---|---|
+| 审查时间 | 2026-10-31（复检，继首轮 §12 之后） |
+| 分支 / 基线 | `feature/TASK-053` @ `6e013d7`（未变） |
+| 审查快照 | 工作区未提交改动（`git status --porcelain -uall` 见上文 8 修改 + 11 新增 + `nul` 残留） |
+| 复检范围 | F-01、F-02 修复；AC1–AC8 中可由真实浏览器独立复验者；交付完整性；工作树越界项 |
+| 未审部分 | TASK-054 合入状态；055/056/063/064 设计；生产构建产物在真实浏览器中的行为（本轮仍只跑 dev server）；移动端窄屏；跨时区日期筛选 |
+| 独立性声明 | 本轮复检由同一 Reviewer 角色执行，但**未复用实施者断言**——自建临时探针（`scripts/review-053-probe.cjs`，已删除）serving 真实当前 client 经 vite + 冻结桩（端口 8091）+ 本机 Chrome（`--no-sandbox`）；探针与实施者脚本同方法不同实现，互不依赖 |
+
+**F-01（BLOCKER，首轮）复检 → 已解决**
+
+- `git check-ignore -v client/src/components/RawLog/RawLogView.jsx` → exit 1（**不被忽略**）。
+- `node scripts/check-ignored-sources.cjs` → `PASS  源码目录内没有被 .gitignore 忽略的文件`（扫描 client/src、server、shared、cron-worker、scripts、client/scripts）。
+- `git add -An client/src client/scripts` → 列出 **11 项**（10 新增 + 1 修改），无文件被吞。
+- 附带：`client/.gitignore` 的 `logs` 宽规则仍保留，F-01 防复发靠新建的 `scripts/check-ignored-sources.cjs` + `npm run check:ignored`（详见 F-08）。
+
+**F-02（MAJOR，首轮）复检 → 已解决（独立复验）**
+
+自建探针在真实 client 上复现评审现象：服务器视图设 `level=error + date=2026-10-29` → 切任务日志 → 切回服务器：
+
+| 断言 | 结果 |
+|---|---|
+| 切回后级别保持 `error` | PASS |
+| 切回后日期保持 `2026-10-29` | PASS |
+| 切回后最后一次请求仍为 `level=error&date=2026-10-29` | PASS |
+| 切回后页码回到第 1 页 | PASS |
+| 负向对照：手动改 `all` 后控件值确实变化（证明断言非恒真） | PASS |
+
+结论：筛选状态已提升到 `LogViewer`（父级），`RawLogView` 仅持 `page` 并由 `key={activeTab}` 重挂归 1 —— 与改动前「筛选保持、页码归 1」语义一致。F-02 关闭。
+
+**AC1–AC8 独立复验（真实 client + 冻结桩 + Chrome）**
+
+| AC | 结果 | 证据 |
+|---|---|---|
+| AC1 默认看板 + 顺序 | 满足 | 三个 tab 文本顺序 `[任务运行看板, 服务器日志, 任务日志]` |
+| AC2 URL 承载 tab | 满足 | `?tab=task` 直入任务日志（无看板）；无参数等价看板（渲染 board-shell） |
+| AC3 总览条结构 | 满足 | 5 健康灯 / 1 徽章 / 1 快照位；5 灯 `data-state` 全 `unknown`，无绿色成功语义 |
+| AC4 五卡六区域 | 满足 | 5 卡；正文无 `undefined`/`NaN`/`Invalid Date` |
+| AC5 原始视图零回归 | 满足 | F-02 已修；请求序列与控件值在跨视图切换后保持；冻结桩确实按 level/date 过滤（对照 `a11y-053-freeze-compare.cjs` 实现已修正旧盲点） |
+| AC6 只读硬约束 | 满足 | `/logs` 子树 `useMutation` 0 命中、`api.post/put/patch/delete` 0 命中（仅注释）；DOM 无「执行再平衡/撤销/重做/手动触发/编辑阈值/运行一次」 |
+| AC7 错误隔离 | 满足 | 看板渲染无 `pageerror`；看板不请求接口；切原始日志仍加载 |
+| AC8 build + lint | 满足 | 独立复跑 `npm run build --workspace client` → exit 0；`eslint "src/**/*.{js,jsx}"` → 0 error / 0 warning（97 文件） |
+
+> 注：复检时 build 需放开子进程派生的沙箱限制（esbuild spawn），属环境事实，不影响结论（与首轮 §12.5 一致）。
+
+**新增 Findings（工作树卫生 / 越界）**
+
+- **F-06（MINOR）· 残留 `nul` 文件**：工作树根存在未跟踪的 `nul`（约 129 B，内容为一次失败 shell 重定向 `dir: cannot access '/b'…` 的输出）。它不是本卡产物，`git status` 列为 `?? nul`，若用 `git add -A` 会被误提交。**处置**：Implementer 提交前 `rm nul`；Reviewer 不替实施者清理工作树。
+- **F-07（MINOR）· 越界未提交改动**：同一工作树含 `docs/BOARD.md`、`TASK-056.md`、`TASK-056-plan.md` 的修改。经核对为 Orchestrator 对 TASK-056 的设计批准登记（BOARD 2026-10-31 记录、TASK-056 §Orchestrator 设计批准与启动核对记录），非本卡实现。**处置**：这些改动**不得**并入 TASK-053 提交；由 Orchestrator 按其权限单独处理；本复检结论不覆盖之。
+- **F-08（MINOR）· 根配置改动**：为防 F-01 复发，新增 `scripts/check-ignored-sources.cjs` 并在根 `package.json` 加 `check:ignored` 脚本，并在 `.gitignore` 登记 `client/.tmp-053-before/`。Task §4 In Scope 仅列 client 文件、并称「不改依赖及构建配置」，故根配置改动属**计划外但必要**的偏差（F-01 修复的配套防复发）。**处置**：保留为 F-01 修复的组成部分，记录为良性偏差；如 Human 认为应收窄到 client 级脚本可另行决策。
+
+**残余 MINOR（首轮未变）**
+
+- F-03：计划 §10.4 引用不存在，仍待 Orchestrator 决策（补写或修正引用）。
+- F-04：验收脚本（`a11y-053-*`、`e2e-task-053-*`）依赖本机 Chrome + `playwright-core`，未纳入 `npm test`；其中 `check:ignored` 已接入 `npm run check:ignored`。
+- F-05：真实数据对照脚本会写访问日志自污染，实施者已在脚本头部标注，处理正确。
+
+**12.9 判定**
+
+**Pass with issues** —— F-01（BLOCKER）与 F-02（MAJOR）均已修复并经独立复验通过；无未整改 BLOCKER/MAJOR；残余均为 MINOR（F-03～F-08）。按 REVIEWER.md §5.1，满足「AC 满足、剩余 MINOR 已记录」。
+
+**交回 Orchestrator / Implementer**
+
+1. Implementer 提交前清理 `nul`（F-06）。
+2. TASK-056 / BOARD 改动（F-07）不得并入本卡提交，由 Orchestrator 单独处置。
+3. F-03 由 Orchestrator 决策；F-04/F-05/F-08 记录为残余/良性偏差。
+4. 本轮**未**修改 AC / Scope / 业务代码 / Status / 合入状态；**未** git add / commit / push；是否登记 `Reviewing`、合入与关闭由 Human / Orchestrator 依 STATES.md §4 处理。
