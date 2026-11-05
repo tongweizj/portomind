@@ -2,15 +2,17 @@
 
 ## Status
 
-Status：Draft
+Status：Approved
 
-Owner：Planner（本轮已完成规划草案；实施者及独立Reviewer待指派）
+Owner：Planner（规划已完成）→ 待指派 Implementer
 
 Related Task：[TASK-055](./TASK-055.md)；所属 [US-001](../../requirements/stories/active/US-001-cron-worker-health-and-data-completeness.md)。
 
-Branch / Base：未来在真实源码工作区从已核对基线新建 feature/TASK-055；本轮只读基线为 chore/agent-rules-refactor，HEAD 2bde9131b8d47e4460ce9f87ea801839e37e1f7f，工作区已有无关改动，不得清理或覆盖。
+Branch / Base：从 `main` 的 `53edb8e` 新建 `feature/TASK-055`，在**独立 worktree** 中实施。规划期只读基线为 `chore/agent-rules-refactor` @ `2bde913`（该提交是 `main` 祖先）。**关键前置已就绪**：`TASK-056` 的 `status*` token 与 `statusTone.js` 已随 `53edb8e` 合入 `main`，AC2 可直接引用。
 
-Approval：未批准。**D-04 已于 2026-11-04 由 Human 裁决**，三项澄清全部采纳，原任务 AC6/AC8/AC9 已按裁决更新（见 Task §3 与卡内「D-04 裁决记录」），本计划 §4/§5/§6/§7/§8 已同步对齐。计划本身仍待 Human 批准，未构成实施授权。
+Approval：**2026-11-04，Human 指示「完成合并了！现在开始 055」，据此登记 Draft → Approved。** D-04 三项裁决已折入 AC6/AC8/AC9（见 Task §3 与卡内「D-04 裁决记录」），本计划 §4/§5/§6/§7/§8 已同步对齐。批准覆盖本文件 §1～§9 当前设计，不含其他任务。
+
+启动核对：2026-11-04 完成只读核对，见 §10。
 
 ## 1. Intent
 
@@ -87,7 +89,34 @@ missing列表按symbol/name/market展示和折叠；缺失总数用实际数组�
 
 ## 10. Implementer Handoff
 
-本计划未批准，不构成实施交接。批准后由Orchestrator核对状态、依赖和对应版本，再交Implementer。仅按§4/§5修改范围内文件；不能读到必要源码、触及范围/AC/重大设计变化或数据库前置缺失时暂停受影响部分。提交实际文件清单、版本、AC结果、妥协与未验证项。
+### 10.1 启动核对结果（2026-11-04，Orchestrator）
+
+依据：Human 指示「完成合并了！现在开始 055」；状态权限见 [STATES.md §4](../../../os/process/STATES.md#4-谁可以改变状态)。
+
+**结论：设计有效，AC1～AC11 可实施，无硬阻塞。**
+
+| 启动项 | 核对事实 |
+|---|---|
+| 基线 | `main` = `53edb8e`（056 已合入）；`feature/TASK-055` 分支**不存在**，需新建 + worktree |
+| 依赖 B4（054） | ✅ `GET /api/cron/status` 已在 `main`（`server/routes/cronStatus.routes.js`，`app.js:121` 挂载） |
+| 依赖 B5（053 骨架） | ✅ 已在 `main`（PR #41） |
+| 依赖 B6（056 token） | ✅ **已解除**：`statusOk/Warn/Bad/Idle` + `statusTone.js` + `StatusLegend.jsx` 随 `53edb8e` 进 `main` |
+| 数据契约（实测） | 价格 `dataState` = `{ targetMarketDate, calendarPrevOpenDay, expected, fetched, missing[], byMarket, notListed, unsupportedMarkets, dayPriceSymbolCount }`；外层 `dataStateLevel`（ok/warn/bad/unknown）、`contractReady`（价格恒 `true`）。**无 `percentage` 字段**，`dataState` 恒为对象不会 `null` |
+| AC6 依据 | 接口无百分比 → 前端必须算；D-04 已裁决允许**唯一一处**纯展示 helper |
+| AC8 分层 | 单端点返回五卡数据 → ①整体失败归 `TASK-063`；②单卡数据异常归本卡 |
+| 验证入口 | [DEPLOYMENT §7](../../../handbook/ops/DEPLOYMENT.md#7-验证与测试命令)：`cd client && npm run build && npm run lint`。`client` 无 `test` 脚本；eslint v9.39.5 |
+
+### 10.2 已准备、尚未派发的交接
+
+- **需求**：[TASK-055](./TASK-055.md) §1～§4。
+- **设计与验证**：本计划 §4 / §5 / §7。
+- **写入边界**：仅 `client/` 下与价格卡相关的文件；不改 `server/` `shared/` `cron-worker/`，不改行情页/持仓页/KPI 卡/账号页配色，不改 053/056 已交付的组件契约。
+- **AC8① 边界**：整体失败的五卡统一降级归 `TASK-063`；本卡只实现本卡降级表现 + 原始日志不受影响，交付时须显式标注。
+- **交付要求**：文件清单与 SHA256、AC1～AC11 逐条结果、负向对照记录（AC2/AC4/AC7/AC9）、build/lint 实际输出、妥协与未验证项。
+
+### 10.3 剩余启动动作
+
+从 `main`（`53edb8e`）建 `feature/TASK-055` 独立 worktree，记录路径/分支/基线/工作区状态/工具可用性，然后指派 Implementer。本轮**未执行**该动作，未切换或清理主工作区。
 
 ## 11. Implementation Record
 

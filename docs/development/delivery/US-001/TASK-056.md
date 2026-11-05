@@ -21,7 +21,7 @@
 `2026-10-26`
 
 **Updated:**  
-`2026-11-04`（Human 确认完成，登记 `Completed`；原创建日期保留）。
+`2026-11-04`（Human 确认完成并合入 `main`，登记 `Completed` + `Merged`；原创建日期保留）。
 
 **Type:**  
 `Feature`（前端视觉语义 / design token）
@@ -229,15 +229,19 @@ Human 指示「056 请登记完成」。按 [STATES.md §4](../../../os/process/
 | 审查判定 | **`Pass with issues`**，无 BLOCKER/MAJOR |
 | DoD | T-1 实现 ✅ / T-2 验证 ✅ / T-3 AC 逐条 ✅ / T-4 审查收敛 ✅ / T-5 文档同步 ✅ / T-6 已知妥协 ✅（计划 §11.8） |
 | Status | `Reviewing` → **`Completed`** |
-| Merged | **`Pending`** —— 分支尚未合入 `main`（见下） |
+| Merged | **`Merged`** —— 合入 `main`（merge commit `53edb8e`） |
+| 合入核对 | `git merge-base --is-ancestor 31b516e main` = **是**；`main` 上 `statusOk/Warn/Bad/Idle` 四 token 与 `statusTone.js` / `StatusLegend.jsx` 均已在位 |
 
-### ⚠️ 合入状态：`Pending`，不是 `Merged`
+### 合入状态：`Merged`
 
-核对 `git merge-base --is-ancestor 31b516e main` = **否**。`feature/TASK-056` 领先 `main` 两个提交（`6f4b491` 实现、`31b516e` 审查记录），**尚未合入**。
+2026-11-04 Human 完成合并（`53edb8e` `Merge branch 'feature/TASK-056' into main`）。
 
-按 [STATES.md §1](../../../os/process/STATES.md#1-status-与-merged)：「Completed 不表示已提交、已合入或已发布」；`Merged` 取值 `—`（未判定）/ `Pending`（尚未合入）/ `Merged`（已合入，附 SHA/PR），且「Human 根据实际合入证据判定」。故此处记 `Pending`，**未填 `Merged`**——合入动作与 `Merged` 登记仍归 Human。
+按 [STATES.md §1](../../../os/process/STATES.md#1-status-与-merged)，`Merged` 由 Human 依实际合入证据判定。本轮登记前复核：
+- `git merge-base --is-ancestor 31b516e main` = **是**（分支两个提交均已入主线）
+- `main` 的 `design-tokens.js` 含 `statusOk #166534` / `statusWarn #854D0E` / `statusBad #B91C1C` / `statusIdle #475569`
+- `main` 的 `CronStatus/` 含 `statusTone.js` 与 `StatusLegend.jsx`
 
-**对下游的影响**：`TASK-055` AC2 需要本卡的 `status*` token。这些 token 目前只在 `feature/TASK-056` 分支上，`main` 里**还没有**。055 若从 `main` 拉分支将取不到 token（见 055 卡 §6 B6）。
+**对下游的影响（已解除）**：`TASK-055` AC2 需要的 `status*` token 现已在 `main`，055 可从干净 `main` 拉分支并完整实施 AC2。原先"token 只在 056 分支"的缺口已闭环。
 
 ### 过程目录处置
 

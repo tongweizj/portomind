@@ -9,19 +9,19 @@
 **规划核对：** [Planner 回交说明](./US-001-02-planner-return.md)；新增关联不改变本卡 AC、原状态、既有批准或结案结论。
 
 **Status:**  
-`Planning`（2026-11-04，Human 已就 D-04 三项作出裁决并更新 AC6/AC8/AC9；**计划仍为 Draft，未获实施授权**）。
+`Implementing`（2026-11-04，计划已批准，启动核对完成；待 Implementer 在独立 worktree 中实施）。
 
 **Priority:**  
 `High`（P0 Must Have。它是 FS 核心主张"任务跑绿 ≠ 数据到位"的**唯一可视化落点**）
 
 **Owner:**  
-`待指派`（本轮仅接收规划，未指派实施者或独立 Reviewer）。
+`Implementer`（待指派；独立 Reviewer 另行安排）。
 
 **Created:**  
 `2026-10-26`
 
 **Updated:**  
-`2026-11-04`（Human 裁决 D-04：更新 AC6 / AC8 / AC9；原创建日期保留）。
+`2026-11-04`（计划登记 Approved、启动核对完成、Task → Implementing；原创建日期保留）。
 
 **Type:**  
 `Feature`（前端数据态展示，纯客户端）
@@ -33,7 +33,7 @@
 `None`
 
 **Execution Plan:**  
-[Draft：TASK-055](./TASK-055-plan.md)（**D-04 已裁决，AC 已更新**；计划本身仍待 Human 批准，未构成实施授权）
+[Approved：TASK-055](./TASK-055-plan.md)（2026-11-04 批准；D-04 三项裁决已折入 AC6/AC8/AC9；启动核对见计划 §10.1）
 
 **来源：**  
 FS 卡片 `C-03`（PM 拆分，2026-10-26）
@@ -123,12 +123,12 @@ FS 卡片 `C-03`（PM 拆分，2026-10-26）
 
 | 编号 | 依赖 | 状态 |
 |---|---|---|
-| **B1** | Human 批准本卡 | ⏳ 待排期 |
-| **B2** | Planner 产出 ExecPlan 并经 Human Plan Review | ⏳ 阻塞 |
+| **B1** | Human 批准本卡 | ✅ 2026-11-04，Human 指示「现在开始 055」，计划登记 Approved |
+| **B2** | Planner 产出 ExecPlan 并经 Human Plan Review | ✅ 计划已批准；D-04 三项裁决已折入 AC |
 | **B3** | 独立 Reviewer 复核 | ⏳ 交付时 |
 | **B4** | `TASK-054`（`GET /api/cron/status`，AC2 提供 `targetMarketDate/expected/fetched/missing[]`） | ✅ **已解除（2026-10-27，`TASK-054` 归档 `complete/`）**——接口已实现（分支 `c7389d1`）；⚠️ **尚未合入 `main`**，开工前需先合并或从该分支切，否则本地 `GET /api/cron/status` 仍 404 |
 | **B5** | `TASK-053`（卡片位） | ✅ **已解除（2026-11-04，`TASK-053` 结案并合入 `main`，PR #41 / `ecd9314`）**——看板骨架与六区域卡片位已在 `client/src/components/CronStatus/`，本卡可直接在其上填数据态 |
-| B6 | `TASK-056`（状态色 token） | ⚠️ **部分就绪（2026-11-04）**：`statusOk/statusWarn/statusBad/statusIdle` 已实现在 `feature/TASK-056` @ `31b516e` 并通过审查，Task 已 `Completed`；但**尚未合入 `main`**（`Merged` = `Pending`）。从 `main` 拉分支取不到 token → 实施前须先合入 056，或从该分支切出（见 §7 与计划 §10） |
+| B6 | `TASK-056`（状态色 token） | ✅ **已解除（2026-11-04，`TASK-056` 结案并合入 `main`，`53edb8e`）**——`statusOk/statusWarn/statusBad/statusIdle` + `statusTone.js` + `StatusLegend.jsx` 均已在 `main`；本卡 AC2 可直接引用该映射，**不得自建色值** |
 
 ---
 

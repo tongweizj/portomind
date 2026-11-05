@@ -319,7 +319,7 @@ $ cd client && ../node_modules/.bin/eslint "src/**/*.{js,jsx}"
 | 审查记录 | `31b516e`（§12） |
 | 审查判定 | `Pass with issues`，无 BLOCKER/MAJOR |
 | 状态流转 | `Draft` → `Approved`（2026-11-04）→ `Implementing`（计划推进）→ `Completed`（2026-11-04） |
-| 合入 | **`Pending`** —— 分支尚未合入 `main`（`git merge-base --is-ancestor 31b516e main` = 否） |
+| 合入 | **`Merged`** —— `53edb8e` `Merge branch 'feature/TASK-056' into main`（`git merge-base --is-ancestor 31b516e main` = 是） |
 
 ### 13.2 DoD 逐条（[DEFINITION_OF_DONE](../../../os/process/DEFINITION_OF_DONE.md) §3）
 
@@ -332,7 +332,7 @@ $ cd client && ../node_modules/.bin/eslint "src/**/*.{js,jsx}"
 | T-5 | 文档同步 | ✅ 任务卡、本计划 §11～§13、BOARD |
 | T-6 | 已知妥协已记录 | ✅ §11.8 六项 |
 
-> 按 DoD §4，「合入 `main`」不属于任务级 DoD；`Merged` 字段单列，由 Human 判定。当前为 `Pending`。
+> 按 DoD §4，「合入 `main`」不属于任务级 DoD；`Merged` 字段单列，由 Human 判定。当前为 `Merged`（`53edb8e`）。
 
 ### 13.3 遗留（不阻塞结案）
 
@@ -341,9 +341,9 @@ $ cd client && ../node_modules/.bin/eslint "src/**/*.{js,jsx}"
 - **F-03（MINOR）**：AC6 卡片文案仍为 053 占位「未知」，待 `TASK-063` 消费 `statusTone` 接线。
 - **未验证**：移动端/极端缩放下图例首屏可见性（仅测 1440×900 与 1280×600）。
 
-### 13.4 对下游的影响（重要）
+### 13.4 对下游的影响（已解除）
 
-`TASK-055` AC2 要求引用本卡的 `status*` token，而这些 token **目前只在 `feature/TASK-056` 分支上，`main` 中没有**。055 若从 `main` 拉分支将取不到 token。合入 056 是 055 完整实施的前置；或在 055 开工时从 `feature/TASK-056` 切分支（需 Human 决定）。
+`TASK-055` AC2 要求引用本卡的 `status*` token。这些 token 现已随 `53edb8e` 合入 `main`（`statusOk/statusWarn/statusBad/statusIdle` + `statusTone.js` + `StatusLegend.jsx` 均已在位），**055 可从干净 `main` 拉分支并完整实施 AC2**。原先"token 只在 056 分支"的缺口已闭环。
 
 ### 13.5 过程目录处置
 
