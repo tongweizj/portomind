@@ -246,7 +246,66 @@ $ cd client && ../node_modules/.bin/eslint "src/**/*.{js,jsx}"
 
 ## 12. Review Record
 
-尚未独立审查；本轮Planner自检不等于Reviewer判定。
+### 12.1 审查对象与基线
+
+| 项 | 事实 |
+|---|---|
+| 审查角色 | 独立 Reviewer（独立会话，非实现者，未自审通过） |
+| 工作目录 | `D:/projects/portomind-056`（独立 worktree） |
+| 分支 / SHA | `feature/TASK-056` @ `6f4b491`（父 `87e5d68` = main） |
+| 工作区状态 | 干净（`git status --porcelain` 空；交付已全部提交） |
+| 主工作区 | `D:/projects/portomind` 仅 `docs/development/delivery/US-001/US-001-01-planner-handoff.md` 一处未提交 docs（非本卡产物，未触碰） |
+| 被审文件 SHA256 | `design-tokens.js` `2a791c73…d53`；`statusTone.js` `5fc57435…ad4`；`StatusLegend.jsx` `586bc196…10e`；`BoardShell.jsx` `bfc8cd8e…96d` |
+
+### 12.2 方法声明（独立性）
+
+- 未直接采纳 Implementer / Orchestrator 的自述作为结论；全部以自建探针实测。
+- 自建临时探针 `scripts/review-056-probe.cjs`（Playwright + `--no-sandbox`，serving 真实 client 经 vite，读取页面内 `getComputedStyle`），覆盖 AC1/2/4/5/6/7 与 053 回归；跑完即删除，`git status` 已复原为空。
+- 对 AC2 / AC3 各做一次**负向对照**（注入缺陷证明断言能失败，再还原，验证 `git status` 为空）。
+- 实现者脚本 `verify-task-056.cjs` 仅作参考；其 AC2 预期色取自同一 `colors[token]`，存在恒真风险，已由本探针用**批准色值（计划 §6）硬基线**独立复验。
+
+### 12.3 AC1–AC9 逐条判定（独立实测）
+
+| AC | 判定 | 证据（本探针 / 独立核对） |
+|---|---|---|
+| AC1 | 满足 | 4 个 token 存在且命名体现系统状态：`statusOk/statusWarn/statusBad/statusIdle`；`up/down/warn/danger` 原值未动；`statusOk=#166534` 既 ≠ `up(#DF1B41)` 也 ≠ `down(#0E9F6E)`（绿≠涨跌） |
+| AC2 | 满足（非恒真，已负向对照） | 四态 swatch 计算色 = 批准色值 `rgb(22,101,52)/rgb(133,77,14)/rgb(185,28,28)/rgb(71,85,105)`；语义方向 ok 绿(g>r+20)/bad 红(r>g+20)/unknown 灰(r≈g≈b)；负向：把 `statusOk` 改成 `#B91C1C` 后断言 FAIL（got 红 want 绿），还原后空 |
+| AC3 | 满足（已负向对照） | `grep -rn "colors\.up\|colors\.down\|text-red-500\|text-emerald-500" client/src/components/CronStatus/` → 0 命中；负向：临时注入 `colors.down` 后 grep 命中、断言失败，删除后复原为空 |
+| AC4 | 满足 | 图例 `top=100/bottom=134` 在 1440×900 与 1280×600 两视口均 `< innerHeight`，首屏可见无需滚动；文案「此处红=坏、绿=好，与行情页红涨绿跌无关」 |
+| AC5 | 满足 | 四态 each 含 `legend-icon` + 文字（正常/需关注/失败/未运行）；灰度/色盲可辨 |
+| AC6 | 满足 | 5 卡网格文本无「正常/全部良好」；unknown 样例为灰 `rgb(71,85,105)`、文案「未运行/暂无记录」；`getStatusTone` 对 `'OK'/'success'/'normal'/undefined` 全部降级 `unknown`（不降级为正常） |
+| AC7 | 满足 | 四 token 白底(WCAG)对比度实测 7.13 / 6.85 / 6.47 / 7.58，均 ≥ 4.5:1（与本卡 §11.5 一致） |
+| AC8 | 满足 | `colors.up\|colors.down` 消费方 = 7 文件 13 处（Account/AccountUsers/AssetDetail/AssetList/KpiCards/PositionOverview/priceDisplay），与基线一致；CronStatus 不在其中；未改行情页/账号页 |
+| AC9 | 满足 | 本探针复跑 `npm run build --workspace client` → exit 0；`eslint "src/**/*.{js,jsx}"` → 0 error / 0 warning（97 文件） |
+
+### 12.4 Findings
+
+| # | 严重度 | 位置 | 现象 | 对应 AC | 修法方向 |
+|---|---|---|---|---|---|
+| F-01 | MINOR | `verify-task-056.cjs` 内 AC2 断言 | 预期色取自被测同一 `colors[token]`，为恒真风险（错误的 token 接线不会失败） | AC2 | 改为以批准色值或 `STATUS_TONE` level→token 命名作为预期基线（本探针已示范）；属测试脚本质量，非产品缺陷 |
+| F-02 | MINOR | `client/scripts/fixtures/`（TASK-053 既有） | 共享 fixture / 验收脚本依赖本机 Chrome + `playwright-core`，后者在 worktree `node_modules` 缺失，需借主工作区 `node_modules`；未接入 CI | AC9/验证 | 记录为交付方式限制；不影响结论 |
+| F-03 | — | AC6 卡片文案 | 053 `TaskCardShell` 占位仍显示「未知」（中性灰），未消费本卡映射写「未运行/暂无记录」；此为本卡 §10.3 写入边界，非缺陷，待 TASK-063 接线 | AC6 | 留待 TASK-063，不阻塞 |
+
+无 BLOCKER / MAJOR。
+
+### 12.5 负向对照记录
+
+- **AC2（非恒真）**：临时 `sed` 将 `design-tokens.js` 的 `statusOk` 改为 `#B91C1C`（红），重跑探针 → AC2-ok 断言 FAIL（got `rgb(185,28,28)` want `rgb(22,101,52)`）；`cp` 还原后 `git status --porcelain` 仅余临时探针，确认文件回原始值 `#166534`。
+- **AC3（能失败）**：向 `CronStatus/BoardShell.jsx` 末尾追加 `const _neg = colors.down;`，`grep` 命中 → 断言失败；删除还原后 `git status` 为空。
+- 两处对照结束后 `git status --porcelain` 均为空（临时探针 `review-056-probe.cjs` 已 `rm`），证明未污染被审实现。
+
+### 12.6 残余风险与未验证项
+
+- 仅验证 1440×900 与 1280×600 两视口首屏可见；移动端/极端缩放未测（与 §11.8 同口径）。
+- 未跑 053 完整 e2e（`/logs` 登录态 + 真实后端）；以夹具内 053 结构断言替代，053 已验收结构（5 灯/1 徽章/1 快照/5 卡六区域/无 undefined·NaN·Invalid Date/灯非绿）全部 PASS，未发现 §10.2 预警的回归。
+- 依赖安装（esbuild postinstall 被 allowScripts 拦截）沿用平台二进制，环境现象非代码问题。
+- 主工作区 `US-001-01-planner-handoff.md` 未提交改动非本卡产物，未处理、未纳入本卡提交。
+
+### 12.7 判定
+
+**Pass with issues** —— AC1–AC9 全部满足并经独立复验；AC2 / AC3 已做负向对照证明断言非恒真；无 BLOCKER / MAJOR；残余均为 MINOR（F-01 测试脚本质量、F-02 验证方式、F-03 写入边界，均不阻塞）。
+
+本结论为**判定词而非状态**；未改 Task Status / AC / Scope / 合入状态，未 git add / commit / push，未关闭 Task 或 Story。是否登记 `Reviewing`、合入与关闭由 Orchestrator / Human 依 STATES.md §4 处理。
 
 ## 13. Completion Record
 
