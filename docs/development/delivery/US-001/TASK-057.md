@@ -117,7 +117,7 @@ FS 卡片 `C-05`（PM 拆分，2026-10-26）
 | AC7 | **状态判定不变**：`failureCount>0 → PARTIAL`、否则 `SUCCEEDED`、未捕获异常 → `FAILED`（`taskRunner.js:50` 的语义零改动）。**负向对照**：任务返回合法 `result` 但 `failureCount=0` → 仍为 `SUCCEEDED`（新增字段不得改变状态机）。 |
 | AC8 | **历史数据兼容**：现存 204 条无 `result` 的文档在读取侧不报错；`result == null` 必须被视为「契约未就绪」，**不得**当成空对象 `{}` 后渲染成"0 缺口"。 |
 | AC9 | **不改调度语义（NG2）**：cron 表达式、`runKey` 形态（含逐组合 `<schedule>:<periodKey>`）、`SCHEDULE_DUE_RULES`、两层防重逻辑**零改动**；`server/` 仍不注册 cron（ADR-002）。 |
-| AC10 | **测试**：新增单测覆盖 AC2/AC4/AC5/AC6/AC7；全量回归 **229 条全绿**（`test:server` **152** + `test:worker` **77**，2026-10-26 在 `main` 实测，两个 workspace 均 exit 0）。既有 `rebalanceScheduler.test.js:65-68` 等 3 处断言按 OQ-3 裁定处理（改测试须在 ExecPlan 里写明理由，不得为过测而弱化断言）。 |
+| AC10 | **测试**：新增单测覆盖 AC2/AC4/AC5/AC6/AC7；`test:server` 与 `test:worker` 全量回归**全绿**、两个 workspace 均 exit 0（**数量以实际为准**；2026-10-26 旧基线 152+77=229 条仅作历史参考。2026-11-04 按 Human 裁决更正原「229 条全绿」固定措辞，见文末 Planner 裁决记录）。既有 `rebalanceScheduler.test.js:65-68` 等 3 处断言按 D-03 裁定处理（改测试须在 ExecPlan 里写明理由，不得为过测而弱化断言）。 |
 | AC11 | **文档同步**：`docs/handbook/technical/CRON_WORKER_DEV.md §5` 补 `result` 字段、`SKIPPED` 落库口径、父任务 `rebalance-check` 的 `taskName`（§5.1 现只有 5 类，**不含父任务**）；`docs/handbook/ops/CRON_WORKER_OPS.md` 若涉及状态表（`:168` 现写 "`SKIPPED` 状态 = 正常防重"）需与新落库口径一致。 |
 | AC12 | 独立 Reviewer 复核通过；Implementer **不得**自判。 |
 
@@ -165,7 +165,7 @@ FS 卡片 `C-05`（PM 拆分，2026-10-26）
 
 | 编号 | 依赖 | 状态 |
 |---|---|---|
-| **B1** | Human 批准本卡，并裁决 §7 的 **OQ-1**（SKIPPED 载体）与 **OQ-3**（父任务包裹位置） | ⏳ 待排期（**OQ-1 未决不得开工**：它决定 schema 与索引，返工代价最高） |
+| **B1** | Human 批准本卡计划，并裁决 §7 的 **OQ-1**（SKIPPED 载体）与 **OQ-3**（父任务包裹位置） | 🔶 **OQ 裁决已齐**（2026-11-04，见文末 Planner 裁决记录）；**计划批准仍待 Human**，批准前不得开工 |
 | **B2** | Planner 产出 ExecPlan 并经 Human Plan Review（须冻结 `result` 的字段名与裁剪口径） | ⏳ 阻塞 |
 | **B3** | 独立 Reviewer 复核 | ⏳ 交付时 |
 | **B4** | 实库核查（`portomind_dev`）确认"上线首日无 `result`"已被读侧正确降级 | ⏳ 交付时（`TASK-054` 的 `contractReady` 路径） |
@@ -175,6 +175,8 @@ FS 卡片 `C-05`（PM 拆分，2026-10-26）
 ---
 
 ## 7. Open Questions（需 Human / PM 裁决）
+
+> **2026-11-04 已全部裁决**：OQ-1 = 独立 TaskSkip 集合；OQ-2 = 摘要 + gapAssets；OQ-4 = currencies 记数值+完成标志；OQ-3 = 函数内部包裹；OQ-5 无需裁决。详见文末 [Planner 裁决记录](#planner-裁决记录) 与 [计划 §6](./TASK-057-plan.md)；下文原文保留作历史。
 
 ### OQ-1：`SKIPPED` 用什么载体落库？（**最关键**，决定 schema 与索引）
 
@@ -220,3 +222,15 @@ FS 建议"2 × 周期"，但 5 个任务周期不同、再平衡按组合计划�
 ## Orchestrator 接收记录
 
 2026-10-30：按 Human 本轮接收 US-001 规划并提交 Draft 审阅的指令、Story 既有 High 优先级及 STATES.md §4，接收本卡规划，将原 BACKLOG 登记为 Planning。原 AC、Scope 与技术待决项不变；旧依赖表中的排期和分支描述为当时记录，当前授权核对见 [Orchestrator 审阅清单](./US-001-02-planner-return.md#7-orchestrator-接收与-human-审阅清单)。此登记只推进规划阶段，不批准计划、不宣布实施开工；Owner 仍待指派。
+
+## Planner 裁决记录
+
+2026-11-04：Human 在 Planner 会话逐项裁决 D-01～D-03 及 AC10 措辞（回交 §4 / R-02）：
+
+- **D-01 = 独立 TaskSkip 集合**（原 OQ-1 选项 D）：两条跳过路径均落 `taskskips` 事件，`taskruns` 唯一索引与 `runKey` 语义零改动，064 读可选 `lastSkip`；partial-index / 合成 runKey / 只记一种跳过的备选废止。
+- **D-02 = result 摘要 + 汇率记数值与完成标志**（OQ-2 ② + OQ-4 ③ 收敛）：完整性存 totals/gapAssets 摘要；`currencies{USD/CAD/HKD:{ok:true, rateToCny:<实际入库值>}}`；失败运行 FAILED + 结果未知，不补造逐币种成败。
+- **D-03 = `runRebalanceCheck` 函数内部包裹**（原 OQ-3 选项 A）：父名 `rebalance-check`、runKey=`marketDate(now,timezone)`；既有测试对新增父记录只做加法适配。
+- **AC10 措辞更正获准**（既有 AC 的实质变更，依据 Human 本轮明确决定执行）：「229 条全绿」→「全量回归全绿、数量以实际为准」，229 条（152+77）记为 2026-10-26 旧基线。Story AC 不变。
+- OQ-5 确认无需裁决（`cronStatus.constants.js` 已有单一常量来源）。
+
+契约冻结、验证映射与回退见 [TASK-057 计划 §4/§6/§7/§9](./TASK-057-plan.md)。**计划本身仍为 Draft**：待 Human 明确批准当前设计后由 Orchestrator 按 STATES.md §4 登记 Approved 并派发；本记录不是实施授权。
