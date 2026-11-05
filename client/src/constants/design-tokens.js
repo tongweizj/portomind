@@ -29,6 +29,14 @@ export const colors = {
   warn: '#F5A524',
   danger: '#E0254B',
 
+  // 系统健康状态色（TASK-056 / FS C-04）：**仅用于 cron 看板**
+  // 语义：绿=好、红=坏，与上面行情 up/down（A 股红涨绿跌）**相反**，禁止互相复用。
+  // 只做新增：不改动 up/down/warn/danger 及其既有语义。
+  statusOk: '#166534',   // 正常 / 达标 / 数据齐全
+  statusWarn: '#854D0E', // 部分完成 / 需关注
+  statusBad: '#B91C1C',  // 失败 / 缺数据
+  statusIdle: '#475569', // 未运行 / 跳过 / 无数据（灰）
+
   // 资产类型色（对齐设计稿）
   stock: '#0284C7', // 股票蓝
   etfOnshore: '#0E9F6E', // ETF-场内绿
