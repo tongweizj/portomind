@@ -238,7 +238,70 @@ $ cd client && ../node_modules/.bin/eslint "src/**/*.{js,jsx}"
 
 ## 12. Review Record
 
-尚未独立审查；本轮Planner自检不等于Reviewer判定。
+### 12.1 审查对象与基线
+
+| 项 | 事实 |
+|---|---|
+| 审查角色 | 独立 Reviewer（独立会话，非实现者，未自审通过） |
+| 工作目录 | `D:/projects/portomind-055`（独立 worktree） |
+| 分支 / SHA | `feature/TASK-055` @ `3991df8`（基点 `53edb8e` = main 在此卡起点的派生） |
+| 工作区状态 | 干净（`git status --porcelain` 空；交付已全部提交） |
+| 被审文件 SHA256 | `priceDataState.js` `8194b4b1…43`；`PriceTaskCard.jsx` `409ea9e6…ee`；`statusTone.js` `b8071337…f9b`（056 契约，未改）；`TaskCardShell.jsx` `291263c8…b8`（053 契约，未改） |
+
+### 12.2 方法声明（独立性）
+
+- 未直接采纳 Implementer / Orchestrator 的自述为结论；全部以**自建 Playwright 探针**（serving 真实 client 经 vite，读取页面内 `getComputedStyle` 与 `getPriceView` 纯函数返回值）独立实测。自建夹具 `review055-fixture.jsx` 仅临时存在，跑完即删，`git status` 已复原为空。
+- 对 **AC4 / AC6 / AC7 / AC9** 各做一次**负向对照**（篡改源码注入缺陷 → 断言 FAIL → 还原 → 验证 `git status` 为空）。
+- Implementer 的 45/45 仅作参考，其部分断言依赖同源预期（见 F-01），已用批准色值硬基线独立复验。
+
+### 12.3 AC1–AC11 逐条判定（独立实测）
+
+| AC | 判定 | 证据（本探针 / 独立核对） |
+|---|---|---|
+| AC1 | 满足 | `targetText`=「2026-10-23」且 DOM 文案「目标市场日（上一开市日）」；`countsText`=`38 / 40`（warn）、`40 / 40`（ok）；**未写"今天"** |
+| AC2 | 满足 | 四态 tone dot 计算色 = 批准色值 `rgb(22,101,52)`(ok)/`rgb(133,77,14)`(warn)/`rgb(185,28,28)`(bad)/`rgb(71,85,105)`(unknown)；色值全部经 `statusTone` → `colors.status*`，**无硬编码 hex** |
+| AC3 | 满足 | warn 场景 `showMissingList=true`、`missing` 每项含 `symbol`+`name`+`market`（AAPL/Apple/US、MSFT/Microsoft/US）；收起汇总「缺 2 支」（`missingCount`） |
+| AC4 | 满足（已负向对照） | `expected/fetched=0` → `percentText="—"`、`width=0`、DOM 文本无 `NaN`/`Infinity`/`0%`；负向：把 empty 改显示 `0%` +「数据齐全」后 4 条断言全部 FAIL，还原后空 |
+| AC5 | 满足（含 AC6 负向） | `fetched=5,expected=3` → `computePercentage` 钳制为 100、`width=100`，fill 实宽 303px ≤ track 305px、卡片未破；负向：去掉 `Math.min(100,…)` 钳制 → 166.67% → fill 505px > track、断言 FAIL，还原后空 |
+| AC6 | 满足（已负向对照） | 目录内 `grep "\* 100"` **仅 1 处**（priceDataState.js:39，唯一 helper）；helper 不改 `expected/fetched/targetMarketDate`、不读 `lastRun`；结果钳制 0–100（见 AC5） |
+| AC7 | 满足（核心语义，已负向对照） | `runState` 仅进徽章文案（「运行状态：SUCCEEDED」），**不进 tone**；构造 `runState=SUCCEEDED + fetched=0` → 卡片仍 **红**(bad)；镜像 `runState=FAILED + data ok` → 仍 **绿**(ok)，证明 status 不驱动颜色；负向：把 `runState` 接进 tone → 卡片翻绿、AC7 断言 FAIL，还原后空 |
+| AC8① | **部分（诚实标注，归 063）** | 本卡仅实现价格卡侧局部降级（`requestError`/旧快照提示/重试入口）；「五卡统一降级」的共享请求层**未在代码中出现**，计划 §11.7 与 §12 均明示归 TASK-063，**未见谎报为已实现**（§8 红线未触发） |
+| AC8② | 满足 | 4 个 `TaskCardShell`（data-state=unknown 中性灰）+ 1 张字段异常价格卡；仅价格卡变红，4 张 shell 不受影响 → 单卡异常隔离成立 |
+| AC9 | 满足（已负向对照） | 三型空态分离：`expected=0`→灰+「无应采资产」+不出现 `0%`；`fetched=0 && expected>0`→红+「疑似整体故障」+不逐条列 missing（`missingCount=0`）；`requestError`→「快照获取失败」；三者均非绿、非「全部正常」；负向：empty 文案改「数据齐全」后 AC9 断言 FAIL，还原后空 |
+| AC10 | 满足（代码级 + 实施者 CDP 验证） | `priceDataState.js`/`PriceTaskCard.jsx` 零 `new Date()`、零 `toLocaleDateString`、零市场时区重算；目标日作为不透明服务端字符串（正则 `^\d{4}-\d{2}-\d{2}$`，非法→`—`）展示，故 UTC+8/UTC-7 文本一致 |
+| AC11 | 满足 | `npm run build` → exit 0（`built in 2.90s`）；`eslint "src/**/*.{js,jsx}"` → 0 error / 0 warning（97 文件） |
+
+### 12.4 Findings
+
+| # | 严重度 | 位置 | 现象 | 对应 AC | 修法方向 |
+|---|---|---|---|---|---|
+| F-01 | MINOR | `verify-task-055.cjs` 部分断言 | 个别断言预期值取自被测同源（如 tone 颜色来自 `statusTone`/组件自身），存在恒真风险；已由本探针用批准色值硬基线复验补强 | AC2/AC7 | 改为以批准色值或 `dataStateLevel`（而非组件回读）作预期基线；属测试脚本质量，非产品缺陷 |
+| F-02 | MINOR | `client/scripts/fixtures/`（TASK-053/054 既有） | 验收脚本依赖本机 Chrome + `playwright-core`（worktree 自带 `node_modules`，可独立运行）；未接入 CI | AC11/验证 | 记录为交付方式限制；不影响结论 |
+| F-03 | — | AC8① 边界 | 整体失败归 063 承接，本卡未实现五卡统一降级，已诚实标注；不阻塞 | AC8① | 留待 TASK-063，不记为通过 |
+| F-04 | — | 未接入页面 | `PriceTaskCard` 是供 063 接入的展示组件，本卡未在 `LogViewer`/`BoardShell` 实跑端到端（所有场景为夹具构造） | 全卡 | 计划 §11.7 已声明；063 接入后需再验 |
+
+无 BLOCKER / MAJOR。
+
+### 12.5 负向对照记录（篡改→断言 FAIL→还原→`git status` 空）
+
+- **AC6/AC5（钳制）**：临时删除 `computePercentage` 的 `Math.min(100, Math.max(0, …))` → `fetched=5,expected=3` 得 166.67% → fill 505px > track 305px → AC5 两条断言 FAIL；`git checkout` 还原，状态空。
+- **AC7（status 驱动颜色）**：临时在 `PriceTaskCard` 把 `runState` 传入 `getPriceView`，并在 tone 推导中 `runState==='SUCCEEDED' ? 'ok' : level` → `runState=SUCCEEDED + fetched=0` 卡片翻绿（`rgb(22,101,52)`）→ AC7 断言 FAIL；还原两文件，状态空。
+- **AC4/AC9（空态回退）**：临时将 empty 分支 `percentText` 改为 `0%`、`statusMessage` 改「数据齐全」→ AC4（"—"、无 `0%`）、AC9（"无应采资产"）共 4 条断言 FAIL；还原，状态空。
+- 四处对照结束后 `git status --porcelain` 均为空（临时探针 `review-055-probe.cjs` 与 `review055-fixture.*` 已 `rm`），证明未污染被审实现。
+
+### 12.6 残余风险与未验证项
+
+- 仅验证 1440×900 视口下的布局与宽度；移动端/其他缩放/暗色主题未测（与 §11.7 同口径）。
+- AC10 仅代码级确认「无本地日期重算」+ 实施者 CDP 时区覆盖验证；未自行跑 CDP 时区覆盖（本探针用固定字符串入参，等价证明），可补测。
+- 未跑真实 `GET /api/cron/status` 端到端（本卡无接入，且 requestError 分支已在夹具构造验证）。
+- 组件尚未接入实际页面，缺真实数据集成证据（F-04）。
+- 主工作区/其他 worktree 未动；本卡**未改** 053/056 契约（`TaskCardShell`/`BoardShell`/`statusTone`/`StatusLegend` 未触碰），未改行情页/账号页（§8 红线未触发）。
+
+### 12.7 判定
+
+**Pass with issues** —— AC1–AC11 中 AC1/AC2/AC3/AC4/AC5/AC6/AC7/AC8②/AC9/AC10/AC11 全部满足并经独立复验；AC8① 为计划明示的**部分（归 063 承接）**，未谎报为通过；AC4/AC6/AC7/AC9 负向对照均证明断言非恒真；无 BLOCKER / MAJOR；残余均为 MINOR（F-01 测试脚本质量、F-02 验证方式、F-04 集成待 063），均不阻塞。
+
+本结论为**判定词而非状态**；未改 Task Status / AC / Scope / 合入状态，未 `git add / commit / push`，未关闭 Task 或 Story。是否登记 `Reviewing`、合入与关闭由 Orchestrator / Human 依 STATES.md §4 处理。
 
 > **2026-11-04 更新**：独立审查已完成，判定 `Pass with issues`（无 BLOCKER/MAJOR），记录见 §12.1～§12.7（worktree 提交 `0f697fd`）。上句为规划期占位，保留以显示流转。
 
