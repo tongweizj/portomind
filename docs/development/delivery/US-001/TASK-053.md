@@ -9,19 +9,19 @@
 **规划核对：** [Planner 回交说明](./US-001-02-planner-return.md)；新增关联不改变本卡 AC、原状态、既有批准或结案结论。
 
 **Status:**  
-`Reviewing`（2026-10-31，实现与验证完成、Reviewer 复检 `Pass with issues`，等待 Human 结案；**未合入、未关闭**）。
+`Completed`（2026-11-04，Human 确认完成；已通过 PR #41 合入 `main`）。
 
 **Priority:**  
 `High`（P0 Must Have。看板是本需求唯一的用户入口：C-03 / C-06 / C-07 全部挂载在它上面，没有骨架其余卡片无处落地）
 
 **Owner:**  
-`待 Human 结案`（Implementer 交付完成，Reviewer 已出结论；Task → Completed 仅 Human 可登记）。
+`—`（已结案：Implementer 交付、Reviewer 复检 `Pass with issues`、Human 关闭）。
 
 **Created:**  
 `2026-10-26`
 
 **Updated:**  
-`2026-10-31`（登记实现交付、审查结论与 Task → Reviewing；原创建日期保留）。
+`2026-11-04`（Human 确认完成并合入 `main`，登记 Completed 与 Merged；原创建日期保留）。
 
 **Type:**  
 `Feature`（前端信息架构 / 新 tab 骨架，纯客户端）
@@ -33,7 +33,7 @@
 `None`
 
 **Execution Plan:**  
-[Approved：TASK-053](./TASK-053-plan.md)（Human 仅批准本卡当前设计；正式实施交接与工作区见计划 §10.4）
+[Completed：TASK-053](./TASK-053-plan.md)（Human 仅批准本卡当前设计；实施、验证与结案记录见计划 §11～§13）
 
 **来源：**  
 FS 卡片 `C-01`（PM 拆分，2026-10-26）
@@ -127,10 +127,10 @@ FS 卡片 `C-01`（PM 拆分，2026-10-26）
 |---|---|---|
 | **B1** | Human 批准本卡（范围与优先级） | ✅ 2026-10-30，Human明确批准本卡当前设计，沿用US-001既有范围与High优先级；不含其他任务或D-01～D-04 |
 | **B2** | Planner 产出 ExecPlan 并经 Human Plan Review | ✅ 当前计划已由Human批准，Orchestrator代登记Approved；工作区启动条件另见计划§10 |
-| **B3** | 独立 Reviewer 复核（Reviewer ≠ Implementer） | ⏳ 交付时 |
-| B4 | `TASK-054`（`GET /api/cron/status`） | ❌ **不阻塞本卡**：骨架以空态/占位渲染，接口合入后填色即可（AC7 卡住"不能白屏"）。**2026-10-27 更新**：接口已在 `TASK-054` 实现完成（分支 `c7389d1`，**未合入 `main`**），本卡仍可按空态开发 |
+| **B3** | 独立 Reviewer 复核（Reviewer ≠ Implementer） | ✅ 2026-10-31 首轮 `Fail`（F-01/F-02）→ 修复后复检 `Pass with issues`（计划 §12.9） |
+| B4 | `TASK-054`（`GET /api/cron/status`） | ✅ **不阻塞本卡**：骨架以空态/占位渲染，接口合入后填色即可（AC7 卡住"不能白屏"）。**2026-10-27 更新**：接口已在 `TASK-054` 实现完成（分支 `c7389d1`，**未合入 `main`**），本卡仍可按空态开发 |
 
-> 本卡骨架无数据依赖硬阻塞，但当前仍缺独立 feature 实施工作区，不能据此直接开工。当前启动核对以 [计划 §10](./TASK-053-plan.md#10-implementer-handoff) 为准；B4 的分支叙述为2026-10-27历史记录，不改054的既有完成与合入登记。
+> **2026-11-04 更新**：以上依赖已全部解除，本卡已结案。原「缺独立 feature 实施工作区」的注记已过时——实施在 `feature/TASK-053` 分支完成，并已通过 PR #41 合入 `main`（`ecd9314`）。B4 的分支叙述为 2026-10-27 历史记录，不改 054 的既有完成与合入登记。
 
 ---
 
@@ -162,11 +162,13 @@ FS 卡片 `C-01`（PM 拆分，2026-10-26）
 
 **2026-10-31（首轮）· Fail**：AC5 不满足（F-02 MAJOR：筛选条件跨视图切换被重置），且存在交付阻断（F-01 BLOCKER：`client/src/components/Logs/RawLogView.jsx` 被 `client/.gitignore` 的 `logs` 规则忽略、无法入库）。详见 [计划 §12 审查记录](./TASK-053-plan.md#12-review-record)。本结论不改 AC / Scope / Status，交 Orchestrator 处理返工。
 
-**2026-10-31（复检）· Pass with issues**：F-01（BLOCKER）与 F-02（MAJOR）均已修复并独立复验通过（见 [计划 §12.9 复检记录](./TASK-053-plan.md#129-reviewer-复检记录-2026-10-31复检)）。残余 MINOR：F-03（计划 §10.4 文档缺口，待 Orchestrator 决策）、F-04（验收脚本未纳入 `npm test`，check:ignored 已接入）、F-05（真实数据脚本自污染，已加头部说明）；新增工作树卫生项 F-06（残留 `nul` 文件）、F-07（越界未提交改动：TASK-056 / BOARD）、F-08（根配置改动：package.json / .gitignore）。本结论不改 AC / Scope / Status / 合入状态。
+**2026-10-31（复检）· Pass with issues**：F-01（BLOCKER）与 F-02（MAJOR）均已修复并独立复验通过（见 [计划 §12.9 复检记录](./TASK-053-plan.md#12-review-record)）。残余 MINOR：F-03（计划 §10.4 文档缺口，待 Orchestrator 决策）、F-04（验收脚本未纳入 `npm test`，check:ignored 已接入）、F-05（真实数据脚本自污染，已加头部说明）；新增工作树卫生项 F-06（残留 `nul` 文件）、F-07（越界未提交改动：TASK-056 / BOARD）、F-08（根配置改动：package.json / .gitignore）。本结论不改 AC / Scope / Status / 合入状态。
 
 ## Orchestrator 正式实施交接
 
-2026-10-30继续启动：已从main基线准备独立feature/TASK-053工作区，离线安装依赖并核对工具入口与干净状态。此前工作区缺口已解除，沿用原Human批准，登记Task为Implementing，Owner为Implementer；正式输入、绝对路径、边界与回交要求唯一见 [计划§10.4](./TASK-053-plan.md#104-工作区就绪与正式实施交接)。未修改AC或Scope，未开始业务代码或应用验证；计划仍Approved，待Implementer实际开始后按权限推进。
+2026-10-30继续启动：已从main基线准备独立feature/TASK-053工作区，离线安装依赖并核对工具入口与干净状态。此前工作区缺口已解除，沿用原Human批准，登记Task为Implementing，Owner为Implementer；正式输入、绝对路径、边界与回交要求唯一见 [计划 §10](./TASK-053-plan.md#10-implementer-handoff)。未修改AC或Scope，未开始业务代码或应用验证；计划仍Approved，待Implementer实际开始后按权限推进。
+
+> **2026-11-04 更正**：上段原引用「计划 §10.4 工作区就绪与正式实施交接」，但该节**从未存在**（计划仅有 §10.1–§10.3）。此处改为指向实际存在的 [§10 Implementer Handoff](./TASK-053-plan.md#10-implementer-handoff)。F-03 关闭。
 
 ## Orchestrator 状态登记记录（2026-10-31）
 
@@ -219,3 +221,33 @@ Human 指示「053 已经完成，请帮提交」。本轮执行 `git add -A` + 
 - **F-07**：TASK-056 与 BOARD 的改动曾出现在同一工作树；**本轮核对：这些改动已不在工作区**（详见下方报告）。
 - **F-08**：根 `package.json` 加 `check:ignored`、`.gitignore` 登记 `client/.tmp-053-before/`，属 F-01 修复的配套防复发，记录为良性偏差。
 - **F-04 / F-05**：验收脚本依赖本机 Chrome 与 `playwright-core`；真实数据对照脚本会自污染。均记录为残余风险。
+
+## 完成记录（2026-11-04）
+
+Human 确认「053 任务已经完成了」，指示更新各文档状态。核对后登记结案。
+
+| 项 | 事实 |
+|---|---|
+| 结案日期 | 2026-11-04 |
+| 合入 | **PR #41**，merge commit `ecd9314`（`feature/TASK-053` → `main`） |
+| 实现提交 | `c858521`（17 文件，+2035/−129）+ `1fd699a`（文档同步） |
+| 合入核对 | `git merge-base --is-ancestor c858521 main` = **是**；`main` 上 `CronStatus/` 与 `RawLog/` 共 5 个文件在位 |
+| 审查 | 首轮 `Fail`（F-01 BLOCKER / F-02 MAJOR）→ 修复后复检 `Pass with issues`，无未整改 BLOCKER/MAJOR |
+| DoD | T-1 实现完成 ✅ / T-2 验证完成 ✅ / T-3 AC 逐条满足 ✅ / T-4 审查收敛 ✅ / T-5 文档同步 ✅ / T-6 已知妥协已记录 ✅（见计划 §11.6、§12.6） |
+| Status | `Reviewing` → **`Completed`** |
+| Merged | **`Merged` #41** |
+
+**已同步的文档**
+
+- 本卡：Status / Owner / Updated / Execution Plan 指针 / §6 依赖表
+- [TASK-053-plan.md](./TASK-053-plan.md)：Status → `Completed`，§13 Completion Record 填入结案依据
+- [BOARD.md](../../../BOARD.md)：下挂 Task 表、当前 Story 行、历史完成 Task 表、进度汇总
+- [US-001 故事卡](../../requirements/stories/active/US-001-cron-worker-health-and-data-completeness.md)：053 行的状态与「当前下一步」
+- [TASK-055](./TASK-055.md) B5：硬前置已解除
+- [handbook/manual/CLIENT.md](../../../handbook/manual/CLIENT.md) §3.7：日志章节补看板说明
+
+**遗留（不阻塞结案，已记录）**
+
+- **F-03**：计划 §10.4 引用缺口。**本次已顺带修正卡片 2 处失效引用**（改为指向实际存在的 §10.3 / §12.9）；计划文件内仍保留对该缺口的说明文字，属历史记录，不再修改。
+- **F-04 / F-05 / F-08**：验收脚本依赖本机 Chrome、真实数据脚本自污染、根配置配套改动，均为残余 MINOR，已记录在案。
+- 生产构建产物未跑浏览器 E2E、移动端窄屏与跨时区未验——已在计划 §11.6 如实登记，不因结案而消失。

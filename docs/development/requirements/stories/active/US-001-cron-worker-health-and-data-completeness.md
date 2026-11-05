@@ -84,15 +84,15 @@
 | OQ-03 | 产品结果表达 | TASK-057 汇率结果记录形式未决；采集端全或无不能证明独立逐币种成功 | PM / Planner / Human | 明确显示可证实的数据、数值/标志及未知态，不杜撰可观察性 | 不把 TASK-051 汇率方向修复并入此 Story；同步成功不等于汇率方向正确 |
 | DEP-02 | 实施准备 | 副本只含文档，Planner已只读核对D:/projects/portomind源码；数据库与运行环境未核实 | Orchestrator | 按回交说明核对基线、环境与计划批准 | 未执行代码/数据库/浏览器验证，不声称交付测试已走完 |
 
-**当前下一步：** Human已仅批准053当前设计，其计划为Approved；[启动核对](../../../delivery/US-001/TASK-053-plan.md#10-implementer-handoff) 已确认源码与相关基线，但独立feature工作区尚未就绪，053与Story仍Planning，未指派或开工。其他5份Draft、D-01～D-04及材料继续按 [审阅清单](../../../delivery/US-001/US-001-02-planner-return.md#7-orchestrator-接收与-human-审阅清单) 处理。本次仅同步关联与进度投影，未修改Story范围、AC或Status。
+**当前下一步：** `TASK-053` 已结案（2026-11-04，Completed + `Merged` #41），看板骨架与六区域卡片位已在 `main`。**Story 状态仍为 Planning**——是否推进 `Implementing` / `Reviewing` 属 PM 权限（[STATES.md §4](../../../../os/process/STATES.md#4-谁可以改变状态)），Orchestrator 未代登记。剩余：`TASK-056` 已按 Human 指示退回暂不做（保持 Planning，计划 Draft 未批准）；`TASK-055` 的 053 硬前置已解除，`TASK-055`/`057`/`063`/`064` 仍为 Draft，待 D-01～D-04 与各自计划批准，见 [审阅清单](../../../delivery/US-001/US-001-02-planner-return.md#7-orchestrator-接收与-human-审阅清单)。本次仅同步进度投影，未修改 Story 范围、AC 或 Status。
 
 ## 6. 关联 Task 与验收覆盖
 
-七张关联卡的所属Story和覆盖AC均已核对；Orchestrator于2026-10-30正式登记063/064，六张待实施卡处于Planning，054保持既有Completed。完整映射见回交说明§3，当前接收与缺口见§7。原Task及Story AC未修改；当前仅053计划已由Human批准，其余5份仍Draft。
+七张关联卡的所属Story和覆盖AC均已核对；Orchestrator于2026-10-30正式登记063/064。**2026-11-04 更新：`TASK-053` 已结案（Completed + `Merged` #41）**；`TASK-054` 保持既有 Completed；其余五张（055/056/057/063/064）处于 Planning，计划均为 Draft。完整映射见回交说明§3，当前接收与缺口见§7。原Task及Story AC未修改。
 
 | Task | 工作摘要 | 覆盖的验收条件 | 必要性 / 关联说明 |
 |---|---|---|---|
-| [TASK-053](../../../delivery/US-001/TASK-053.md) | 看板入口、总览、五卡与原日志保留 | AC-01、02、07、10、11 | 必需；计划Approved，独立实施工作区未就绪，尚未开工；骨架与063真实接入分开 |
+| [TASK-053](../../../delivery/US-001/TASK-053.md) | 看板入口、总览、五卡与原日志保留 | AC-01、02、07、10、11 | **已完成（2026-11-04，`Merged` #41）**；看板骨架与六区域卡片位已入库；骨架与 063 真实接入分开 |
 | [TASK-054](../../../tasks/completed/TASK-054-cron-status-aggregate-api.md) | 只读聚合及有效目标日、降级 | AC-02～08、10、11 的读侧支撑 | 必需；已有完成证据供复用，不能将历史完成直接当作当前整体验收通过 |
 | [TASK-055](../../../delivery/US-001/TASK-055.md) | 价格完成度与缺失清单 | AC-03、04、07、10 | 必需；待D-04与055/063接口约定及计划批准 |
 | [TASK-056](../../../delivery/US-001/TASK-056.md) | 系统状态色及图例 | AC-02、09 | 必需；规划已接收，待设计批准；所有卡片采用同一语义 |

@@ -2,19 +2,23 @@
 
 ## Status
 
-Status：Implementing
+Status：Completed
 
-Owner：Implementer（2026-10-30 实际开始实施）；独立Reviewer待指派
+Owner：Implementer（2026-10-30 实施）→ Reviewer（2026-10-31 复检 `Pass with issues`）→ Human（2026-11-04 确认完成并合入）
 
 Related Task：[TASK-053](./TASK-053.md)；所属 [US-001](../../requirements/stories/active/US-001-cron-worker-health-and-data-completeness.md)。
 
-Branch / Base：实施工作区 `D:/projects/portomind`，分支 `feature/TASK-053`，基线提交 `6e013d7`（= 本地 `main` = `origin/main`，含 PR #40）。工作区起始状态干净（`git status --porcelain` 空），无需保留他人未提交改动。计划 §10.1 记录的 6 份文件 SHA256 在实施前逐一复核，**全部一致**（`LogViewer.jsx` 9dbe0c12… / `api.js` 705d0376… / `log.service.js` 998017ec… / `router.jsx` 1a28a6a8… / `Sidebar.jsx` b7351b42… / `client/package.json` 3a575006…）。
+Branch / Base：实施工作区 `D:/projects/portomind`，分支 `feature/TASK-053`，基线提交 `6e013d7`（= 本地 `main` = `origin/main`，含 PR #40）。**2026-11-04 已通过 PR #41 合入 `main`（merge commit `ecd9314`）。** 计划 §10.1 记录的 6 份文件 SHA256 在实施前逐一复核，**全部一致**（`LogViewer.jsx` 9dbe0c12… / `api.js` 705d0376… / `log.service.js` 998017ec… / `router.jsx` 1a28a6a8… / `Sidebar.jsx` b7351b42… / `client/package.json` 3a575006…）。
 
 > **§10.4 记录缺口（2026-10-30，实施时发现）**：Task §Metadata「Execution Plan」与 §6、§Orchestrator 正式实施交接 共 3 处引用「计划 §10.4 工作区就绪与正式实施交接」，但本文件**只有 §10.1–§10.3，从未存在 §10.4**（`git log -S "10.4 工作区就绪"` 无任何命中，本文件仅有 `37a7d17` 一次提交）。判断：这是**文档记录缺口，不是设计失效**——工作区、分支、基线与文件指纹均已逐项核对通过，交接所需的实质条件成立。故本轮按 §10/§10.1/§10.2 的现有内容实施，并在此登记该差异；**未修改 Task AC、Scope 或任何设计**，§10.4 的补写交回 Orchestrator 决定（Implementer 不自行改写计划结构）。
+>
+> **2026-11-04 处置（Orchestrator）**：不补写 §10.4——该节描述的「工作区就绪与正式实施交接」实质内容已由 §10.1–§10.3 与 §11.1 覆盖，另立一节只会产生重复正文。改法为**修正引用**：Task 卡内 2 处失效链接已改指 §10 / §12.9。F-03 关闭。本段保留为历史记录。
 
 Approval：2026-10-30，Human 在本 chat 明确：“我批准 TASK-053 当前 Draft 的设计，批准范围仅限 TASK-053，不包含其他任务或 D-01～D-04 的待决方案。”本记录由 Orchestrator 按该 Human 决定登记 Draft → Approved，不是 Orchestrator 自行批准。批准的 §1～§9 设计未改变；其 UTF-8/LF 摘要 SHA256 为 422ceff1f595304fa87c767b1f74eb669eae08bbabe58cfdb1f27ab9df2c20be。Approved 不代表已经启动实施。
 
-实施开始：2026-10-30，Implementer 按本计划 §10 交接实际开始，计划由 Approved 登记为 Implementing（依据 [STATES.md](../process/STATES.md) §4：计划实施推进归 Implementer）。进度与证据见 §11。
+实施开始：2026-10-30，Implementer 按本计划 §10 交接实际开始，计划由 Approved 登记为 Implementing（依据 [STATES.md](../../../os/process/STATES.md) §4：计划实施推进归 Implementer）。进度与证据见 §11。
+
+**结案：2026-11-04**，Human 确认完成并合入 `main`（PR #41 / `ecd9314`）；计划由 Implementing 登记为 **Completed**，依据 [STATES.md](../../../os/process/STATES.md) §3「Completed：计划工作完成，验证与审查记录齐全」。结案记录见 §13。
 
 ## 1. Intent
 
@@ -424,7 +428,7 @@ git add -n client/src/components/Logs/
 
 **Fail** — AC5 不满足（F-02，MAJOR），且存在交付阻断（F-01，BLOCKER）。
 
-不满足 `Pass`（AC 未全部满足）与 `Pass with issues`（存在 BLOCKER 与未整改的 MAJOR）。按 [REVIEWER.md](../roles/REVIEWER.md) §5.1，BLOCKER 不得据此通过或合入。
+不满足 `Pass`（AC 未全部满足）与 `Pass with issues`（存在 BLOCKER 与未整改的 MAJOR）。按 [REVIEWER.md](../../../os/roles/REVIEWER.md) §5.1，BLOCKER 不得据此通过或合入。
 
 ### 12.8 交回 Orchestrator 的事项
 
@@ -432,14 +436,8 @@ git add -n client/src/components/Logs/
 2. **F-02（MAJOR）**：退回 Implementer，修复筛选条件跨视图保持，并扩充对照断言；修复后需重新独立复核该条。
 3. **F-03（MINOR）**：由 Orchestrator 决定补写计划 §10.4 或修正 Task 卡引用。
 4. **F-04 / F-05（MINOR）**：记录为残余风险，由 Orchestrator 决定是否纳入后续任务。
-5. 按 [STATES.md](../process/STATES.md) §4，Task 现处 `Implementing`，**尚未满足进入 `Reviewing` 的条件**（实施者未登记交付、本轮审查已给出 Fail）。是否登记 `Reviewing`、返工回 `Implementing`，由 Orchestrator 依权限处理。
+5. 按 [STATES.md](../../../os/process/STATES.md) §4，Task 现处 `Implementing`，**尚未满足进入 `Reviewing` 的条件**（实施者未登记交付、本轮审查已给出 Fail）。是否登记 `Reviewing`、返工回 `Implementing`，由 Orchestrator 依权限处理。
 6. 本轮**未**修改 AC / Scope / 业务代码 / Status / 合入状态；**未** git add / commit / push；**未**关闭 Task、Story 或计划。
-
-## 13. Completion Record
-
-尚未结案；无Human关闭或合入决定。
-
----
 
 ### 12.9 Reviewer 复检记录（2026-10-31，复检）
 
@@ -512,3 +510,45 @@ git add -n client/src/components/Logs/
 2. TASK-056 / BOARD 改动（F-07）不得并入本卡提交，由 Orchestrator 单独处置。
 3. F-03 由 Orchestrator 决策；F-04/F-05/F-08 记录为残余/良性偏差。
 4. 本轮**未**修改 AC / Scope / 业务代码 / Status / 合入状态；**未** git add / commit / push；是否登记 `Reviewing`、合入与关闭由 Human / Orchestrator 依 STATES.md §4 处理。
+
+## 13. Completion Record
+
+### 13.1 结案依据（2026-11-04，Human 确认）
+
+| 项 | 事实 |
+|---|---|
+| 结案日期 | 2026-11-04 |
+| 结案指令 | Human：「053 任务已经完成了，请更新各个文档中的状态」 |
+| 合入 | **PR #41**，merge commit `ecd9314`（`feature/TASK-053` → `main`） |
+| 实现提交 | `c858521`（17 文件，+2035/−129）、`1fd699a`（文档同步） |
+| 合入核对 | `git merge-base --is-ancestor c858521 main` = **是**；`main` 上 `CronStatus/`（4 文件）与 `RawLog/`（1 文件）在位 |
+| 审查结论 | 首轮 §12.7 `Fail`（F-01 BLOCKER / F-02 MAJOR）→ 修复后 §12.9 `Pass with issues`；无未整改 BLOCKER/MAJOR |
+| 验证证据 | `e2e-task-053-verify` 33/33、`e2e-task-053-f02` 7/7、build exit 0、eslint 0-0、`check:ignored` PASS（§11.3 / §11.8；提交后复验见任务卡完成记录） |
+| 状态流转 | `Draft` → `Approved`（2026-10-30）→ `Implementing`（2026-10-30）→ `Completed`（2026-11-04） |
+
+### 13.2 DoD 逐条（[DEFINITION_OF_DONE](../../../os/process/DEFINITION_OF_DONE.md) §3）
+
+| # | 要求 | 结论 |
+|---|---|---|
+| T-1 | 实现完成，改动清单与 `Implementing` 退出物证一致 | ✅ 17 文件清单见 §11.2 |
+| T-2 | 验证完成，运行类记录实际结果、静态检查记录对象与方法 | ✅ §11.3 / §11.8 / §12.5；未验证项见 §11.6 |
+| T-3 | AC 逐条满足 | ✅ AC1–AC8 见 §12.3 / §12.9 |
+| T-4 | 审查结论收敛，无未决 BLOCKER，MAJOR 已整改 | ✅ F-01 / F-02 均已修复复验 |
+| T-5 | 文档同步 | ✅ 卡片、本计划、BOARD、US-001、TASK-055 B5、`handbook/manual/CLIENT.md` §3.7 |
+| T-6 | 已知妥协已记录 | ✅ §11.6 / §12.6 |
+
+> 按 DoD §4，「合入 `main`」不属于任务级 DoD；本次合入由 Human 经 PR #41 完成，`Merged` 字段已登记。
+
+### 13.3 遗留（不阻塞结案）
+
+- **F-03**：§10.4 引用缺口——**已关闭**（不补写该节，改为修正卡片 2 处引用）。
+- **F-04**：验收脚本依赖本机 Chrome + `playwright-core`，未纳入 `npm test`。
+- **F-05**：真实数据对照脚本会写访问日志自污染，已在脚本头部标注。
+- **F-08**：根 `package.json` 的 `check:ignored` 与 `.gitignore` 登记属 F-01 修复的配套防复发，记录为良性偏差。
+- **未验证项**（§11.6）：生产构建产物未跑浏览器 E2E；移动端窄屏布局、跨时区日期筛选未验——均不在本卡 AC 内。
+
+### 13.4 过程目录处置
+
+按 [DOCS.md §1.1](../../../os/standards/DOCS.md#11-story-交付目录与文档生命周期)：「单个 Task 或计划完成只更新其字段与记录，**仍留在 Story 目录内，不提前单独移出**」。故本卡与计划**保持在** `development/delivery/US-001/`，待 Human 关闭 US-001 后随过程目录整体归档。
+
+---
