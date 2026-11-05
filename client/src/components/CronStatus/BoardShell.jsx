@@ -12,6 +12,7 @@
 // TASK-055 填价格完成度。它们只填 BoardShell 已声明的插槽，不改结构。
 import { BOARD_SLOTS } from './unknownValue';
 import SummaryShell from './SummaryShell';
+import StatusLegend from './StatusLegend';
 import TaskCardShell from './TaskCardShell';
 
 /**
@@ -31,6 +32,8 @@ export default function BoardShell({ summary, cards } = {}) {
         snapshotAt={safeSummary.snapshotAt}
         overallState={safeSummary.overallState}
       />
+      {/* TASK-056：状态色图例（首屏可见；只新增这一行，不改 053 的 props / 五卡结构） */}
+      <StatusLegend />
 
       {/* 5 卡网格：槽位数来自 BOARD_SLOTS（恰好 5），顺序固定 */}
       <div
