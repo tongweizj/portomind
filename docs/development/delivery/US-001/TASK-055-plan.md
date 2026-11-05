@@ -2,9 +2,9 @@
 
 ## Status
 
-Status：Approved
+Status：Completed
 
-Owner：Planner（规划已完成）→ 待指派 Implementer
+Owner：Planner（规划）→ Implementer（2026-11-04 实施，`3991df8`）→ Reviewer（`Pass with issues`，`0f697fd`）→ Human（2026-11-04 结案）
 
 Related Task：[TASK-055](./TASK-055.md)；所属 [US-001](../../requirements/stories/active/US-001-cron-worker-health-and-data-completeness.md)。
 
@@ -126,6 +126,54 @@ missing列表按symbol/name/market展示和折叠；缺失总数用实际数组�
 
 尚未独立审查；本轮Planner自检不等于Reviewer判定。
 
+> **2026-11-04 更新**：独立审查已完成，判定 `Pass with issues`（无 BLOCKER/MAJOR），记录见 §12.1～§12.7（worktree 提交 `0f697fd`）。上句为规划期占位，保留以显示流转。
+
 ## 13. Completion Record
 
-尚未结案；无Human关闭或合入决定。
+### 13.1 结案依据（2026-11-04，Human 确认）
+
+| 项 | 事实 |
+|---|---|
+| 结案日期 | 2026-11-04 |
+| 结案指令 | Human：「055 reviewer 的验证通过了，请更新状态」 |
+| 实现 | `feature/TASK-055` @ `3991df8`（worktree `D:/projects/portomind-055`，代码 5 文件 +1150） |
+| 审查记录 | `0f697fd`（§12） |
+| 审查判定 | `Pass with issues`，无 BLOCKER/MAJOR |
+| 状态流转 | `Draft` → `Approved`（2026-11-04）→ `Implementing` → `Reviewing` → `Completed`（2026-11-04） |
+| 合入 | **`Pending`** —— 分支尚未合入 `main` |
+
+### 13.2 DoD 逐条（[DEFINITION_OF_DONE](../../../os/process/DEFINITION_OF_DONE.md) §3）
+
+| # | 要求 | 结论 |
+|---|---|---|
+| T-1 | 实现完成 | ✅ §11.2（代码 5 文件） |
+| T-2 | 验证完成，记录实际结果 | ✅ §11.4 / §12.3；未验证项见 §11.7 / §12.6 |
+| T-3 | AC 逐条满足 | ✅ 11 条中 10 条满足；**AC8① 明示为「部分，归 063」**，未记为通过 |
+| T-4 | 审查收敛，无未决 BLOCKER，MAJOR 已整改 | ✅ `Pass with issues`，无 BLOCKER/MAJOR |
+| T-5 | 文档同步 | ✅ 任务卡、本计划 §11～§13、BOARD |
+| T-6 | 已知妥协已记录 | ✅ §11.7 / §12.6 |
+
+> 按 DoD §4，「合入 `main`」不属于任务级 DoD；`Merged` 字段单列，由 Human 判定。当前为 `Pending`。
+
+### 13.3 遗留（不阻塞结案）
+
+- **F-01（MINOR）**：`verify-task-055.cjs` 部分断言预期值同源，有恒真风险。Reviewer 已用批准色值硬基线复验补强；建议后续修正脚本。
+- **F-02（MINOR）**：验收脚本依赖本机 Chrome + `playwright-core`，未接入 CI。
+- **F-04（待 063）**：`PriceTaskCard` 尚未接入 `LogViewer`/`BoardShell`，本卡所有场景为夹具构造；063 接入后需端到端再验。
+- **AC8①（明示部分）**：整体失败的五卡统一降级归 `TASK-063`；本卡只实现价格卡侧局部降级。
+- **未验证**：移动端/其他缩放/暗色主题；AC10 未自行跑 CDP 时区覆盖（以固定字符串入参等价证明）。
+
+### 13.4 对下游的影响
+
+`TASK-063` 接入时需要消费本卡导出的 `PriceTaskCard` 与 `priceDataState.getPriceView`：
+- props 契约见 §11.3
+- 配色唯一来源 `dataStateLevel → getStatusTone()`（056）
+- 063 负责 AC8① 的共享请求层与五卡统一降级
+
+### 13.5 合入前须处理
+
+`feature/TASK-055` 从 `53edb8e` 切出，落后 `main`（`6296fef`，含 055 的批准登记 `45030b0` 与交付登记 `6296fef`）。**合入前须 `git rebase main` 或 `merge main`**，否则会把旧版文档（显示 `Planning`/`Draft`）一起合入。
+
+### 13.6 过程目录处置
+
+按 [DOCS.md §1.1](../../../os/standards/DOCS.md#11-story-交付目录与文档生命周期)，本卡与计划**留在** `development/delivery/US-001/`，待 Human 关闭 US-001 后整体归档。

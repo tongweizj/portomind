@@ -9,19 +9,19 @@
 **规划核对：** [Planner 回交说明](./US-001-02-planner-return.md)；新增关联不改变本卡 AC、原状态、既有批准或结案结论。
 
 **Status:**  
-`Reviewing`（2026-11-04，实现与自测完成于 worktree `D:/projects/portomind-055` @ `3991df8`，等待独立 Reviewer 复核）。
+`Completed`（2026-11-04，Human 确认完成；独立 Reviewer 判定 `Pass with issues`，无 BLOCKER/MAJOR）。
 
 **Priority:**  
 `High`（P0 Must Have。它是 FS 核心主张"任务跑绿 ≠ 数据到位"的**唯一可视化落点**）
 
 **Owner:**  
-`Reviewer`（待指派独立会话复核；Reviewer ≠ Implementer）。
+`—`（已结案：Implementer 交付、Reviewer `Pass with issues`、Human 关闭）。
 
 **Created:**  
 `2026-10-26`
 
 **Updated:**  
-`2026-11-04`（登记实现交付与 Task → Reviewing；原创建日期保留）。
+`2026-11-04`（独立 Reviewer 复核完成并登记 `Completed`；原创建日期保留）。
 
 **Type:**  
 `Feature`（前端数据态展示，纯客户端）
@@ -190,3 +190,47 @@ Human 就 [D-04（055 原 AC6/8/9 澄清）](./US-001-02-planner-return.md#d-040
 **⚠️ 分支基点说明（非越界）**：`feature/TASK-055` 从 `53edb8e` 切出，早于 Orchestrator 的 `45030b0`（055 批准登记）。故分支内的 `TASK-055.md` / `TASK-055-plan.md` 等 docs 仍显示 `Planning` / `Draft`，这是**分支基点落后**，不是 Implementer 改错文档。合入前需先 rebase 或 merge `main`。
 
 **未做的事**：未重跑 build / lint / 浏览器（Reviewer 将独立复验）；未改 AC / Scope / 代码；未提交、未合入、未填 `Merged`、未关闭。
+
+## 审查结论接收与完成记录（2026-11-04）
+
+独立 Reviewer 已完成复核，结论写入 [计划 §12](./TASK-055-plan.md#12-review-record)（worktree 提交 `0f697fd`）。
+
+| 项 | 结果 |
+|---|---|
+| 判定 | **`Pass with issues`**（按 [REVIEWER.md](../../../os/roles/REVIEWER.md) §5） |
+| BLOCKER / MAJOR | **无** |
+| AC1～AC11 | **10 条满足**（AC1/2/3/4/5/6/7/8②/9/10/11），经 Reviewer **自建 Playwright 探针**独立实测 |
+| AC8① | **部分** —— 整体失败的五卡统一降级归 `TASK-063`，Reviewer 确认代码中**未谎报为已实现**（§8 红线未触发） |
+| 负向对照 | AC4 / AC6 / AC7 / AC9 各一次，均证明断言非恒真，还原后 `git status` 为空 |
+| 053/056 契约 | `TaskCardShell` / `BoardShell` / `statusTone` / `StatusLegend` **未触碰** |
+
+**Reviewer 的关键负向对照**（这是判定可信的实质依据）
+
+- 去掉 `Math.min(100, …)` 钳制 → `5/3` 得 166.67%、fill 505px > track 305px → AC5 断言 FAIL
+- 把 `runState` 接入 tone → `SUCCEEDED + fetched=0` 卡片**翻绿** → AC7 断言 FAIL（这正是本卡核心产品语义的防线）
+- 空态改为 `0%` +「数据齐全」→ AC4/AC9 共 4 条断言 FAIL
+
+**残余 MINOR（不阻塞）**
+
+- **F-01**：`verify-task-055.cjs` 部分断言预期值同源（恒真风险）；Reviewer 已用批准色值硬基线复验补强。
+- **F-02**：验收脚本依赖本机 Chrome + `playwright-core`，未接入 CI。
+- **F-04**：`PriceTaskCard` 是供 063 接入的展示组件，本卡未在 `LogViewer`/`BoardShell` 实跑端到端；接入后需再验。
+
+**状态处置**
+
+| 项 | 结果 |
+|---|---|
+| 结案日期 | 2026-11-04 |
+| Status | `Reviewing` → **`Completed`** |
+| Merged | **`Pending`** —— 分支尚未合入 `main`（见下） |
+| DoD | T-1 实现 ✅ / T-2 验证 ✅ / T-3 AC 逐条 ✅（AC8① 明示为部分）/ T-4 审查收敛 ✅ / T-5 文档同步 ✅ / T-6 已知妥协 ✅ |
+
+### ⚠️ 合入状态：`Pending`
+
+核对 `git merge-base --is-ancestor 0f697fd main` = **否**。`feature/TASK-055` 尚未合入 `main`。
+
+按 [STATES.md §1](../../../os/process/STATES.md#1-status-与-merged)：「Completed 不表示已提交、已合入或已发布」。故 `Merged` 记 `Pending`，**未填 `Merged`**——合入与 `Merged` 登记归 Human。
+
+**合入前须处理**：该分支从 `53edb8e` 切出，落后 `main`（`6296fef`），需先 `git rebase main` 或 `merge main`，否则会把旧版文档一起合入。
+
+**未做的事**：未改 AC / Scope / 代码；未提交合入、未推送、未关闭 Task 或 Story。
