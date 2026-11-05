@@ -11,8 +11,8 @@
 | Status | Implementing（Human 2026-11-04 确认；053 已结案，056 已进入实施） |
 | 交付目录 | [US-001 过程资料](./development/delivery/US-001)（6张专属任务卡、2份Approved计划（053 Completed、056 Approved）、5份Draft、2份交接记录；复用054保持唯一原位置） |
 | PM / 验收负责人 | PM（本 chat 需求整理）/ Human |
-| 下一步 | **053 已结案**（`Merged` #41）。**TASK-056 已完成实现与审查**（`Pass with issues`），**待 Human 结案与合入**——合入后 055 的 AC2 才可验收。**D-04 已裁决**（055 AC6/8/9 已更新）。余：055 待 056 合入 + 063 共享请求层；057/063/064 仍为 Draft，D-01～D-03 未决 |
-| 阻塞 / 待决策 | **053 无阻塞，已结案**。**056 无阻塞，待 Human 结案**（`Merged` 与关闭仅 Human 可登记）。055 待 056 合入与 063。D-01～D-03 仍未决（影响 057/064/063）。没有新增状态或自动置 Blocked |
+| 下一步 | **053 已结案**（`Merged` #41）。**056 已结案**（`Completed`，但 `Merged` = `Pending`，未合入 `main`）。**下一步 TASK-055**：AC2 需 056 的 token，而 token 只在 `feature/TASK-056` 分支上 → 须先合入 056 或从该分支切出。**D-04 已裁决**（055 AC6/8/9 已更新）。余：057/063/064 仍为 Draft，D-01～D-03 未决 |
+| 阻塞 / 待决策 | **053、056 无阻塞，均已结案**。**055 的硬缺口**：056 token 未进 `main`（`Merged` = `Pending`）——需 Human 决定合入方式，或授权 055 从 `feature/TASK-056` 切分支。055 另需 063 的共享请求层。D-01～D-03 仍未决（影响 057/064/063）。没有新增状态或自动置 Blocked |
 
 ### 下挂 Task
 
@@ -21,7 +21,7 @@
 | [TASK-053](./development/delivery/US-001/TASK-053.md) | 看板入口及骨架 | AC-01、02、07、10、11 | Completed | — | **已结案（2026-11-04）**：实现 `c858521`，经 **PR #41** 合入 `main`（`ecd9314`）；33/33 + 7/7 PASS，提交后复验 build 0 / eslint 0-0 / check:ignored PASS；Reviewer `Pass with issues`，F-01/F-02 已修复，F-03 已关闭 | [Completed](./development/delivery/US-001/TASK-053-plan.md)，仅053设计 |
 | [TASK-054](./development/tasks/completed/TASK-054-cron-status-aggregate-api.md) | 聚合快照读侧（既有产出） | AC-02～08、10、11 的读侧支撑 | Completed | 既有结案记录 | 复用证据前核对真实项目版本 | [已归档计划](./development/exec-plans/completed/TASK-054-cron-status-aggregate-api.md) |
 | [TASK-055](./development/delivery/US-001/TASK-055.md) | 价格完成度 | AC-03、04、07、10 | Planning | 待指派 | **D-04 已裁决（2026-11-04），AC6/AC8/AC9 已更新**；余：AC2 待 056 的 token、AC8① 待 063 共享请求层、计划待批准 | [Draft](./development/delivery/US-001/TASK-055-plan.md)，未批准（§4～§8 已对齐裁决） |
-| [TASK-056](./development/delivery/US-001/TASK-056.md) | 系统状态色与图例 | AC-02、09 | Reviewing | 待 Human 结案 | **实现+审查均完成**：`feature/TASK-056` @ `31b516e`（worktree `D:/projects/portomind-056`），Reviewer 判定 **`Pass with issues`**，无 BLOCKER/MAJOR，AC1～AC9 全满足 + AC2/AC3 负向对照成立，053 回归 PASS；余 3 项 MINOR。**未合入、未关闭**，`Merged` 待 Human | [Approved](./development/delivery/US-001/TASK-056-plan.md)（§12 已填审查记录） |
+| [TASK-056](./development/delivery/US-001/TASK-056.md) | 系统状态色与图例 | AC-02、09 | Completed | — | **已结案（2026-11-04）**：`feature/TASK-056` @ `31b516e`（worktree `D:/projects/portomind-056`）；Reviewer `Pass with issues`，无 BLOCKER/MAJOR，AC1～AC9 全满足 + AC2/AC3 负向对照成立，053 回归 PASS；余 3 项 MINOR。⚠️ **`Merged` = `Pending`，尚未合入 `main`** | [Completed](./development/delivery/US-001/TASK-056-plan.md)（§12 审查记录、§13 结案记录） |
 | [TASK-057](./development/delivery/US-001/TASK-057.md) | 结果写侧及再平衡父任务 | AC-05～08 的写侧支撑 | Planning | 待指派 | 待D-01～03、AC10口径、环境核对及计划批准 | [Draft](./development/delivery/US-001/TASK-057-plan.md)，未批准 |
 | [TASK-063](./development/delivery/US-001/TASK-063.md) | 五卡接入、总览与刷新 | AC-02、05～08、10、11 | Planning | 待指派 | 已登记；**D-04 已裁决**（需按 AC8① 实现五卡统一降级）；余待 D-01～03、055 接口约定及最终契约 | [Draft](./development/delivery/US-001/TASK-063-plan.md)，未批准 |
 | [TASK-064](./development/delivery/US-001/TASK-064.md) | 读侧结果兼容与skip观测 | AC-02、05～08、11 | Planning | 待指派 | 已登记；待D-01～03、057结果契约及计划批准 | [Draft](./development/delivery/US-001/TASK-064-plan.md)，未批准 |
@@ -38,14 +38,16 @@
 
 > 2026-11-04（续）：Human 指示「先完成 056」。Orchestrator 按 STATES.md §4 将 TASK-056 计划 `Draft` → **`Approved`**、Task `Planning` → **`Implementing`**，**token 命名冻结**为 `statusOk/statusWarn/statusBad/statusIdle`（055 AC2 依赖）。启动核对完成：053 骨架已在 `main`（AC3 基线 0 行、AC8 基线 7 文件 13 处已实测）。**发现一处缺口**：`BoardShell` 未预置图例插槽（053 计划称"056 插入图例"但未声明位置）→ 处置为在 `SummaryShell` 与五卡网格间新增一行 `StatusLegend`，只加不改，破坏 053 断言则停下上报。AC7 候选色静态计算均 ≥4.5:1，但须浏览器实测。**未建 worktree、未改代码、未跑验证、未指派实施者。**
 
-> 2026-11-04（再续）：TASK-056 实施与审查均已完成。实现于独立 worktree `D:/projects/portomind-056`（`feature/TASK-056`，8 文件 +759/−1，`6f4b491`）；独立 Reviewer 自建探针复核，判定 **`Pass with issues`**——AC1～AC9 全满足、AC2/AC3 负向对照证明断言非恒真、**053 结构回归全部 PASS（未出现计划 §10.2 预警的图例插入回归）**，无 BLOCKER/MAJOR，余 3 项 MINOR（F-01 实现者脚本 AC2 期望值恒真风险、F-02 脚本依赖本机 Chrome、F-03 AC6 卡片文案待 063 接线）。审查记录提交 `31b516e`。**Task 保持 `Reviewing`**：按 §4，`Completed` 与 `Merged` 仅 Human 可登记。**未合入 `main`、未关闭。**
+> 2026-11-04（再续）：TASK-056 实施与审查均已完成。实现于独立 worktree `D:/projects/portomind-056`（`feature/TASK-056`，8 文件 +759/−1，`6f4b491`）；独立 Reviewer 自建探针复核，判定 **`Pass with issues`**——AC1～AC9 全满足、AC2/AC3 负向对照证明断言非恒真、**053 结构回归全部 PASS（未出现计划 §10.2 预警的图例插入回归）**，无 BLOCKER/MAJOR，余 3 项 MINOR（F-01 实现者脚本 AC2 期望值恒真风险、F-02 脚本依赖本机 Chrome、F-03 AC6 卡片文案待 063 接线）。审查记录提交 `31b516e`。
+
+> 2026-11-04（结案）：Human 指示「056 请登记完成」。按 STATES.md §4 登记 **`Reviewing` → `Completed`**，计划同步 `Approved` → `Completed`，DoD §3 T-1～T-6 逐条满足（计划 §13.2）。**⚠️ `Merged` 记 `Pending`，不是 `Merged`**：核对 `git merge-base --is-ancestor 31b516e main` = 否，分支领先 `main` 两个提交、**尚未合入**。按 §1「Completed 不表示已合入」，合入与 `Merged` 登记归 Human。**下游影响**：055 AC2 需要的 `status*` token 只在 `feature/TASK-056` 上，`main` 里没有——055 从 `main` 拉分支将取不到，须先合入 056 或从该分支切出。
 
 ### 进度汇总
 
 | 统计范围 | 总数 | Backlog | Planning | Implementing | Reviewing | Blocked | Completed |
 |---|---:|---:|---:|---:|---:|---:|---:|
 | 全部已登记 Story（排除取消） | 1 | 0 | 1 | 0 | 0 | 0 | 0 |
-| 当前 Story 已关联 Task | 7 | 0 | 4 | 0 | 1 | 0 | 2 |
+| 当前 Story 已关联 Task | 7 | 0 | 4 | 0 | 0 | 0 | 3 |
 | 尚未关联 Story 的未完成 Task | 5 | 1 | 4 | 0 | 0 | 0 | 0 |
 
 > 统计来自卡片；旧词按 STATES.md §7.1 映射，不证明当前实施授权。已关联任务不重复计入未关联任务。TASK-054 的既有 Completed 计为 1 个支撑任务完成，不表示当前 Story 已验收。共 11 条历史完成记录保留作证据索引，与本 Story 进度不可相加；本轮新增登记2卡已计入，现无待登记卡。
@@ -88,6 +90,7 @@
 
 | Task | 工作 | 完成日期 | Merged | 记录 |
 |---|---|---|---|---|
+| TASK-056 | 看板系统状态色语义与图例（FS **C-04**） | 2026-11-04 | `Pending` | [任务卡](./development/delivery/US-001/TASK-056.md) · [计划](./development/delivery/US-001/TASK-056-plan.md)（仍在 US-001 过程目录；分支 `feature/TASK-056` @ `31b516e` **尚未合入 main**） |
 | TASK-053 | 日志频道「任务运行看板」tab 骨架（FS **C-01**） | 2026-11-04 | `Merged` #41 | [任务卡](./development/delivery/US-001/TASK-053.md) · [计划](./development/delivery/US-001/TASK-053-plan.md)（仍在 US-001 过程目录，待 Story 关闭后整体归档） |
 | TASK-052 | Agent 运行规则（docs 治理层）审计与整改 | 2026-10-29 | `Pending` | [任务卡](./development/tasks/completed/TASK-052-agent-rules-update.md)（含明确接受的未满足项，详见卡片） |
 | TASK-058 | 账号与访问控制（用户模块；U1 后端内核 + U2 前端登录/账户 + U3 用户管理页） | 2026-10-28 | `Merged` #38 | [任务卡](./development/tasks/completed/TASK-058-authentication-and-accounts.md) |

@@ -2,9 +2,9 @@
 
 ## Status
 
-Status：Approved
+Status：Completed
 
-Owner：Planner（规划已完成）→ 待指派 Implementer
+Owner：Planner（规划）→ Implementer（2026-11-04 实施，`6f4b491`）→ Reviewer（`Pass with issues`，`31b516e`）→ Human（2026-11-04 结案）
 
 Related Task：[TASK-056](./TASK-056.md)；所属 [US-001](../../requirements/stories/active/US-001-cron-worker-health-and-data-completeness.md)。
 
@@ -136,6 +136,46 @@ components/CronStatus/statusTone.js 维护ok/warn/bad/unknown到token、文字�
 
 尚未独立审查；本轮Planner自检不等于Reviewer判定。
 
+> **2026-11-04 更新**：独立审查已完成，判定 `Pass with issues`（无 BLOCKER/MAJOR），记录见 §12.1～§12.7。上句为规划期占位，保留以显示流转。
+
 ## 13. Completion Record
 
-尚未结案；无Human关闭或合入决定。
+### 13.1 结案依据（2026-11-04，Human 确认）
+
+| 项 | 事实 |
+|---|---|
+| 结案日期 | 2026-11-04 |
+| 结案指令 | Human：「056 请登记完成」 |
+| 实现 | `feature/TASK-056` @ `6f4b491`（worktree `D:/projects/portomind-056`） |
+| 审查记录 | `31b516e`（§12） |
+| 审查判定 | `Pass with issues`，无 BLOCKER/MAJOR |
+| 状态流转 | `Draft` → `Approved`（2026-11-04）→ `Implementing`（计划推进）→ `Completed`（2026-11-04） |
+| 合入 | **`Pending`** —— 分支尚未合入 `main`（`git merge-base --is-ancestor 31b516e main` = 否） |
+
+### 13.2 DoD 逐条（[DEFINITION_OF_DONE](../../../os/process/DEFINITION_OF_DONE.md) §3）
+
+| # | 要求 | 结论 |
+|---|---|---|
+| T-1 | 实现完成 | ✅ §11.2（8 文件） |
+| T-2 | 验证完成，记录实际结果 | ✅ §11.3 / §11.5 / §11.7；未验证项见 §11.8 |
+| T-3 | AC 逐条满足 | ✅ §12.3（Reviewer 独立实测） |
+| T-4 | 审查收敛，无未决 BLOCKER，MAJOR 已整改 | ✅ `Pass with issues`，无 BLOCKER/MAJOR |
+| T-5 | 文档同步 | ✅ 任务卡、本计划 §11～§13、BOARD |
+| T-6 | 已知妥协已记录 | ✅ §11.8 六项 |
+
+> 按 DoD §4，「合入 `main`」不属于任务级 DoD；`Merged` 字段单列，由 Human 判定。当前为 `Pending`。
+
+### 13.3 遗留（不阻塞结案）
+
+- **F-01（MINOR）**：`verify-task-056.cjs` 的 AC2 期望色取自被测同一 `colors[token]`，有恒真风险。Reviewer 已用批准色值硬基线独立复验，结论可信；建议后续修正脚本。
+- **F-02（MINOR）**：验收脚本依赖本机 Chrome + `playwright-core`，未接入 CI。
+- **F-03（MINOR）**：AC6 卡片文案仍为 053 占位「未知」，待 `TASK-063` 消费 `statusTone` 接线。
+- **未验证**：移动端/极端缩放下图例首屏可见性（仅测 1440×900 与 1280×600）。
+
+### 13.4 对下游的影响（重要）
+
+`TASK-055` AC2 要求引用本卡的 `status*` token，而这些 token **目前只在 `feature/TASK-056` 分支上，`main` 中没有**。055 若从 `main` 拉分支将取不到 token。合入 056 是 055 完整实施的前置；或在 055 开工时从 `feature/TASK-056` 切分支（需 Human 决定）。
+
+### 13.5 过程目录处置
+
+按 [DOCS.md §1.1](../../../os/standards/DOCS.md#11-story-交付目录与文档生命周期)，本卡与计划**留在** `development/delivery/US-001/`，待 Human 关闭 US-001 后整体归档。

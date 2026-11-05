@@ -9,19 +9,19 @@
 **规划核对：** [Planner 回交说明](./US-001-02-planner-return.md)；新增关联不改变本卡 AC、原状态、既有批准或结案结论。
 
 **Status:**  
-`Reviewing`（2026-11-04，独立 Reviewer 已复核：`Pass with issues`，无 BLOCKER/MAJOR；**等待 Human 结案与合入决定**，未合入、未关闭）。
+`Completed`（2026-11-04，Human 确认完成；独立 Reviewer 判定 `Pass with issues`，无 BLOCKER/MAJOR）。
 
 **Priority:**  
 `High`（P0 Must Have。它是看板"能不能被正确读懂"的前提：本项目行情页是**红涨绿跌**，看板是**红坏绿好**，两套语义在同一产品里并存，没有显式隔离必然误读）
 
 **Owner:**  
-`待 Human 结案`（实现与审查均已完成；Task → Completed 与 `Merged` 仅 Human 可登记）。
+`—`（已结案：Implementer 交付、Reviewer `Pass with issues`、Human 关闭）。
 
 **Created:**  
 `2026-10-26`
 
 **Updated:**  
-`2026-11-04`（独立 Reviewer 复核完成，判定 `Pass with issues`；原创建日期保留）。
+`2026-11-04`（Human 确认完成，登记 `Completed`；原创建日期保留）。
 
 **Type:**  
 `Feature`（前端视觉语义 / design token）
@@ -216,3 +216,29 @@ FS §3 给看板定义了 4 种系统状态色：**绿 = 成功/完成/数据齐
 **Task 状态处置**：按 [STATES.md §4](../../../os/process/STATES.md#4-谁可以改变状态)，审查收敛后 `Task → Completed` 与合入 `Merged` **只有 Human 可登记**。故本卡**保持 `Reviewing`**，Owner 改为「待 Human 结案」，未登记 Completed、未填 `Merged`、未关闭。
 
 **未做的事**：未改 AC / Scope / 代码；未提交合入、未推送、未关闭 Task 或 Story。
+
+## 完成记录（2026-11-04）
+
+Human 指示「056 请登记完成」。按 [STATES.md §4](../../../os/process/STATES.md#4-谁可以改变状态) 登记 `Reviewing` → **`Completed`**。
+
+| 项 | 事实 |
+|---|---|
+| 结案日期 | 2026-11-04 |
+| 实现 | `feature/TASK-056` @ `6f4b491`（worktree `D:/projects/portomind-056`，8 文件 +759/−1） |
+| 审查记录 | `31b516e`（计划 §12） |
+| 审查判定 | **`Pass with issues`**，无 BLOCKER/MAJOR |
+| DoD | T-1 实现 ✅ / T-2 验证 ✅ / T-3 AC 逐条 ✅ / T-4 审查收敛 ✅ / T-5 文档同步 ✅ / T-6 已知妥协 ✅（计划 §11.8） |
+| Status | `Reviewing` → **`Completed`** |
+| Merged | **`Pending`** —— 分支尚未合入 `main`（见下） |
+
+### ⚠️ 合入状态：`Pending`，不是 `Merged`
+
+核对 `git merge-base --is-ancestor 31b516e main` = **否**。`feature/TASK-056` 领先 `main` 两个提交（`6f4b491` 实现、`31b516e` 审查记录），**尚未合入**。
+
+按 [STATES.md §1](../../../os/process/STATES.md#1-status-与-merged)：「Completed 不表示已提交、已合入或已发布」；`Merged` 取值 `—`（未判定）/ `Pending`（尚未合入）/ `Merged`（已合入，附 SHA/PR），且「Human 根据实际合入证据判定」。故此处记 `Pending`，**未填 `Merged`**——合入动作与 `Merged` 登记仍归 Human。
+
+**对下游的影响**：`TASK-055` AC2 需要本卡的 `status*` token。这些 token 目前只在 `feature/TASK-056` 分支上，`main` 里**还没有**。055 若从 `main` 拉分支将取不到 token（见 055 卡 §6 B6）。
+
+### 过程目录处置
+
+按 [DOCS.md §1.1](../../../os/standards/DOCS.md#11-story-交付目录与文档生命周期)：「单个 Task 或计划完成只更新其字段与记录，仍留在 Story 目录内，不提前单独移出」。故本卡与计划**保持在** `development/delivery/US-001/`，待 Human 关闭 US-001 后随过程目录整体归档。
