@@ -9,19 +9,19 @@
 **规划核对：** [Planner 回交说明](./US-001-02-planner-return.md)；新增关联不改变本卡 AC、原状态、既有批准或结案结论。
 
 **Status:**  
-`Reviewing`（2026-11-04，实现与自测完成于 worktree `D:/projects/portomind-056` @ `6f4b491`，等待独立 Reviewer 复核）。
+`Reviewing`（2026-11-04，独立 Reviewer 已复核：`Pass with issues`，无 BLOCKER/MAJOR；**等待 Human 结案与合入决定**，未合入、未关闭）。
 
 **Priority:**  
 `High`（P0 Must Have。它是看板"能不能被正确读懂"的前提：本项目行情页是**红涨绿跌**，看板是**红坏绿好**，两套语义在同一产品里并存，没有显式隔离必然误读）
 
 **Owner:**  
-`Reviewer`（待指派独立会话复核；Reviewer ≠ Implementer）。
+`待 Human 结案`（实现与审查均已完成；Task → Completed 与 `Merged` 仅 Human 可登记）。
 
 **Created:**  
 `2026-10-26`
 
 **Updated:**  
-`2026-11-04`（登记实现交付与 Task → Reviewing；原创建日期保留）。
+`2026-11-04`（独立 Reviewer 复核完成，判定 `Pass with issues`；原创建日期保留）。
 
 **Type:**  
 `Feature`（前端视觉语义 / design token）
@@ -194,3 +194,25 @@ FS §3 给看板定义了 4 种系统状态色：**绿 = 成功/完成/数据齐
 | 越界改动 | `git diff main..HEAD -- server/ shared/ cron-worker/` **空** ✓ |
 
 **未做的事**：未重跑 build / lint / 浏览器验收（同基线同一交付已有 Implementer 证据，且 Reviewer 将独立复验）；未改 AC / Scope / 代码；未提交、未合入、未填 `Merged`、未关闭。
+
+## 审查结论接收记录（2026-11-04）
+
+独立 Reviewer 已完成复核，结论写入 [计划 §12](./TASK-056-plan.md#12-review-record)（worktree 提交 `31b516e`）。
+
+| 项 | 结果 |
+|---|---|
+| 判定 | **`Pass with issues`**（按 [REVIEWER.md](../../../os/roles/REVIEWER.md) §5） |
+| BLOCKER / MAJOR | **无** |
+| AC1～AC9 | 全部满足，经 Reviewer **自建探针**独立实测（非采纳实现者自述） |
+| 负向对照 | AC2、AC3 各做一次，证明断言非恒真；还原后 `git status` 为空 |
+| 053 回归 | 结构断言全部 PASS，**未出现**计划 §10.2 预警的图例插入回归 |
+
+**残余 MINOR（不阻塞，已记录）**
+
+- **F-01**：实现者脚本 `verify-task-056.cjs` 的 AC2 预期色取自被测同一 `colors[token]`，存在恒真风险。Reviewer 已用批准色值硬基线独立复验，结论可信；脚本本身建议后续修正。
+- **F-02**：验收脚本依赖本机 Chrome + `playwright-core`（worktree `node_modules` 缺后者，需借主工作区），未接入 CI。
+- **F-03**：AC6 的卡片文案仍显示 053 占位的「未知」，未消费本卡映射的「未运行/暂无记录」——属计划 §10.3 写入边界，待 `TASK-063` 接线，非缺陷。
+
+**Task 状态处置**：按 [STATES.md §4](../../../os/process/STATES.md#4-谁可以改变状态)，审查收敛后 `Task → Completed` 与合入 `Merged` **只有 Human 可登记**。故本卡**保持 `Reviewing`**，Owner 改为「待 Human 结案」，未登记 Completed、未填 `Merged`、未关闭。
+
+**未做的事**：未改 AC / Scope / 代码；未提交合入、未推送、未关闭 Task 或 Story。
