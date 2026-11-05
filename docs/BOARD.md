@@ -8,11 +8,11 @@
 | 项目 | 当前情况 |
 |---|---|
 | Story / 用户价值 | [US-001](./development/requirements/stories/active/US-001-cron-worker-health-and-data-completeness.md)：首屏判断五类任务运行与数据完整性（FS P0） |
-| Status | Implementing **待 PM 按 STATES.md §2.2 / §4 复核**：053 已完成结案，Story 是否应推进 Implementing / Reviewing 属 PM 权限，Orchestrator 未代登记） |
-| 交付目录 | [US-001 过程资料](./development/delivery/US-001)（6张专属任务卡、2份计划（053 Completed、056 Draft）、5份Draft、2份交接记录；复用054保持唯一原位置） |
+| Status | Implementing（Human 2026-11-04 确认；053 已结案，056 已进入实施） |
+| 交付目录 | [US-001 过程资料](./development/delivery/US-001)（6张专属任务卡、2份Approved计划（053 Completed、056 Approved）、5份Draft、2份交接记录；复用054保持唯一原位置） |
 | PM / 验收负责人 | PM（本 chat 需求整理）/ Human |
-| 下一步 | **053 已结案**（Completed + `Merged` #41）。**D-04 已裁决（2026-11-04）**：055 的 AC6/AC8/AC9 已更新、计划 §4～§8 已对齐。剩余：**056 已按 Human 指示退回，暂不做**；055 待计划批准（AC2 依赖 056、AC8① 依赖 063）；057/063/064 仍为 Draft，D-01～D-03 未决，见 [审阅清单](./development/delivery/US-001/US-001-02-planner-return.md#7-orchestrator-接收与-human-审阅清单) |
-| 阻塞 / 待决策 | **053 无阻塞，已结案**。**056 已按 Human 指示退回暂不做**。**D-04 已闭环**；D-01～D-03 仍未决（影响 057/064/063）。055 的 AC2 依赖 056、AC8① 依赖 063，其余 AC 可独立实施。没有新增状态或自动置 Blocked |
+| 下一步 | **053 已结案**（`Merged` #41）。**当前推进 TASK-056**：计划已批准、token 命名冻结，待独立 worktree 与 Implementer 实施；056 完成前 055 的 AC2 无法验收。**D-04 已裁决**（055 AC6/8/9 已更新）。余：057/063/064 仍为 Draft，D-01～D-03 未决 |
+| 阻塞 / 待决策 | **053 无阻塞，已结案**。**056 可实施**，唯一注意项是图例无预置插槽（计划 §10.2 已给处置）。055 待 056 的 token 与 063 的共享请求层。D-01～D-03 仍未决（影响 057/064/063）。没有新增状态或自动置 Blocked |
 
 ### 下挂 Task
 
@@ -21,7 +21,7 @@
 | [TASK-053](./development/delivery/US-001/TASK-053.md) | 看板入口及骨架 | AC-01、02、07、10、11 | Completed | — | **已结案（2026-11-04）**：实现 `c858521`，经 **PR #41** 合入 `main`（`ecd9314`）；33/33 + 7/7 PASS，提交后复验 build 0 / eslint 0-0 / check:ignored PASS；Reviewer `Pass with issues`，F-01/F-02 已修复，F-03 已关闭 | [Completed](./development/delivery/US-001/TASK-053-plan.md)，仅053设计 |
 | [TASK-054](./development/tasks/completed/TASK-054-cron-status-aggregate-api.md) | 聚合快照读侧（既有产出） | AC-02～08、10、11 的读侧支撑 | Completed | 既有结案记录 | 复用证据前核对真实项目版本 | [已归档计划](./development/exec-plans/completed/TASK-054-cron-status-aggregate-api.md) |
 | [TASK-055](./development/delivery/US-001/TASK-055.md) | 价格完成度 | AC-03、04、07、10 | Planning | 待指派 | **D-04 已裁决（2026-11-04），AC6/AC8/AC9 已更新**；余：AC2 待 056 的 token、AC8① 待 063 共享请求层、计划待批准 | [Draft](./development/delivery/US-001/TASK-055-plan.md)，未批准（§4～§8 已对齐裁决） |
-| [TASK-056](./development/delivery/US-001/TASK-056.md) | 系统状态色与图例 | AC-02、09 | Planning | 待指派 | 待Human审阅设计；与053协调插槽及顺序 | [Draft](./development/delivery/US-001/TASK-056-plan.md)，未批准 |
+| [TASK-056](./development/delivery/US-001/TASK-056.md) | 系统状态色与图例 | AC-02、09 | Implementing | Implementer（待指派） | **2026-11-04 计划已批准，token 命名冻结**（`statusOk/Warn/Bad/Idle`）；053 骨架已在 `main`；⚠️ 图例无预置插槽，处置见计划 §10.2；待独立 worktree 与实施 | [Approved](./development/delivery/US-001/TASK-056-plan.md) |
 | [TASK-057](./development/delivery/US-001/TASK-057.md) | 结果写侧及再平衡父任务 | AC-05～08 的写侧支撑 | Planning | 待指派 | 待D-01～03、AC10口径、环境核对及计划批准 | [Draft](./development/delivery/US-001/TASK-057-plan.md)，未批准 |
 | [TASK-063](./development/delivery/US-001/TASK-063.md) | 五卡接入、总览与刷新 | AC-02、05～08、10、11 | Planning | 待指派 | 已登记；**D-04 已裁决**（需按 AC8① 实现五卡统一降级）；余待 D-01～03、055 接口约定及最终契约 | [Draft](./development/delivery/US-001/TASK-063-plan.md)，未批准 |
 | [TASK-064](./development/delivery/US-001/TASK-064.md) | 读侧结果兼容与skip观测 | AC-02、05～08、11 | Planning | 待指派 | 已登记；待D-01～03、057结果契约及计划批准 | [Draft](./development/delivery/US-001/TASK-064-plan.md)，未批准 |
@@ -36,12 +36,14 @@
 
 > 2026-11-04：Human 确认「053 任务已经完成了」。核对 `git merge-base --is-ancestor c858521 main` = 是，合入来自 **PR #41**（`ecd9314`）。按 STATES.md §4 登记 TASK-053 **`Reviewing` → `Completed`**，`Merged` = `#41`，计划同步 `Implementing` → `Completed`；DoD §3 T-1～T-6 逐条满足（见计划 §13.2）。**本轮未重跑验证**（同基线同一交付已有提交后复验与独立审查证据，按复用原则引用）；未改 AC/Scope/代码。过程目录按 DOCS.md §1.1 **留在 `delivery/US-001/`**，待 Story 关闭后整体归档。同轮修正两处文档缺陷：计划 §12.9 误置于 §13 之后（已移回 §12 内）、卡片 3 处失效引用（`§10.4` 不存在、`../process/` `../roles/` 旧路径）——`npm run docs:check` 由 5 ERROR 降至 **0 ERROR**。
 
+> 2026-11-04（续）：Human 指示「先完成 056」。Orchestrator 按 STATES.md §4 将 TASK-056 计划 `Draft` → **`Approved`**、Task `Planning` → **`Implementing`**，**token 命名冻结**为 `statusOk/statusWarn/statusBad/statusIdle`（055 AC2 依赖）。启动核对完成：053 骨架已在 `main`（AC3 基线 0 行、AC8 基线 7 文件 13 处已实测）。**发现一处缺口**：`BoardShell` 未预置图例插槽（053 计划称"056 插入图例"但未声明位置）→ 处置为在 `SummaryShell` 与五卡网格间新增一行 `StatusLegend`，只加不改，破坏 053 断言则停下上报。AC7 候选色静态计算均 ≥4.5:1，但须浏览器实测。**未建 worktree、未改代码、未跑验证、未指派实施者。**
+
 ### 进度汇总
 
 | 统计范围 | 总数 | Backlog | Planning | Implementing | Reviewing | Blocked | Completed |
 |---|---:|---:|---:|---:|---:|---:|---:|
 | 全部已登记 Story（排除取消） | 1 | 0 | 1 | 0 | 0 | 0 | 0 |
-| 当前 Story 已关联 Task | 7 | 0 | 5 | 0 | 0 | 0 | 2 |
+| 当前 Story 已关联 Task | 7 | 0 | 4 | 1 | 0 | 0 | 2 |
 | 尚未关联 Story 的未完成 Task | 5 | 1 | 4 | 0 | 0 | 0 | 0 |
 
 > 统计来自卡片；旧词按 STATES.md §7.1 映射，不证明当前实施授权。已关联任务不重复计入未关联任务。TASK-054 的既有 Completed 计为 1 个支撑任务完成，不表示当前 Story 已验收。共 11 条历史完成记录保留作证据索引，与本 Story 进度不可相加；本轮新增登记2卡已计入，现无待登记卡。

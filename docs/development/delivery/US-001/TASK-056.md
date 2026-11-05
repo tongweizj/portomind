@@ -9,19 +9,19 @@
 **规划核对：** [Planner 回交说明](./US-001-02-planner-return.md)；新增关联不改变本卡 AC、原状态、既有批准或结案结论。
 
 **Status:**  
-`Planning`（2026-10-30，Orchestrator 已接收规划并提交 Human 审阅；Draft 未批准，未获业务代码实施授权）。
+`Implementing`（2026-11-04，计划已批准、token 命名已冻结，启动核对完成；待 Implementer 在独立 worktree 中实施）。
 
 **Priority:**  
 `High`（P0 Must Have。它是看板"能不能被正确读懂"的前提：本项目行情页是**红涨绿跌**，看板是**红坏绿好**，两套语义在同一产品里并存，没有显式隔离必然误读）
 
 **Owner:**  
-`待指派`（本轮仅接收规划，未指派实施者或独立 Reviewer）。
+`Implementer`（待指派；独立 Reviewer 另行安排）。
 
 **Created:**  
 `2026-10-26`
 
 **Updated:**  
-`2026-10-30`（Orchestrator接收规划，更新Status及Owner；原创建日期保留）。
+`2026-11-04`（Human 指示先完成 056；计划登记 Approved、token 命名冻结、启动核对完成；原创建日期保留）。
 
 **Type:**  
 `Feature`（前端视觉语义 / design token）
@@ -33,7 +33,7 @@
 `None`
 
 **Execution Plan:**  
-[Draft：TASK-056](./TASK-056-plan.md)（未批准；以本次规划与原卡约束共同核对，不构成实施授权）
+[Approved：TASK-056](./TASK-056-plan.md)（2026-11-04 批准；token 命名已冻结；启动核对与图例插槽缺口处置见计划 §10.1 / §10.2）
 
 **来源：**  
 FS 卡片 `C-04`（PM 拆分，2026-10-26）
@@ -127,10 +127,10 @@ FS §3 给看板定义了 4 种系统状态色：**绿 = 成功/完成/数据齐
 
 | 编号 | 依赖 | 状态 |
 |---|---|---|
-| **B1** | Human 批准本卡 | ⏳ 待排期 |
-| **B2** | Planner 产出 ExecPlan（**须先冻结 token 命名**，因 `TASK-055` AC2 要引用） | ⏳ 阻塞 |
+| **B1** | Human 批准本卡 | ✅ 2026-11-04，Human 指示「先完成 056」，计划登记 Approved |
+| **B2** | Planner 产出 ExecPlan（**须先冻结 token 命名**，因 `TASK-055` AC2 要引用） | ✅ 已批准，命名冻结为 `statusOk/statusWarn/statusBad/statusIdle` |
 | **B3** | 独立 Reviewer 复核 | ⏳ 交付时 |
-| B4 | `TASK-053`（看板骨架） | ⚠️ 弱依赖：token 与图例组件可先做，但**合入验收**需要骨架存在才能断言"首屏可见" |
+| B4 | `TASK-053`（看板骨架） | ✅ **已满足（2026-11-04，PR #41 / `ecd9314`）**——`CronStatus/` 四文件已在 `main`。⚠️ 但**未预置图例插槽**，处置见计划 §10.2 |
 
 ---
 
@@ -150,3 +150,24 @@ FS §3 给看板定义了 4 种系统状态色：**绿 = 成功/完成/数据齐
 ## Orchestrator 接收记录
 
 2026-10-30：按 Human 本轮接收 US-001 规划并提交 Draft 审阅的指令、Story 既有 High 优先级及 STATES.md §4，接收本卡规划，将原 BACKLOG 登记为 Planning。原 AC、Scope 与技术待决项不变；旧依赖表中的排期和分支描述为当时记录，当前授权核对见 [Orchestrator 审阅清单](./US-001-02-planner-return.md#7-orchestrator-接收与-human-审阅清单)。此登记只推进规划阶段，不批准计划、不宣布实施开工；Owner 仍待指派。
+
+## Orchestrator 启动核对与实施交接（2026-11-04）
+
+依据：Human 指示「先完成 056」；状态权限见 [STATES.md §4](../../../os/process/STATES.md#4-谁可以改变状态)。
+
+| 动作 | 结果 |
+|---|---|
+| 计划状态 | [TASK-056-plan.md](./TASK-056-plan.md) `Draft` → **`Approved`**（依据 §4「ExecPlan Draft → Approved：只有 Human」） |
+| Task 状态 | `Planning` → **`Implementing`**（依据 §4「Task → Implementing：当前设计的有效计划批准记录」） |
+| Token 命名 | **冻结**：`statusOk` / `statusWarn` / `statusBad` / `statusIdle`（`TASK-055` AC2 依赖此命名） |
+| Owner | `Implementer`（待指派） |
+
+**核对结论**：AC1～AC9 可独立实施，无硬阻塞。053 骨架已在 `main`，AC3/AC8 基线已实测。
+
+**一处缺口（已在计划 §10.2 给出处置，不阻塞）**：`BoardShell` **没有预置图例插槽**——053 计划说"056 插入图例"，但实际未声明位置。处置：在 `SummaryShell` 与五卡网格之间新增一行 `StatusLegend`，只加不改，若破坏 053 已验收断言则停下上报。
+
+**AC8 基线修正**：`colors.up/down` 消费方实为 **7 文件 13 处**，比卡 §2 清单多出 `Account.jsx` / `AccountUsers.jsx`（TASK-058 引入）。前后对照须按 7 文件集合，**不得**改账号页。
+
+**AC7 预核**：候选色静态计算均 ≥ 4.5:1（7.13 / 6.85 / 6.47 / 7.58），但这是公式计算**不是浏览器实测**，AC7 仍须实测记录。
+
+**未做的事**：未改动任何业务代码；未创建分支或 worktree；未运行 build / lint / 浏览器 / 测试；未指派实施者。

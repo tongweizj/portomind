@@ -2,15 +2,17 @@
 
 ## Status
 
-Status：Draft
+Status：Approved
 
-Owner：Planner（本轮已完成规划草案；实施者及独立Reviewer待指派）
+Owner：Planner（规划已完成）→ 待指派 Implementer
 
 Related Task：[TASK-056](./TASK-056.md)；所属 [US-001](../../requirements/stories/active/US-001-cron-worker-health-and-data-completeness.md)。
 
-Branch / Base：未来在真实源码工作区从已核对基线新建 feature/TASK-056；本轮只读基线为 chore/agent-rules-refactor，HEAD 2bde9131b8d47e4460ce9f87ea801839e37e1f7f，工作区已有无关改动，不得清理或覆盖。
+Branch / Base：从 `main` 的 `dc4b15a` 新建 `feature/TASK-056`，在**独立 worktree** 中实施（不占用主工作区）。规划期只读基线为 `chore/agent-rules-refactor` @ `2bde913`，该提交是当前 `main` 的祖先，且 `git diff 2bde913..main` 对本卡目标文件（`design-tokens.js`、`CronStatus/`、`priceDisplay.js`）无差异——规划期结论仍成立。
 
-Approval：未批准。新增/调整AC的建议和条件分支均不是Human决定。原任务AC保持不变，冲突见 §6。
+Approval：2026-11-04，Human 明确「先完成 056」，据此登记 Draft → Approved。批准覆盖本文件 §1～§9 当前设计，不含其他任务。**§4 的 token 命名 `statusOk/statusWarn/statusBad/statusIdle` 随本次批准冻结**（`TASK-055` AC2 要引用）；候选色值同获批准，但须在实施时实测对比度，不达 4.5:1 时按 AC7 调整本次新增色。
+
+启动核对：2026-11-04 完成只读核对，结论见 §10.1。**发现一处真实缺口（图例无预置插槽），已在 §10.1 给出处置方案，不阻塞实施。**
 
 ## 1. Intent
 
@@ -39,9 +41,20 @@ components/CronStatus/statusTone.js 维护ok/warn/bad/unknown到token、文字�
 
 ## 6. Decisions
 
-候选命名与色值属于计划设计，Human批准本计划前不算冻结；如计划批准前需要设计取舍，直接在本节记录。
+**已冻结（随 2026-11-04 批准）**：
 
-决定详情与选项见回交 §4。Human批准前不得开始代码实施；有未决内容影响的分支不得按推荐值擅自实现。
+| 项 | 决定 | 依据 |
+|---|---|---|
+| Token 命名 | `statusOk` / `statusWarn` / `statusBad` / `statusIdle` | §4；`TASK-055` AC2 需引用，必须稳定 |
+| 候选色值 | `#166534` / `#854D0E` / `#B91C1C` / `#475569` | §4；静态计算白底对比度 7.13 / 6.85 / 6.47 / 7.58 均 ≥ 4.5:1，**实施时须以浏览器实测为准**（AC7） |
+| 映射位置 | 单一来源 `components/CronStatus/statusTone.js` | §4；AC3 检测式与单一归属要求 |
+| `unknown` 语义 | 只表示"未知/未跑/跳过"，不得替代业务成功 | §4；AC6 |
+
+**实施时仍需自行判断（属实现层，不需再审批）**：图例的具体位置与视觉形态、圆点最小尺寸（R-4）、灰态是否配虚线边框（R-6）。
+
+**发现的设计缺口（见 §10.1）**：`BoardShell` 未预置图例插槽。处置方案已在 §10.1 给出——在 `BoardShell` 内新增一行图例位，属对 053 骨架的**最小增补**，不改其结构契约。
+
+决定详情与选项见回交 §4。未决内容不得按推荐值擅自实现。
 
 ## 7. Verification
 
@@ -68,7 +81,52 @@ components/CronStatus/statusTone.js 维护ok/warn/bad/unknown到token、文字�
 
 ## 10. Implementer Handoff
 
-本计划未批准，不构成实施交接。批准后由Orchestrator核对状态、依赖和对应版本，再交Implementer。仅按§4/§5修改范围内文件；不能读到必要源码、触及范围/AC/重大设计变化或数据库前置缺失时暂停受影响部分。提交实际文件清单、版本、AC结果、妥协与未验证项。
+### 10.1 启动核对结果（2026-11-04，Orchestrator）
+
+依据：Human 指示「先完成 056」；状态权限见 [STATES.md §4](../../../os/process/STATES.md#4-谁可以改变状态)。本节为只读核对记录。
+
+**结论：设计有效，AC1～AC9 可独立实施，无硬阻塞。发现一处真实缺口（图例无预置插槽），处置方案见下，不阻塞。**
+
+| 启动项 | 核对事实 |
+|---|---|
+| 基线 | `main` = `dc4b15a`；`feature/TASK-056` 分支**不存在**，`git worktree list` 仅主工作区一条。需新建分支与 worktree。 |
+| 目标文件 | `client/src/constants/design-tokens.js` 干净、SHA256 `386b56e7…`；`grep status` **0 命中**，确认四态 token 尚未存在。 |
+| 依赖 B2 | 计划已批准、token 命名已冻结 → **已满足**。 |
+| 依赖 B4（053 骨架） | ✅ **已满足**：`CronStatus/` 四文件（BoardShell / SummaryShell / TaskCardShell / unknownValue）已在 `main`（PR #41）。 |
+| AC3 基线 | `grep -rn "colors\.up\|colors\.down" client/src/components/CronStatus/` → **0 行**。负向对照可安全注入。 |
+| AC8 基线 | 全仓 `colors.up\|colors.down` 消费方 **7 文件 13 处**：`priceDisplay.js`(3)、`Asset/AssetDetail.jsx`(2)、`Asset/AssetList.jsx`(1)、`Portfolio/KpiCards.jsx`(2)、`Portfolio/PositionOverview.jsx`(1)、`Account.jsx`(1)、`AccountUsers.jsx`(3)。**卡 §2 的清单少了账号页 2 个文件**（TASK-058 引入，用 `down` 绿表示"成功/启用"）→ AC8 前后对照须按 **7 文件**集合，且**不得**改账号页。 |
+| AC7 对比度预核 | 候选色静态计算（WCAG 公式，白底 `#FFFFFF`）：`#166534` 7.13:1 · `#854D0E` 6.85:1 · `#B91C1C` 6.47:1 · `#475569` 7.58:1，**均 ≥ 4.5:1**。⚠️ 这是公式计算**不是浏览器实测**，不能替代 AC7 的实测记录。 |
+| AC2 取色前提 | 卡 §2 称"Tailwind v4 编译为 `oklch()`"，但 `design-tokens.js` 是**普通 JS 导出的 hex 字面量**、组件用 inline style。`getComputedStyle` 取色仍应遵守（浏览器会归一化），但风险描述的前提在本卡目标文件上不成立。 |
+| 验证入口 | [DEPLOYMENT §7](../../../handbook/ops/DEPLOYMENT.md#7-验证与测试命令)：`cd client && npm run build && npm run lint`。`client/package.json` 有 `build`/`lint`，**无 `test`**；`node_modules/.bin/eslint` 为 v9.39.5；`playwright-core` 可解析。以上只证明工具可达，**不证明任何验证已通过**。 |
+
+### 10.2 ⚠️ 发现的缺口：图例没有预置插槽
+
+**事实**：`TASK-053` 计划 §4 写「056 插入图例」，但 **053 的 `BoardShell` 并没有声明图例插槽**——它只有 `SummaryShell`、`task-card-grid`（五卡）、`data-testid="board-shell"` 容器，没有任何 legend 位置。`SummaryShell` 内也只有 `health-dots` / `overall-badge` / `snapshot-at` 三个元素。
+
+**影响**：AC4 要求「图例首屏可见」，但没有现成挂载点。这不是 053 的缺陷（053 AC4 只要求六区域卡片位），而是两卡之间的**接口约定缺失**。
+
+**处置方案（已批准，按此实施）**：在 `BoardShell` 内、`SummaryShell` 之后、五卡网格之前，新增一行图例位：
+
+```jsx
+<BoardShell>
+  <SummaryShell ... />
+  <StatusLegend />        {/* ← 056 新增：一行四态图例，首屏可见 */}
+  <div data-testid="task-card-grid"> ... </div>
+</BoardShell>
+```
+
+约束：① 只**新增**这一行，不改 `BoardShell` 的现有 props、不改五卡结构、不改 `SummaryShell`；② `StatusLegend` 自带 `data-testid="status-legend"`，便于 AC4 断言；③ 若实现时发现新增该行会破坏 053 已验收的断言（如"总览条恰好 5 灯"），**停下上报**，不要改 053 的断言。
+
+### 10.3 已准备、尚未派发的交接
+
+- **需求**：[TASK-056](./TASK-056.md) §1～§4。
+- **设计与验证**：本计划 §4 / §5 / §7。
+- **写入边界**：仅 `client/src/constants/design-tokens.js`（只加不改）、新增 `components/CronStatus/statusTone.js` 与 `StatusLegend`（文件名自定）、`BoardShell.jsx` 新增一行。**不改** `server/` `shared/` `cron-worker/`，不改行情页/持仓页/KPI 卡/账号页配色，不做暗色主题，不做数据与布局。
+- **交付要求**：文件清单与 SHA256、AC1～AC9 逐条结果、AC3 负向对照、AC7 实测对比度值、AC8 七文件集合前后对照、build/lint 实际输出、妥协与未验证项。
+
+### 10.4 剩余启动动作
+
+从 `main`（`dc4b15a`）建 `feature/TASK-056` 独立 worktree，记录路径/分支/基线/工作区状态/工具可用性，然后指派 Implementer。本轮**未执行**该动作，未切换或清理主工作区。
 
 ## 11. Implementation Record
 
