@@ -11,7 +11,7 @@
 | Status | Implementing（Human 2026-11-04 确认；053 已结案，056 已进入实施） |
 | 交付目录 | [US-001 过程资料](./development/delivery/US-001)（6张专属任务卡、2份Approved计划（053 Completed、056 Approved）、5份Draft、2份交接记录；复用054保持唯一原位置） |
 | PM / 验收负责人 | PM（本 chat 需求整理）/ Human |
-| 下一步 | **053（`Merged` #41）、056（`Merged` `53edb8e`）均已结案并合入 `main`**。**当前推进 TASK-055**：计划已批准、启动核对完成，B1/B2/B4/B5/B6 全部解除，待独立 worktree 与 Implementer 实施。余：057/063/064 仍为 Draft，D-01～D-03 未决 |
+| 下一步 | **053（`Merged` #41）、056（`Merged` `53edb8e`）已结案并合入**。**TASK-055 已交付并进入 Reviewing**（`3991df8`，45/45 PASS），待独立 Reviewer 复核。余：057/063/064 仍为 Draft，D-01～D-03 未决 |
 | 阻塞 / 待决策 | **053、056 无阻塞，已结案并合入**。**055 可实施**，无硬缺口；唯一注意项：AC8①（整体失败的五卡统一降级）归 `TASK-063`，本卡只做单卡数据异常与本卡降级表现。D-01～D-03 仍未决（影响 057/064/063）。没有新增状态或自动置 Blocked |
 
 ### 下挂 Task
@@ -20,7 +20,7 @@
 |---|---|---|---|---|---|---|
 | [TASK-053](./development/delivery/US-001/TASK-053.md) | 看板入口及骨架 | AC-01、02、07、10、11 | Completed | — | **已结案（2026-11-04）**：实现 `c858521`，经 **PR #41** 合入 `main`（`ecd9314`）；33/33 + 7/7 PASS，提交后复验 build 0 / eslint 0-0 / check:ignored PASS；Reviewer `Pass with issues`，F-01/F-02 已修复，F-03 已关闭 | [Completed](./development/delivery/US-001/TASK-053-plan.md)，仅053设计 |
 | [TASK-054](./development/tasks/completed/TASK-054-cron-status-aggregate-api.md) | 聚合快照读侧（既有产出） | AC-02～08、10、11 的读侧支撑 | Completed | 既有结案记录 | 复用证据前核对真实项目版本 | [已归档计划](./development/exec-plans/completed/TASK-054-cron-status-aggregate-api.md) |
-| [TASK-055](./development/delivery/US-001/TASK-055.md) | 价格完成度 | AC-03、04、07、10 | Implementing | Implementer（待指派） | **2026-11-04 计划已批准，启动核对完成**；B1/B2/B4/B5/B6 全部解除（054 接口、053 骨架、056 token 均已在 `main`）；D-04 已折入 AC6/8/9；⚠️ AC8① 的整体失败归 063 | [Approved](./development/delivery/US-001/TASK-055-plan.md)（§10.1 启动核对） |
+| [TASK-055](./development/delivery/US-001/TASK-055.md) | 价格完成度 | AC-03、04、07、10 | Reviewing | Reviewer（待指派） | **实现+自测完成**：`feature/TASK-055` @ `3991df8`（worktree `D:/projects/portomind-055`），脚本 45/45 PASS；AC6 唯一换算已抽验（1 处）、AC7 配色走 056 映射、无越界。⚠️ AC8① 归 063（已如实标注为「部分」）。**待独立 Reviewer 复核**；分支基点落后 `main`（`53edb8e` vs `45030b0`），合入前需 rebase | [Approved](./development/delivery/US-001/TASK-055-plan.md)（§11 实施记录） |
 | [TASK-056](./development/delivery/US-001/TASK-056.md) | 系统状态色与图例 | AC-02、09 | Completed | — | **已结案并合入（2026-11-04）**：`feature/TASK-056` @ `31b516e` → `Merged` **`53edb8e`**；Reviewer `Pass with issues`，无 BLOCKER/MAJOR，AC1～AC9 全满足 + AC2/AC3 负向对照成立，053 回归 PASS；余 3 项 MINOR。`status*` token 与 `statusTone.js` 已在 `main` | [Completed](./development/delivery/US-001/TASK-056-plan.md)（§12 审查、§13 结案） |
 | [TASK-057](./development/delivery/US-001/TASK-057.md) | 结果写侧及再平衡父任务 | AC-05～08 的写侧支撑 | Planning | 待指派 | 待D-01～03、AC10口径、环境核对及计划批准 | [Draft](./development/delivery/US-001/TASK-057-plan.md)，未批准 |
 | [TASK-063](./development/delivery/US-001/TASK-063.md) | 五卡接入、总览与刷新 | AC-02、05～08、10、11 | Planning | 待指派 | 已登记；**D-04 已裁决**（需按 AC8① 实现五卡统一降级）；余待 D-01～03、055 接口约定及最终契约 | [Draft](./development/delivery/US-001/TASK-063-plan.md)，未批准 |
@@ -51,7 +51,7 @@
 | 统计范围 | 总数 | Backlog | Planning | Implementing | Reviewing | Blocked | Completed |
 |---|---:|---:|---:|---:|---:|---:|---:|
 | 全部已登记 Story（排除取消） | 1 | 0 | 1 | 0 | 0 | 0 | 0 |
-| 当前 Story 已关联 Task | 7 | 0 | 3 | 1 | 0 | 0 | 3 |
+| 当前 Story 已关联 Task | 7 | 0 | 3 | 0 | 1 | 0 | 3 |
 | 尚未关联 Story 的未完成 Task | 5 | 1 | 4 | 0 | 0 | 0 | 0 |
 
 > 统计来自卡片；旧词按 STATES.md §7.1 映射，不证明当前实施授权。已关联任务不重复计入未关联任务。TASK-054 的既有 Completed 计为 1 个支撑任务完成，不表示当前 Story 已验收。共 11 条历史完成记录保留作证据索引，与本 Story 进度不可相加；本轮新增登记2卡已计入，现无待登记卡。

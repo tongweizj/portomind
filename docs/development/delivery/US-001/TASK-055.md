@@ -9,19 +9,19 @@
 **规划核对：** [Planner 回交说明](./US-001-02-planner-return.md)；新增关联不改变本卡 AC、原状态、既有批准或结案结论。
 
 **Status:**  
-`Implementing`（2026-11-04，计划已批准，启动核对完成；待 Implementer 在独立 worktree 中实施）。
+`Reviewing`（2026-11-04，实现与自测完成于 worktree `D:/projects/portomind-055` @ `3991df8`，等待独立 Reviewer 复核）。
 
 **Priority:**  
 `High`（P0 Must Have。它是 FS 核心主张"任务跑绿 ≠ 数据到位"的**唯一可视化落点**）
 
 **Owner:**  
-`Implementer`（待指派；独立 Reviewer 另行安排）。
+`Reviewer`（待指派独立会话复核；Reviewer ≠ Implementer）。
 
 **Created:**  
 `2026-10-26`
 
 **Updated:**  
-`2026-11-04`（计划登记 Approved、启动核对完成、Task → Implementing；原创建日期保留）。
+`2026-11-04`（登记实现交付与 Task → Reviewing；原创建日期保留）。
 
 **Type:**  
 `Feature`（前端数据态展示，纯客户端）
@@ -165,3 +165,28 @@ Human 就 [D-04（055 原 AC6/8/9 澄清）](./US-001-02-planner-return.md#d-040
 **影响的下游**：`TASK-063`（共享请求层，需按 AC8 ① 实现整体失败）与 `TASK-055-plan.md`（§4 设计、§6 Decisions、§7 验证映射）须同步对齐；本卡已更新，计划的同步状态见其 §6。
 
 **未做的事**：未修改 Story AC；未修改 `server/` `shared/` 任何代码；未批准计划；未指派 Owner。
+
+## Orchestrator 交付接收记录（2026-11-04）
+
+依据 [STATES.md §4](../../../os/process/STATES.md#4-谁可以改变状态)：「Task → Reviewing：Implementer 提供改动清单、自测证据、可审对象和已知妥协」。四项齐备，故登记 `Implementing` → **`Reviewing`**。
+
+| 项 | 事实 |
+|---|---|
+| Worktree | `D:/projects/portomind-055`（主工作区未被本卡改动） |
+| 分支 / 提交 | `feature/TASK-055` @ **`3991df8`** |
+| 改动规模 | 代码 5 文件 +1150（`priceDataState.js`、`PriceTaskCard.jsx`、3 个验收脚本/夹具）+ 计划 §11 |
+| 范围核对 | 无 `server/` `shared/` `cron-worker/` 改动；未改行情页/账号页/`TaskCardShell`/`BoardShell`/`statusTone` |
+| 自测证据 | 计划 §11.4：AC1～AC11 逐条，脚本 **45/45 PASS** |
+| 已知妥协 | AC8①（整体失败的五卡统一降级）**由 TASK-063 承接**，本卡只做价格卡局部降级——已如实标注为「部分」，未记为通过 |
+
+**Orchestrator 独立抽验（不采信自述）**
+
+| 项 | 结果 |
+|---|---|
+| AC6 唯一换算 | `grep -rn "\* 100" client/src/components/CronStatus/` → **仅 `priceDataState.js:39` 一处** ✓ |
+| AC7 配色来源 | 组件配色走 `view.tone.color`（056 映射），`runState` 仅渲染徽章 ✓ |
+| 越界改动 | `git diff main..HEAD -- server/ shared/ cron-worker/` **空**；行情页/账号页**零改动** ✓ |
+
+**⚠️ 分支基点说明（非越界）**：`feature/TASK-055` 从 `53edb8e` 切出，早于 Orchestrator 的 `45030b0`（055 批准登记）。故分支内的 `TASK-055.md` / `TASK-055-plan.md` 等 docs 仍显示 `Planning` / `Draft`，这是**分支基点落后**，不是 Implementer 改错文档。合入前需先 rebase 或 merge `main`。
+
+**未做的事**：未重跑 build / lint / 浏览器（Reviewer 将独立复验）；未改 AC / Scope / 代码；未提交、未合入、未填 `Merged`、未关闭。
