@@ -9,19 +9,19 @@
 **规划核对：** [Planner 回交说明](./US-001-02-planner-return.md)；新增关联不改变本卡 AC、原状态、既有批准或结案结论。
 
 **Status:**  
-`Implementing`（2026-11-04，计划已批准、token 命名已冻结，启动核对完成；待 Implementer 在独立 worktree 中实施）。
+`Reviewing`（2026-11-04，实现与自测完成于 worktree `D:/projects/portomind-056` @ `6f4b491`，等待独立 Reviewer 复核）。
 
 **Priority:**  
 `High`（P0 Must Have。它是看板"能不能被正确读懂"的前提：本项目行情页是**红涨绿跌**，看板是**红坏绿好**，两套语义在同一产品里并存，没有显式隔离必然误读）
 
 **Owner:**  
-`Implementer`（待指派；独立 Reviewer 另行安排）。
+`Reviewer`（待指派独立会话复核；Reviewer ≠ Implementer）。
 
 **Created:**  
 `2026-10-26`
 
 **Updated:**  
-`2026-11-04`（Human 指示先完成 056；计划登记 Approved、token 命名冻结、启动核对完成；原创建日期保留）。
+`2026-11-04`（登记实现交付与 Task → Reviewing；原创建日期保留）。
 
 **Type:**  
 `Feature`（前端视觉语义 / design token）
@@ -171,3 +171,26 @@ FS §3 给看板定义了 4 种系统状态色：**绿 = 成功/完成/数据齐
 **AC7 预核**：候选色静态计算均 ≥ 4.5:1（7.13 / 6.85 / 6.47 / 7.58），但这是公式计算**不是浏览器实测**，AC7 仍须实测记录。
 
 **未做的事**：未改动任何业务代码；未创建分支或 worktree；未运行 build / lint / 浏览器 / 测试；未指派实施者。
+
+## Orchestrator 交付接收记录（2026-11-04）
+
+依据 [STATES.md §4](../../../os/process/STATES.md#4-谁可以改变状态)：「Task → Reviewing：Implementer 提供改动清单、自测证据、可审对象和已知妥协」。三项齐备，故登记 `Implementing` → **`Reviewing`**。
+
+| 项 | 事实 |
+|---|---|
+| Worktree | `D:/projects/portomind-056`（主工作区未被本卡改动） |
+| 分支 / 提交 | `feature/TASK-056` @ **`6f4b491`**（父 `87e5d68` = `main`） |
+| 改动规模 | 8 文件，+759/−1（新增 5、修改 3） |
+| 范围核对 | 无 `server/` `shared/` `cron-worker/` 改动；未改行情页/持仓页/KPI 卡/账号页 |
+| 自测证据 | 计划 §11.3：AC1～AC9 逐条 PASS；脚本 31/31、053 结构回归 5/5 |
+| 已知妥协 | 计划 §11.8 六项（AC6 卡片文案待 063 接线、未跑 053 完整 e2e、未做视觉走查、esbuild postinstall 被拦截、无 CI、未做暗色/动画） |
+
+**Orchestrator 独立抽验（不采信自述，只做可快速复核的三项）**
+
+| 项 | 结果 |
+|---|---|
+| AC3 `CronStatus/` 内行情语义 token | **0 命中** ✓ |
+| AC8 全仓 `colors.up\|down` 消费方 | **7 文件 13 处**，与基线一致 ✓ |
+| 越界改动 | `git diff main..HEAD -- server/ shared/ cron-worker/` **空** ✓ |
+
+**未做的事**：未重跑 build / lint / 浏览器验收（同基线同一交付已有 Implementer 证据，且 Reviewer 将独立复验）；未改 AC / Scope / 代码；未提交、未合入、未填 `Merged`、未关闭。
