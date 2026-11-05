@@ -120,7 +120,121 @@ missing列表按symbol/name/market展示和折叠；缺失总数用实际数组�
 
 ## 11. Implementation Record
 
-尚未实施。
+**状态：** 实施完成（2026-11-04）。本卡 Task Status **未改动**（仍为 `Planning`，状态权限归 Orchestrator / Human）；计划 Status 亦未改（`Draft`，批准权限不在 Implementer）。本次实施依据 Human 2026-11-04 的直接实施指令与已裁决的 D-04 口径。
+
+### 11.1 实施环境
+
+| 项 | 实际值 |
+|---|---|
+| Worktree | `D:\projects\portomind-055`（主工作区 `D:\projects\portomind` 未被本卡改动） |
+| Branch | `feature/TASK-055` |
+| BASE | `main` @ `53edb8e`（TASK-056 已合入；`statusOk/statusWarn/statusBad/statusIdle`、`statusTone.js`、`StatusLegend.jsx` 均已在 main） |
+| 分支干净度 | 开工时 `git status --porcelain` 为空 |
+| Node / npm | `node v24.20.0` / `npm 12.2.1` |
+| 依赖 | worktree 无 `node_modules`，选择 **`npm ci` 隔离安装**（515 packages）；`esbuild` postinstall 被本机 allowScripts 策略拦截，平台二进制已安装，build 正常 |
+
+### 11.2 改动文件与 SHA256
+
+| 文件 | 类型 | 说明 | SHA256 |
+|---|---|---|---|
+| `client/src/components/CronStatus/priceDataState.js` | 新增 | 价格数据态纯展示派生：唯一百分比换算、四态/三型空态/非法值判定 | `81cb101d9e1e4a197902363a15442d33f9d86bea3a17b308180b9f8f43aa8703` |
+| `client/src/components/CronStatus/PriceTaskCard.jsx` | 新增 | 价格卡展示组件（目标日/应采已采/百分比/进度条/missing 展开/错误与空态），仅消费 056 映射 | `409ea9e6654da912cb9aa0b8032dce86400fa2146e8658b4c5001401dd3d79ee` |
+| `client/scripts/verify-task-055.cjs` | 新增（验收脚本） | AC1–AC10 实测：静态断言 + Vite + Chrome CDP（含时区覆盖） | `27b5390e68a2556b1a598cbf490d1f62ed6bb6a1b1ce898f6f14a0539f4ef46c` |
+| `client/scripts/fixtures/task055-fixture.html` | 新增（验收夹具） | 仅验收用页面 | `4bdbc63c7abc381dd193b6a9197f6d5d6b8d573774bcb3c89609d24733b22c02` |
+| `client/scripts/fixtures/task055-fixture.jsx` | 新增（验收夹具） | 8 个价格卡场景 + AC8② 五卡上下文模拟 | `76d264015300f45d03063723a1d1d9f38f20f16f7cc3c8a15c882a58823c280a` |
+| `docs/development/delivery/US-001/TASK-055-plan.md` | 修改 | 本实施记录（§11） | 见交付消息（本文件写入后计算；自引用无法内嵌自身最终哈希） |
+
+**未改动：** `server/`、`shared/`、`cron-worker/`、`TaskCardShell.jsx`、`BoardShell.jsx`、`statusTone.js`、`StatusLegend.jsx`、`LogViewer.jsx`、行情页/账号页、`client/package.json`、lockfile。
+
+### 11.3 组件契约（供 TASK-063 接入）
+
+`PriceTaskCard` 为纯展示组件，**不发请求**，由 TASK-063 的共享请求层传入单次快照：
+
+```jsx
+<PriceTaskCard
+  dataState={{ targetMarketDate, calendarPrevOpenDay, expected, fetched,
+               missing, byMarket, notListed, unsupportedMarkets, dayPriceSymbolCount }}
+  dataStateLevel="ok" | "warn" | "bad" | "unknown"
+  lastRunAt={...}       // 仅展示
+  runState={...}        // 仅渲染运行态徽章，不参与配色（AC7）
+  requestError={...}    // 063 整体请求失败时传入 → “快照获取失败 + 可重试”
+  snapshotAt={...}      // 063 上次成功快照时间 → 明示“数据为 X 时快照，刷新失败”
+  onRetry={fn}
+/>
+```
+
+- 配色唯一来源：`dataStateLevel → getStatusTone()`（056）；本卡不改 053/056 已交付组件，也不把它们复制成第二份状态色表。
+- 唯一展示换算：`priceDataState.computePercentage(fetched, expected)`（`* 100` 全目录仅 1 处），钳制 0–100；`expected === 0` 返回 `null`。
+- 空态分型：`expected === 0 → empty（灰，无应采资产）`；`fetched === 0 && expected > 0 → all-missing（红，疑似整体故障，不列清单）`；`requestError → request-error（快照获取失败）`。
+- 防御：`dataState` 非对象或 `expected/fetched` 非有限非负数 → invalid（红，“价格数据异常”），不产生 `NaN/Infinity`，不当 0。
+- 接入方式：TASK-063 决定在 BoardShell 的 price-sync 槽位渲染本组件（或把其数据传入）；本卡未改 BoardShell/LogViewer，避免越界与制造第二请求层。
+
+### 11.4 AC1～AC11 逐条结果（实测）
+
+| AC | 结果 | 证据 |
+|---|---|---|
+| AC1 目标市场日 + 应采/已采 + 百分比 + 进度条；不写“今天” | **PASS** | 夹具 ok：文本含“目标市场日（上一开市日）：2026-10-23”“应采 / 已采：40 / 40”“100%”与 `role=progressbar`；无“今天” |
+| AC2 四态配色走 056 token，不硬编码 | **PASS** | 四态 `price-tone-dot` 计算色分别 = `statusOk rgb(22,101,52)` / `statusWarn rgb(133,77,14)` / `statusBad rgb(185,28,28)` / `statusIdle rgb(71,85,105)`，期望值来自 token 探针计算色；静态扫描价格卡文件无 hex 色值 |
+| AC3 missing 可展开，显示 symbol+name+market；收起显示“缺 N 支” | **PASS** | partial：收起 `details.open=false` + “缺 2 支”；点击后 2 项分别含 `000001/平安银行/CN`、`600000/浦发银行/CN` |
+| AC4 expected=0：百分比“—”、宽度 0、无 NaN/Infinity/0% | **PASS** | empty：`price-percent` 文本 “—”，fill 宽度 `0`，卡内文本不匹配 `/NaN|Infinity|0%/` |
+| AC5 fetched>expected 钳制 100%，不溢出 | **PASS** | over（5/3）：完成度 `100%`；fill 宽 1144 ≤ track 1146；卡片 `scrollWidth=1178 ≤ clientWidth=1178` |
+| AC6 唯一展示换算，不改业务口径 | **PASS** | `grep -Rno "\* 100" src/components/CronStatus` → 仅 `priceDataState.js:39` 1 处；静态断言未对 `expected/fetched/targetMarketDate` 赋值；换算结果钳制 |
+| AC7 不信任 status：SUCCEEDED + fetched=0 仍红 | **PASS** | status-lie：运行徽章显示 `SUCCEEDED`，tone dot = `statusBad`，`data-level=bad`（静态亦确认数据态文件不读 `lastRun.status`） |
+| AC8② 单卡数据异常只影响价格卡 | **PASS** | 夹具“五卡”上下文：4 个 `TaskCardShell` 正常渲染，1 个 `PriceTaskCard` 为 `invalid` + “价格数据异常”，其余四卡无价格异常标记 |
+| AC8① 整体请求失败 | **部分（由 TASK-063 承接）** | 本卡实现价格卡局部降级：`requestError` → 红“快照获取失败” + 旧快照提示“数据为 … 时快照，刷新失败” + 重试按钮；**五卡统一降级/原始日志不受影响的整体验收归 TASK-063**，本卡未实现共享请求层，**未验整体失败**（按范围约定，不记为通过） |
+| AC9 三型空态 | **PASS** | ① expected=0：灰 `statusIdle` + “无应采资产”，不出现“全部正常”；② fetched=0：红 + “疑似整体故障”且 0 条 missing item；③ requestError：红 + “快照获取失败” |
+| AC10 UTC+8 与 UTC-7 目标日文本一致 | **PASS** | CDP `Emulation.setTimezoneOverride`：`Asia/Shanghai` vs `America/Los_Angeles`，两时区下目标日均为 `2026-10-23`；价格卡无 `new Date`/本地化日期调用 |
+| AC11 build + eslint | **PASS** | `npm run build` → `✓ built in 2.77s`（exit 0）；`../node_modules/.bin/eslint "src/**/*.{js,jsx}"` → exit 0、无输出 |
+
+**验收汇总：`node client/scripts/verify-task-055.cjs` → 45/45 PASS。**
+
+### 11.5 负向对照记录（均先备份、故意破坏、确认断言失败、恢复并比对 SHA256）
+
+| AC | 临时缺陷 | 观察到的失败（摘录） | 恢复 |
+|---|---|---|---|
+| AC2 | 将 `getStatusTone(level)` 固定为 `'ok'` | `FAIL AC2 partial 计算色 == statusWarn … actual=rgb(22,101,52)`；`FAIL AC2 all-missing …`；`FAIL AC2 empty …`；36/45 PASS | 恢复后 SHA256 = `81cb101d…8703` |
+| AC4 | 去掉 `computePercentage` 的 `expected <= 0` 守卫 | `FAIL AC4 expected=0 完成度为“—” — text=NaN%`；`FAIL AC4 进度条宽度为 0 — width=1144`；42/45 PASS | 恢复后 SHA256 = `81cb101d…8703` |
+| AC7 | 组件用 `runState === 'SUCCEEDED' ? 'ok'` 覆盖 `dataStateLevel` | `FAIL AC7 SUCCEEDED + fetched=0 仍为红色 — dot=rgb(22,101,52)`；`FAIL AC7 卡片数据态不是 ok`；41/45 PASS | 恢复后 SHA256 = `409ea9e6…79ee` |
+| AC9 | expected=0 强制映射 `'ok'`，文案改为“全部正常” | `FAIL AC9① expected=0 → 灰 + “无应采资产” — dot=rgb(22,101,52)`；`FAIL AC9① 不出现“全部正常”`；41/45 PASS | 恢复后 SHA256 = `81cb101d…8703` |
+
+每次恢复后均重新运行完整验收并回到 **45/45 PASS**；工作区无残留修改（新增文件为预期交付物）。
+
+### 11.6 验证命令与输出（摘录）
+
+```text
+$ node client/scripts/verify-task-055.cjs
+PASS  AC1 渲染目标市场日字符串 — 目标市场日（上一开市日）：2026-10-23
+PASS  AC2 ok 计算色 == statusOk — actual=rgb(22, 101, 52) expected=rgb(22, 101, 52)
+PASS  AC3 收起时显示“缺 2 支” — 缺 2 支
+PASS  AC4 expected=0 完成度为“—” — text=—
+PASS  AC5 进度条不溢出轨道 — fill=1144 track=1146
+PASS  AC7 SUCCEEDED + fetched=0 仍为红色（statusBad）
+PASS  AC8② 仅价格卡异常
+PASS  AC9① expected=0 → 灰 + “无应采资产”
+PASS  AC10 UTC+8 与 UTC-7 下目标日文本一致
+===== TASK-055 验收：45/45 PASS =====
+
+$ cd client && npm run build
+✓ built in 2.77s
+
+$ cd client && ../node_modules/.bin/eslint "src/**/*.{js,jsx}"
+(exit 0，无输出)
+```
+
+### 11.7 已知妥协与未验证项
+
+1. **AC8① 由 TASK-063 承接（必须标注）**：本卡只实现价格卡的局部降级（`requestError` / 旧快照提示 / 重试入口）；「五卡统一降级 + 原始日志不受影响」的共享请求层与整体验收归 TASK-063，本卡**未实现、未验证**，不记为通过。
+2. **本卡未把组件接入实际页面**：`LogViewer` 仍渲染无数据的 `BoardShell`；`PriceTaskCard` 是供 TASK-063 接入的展示组件（计划 §4 明确“消费 063 提供的单次快照 props”）。因此本卡没有真实 `GET /api/cron/status` 的端到端运行证据；所有场景为夹具构造数据。
+3. **AC8② 的“五卡”上下文为夹具模拟**：用 4 个 `TaskCardShell` + 1 个 `PriceTaskCard` 组成；不是真实 BoardShell 集成（BoardShell 尚未有价格数据槽位）。
+4. **AC10 的时区验证**：用 Chrome CDP `Emulation.setTimezoneOverride` 覆盖 `Asia/Shanghai` 与 `America/Los_Angeles`；目标日本身是服务端字符串，不依赖浏览器本地日期。移动端/其他时区未测。
+5. **视觉走查**：只验证 1440×900 视口下的布局与宽度；未做其他视口、缩放、暗色主题（out of scope）。
+6. **`npm run lint`（`eslint .`）**：仓库既有 `verify-price-display.cjs` / `vite.config.js` 的 2 个 error 与本次无关；AC11 指定的 `eslint "src/**/*.{js,jsx}"` 通过（0 error 0 warning）。
+7. 运行态徽章显示原始 `runState`（如 `SUCCEEDED`），未做中文/时间映射；AC7 只要求独立徽章，不要求文案本地化。
+8. 重试按钮仅验证存在与可点击回调接线，未验证实际重试成功（请求层归 063）。
+
+### 11.8 交付状态
+
+实现与验证完成；**Task Status 保持 `Planning`**（未改 AC/Scope，未改 053/056 契约），等待 Orchestrator 登记 `Reviewing` 并安排独立 Reviewer。
 
 ## 12. Review Record
 
