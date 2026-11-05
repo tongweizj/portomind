@@ -9,7 +9,7 @@
 **规划核对：** [Planner 回交说明](./US-001-02-planner-return.md)；新增关联不改变本卡 AC、原状态、既有批准或结案结论。
 
 **Status:**  
-`Planning`（2026-10-30，Orchestrator 已接收规划并提交 Human 审阅；Draft 未批准，未获业务代码实施授权）。
+`Planning`（2026-11-04，Human 已就 D-04 三项作出裁决并更新 AC6/AC8/AC9；**计划仍为 Draft，未获实施授权**）。
 
 **Priority:**  
 `High`（P0 Must Have。它是 FS 核心主张"任务跑绿 ≠ 数据到位"的**唯一可视化落点**）
@@ -21,7 +21,7 @@
 `2026-10-26`
 
 **Updated:**  
-`2026-10-30`（Orchestrator接收规划，更新Status及Owner；原创建日期保留）。
+`2026-11-04`（Human 裁决 D-04：更新 AC6 / AC8 / AC9；原创建日期保留）。
 
 **Type:**  
 `Feature`（前端数据态展示，纯客户端）
@@ -33,7 +33,7 @@
 `None`
 
 **Execution Plan:**  
-[Draft：TASK-055](./TASK-055-plan.md)（未批准；以本次规划与原卡约束共同核对，不构成实施授权）
+[Draft：TASK-055](./TASK-055-plan.md)（**D-04 已裁决，AC 已更新**；计划本身仍待 Human 批准，未构成实施授权）
 
 **来源：**  
 FS 卡片 `C-03`（PM 拆分，2026-10-26）
@@ -77,10 +77,10 @@ FS 卡片 `C-03`（PM 拆分，2026-10-26）
 | AC3 | `0 < fetched < expected` 时 missing 清单**可展开**，每项至少显示 `symbol` + `name` + `market`；收起时显示条数（如"缺 2 支"）。 |
 | AC4 | **数值防御**：`expected === 0` 时百分比显示"—"，进度条宽度 0，**不出现 `NaN` / `Infinity` / `0%`**（`0/0` 的正向断言：构造 `expected=0, fetched=0`，断言 DOM 文本中无 `NaN`、无 `Infinity`）。 |
 | AC5 | **进度条不溢出**：`fetched > expected`（异常数据）时宽度钳制在 100%，且**不把卡片顶破**（构造 `fetched=5, expected=3` 断言视觉宽度 ≤ 轨道宽度）。 |
-| AC6 | **只渲染不自算**：`grep -rn "expected" client/src/components/CronStatus/`（或 ExecPlan 冻结的目录）中不存在除法/百分比计算逻辑；百分比直接取服务端字段或用同一函数一次算完（检测式：不得出现两处以上 `* 100`）。 |
+| AC6 | **允许一处纯展示换算，禁止重算业务口径**：前端**可以**由 `fetched / expected` 算出显示百分比并据此画进度条（接口不返回 `percentage`，这是唯一可行方式，**Human 2026-11-04 裁决**）。约束：① 该换算只能有**一处**实现（唯一 helper），检测式 `grep -c "\* 100"` 在该目录内 ≤ 1；② 换算只做**展示**——不得自行判定谁是"应采"、不得改 `expected` / `fetched` / `targetMarketDate` 的取值、不得用 `lastRun` 反推；③ 换算结果必须钳制在 0–100（见 AC5）；④ 业务口径（哪些资产算应采）只由 `TASK-054` 后端派生，前端发现口径错误应回报而非前端补偿。 |
 | AC7 | **不信任 `status`**：卡的配色与完成度**不得**读取 `lastRun.status`；`status` 仅用于第二行"运行态徽章"文案（如"已运行 03:00 / 失败"）。负向断言：把接口返回的 `status` 改成 `SUCCEEDED` 但 `fetched=0`，断言卡片仍为**红**。 |
-| AC8 | **接口失败不拖垮全局**：`/api/cron/status` 请求失败时，本卡显示局部错误态（可重试），其他 4 张卡与两个原始日志 tab **不受影响**（`route(..., r => r.abort())` 实测）。 |
-| AC9 | **契约未就绪的显式降级**：`dataState` 为 `null`（服务端 AC9 空态）时，卡片显示"暂无运行记录"，**不得**渲染成绿色"全部正常"。 |
+| AC8 | **失败分层，不拖垮全局**（Human 2026-11-04 裁决：`/api/cron/status` 是**单端点返回五卡数据**，无法只让一张卡失败，故按两种失败分别验收）：<br>**① 整体失败**——请求本身失败（网络错误 / 5xx / abort）时，五张卡**统一**降级为"快照获取失败 + 可重试"，**不得**显示任何绿色或伪造的完成度；若存在上次成功快照，明示"数据为 X 时快照，刷新失败"；两个原始日志 tab **不受影响**（它们走独立接口，此条可实测）。<br>**② 单卡数据异常**——请求成功但价格段字段异常（缺 `dataState`、`expected` 非数、字段为 `null`）时，**只有价格卡**显示异常态，其余四卡正常渲染。 |
+| AC9 | **空态必须分型，不得一律"暂无记录"**（Human 2026-11-04 裁决：价格卡的 `dataState` 恒为对象、**不会**为 `null`——它由 `assets × prices` 现算，`contractReady` 恒为 `true`；`null` 是完整性卡/再平衡卡的空态，与本卡无关）。价格卡须区分三种无数据情形：<br>**① `expected === 0`**（节假日 / 无 active 资产 / 全部未上市）→ 显示"无应采资产"，灰色，**不出现 0%**；<br>**② `fetched === 0 && expected > 0`**（全缺）→ 显示"疑似整体故障"，红色，**不逐条列 missing**（见 R-2）；<br>**③ 请求失败**（见 AC8 ①）→ 显示"快照获取失败"。<br>三种情形均**不得**渲染成绿色或"全部正常"。 |
 | AC10 | 日期与时区口径与后端一致：目标日按 `MARKET_TIMEZONE` 展示，不因浏览器本地时区偏移一天（构造浏览器时区为 `UTC+8` 与 `UTC-7` 两种，断言目标日文本相同）。 |
 | AC11 | `npm run build --workspace client` 通过；`cd client && ../node_modules/.bin/eslint "src/**/*.{js,jsx}"` **0 error 0 warning**。 |
 
@@ -149,3 +149,19 @@ FS 卡片 `C-03`（PM 拆分，2026-10-26）
 ## Orchestrator 接收记录
 
 2026-10-30：按 Human 本轮接收 US-001 规划并提交 Draft 审阅的指令、Story 既有 High 优先级及 STATES.md §4，接收本卡规划，将原 BACKLOG 登记为 Planning。原 AC、Scope 与技术待决项不变；旧依赖表中的排期和分支描述为当时记录，当前授权核对见 [Orchestrator 审阅清单](./US-001-02-planner-return.md#7-orchestrator-接收与-human-审阅清单)。此登记只推进规划阶段，不批准计划、不宣布实施开工；Owner 仍待指派。
+
+## D-04 裁决记录（2026-11-04，Human）
+
+Human 就 [D-04（055 原 AC6/8/9 澄清）](./US-001-02-planner-return.md#d-04055原ac689澄清不改story-ac) 作出裁决，三项全部采纳推荐方案。**只改本卡 AC，不改 Story AC、不改 server/ 代码。**
+
+| 子项 | 原 AC 的问题 | Human 裁决 | 落点 |
+|---|---|---|---|
+| **AC6** | 原文「只渲染不自算」禁止除法，但接口**不返回 `percentage`**（实测 `cronStatus.service.js` 价格 `dataState` 只有 `expected`/`fetched`），而 AC1 要求显示百分比 → **自相矛盾** | 「验收标准错了，应该允许前端做这样的简单计算」→ **允许一处纯展示换算**，禁止重算业务口径 | AC6 已重写 |
+| **AC8** | 原文假设「每张卡各自请求」，但 `/api/cron/status` 是**单端点返回五卡数据**，abort 该请求无法只让一张卡失败 | 采用推荐解法 → **失败分两层**：整体失败（五卡统一降级，原日志不受影响）与单卡数据异常（只影响价格卡） | AC8 已重写 |
+| **AC9** | 原文要求「`dataState` 为 `null` 时显示暂无运行记录」，但价格卡 `dataState` **恒为对象**（`contractReady: true`，由 `assets × prices` 现算）；`null` 实为完整性卡/再平衡卡的空态 | 采用推荐解法 → **空态分三型**：无应采资产 / 全缺（疑似整体故障）/ 请求失败 | AC9 已重写 |
+
+**同时保留的约束**（未因裁决放宽）：AC2 仍须引用 `TASK-056` 的 token、不得自建色值；AC7 仍禁止用 `runState` 反推数据态；AC4/AC5 的数值防御不变。
+
+**影响的下游**：`TASK-063`（共享请求层，需按 AC8 ① 实现整体失败）与 `TASK-055-plan.md`（§4 设计、§6 Decisions、§7 验证映射）须同步对齐；本卡已更新，计划的同步状态见其 §6。
+
+**未做的事**：未修改 Story AC；未修改 `server/` `shared/` 任何代码；未批准计划；未指派 Owner。
