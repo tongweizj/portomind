@@ -2,15 +2,15 @@
 
 ## Status
 
-Status：Draft
+Status：Approved（2026-11-06，Human 批准当前设计）
 
-Owner：Planner（规划）→ 待 Orchestrator 登记并指派 Implementer
+Owner：Planner（规划）→ Implementer（2026-11-06 指派）
 
 Related Task：[TASK-068](./TASK-068.md)；所属 [US-004](../../requirements/stories/active/US-004-dashboard-portfolio-health.md)。
 
-Branch / Base：实施时从 up-to-date `main` 新建 `feature/TASK-068` 独立 worktree（沿 053/056 惯例）。规划期基线为 2026-11-05 的 `main`；目标文件 `shared/services/portfolio/summary.js`、`server/controllers/alert.controller.js`、`shared/models/alertEvent.js` 已亲读核实（见 §3）。
+Branch / Base：实施时从 up-to-date `main` 新建 `feature/TASK-068` 独立 worktree（沿 053/056 惯例）。规划期基线为 2026-11-05 的 `main`；**2026-11-06 复核**：TASK-065 已合入 `main`（merge `6f556aa`），`summary.js` 行号已变——`unreadAgg` 现为 `:96-99`、`pendingAgg` 为 `:105-108`、`unreadByPortfolio` 透传为 `:141`（以符号名 `unreadAgg` / `AlertEvent.aggregate` 为准，行号仅参考）。`alert.controller.js` 的 `getEvents`/`getUnreadCount` 行号未变（`:209` / `:239`）。
 
-Approval：**未批准**。本计划覆盖 §1～§9 当前设计；`Draft → Approved` 归 Human（[STATES.md](../../../os/process/STATES.md) §4）。
+Approval：**2026-11-06，Human 明确「批准」当前设计**（Orchestrator 核对时本文件仍为 `Draft`、Approval 段写「未批准」；经 Human 当面确认后由 Orchestrator 据其决定登记，**不是自行批准**）。批准覆盖 §1～§9 当前设计，不含其他任务。前置已满足：TASK-065 已合入 `main`（`6f556aa`），`summary.js` 同改冲突解除。
 
 ## 1. Intent
 
@@ -32,7 +32,7 @@ $or: [{ portfolioId: { $in: <现存组合 ids> } }, { portfolioId: null }]
 | F-01 | `deletePortfolioCascade` 只删 `Transaction` + `RebalanceRecord`，**不删 `AlertEvent`** → 删组合后事件 `portfolioId` 悬空 | `shared/services/portfolio/deletePortfolio.js:10-14` |
 | F-02 | 出口 ① `getEvents`：`AlertEvent.countDocuments(filter)` + `AlertEvent.find(filter)`（`:229-232`），filter 无「组合存在」条件 | `server/controllers/alert.controller.js:209-237` |
 | F-03 | 出口 ② `getUnreadCount`：`AlertEvent.countDocuments({status:'unread'})`（`:241`），无组合存在条件 | `server/controllers/alert.controller.js:239-246` |
-| F-04 | 出口 ③ `computeSummary` 的 `unreadAgg`：`$match: {status:'unread', portfolioId:{$ne:null}}` + `$group by portfolioId`（`:83-87`） | `shared/services/portfolio/summary.js:83-87` |
+| F-04 | 出口 ③ `computeSummary` 的 `unreadAgg`：`$match: {status:'unread', portfolioId:{$ne:null}}` + `$group by portfolioId`（**065 合入后现为 `summary.js:96-99`**，符号名 `unreadAgg` 不变） | `shared/services/portfolio/summary.js:96-99` |
 | F-05 | 资产级事件 `portfolioId = null`（规则 `scope='asset'` 无组合）必须保留 | `shared/models/alertEvent.js:12-16`、`alertEngine.service.js` |
 | F-06 | `AlertEvent` 索引 `{portfolioId:1, status:1}`（`:40`）——`$in` 过滤可走索引 | `shared/models/alertEvent.js:40` |
 

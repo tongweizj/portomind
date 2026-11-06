@@ -27,6 +27,7 @@ function buildPortfolioSummary({
   positions = [],
   classPositions = null,
   lastExecutedAt = null,
+  pendingRebalanceCount = 0,
   now = new Date()
 }) {
   const positionCount = positions.length;
@@ -63,11 +64,23 @@ function buildPortfolioSummary({
     );
     drift = {
       needsRebalance: driftTriggered.length > 0,
-      triggeredThresholds: driftTriggered
+      triggeredThresholds: driftTriggered,
+      // US-004 B3：时间维度单独暴露，不参与既有 needsRebalance 语义
+      dueByTime: result.triggeredThresholds.includes('timeInterval'),
+      // US-004 B3/R-7：标的数，不是顶层阈值类型数；只从 details 派生
+      overThresholdCount: result.details.filter(
+        detail => Array.isArray(detail.triggeredThresholds) && detail.triggeredThresholds.length > 0
+      ).length
     };
   }
 
-  return { positionCount, marketValueByCurrency, drift };
+  return {
+    positionCount,
+    marketValueByCurrency,
+    lastExecutedAt,
+    pendingRebalanceCount,
+    drift
+  };
 }
 
 /**
@@ -85,6 +98,20 @@ async function computeSummary({ includeArchived = false } = {}) {
     { $group: { _id: '$portfolioId', count: { $sum: 1 } } }
   ]);
   const unreadByPortfolio = new Map(unreadAgg.map(item => [item._id.toString(), item.count]));
+  // US-004 AC-03：一次 $match + $group 批量取每组合的 PENDING 再平衡建议数；
+  // 不逐组合 countDocuments（N+1 禁令）。空列表无需查询。
+  let pendingByPortfolio = new Map();
+  if (portfolios.length > 0) {
+    const pendingAgg = await RebalanceRecord.aggregate([
+      { $match: { status: 'PENDING' } },
+      { $group: { _id: '$portfolioId', count: { $sum: 1 } } }
+    ]);
+    pendingByPortfolio = new Map(
+      (Array.isArray(pendingAgg) ? pendingAgg : [])
+        .filter(item => item && item._id != null)
+        .map(item => [item._id.toString(), item.count])
+    );
+  }
   return Promise.all(portfolios.map(async (portfolio) => {
     const [positions, lastExecuted] = await Promise.all([
       tracker.aggregate(portfolio._id),
@@ -108,7 +135,8 @@ async function computeSummary({ includeArchived = false } = {}) {
           portfolio,
           positions,
           classPositions,
-          lastExecutedAt: lastExecuted?.executedAt || lastExecuted?.timestamp || null
+          lastExecutedAt: lastExecuted?.executedAt || lastExecuted?.timestamp || null,
+          pendingRebalanceCount: pendingByPortfolio.get(portfolio._id.toString()) ?? 0
         }),
         unreadAlertCount: unreadByPortfolio.get(portfolio._id.toString()) || 0
       }

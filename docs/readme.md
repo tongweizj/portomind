@@ -64,7 +64,7 @@ docs/
 - 需求：[产品总览](./development/requirements/PRODUCT.md)、[PRD](./development/requirements/PRD.md)、[用户研究](./development/requirements/USER_RESEARCH.md)、[Spec](./development/requirements/specs)、[场景索引](./development/requirements/scenarios/SCENARIOS.md)、[Story 索引](./development/requirements/stories/STORIES.md)。
 - 原型与设计：[HTML 原型、设计稿与截图](./development/prototypes/README.md)。
 - 交付：从 [BOARD.md](./BOARD.md) 进入 [当前 US-001](./development/delivery/completed/US-001)；任务卡 TASK-编号.md、计划 TASK-编号-plan.md、按序号命名的交接记录直接平铺。Human 关闭后整体移入 [completed/](./development/delivery/completed)，具体规则见 DOCS.md §1.1。
-- 独立与既有记录：[任务卡](./development/tasks)、[执行计划](./development/exec-plans)、[问题记录](./development/issues.md)。共享资料通过链接复用。
+- 独立与既有记录：[任务卡](./development/tasks)、[执行计划](./development/exec-plans)、[问题记录](./development/issues.md)。共享资料通过链接复用。独立提案：[TASK-070 DSH Agent Teams 工作流适配提案](./development/tasks/active/TASK-070-dsh-agent-teams-workflow-proposal.md)（待 Human 审阅，未生效）。
 
 ## 资料入口（handbook）
 

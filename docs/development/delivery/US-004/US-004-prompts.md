@@ -11,7 +11,10 @@
 | P-01 | Planner 拆分 US-004 | Planner | 把 US-004 拆成可独立实施 / 验收的 Task 卡 | 已使用 |
 | P-02 | 登记 US-004 为预研 Story | PM | 把 US-004 从 Backlog 推进到 Planning，同步看板，整理 OQ | 待使用 |
 | P-03 | 实施 Task 并提交 git | Implementer | 实施指定 Task、验证并提交 git（含提交规范） | 待使用 |
-| P-04 | 派发 US-004 三卡并行开发 | Orchestrator | 登记 TASK-065/066/067 为 Implementing，建 worktree，分派 3 名 Implementer | 待使用 |
+| P-04 | 派发 US-004 三卡并行开发 | Orchestrator | 登记 TASK-065/066/067 为 Implementing，建 worktree，分派 3 名 Implementer | 已使用（2026-11-06） |
+| P-05 | 实施 TASK-065（shared + server 四字段） | Implementer A | 在 `portomind-065` worktree 实施 summary 四字段、验证、提交 | 待使用 |
+| P-06 | 实施 TASK-066（Dashboard 健康表 + 分币种小计） | Implementer B | 在 `portomind-066` worktree 实施健康表；含 `driftLabels.js` 先合入职责 | 待使用 |
+| P-07 | 实施 TASK-067（PortfolioCard 四格） | Implementer C | 在 `portomind-067` worktree 实施四格；消费 B 的 `driftLabels.js` | 待使用 |
 
 > 状态取值：`草稿` / `待使用` / `已使用` / `已废弃`。
 
@@ -289,6 +292,363 @@ US-004 原 Status 为 Backlog（排队中），但 Planner 已提前拆出 TASK-
 
 ---
 
+## P-05 · 实施 TASK-065（shared + server 四字段）
+
+### 元信息
+
+| 项 | 内容 |
+|---|---|
+| 目标角色 | Implementer A |
+| 用途 | 在 `portomind-065` worktree 实施 `summary` 四字段，验证并提交 |
+| 前置条件 | `TASK-065-plan` 已 `Approved`；worktree 与分支 `feature/TASK-065` 已建（基线 `0189c04`） |
+| 创建 / 更新 | 2026-11-06 |
+| 状态 | 待使用 |
+
+### 提示词正文
+
+```text
+你是本项目的 Implementer A，负责 TASK-065。独立会话。
+
+## 工作目录（已为你建好）
+
+  D:/projects/portomind-065      ← 你的 worktree，全程在这里工作
+  分支 feature/TASK-065，基线 main @ 0189c04
+
+开工先回报：
+  cd D:/projects/portomind-065
+  git branch --show-current    # feature/TASK-065
+  git rev-parse --short HEAD   # 0189c04
+  git status --porcelain       # 应空
+  node -v / npm -v
+  # worktree 无 node_modules，自行 npm ci 并说明理由
+
+不得改动主工作区 D:/projects/portomind，也不得碰其他两个 worktree
+（portomind-066 / portomind-067 由 B、C 使用）。
+
+## 必读
+
+1. docs/development/delivery/US-004/TASK-065.md §3 —— AC-01~AC-06，验收唯一依据
+2. docs/development/delivery/US-004/TASK-065-plan.md —— §3 事实、§4 设计、§7 验证
+3. docs/development/delivery/US-004/US-004-04-dispatch-record-2026-11-06.md —— 派发记录
+4. shared/services/portfolio/summary.js —— 主要改动对象
+5. server/test/integration/portfolio.summary.test.js —— 既有测试
+6. docs/handbook/technical/API_CONTRACT.md 的 GET /api/portfolios/summary
+
+不要全量通读 docs/。
+
+## 你的任务
+
+在 `stats` 上补四个字段：
+- `lastExecutedAt`（Date | null）—— 入参已有，**不得为此新增查询**
+- `pendingRebalanceCount`（整数，默认 0）
+- `drift.dueByTime`（布尔）
+- `drift.overThresholdCount`（整数）
+
+`drift === null` 时，后两字段不出现（不可读）。
+
+## 硬约束（AC 明文，逐条都对得上）
+
+- **AC-02 语义不扩义**：某组合仅时间维度触发时，必须同时满足
+  `drift.needsRebalance === false`、`drift.triggeredThresholds === []`、
+  `drift.dueByTime === true`。三项一起断言。
+- **AC-03 批量聚合**：`pendingRebalanceCount` 用**一次**
+  `$match + $group by portfolioId` 聚合（`status:'PENDING'`）。
+  **严禁**在 `portfolios.map` 内逐组合 countDocuments。
+  `EXECUTED` / `REVOKED` 不计入。
+- **AC-04 不复算**：`overThresholdCount` 从 `evaluateThresholds` 已返回的
+  `details` 派生，**不得**逐组合复算。
+  在 10 个组合的构造数据上断言：
+  - `RebalanceRecord` 查询次数 ≤ 11（1 次聚合 + 每组合 1 次 lastExecuted 既有查询）
+  - `countDocuments` 调用次数 = 0
+  **不靠耗时判定**，靠调用次数。
+- **AC-06 不碰 cron-worker**：交付后 `git status cron-worker` 必须空输出。
+
+## 验证
+
+  cd D:/projects/portomind-065
+  npm run test:server
+
+AC-05 要求新增单测覆盖 AC-01~AC-04 边界（含三项同断言、
+EXECUTED/REVOKED 排除、查询次数断言）；既有
+`portfolio.summary.test.js` 与 `portfolio.archived.test.js` 不得回归。
+
+至少对 AC-02、AC-03、AC-04 各做一次负向对照：
+- AC-02：把 `dueByTime` 也从 `needsRebalance` 派生 → 断言应失败
+- AC-03：改成逐组合 countDocuments → 查询次数断言应失败
+- AC-04：改成逐组合复算 → 复算检测应失败
+
+## 交付物
+
+1. 改动文件清单 + SHA256
+2. AC-01~AC-06 逐条结果（实测输出）
+3. 负向对照记录
+4. 查询次数实测（证明 AC-03/AC-04）
+5. `git status cron-worker` 空输出证明
+6. 已知妥协与未验证项
+7. 在 TASK-065-plan.md §11 填实施记录
+8. 提交到 feature/TASK-065（正文带 TASK-065）
+
+**不要**改 Task 状态、不要 merge main、不要填 Merged。
+
+## 停下上报
+
+- 发现必须改 cron-worker/ 才能满足 AC
+- 发现 `details` 不足以派生 `overThresholdCount`
+- 发现既有测试必须弱化才能通过
+- 需要新增依赖
+```
+
+### 备注
+
+- **AC-03 / AC-04 是调用次数断言，不是耗时断言** —— 这是本卡最容易走偏的地方。用 `countDocuments` 调用计数与 `RebalanceRecord` 查询计数判定，不靠跑得快不快。
+- AC-06 的 `git status cron-worker` 空输出要单独取证，它是 US-004/AC-14 的唯一承接点（PM 的 G-1 缺口）。
+
+---
+
+## P-06 · 实施 TASK-066（Dashboard 健康表 + 分币种小计）
+
+### 元信息
+
+| 项 | 内容 |
+|---|---|
+| 目标角色 | Implementer B |
+| 用途 | 在 `portomind-066` worktree 实施健康表与分币种小计；**并拥有 `driftLabels.js`** |
+| 前置条件 | `TASK-066-plan` 已 `Approved`；worktree 已建；065 尚未合入（用降级态开发） |
+| 创建 / 更新 | 2026-11-06 |
+| 状态 | 待使用 |
+
+### 提示词正文
+
+```text
+你是本项目的 Implementer B，负责 TASK-066。独立会话。
+
+## ⚠️ 你有一个额外职责：driftLabels.js 归你
+
+US-004-02 / D-02 已裁决：`client/src/constants/driftLabels.js`
+**由你（066）拥有**，TASK-067 的 Implementer C 消费。
+
+**请优先完成这一步并尽早合入 main**，否则 C 会卡住：
+1. 先建出 `client/src/constants/driftLabels.js`
+   —— **纯常量文件**，只含共享文案，不含业务逻辑
+2. 提交并告知 Orchestrator，由 Orchestrator 协调合入
+3. 再继续 066 的主体工作
+
+如果 C 在你合入前已开工，他那边会先临时引用并在交付说明标注
+「待 B 合入后切换」——你不需要为此改设计。
+
+## 工作目录
+
+  D:/projects/portomind-066      ← 你的 worktree
+  分支 feature/TASK-066，基线 main @ 0189c04
+
+开工先回报：
+  cd D:/projects/portomind-066
+  git branch --show-current && git rev-parse --short HEAD && git status --porcelain
+  node -v / npm -v；worktree 无 node_modules，自行 npm ci 并说明理由
+
+不得改动主工作区，不得碰 portomind-065 / portomind-067。
+
+## 必读
+
+1. docs/development/delivery/US-004/TASK-066.md §3 —— AC-01~AC-10
+2. docs/development/delivery/US-004/TASK-066-plan.md —— §3 事实、§4 设计、§7 验证
+3. docs/development/delivery/US-004/US-004-04-dispatch-record-2026-11-06.md
+4. client/src/pages/Dashboard.jsx、client/src/components/Household/TotalAssetsCard.jsx
+5. client/src/hooks/usePortfolios.js
+6. client/src/constants/design-tokens.js（配色复用，不自建）
+
+## ⚠️ 065 尚未合入：先用降级态开发
+
+你依赖 TASK-065 新增的四个字段（`lastExecutedAt` /
+`pendingRebalanceCount` / `drift.dueByTime` / `drift.overThresholdCount`），
+但 065 由 Implementer A 并行开发，**尚未合入 main**。
+
+**做法**：按计划 §4 的「字段缺失降级」口径开发骨架——
+字段不存在时显示降级态（「—」「从未」「未知」），不崩、不显示 0。
+
+**验收边界（必须如实标注）**：
+- AC-02 的偏离四态、AC-04 的排序真实值，**须在 065 合入 main 后补验**
+- 本轮可用 mock 数据验证渲染逻辑，但**不得声称端到端已验证**
+- 交付时单独列一节写明「待 065 合入后补验的项」
+
+## 硬约束
+
+- **AC-01 零新增请求**：数据源复用 `usePortfolios()`，对比改动前 Network 基线
+- **AC-02 四态各一条构造用例**，含负向对照：
+  `triggeredThresholds.length === 2` 但只覆盖 1 个标的 → 显示「1 项超阈」
+- **AC-03 点击不冒泡**：点徽标不触发整行跳转（`stopPropagation`）
+- **AC-04 排序全序**：`待办数>0` → `needsRebalance` → `dueByTime` → `createdAt` 倒序。
+  比较函数必须是**全序**（同分稳定），刷新后顺序不变
+- **AC-05 已归档不出现**；0 个组合显示空态 + 「新建组合」按钮，
+  **不出现只有表头的空表格**
+- **AC-06 局部失败隔离**：`summary` 请求 abort 时健康表局部错误态，
+  总资产卡与提醒列表**仍正常渲染**
+- **AC-07 分币种小计**：`null` 桶显示「—」，顺序 `CNY → USD → CAD → HKD`，
+  其余按字母序；无数据时该行整体不渲染
+- **AC-08 提醒区零改动**：筛选/已读/忽略/立即评估/规则管理行为不变
+- **AC-10 视口**：1440×900 下不滚动即可见——总资产金额、分币种小计一行、健康表 3 行
+
+## 验证
+
+  cd client && npm run build
+  cd client && ../node_modules/.bin/eslint "src/**/*.{js,jsx}"
+
+另需实测并记录：
+- 请求次数（证明 AC-01/AC-04 零新增）
+- 1440×900 视口截图或断言（AC-10）
+- AC-02 四态 + 负向对照
+- AC-06 abort 场景
+
+至少对 AC-02、AC-04、AC-06 各做一次负向对照。
+
+## 交付物
+
+1. 改动文件清单 + SHA256
+2. AC-01~AC-10 逐条结果
+3. **「待 065 合入后补验」的清单**（单独一节）
+4. 负向对照记录
+5. 请求次数前后对比
+6. 已知妥协与未验证项
+7. 在 TASK-066-plan.md §11 填实施记录
+8. 提交到 feature/TASK-066（正文带 TASK-066）
+
+**不要**改 Task 状态、不要 merge main、不要填 Merged。
+
+## 停下上报
+
+- 发现必须改 shared/ 或 server/ 才能满足 AC
+- 发现 `usePortfolios` 的现有数据不足以渲染四态
+- 需要新增依赖
+```
+
+### 备注
+
+- **`driftLabels.js` 必须先合入**，否则 C 只能临时引用、后续返工。建议单独一个提交，便于 Orchestrator 优先协调合入。
+- 065 未合入期间，AC-02/AC-04 只能用 mock 验证渲染分支；**不得声称端到端通过**，须在交付里单列待补验项。
+
+---
+
+## P-07 · 实施 TASK-067（PortfolioCard 四格）
+
+### 元信息
+
+| 项 | 内容 |
+|---|---|
+| 目标角色 | Implementer C |
+| 用途 | 在 `portomind-067` worktree 实施组合卡四格；消费 B 的 `driftLabels.js` |
+| 前置条件 | `TASK-067-plan` 已 `Approved`；worktree 已建；065 未合入、B 的常量文件可能未合入 |
+| 创建 / 更新 | 2026-11-06 |
+| 状态 | 待使用 |
+
+### 提示词正文
+
+```text
+你是本项目的 Implementer C，负责 TASK-067。独立会话。
+
+## 工作目录
+
+  D:/projects/portomind-067      ← 你的 worktree
+  分支 feature/TASK-067，基线 main @ 0189c04
+
+开工先回报：
+  cd D:/projects/portomind-067
+  git branch --show-current && git rev-parse --short HEAD && git status --porcelain
+  node -v / npm -v；worktree 无 node_modules，自行 npm ci 并说明理由
+
+不得改动主工作区，不得碰 portomind-065 / portomind-066。
+
+## 必读
+
+1. docs/development/delivery/US-004/TASK-067.md §3 —— AC-01~AC-04
+2. docs/development/delivery/US-004/TASK-067-plan.md
+3. docs/development/delivery/US-004/US-004-04-dispatch-record-2026-11-06.md
+4. client/src/components/PortfolioCard/index.jsx —— 唯一改动文件
+5. client/src/hooks/usePortfolios.js
+
+## ⚠️ 两个依赖方，注意处理
+
+### ① driftLabels.js 由 Implementer B（066）拥有
+
+D-02 已裁决：该文件归 B 建，你**不新建**。
+
+- 先检查 main 上是否已有 `client/src/constants/driftLabels.js`
+- **有** → 直接 import 消费
+- **没有** → 在你分支里临时定义文案（或按 B 约定的结构预引用），
+  并在交付说明中**明确标注**「待 B 的 driftLabels.js 合入后切换为 import」
+- **绝不**自己新建同名文件，否则两人各建一份必然冲突，直接撞 AC-03
+
+### ② 065 尚未合入：字段不可用
+
+四格依赖的字段（`marketValueByCurrency` 已有；
+`positionCount` 已有；`pendingRebalanceCount` / `lastExecutedAt` /
+`stats.drift` 由 065 新增）中，后三个**可能不存在**。
+
+按计划 §4 的降级口径：字段缺失显示「—」/「从未」，不崩、不显示 0。
+
+## 你的任务
+
+在 `PortfolioCard` 新增四格：
+- 总市值（`marketValueByCurrency` 分币种并列，**不跨币种合计**）
+- 持仓资产（`positionCount`）
+- 待办（`pendingRebalanceCount` + `unreadAlertCount`）
+- 上次再平衡（`lastExecutedAt` → `YYYY-MM-DD`，`null` → 「从未」）
+
+## 硬约束
+
+- **AC-02**：待办为 0 显示「—」；上次再平衡无值显示「从未」，
+  **DOM 中 grep 不到「暂无」**
+- **AC-03 同源（D-01 解 B，最易做错）**：
+  - 与健康表（066）的「待办」「上次再平衡」文案**逐字一致**
+    （「N 条待确认」/「N 条未读」/「从未」/`YYYY-MM-DD`）
+  - 「偏离」数据同源取 `stats.drift`（不各算一套）
+  - **但卡片 `DriftBadge` 徽标维持现状两态**
+    （「偏离阈值」/「配置正常」），**不改语义、不改成健康表四态**
+  - 逐字一致**不**要求卡片偏离徽标与健康表偏离列字面相同
+- **AC-04 零新增请求**：进入 `/portfolios` 时 portfolios 相关请求数不变
+- **Out of Scope 红线**：不改 `shared/`、`server/`、`cron-worker/`、
+  不改 Dashboard 健康表、不改 `drift.needsRebalance` 徽标语义
+
+## 验证
+
+  cd client && npm run build
+  cd client && ../node_modules/.bin/eslint "src/**/*.{js,jsx}"
+
+另需实测：
+- 四格渲染 + 降级态（字段缺失时）
+- AC-02 的「待办为 0 → —」「无值 → 从未」，并 grep 确认无「暂无」
+- AC-03 文案与 066 逐字比对（可用常量表核对）
+- AC-04 请求次数前后对比（证明零新增）
+- **负向对照**：把 DriftBadge 改成四态 → 确认 AC-03 断言失败（证明你没改语义）
+
+## 交付物
+
+1. 改动文件清单 + SHA256
+2. AC-01~AC-04 逐条结果
+3. **driftLabels.js 的处理方式说明**（已消费 / 临时引用待切换）
+4. **「待 065 合入后补验」的清单**
+5. 负向对照记录
+6. 请求次数对比
+7. 已知妥协与未验证项
+8. 在 TASK-067-plan.md §11 填实施记录
+9. 提交到 feature/TASK-067（正文带 TASK-067）
+
+**不要**改 Task 状态、不要 merge main、不要填 Merged。
+
+## 停下上报
+
+- 发现必须改 shared/ 或 server/ 才能满足 AC
+- 发现 066 的四态文案与你要用的不一致（AC-03 会冲突）
+- 需要新建 driftLabels.js（应先与 B / Orchestrator 协调）
+- 需要新增依赖
+```
+
+### 备注
+
+- **`DriftBadge` 维持两态是 AC-03 的红线**：D-01 解 B 只要求「待办 / 上次再平衡」逐字一致，**不要求**偏离徽标与健康表偏离列字面相同。把徽标改成四态即违反 AC-03。
+- 若 B 的 `driftLabels.js` 尚未合入，C 的临时方案必须在交付说明里写明切换条件，避免长期双份文案。
+
+---
+
 ## 变更记录
 
 | 日期 | 变更 | 说明 |
@@ -296,3 +656,4 @@ US-004 原 Status 为 Backlog（排队中），但 Planner 已提前拆出 TASK-
 | 2026-11-05 | 新建 | 建立存档结构，收录 P-01「Planner 拆分 US-004」 |
 | 2026-11-05 | 新增 | 收录 P-02「登记 US-004 为预研 Story」、P-03「实施 Task 并提交 git」 |
 | 2026-11-06 | 新增 | 收录 P-04「派发 US-004 三卡并行开发」 |
+| 2026-11-06 | 新增 | 收录 P-05「实施 TASK-065」、P-06「实施 TASK-066」、P-07「实施 TASK-067」；P-04 状态改为「已使用」（2026-11-06 实际完成派发） |
