@@ -4,8 +4,8 @@
 
 | 字段 | 内容 |
 |---|---|
-| Status | Implementing（2026-11-06，计划已 `Approved`、065 已合入 `main`；Orchestrator 登记） |
-| Priority / Owner / Type | `High` / Implementer / `Feature`（shared + server 查询层） |
+| Status | Reviewing（2026-11-06，实现与自测完成于 worktree `portomind-068` @ `9c8c808`，等待独立 Reviewer 复核） |
+| Priority / Owner / Type | `High` / Reviewer（待指派） / `Feature`（shared + server 查询层） |
 | Created / Updated | 2026-11-05 / 2026-11-06 |
 | 所属 Story | [US-004](../../requirements/stories/active/US-004-dashboard-portfolio-health.md) |
 | 覆盖的验收条件 | US-004/AC-19、AC-14（AC-14 的 cron-worker 零改动断言落在本卡） |
@@ -91,3 +91,28 @@
 ## 8. Open Questions
 
 无（HD-14 已裁「全部隐藏」，本卡只落实查询层过滤，不再开题）。
+
+## Orchestrator 交付接收记录（2026-11-06）
+
+依据 [STATES.md §4](../../../os/process/STATES.md#4-谁可以改变状态)：「Task → Reviewing：Implementer 提供改动清单、自测证据、可审对象和已知妥协」。四项齐备，故登记 `Implementing` → **`Reviewing`**。
+
+| 项 | 事实 |
+|---|---|
+| Worktree | `D:/projects/portomind-068` |
+| 分支 / 提交 | `feature/TASK-068` @ **`9c8c808`**（基线 `96ff382` = `main`） |
+| 改动规模 | **7 文件**，+247/−13：新增 `shared/services/alertVisibility.js`（39 行共享查询层）、改 `summary.js` / `alert.controller.js` / 3 份测试、计划 §11 |
+| 范围核对 | `client/`、`cron-worker/` 零改动 ✅；未改模型、未写迁移、未物理删除 `AlertEvent` |
+| 自测证据 | 计划 §11.3：AC-01～AC-07 逐条 PASS |
+
+**Orchestrator 独立复验（本轮亲跑，不采信自述）**
+
+| 项 | 结果 |
+|---|---|
+| `npm run test:server` | **239 pass / 0 fail** ✓ |
+| 三处出口同源 | ✅ `summary.js:17` 与 `alert.controller.js:6` 均 require `alertVisibility`；`getEvents` / `getUnreadCount` / `unreadAgg` 三处都调用 `visibleAlertFilter` |
+| 越界 | `git diff --stat main..HEAD -- cron-worker/ client/` **空** ✓ |
+| AC-14 | `git status --porcelain -- cron-worker/` = **0 行** ✓ |
+
+**⚠️ 分支基线提醒**：068 从 `5083429` 切出，后 fast-forward 到 `96ff382`（实现记录 §11.1 自述）。合入前须确认不含并行会话的其它未提交改动被误带入。
+
+**未做的事**：未改 AC / Scope / 代码；未提交合入、未填 `Merged`、未关闭。
