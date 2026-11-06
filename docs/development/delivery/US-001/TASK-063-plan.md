@@ -195,7 +195,97 @@ node client/scripts/verify-task-063.cjs
 
 ## 12. Review Record
 
-尚未独立审查；Planner 自检不等于 Reviewer 判定。
+### 12.1 审查对象与基线
+
+| 项 | 事实 |
+|---|---|
+| 审查角色 | 独立 Reviewer（独立会话，非实现者，未自审通过） |
+| 工作目录 | `D:/projects/portomind-063`（独立 worktree） |
+| 分支 / SHA | `feature/TASK-063` @ `9b90fdc`（父 `0487ba8` = main） |
+| 工作区状态 | 干净（`git status --porcelain` 空；交付已提交；审查后 temp 夹具/探针全部删除） |
+| 环境 | 纯前端卡，无需数据库；Chrome headless 1440×900 + Vite dev server |
+| 被审文件 SHA256 | `BoardShell.jsx` `1eee267f…ebca`；`SummaryShell.jsx` `b224b61d…1e03`；`CronBoard.jsx` `fe3b95b0…2d71`；`DataTaskCard.jsx` `206ed194…daf7`；`taskDataViews.js` `0c3f3b4b…65be`；`useCronStatus.js` `7dcc8a23…6644`；`cronStatus.service.js` `13e71f02…7590`；`LogViewer.jsx` `98fd144a…62b4` |
+
+### 12.2 方法声明（独立性）
+
+- 未直接采纳 Implementer 的 41/41、Orchestrator 亲跑或 build/lint 为结论；自行重跑确认：`verify-task-063.cjs` **41/41**、`npm run build` exit 0、`eslint "src/**/*.{js,jsx}"` 0 error / 0 warning。
+- **自建探针** `review-063-probe.cjs` + `review063-fixture.jsx`（临时，已删）：Vite 真实浏览器挂载真实组件/真实 `useCronStatus`，以 axios adapter 注入可控快照，覆盖 AC1–AC8 共 **38 条断言**，**38/38 PASS**；含 ① 缺省 BoardShell 的 053 原验收断言复跑、② 总览五组数据、③ 单次请求/不轮询、④ 错误分层、⑤ 四型空态、AC2/3/4 派生。
+- 对 **①契约回归、②总览优先级、③不轮询、④错误分层** 各做一次负向对照（临时篡改源码 → 断言 FAIL → 还原 → `git status` 空）。
+
+### 12.3 AC1–AC8 逐条判定（独立实测）
+
+| AC | 判定 | 证据（本探针 / 独立核对） |
+|---|---|---|
+| AC1 | 满足 | 统一 `api.get('/cron/status')` + 固定 `queryKey:['cron-status']`；五卡固定顺序绑定快照；**总览优先级实测**：五项全 ok 无缺口→「全部正常」、任一 bad→失败、任一 warn→需关注、`unknown`/`contractReady=false`/`lastRun=null`/缺项→「数据未就绪」（**绝不全部正常**）、stale→warn、缺项按 unknown 补齐。负向：改「无 bad 就正常」→ 5 条断言 FAIL |
+| AC2 | 满足 | 完整性 `应采/实际/缺口/跳过(无 launchDate)/缺口资产` 摘要齐全；提醒 `评估/新建/归档/失败`，`created=0 且 failed=0`→「零命中属正常」不判失败；汇率仅显示可证明观测（`本次写入成功`/`同步失败`/`仅观测，不证明同步成功`）且固定标注「同步成功不证明汇率方向正确」 |
+| AC3 | 满足 | 再平衡用**父任务** `到期 / 总组合`（如 `2 / 4`），显示 生成/未超阈/失败 与 `DB_TIMEOUT` 异常原因；`contractReady=false`→「无父结果，未到期未知」不出现「到期 0」；无 `/logs/rebalance` 详情路由（仅注释提及未来 C-07） |
+| AC4 | 满足 | 四型空态可区分：无运行→「暂无运行记录」、契约未就绪→「结果契约未就绪」（非「暂无运行记录」）、零目标 `expected=0`→`empty=zero` 且无 `0%`、单卡坏数据→该卡 `invalid/bad`；`lastSkip` 与 `lastRun` 分离独立行、缺失整体省略（null）；僵尸基于信封 `stale`→「超时未完成」不自行推断 |
+| AC5 | 满足 | 首次挂载 `/cron/status` **calls=1**；静置后 **calls 不变**（`refetchInterval:false` + `refetchOnWindowFocus/Reconnect/Mount:false` + `retry:false`）；手动刷新只多一次（Implementer 脚本 41/41 佐证）；整体失败→五卡统一「快照获取失败」+ 可重试、总览不全部正常；有旧快照→保留旧数据 + `数据为 X 时快照，刷新失败`（沿用服务端 `generatedAt`，不取本地当前时间 — `buildOverview` 源码核对）；原日志两 tab 由 `LogViewer` 独立挂载、未改 |
+| AC6 | 满足 | 五卡共享一次 GET，PriceTaskCard 经 `getPriceView` 消费共享快照、**不二次请求**（calls=1）；StatusLegend 原样；`taskDataViews.js` 不重复实现价格派生；新代码 `\|\| 0` / `?? 0` **0 命中**；配色只经 `getStatusTone`，新文件 0 硬编码 hex |
+| AC7 | 满足 | 单卡格式异常 → 仅 1 张卡 `bad`、其余 3 张仍 `ok`、总览不全部正常；整体失败 vs 单项异常可区分；日期用后端 `targetMarketDate`/ISO 字符串 + `timezone`，新代码 `new Date()`/`toLocaleDateString` **0 命中**（不重推业务目标日） |
+| AC8 | 满足 | 新代码 `useMutation` / `api.post\|put\|patch\|delete` / 执行类按钮 **0 命中**；`/logs` 子树 `useMutation` 0；异常入口 `disabled`；刷新只触发 GET；`npm run build` exit 0、eslint 0/0；默认 `<BoardShell />` 的 053 结构断言实测通过 |
+
+### 12.4 对 053/056 契约变更的独立结论（①，最高风险）
+
+**变更内容**：`BoardShell.jsx` 新增可选 `cardComponents` + `summary.overallLevel/levels`；`SummaryShell.jsx` 的 `HealthDot` 新增可选 `level`、颜色改由 `getStatusTone` 驱动。
+
+**向后兼容性（独立实测）**：不传任何新 props 时，默认 `<BoardShell />` 在本探针中通过全部 053 原验收断言 —— 5 张 `TaskCardShell`、五卡六区域各 5、5 灯 `data-state=unknown` 且无绿色、1 徽章（`data-state=unknown`）+ 1 快照位、StatusLegend 仍在、board 文本无 `undefined/NaN/Invalid Date/null`。`git diff 0487ba8..HEAD` 确认五卡网格数量/顺序/图例位置/结构均未改。**结论：验收层面缺省行为不变，零回归**（§8 停下上报条件未触发）。
+
+**一处如实记录的可观察差异（非回归）**：默认健康灯颜色由 053 的 `NEUTRAL.muted #8A95A5` 改为 `getStatusTone('unknown').color`（`statusIdle #475569`），tooltip 由「未知」改为 tone 标签「未运行」，徽章文字色改由 tone 驱动。二者皆为**中性灰**、`data-state` 恒为 `unknown`、均不含成功语义，053 的 `e2e-task-053-verify.cjs` 断言（仅查 `data-state=unknown` 与「灯色无绿色」）不检查精确灰度/文案，故全部仍通过。属视觉/文案层面的**中性等价替换**，非行为回归。
+
+**授权判断（MINOR，非 MAJOR）**：计划 §4-2 明文「BoardShell 只做向后兼容的槽位组件映射（如可选 `cardComponents`，缺省仍为 `TaskCardShell`）——只加不改」并「SummaryShell 填真实总览（5 灯 + 整体徽章 + generatedAt）」；§4-3/§4-4 要求五灯显示真实状态、价格卡替换骨架卡。不新增这些可选 props 无法实现 AC1/AC6。**判定为计划授权范围内的合理必要扩展**，仅以纯可选 props 实现、未改 055 `PriceTaskCard` / 056 `StatusLegend` / 053 `TaskCardShell` / `statusTone` 文件（diff 确认零改动）。记为 **MINOR（F-01）说明**，不是未经授权的契约变更，也不是 BLOCKER。
+
+### 12.5 Findings
+
+| # | 严重度 | 位置 | 现象 | 对应 AC | 修法方向 |
+|---|---|---|---|---|---|
+| F-01 | MINOR | `BoardShell.jsx` / `SummaryShell.jsx` | 对两个**已验收**组件加纯可选 props；缺省验收行为不变，但默认灯色 `#8A95A5`→`#475569`、tooltip「未知」→「未运行」等中性等价差异未在计划中逐字列名 | 契约回归 / AC1/AC6 | 已在 §12.4 判为授权内必要扩展；如需「像素级零差异」可由 Human 决定是否保留 statusTone 驱动或回退中性色常量；不阻塞 |
+| F-02 | MINOR | `client/scripts/fixtures/task063-fixture.jsx` / 本探针 | 浏览器夹具用 axios adapter 注入快照，未连真实 `GET /api/cron/status` / dev 库；AC2/AC3 的 057 真实 result 持久化证据归 057 | AC2/AC3/AC6 | 上线后跑满一个真实调度周期再确认数据就绪；计划 §11.6 已如实标注，不阻塞 |
+| F-03 | MINOR | 053 原日志运行时回归 | `a11y-053-log-regression.cjs` 需临时库 + 登录服务，本环境未启动；`RawLogView`/`logTabs`/日志 service 未改，tab 编排只替换看板组件 | AC5/AC8 | 属未验证项而非已证通过；组件与路由静态核对无回归，需要时在真实环境补跑 |
+| F-04 | MINOR | `taskDataViews.js` `buildFxView` | 汇率 `statusMessage` 固定为「同步成功不证明汇率方向正确」，与 064 的 `NUMERIC_OBSERVATION_ONLY` note 语义一致但多一层前端文案 | AC2 | 属允许的缺省文案措辞（§6 自由度），不阻塞 |
+| F-05 | — | 静置时长 | 本探针静置 1500ms（Implementer 1200ms）验证无轮询；未跑满 60s 真实墙钟 | AC5 | `refetchInterval:false` 等静态关闭已逐项核对，且负向对照证明注入轮询即 FAIL，等价于「无定时路径」；不阻塞 |
+
+无 BLOCKER / MAJOR。
+
+### 12.6 负向对照记录（篡改 → 断言 FAIL → 还原 → `git status` 空）
+
+| 对照 | 临时缺陷 | 断言表现 | 还原 |
+|---|---|---|---|
+| ① 契约回归 | `BoardShell` 默认卡改为 `()=>null` | 「缺省 5 张 TaskCardShell」「缺省五卡六区域各 5」2 条 FAIL；28/31 PASS | 备份还原，SHA256 回 `1eee267f…` |
+| ② 总览优先级 | `buildOverview` 改为「无 bad 就全部正常」 | 「unknown / contractReady=false / lastRun=null / present:false / 缺项」5 条 FAIL（显示「全部正常」）；31/38 PASS | 备份还原，SHA256 回 `0c3f3b4b…` |
+| ③ 不轮询 | `useCronStatus` 改 `refetchInterval: 300` | 「静置后无新请求」FAIL（calls=6）；37/38 PASS | 备份还原，SHA256 回 `7dcc8a23…` |
+| ④ 错误分层 | `buildCards` 中 `unavailable=false`（整体失败只影响一卡） | 强化后的「五卡统一快照获取失败」FAIL（4 卡中 0 卡含失败文案）；37/38 PASS | 备份还原，SHA256 回 `fe3b95b0…` |
+
+还原后重跑自建探针 **38/38 PASS**；每次 `git status --porcelain` 均为空（仅余 temp 夹具/探针，最终全部删除）。
+
+### 12.7 数据库前后条数
+
+本卡为**纯前端卡**，不读写数据库；未连接 dev 库、无集合/索引/记录变更。审查范围内 `git diff --name-only 0487ba8..HEAD` 无 `server/`、`shared/`、`cron-worker/` 文件（§8 停下上报条件「须改后端」未触发）。浏览器夹具的 axios adapter 注入不落任何持久化。
+
+### 12.8 停下上报条件逐条排除
+
+- 053/056 缺省行为未改变（验收断言全过，见 §12.4）。
+- 总览不把 unknown 当健康（5 组数据 + 负向对照实证）。
+- 看板只发一次请求、无轮询（calls=1、静置不变、负向对照注入轮询即 FAIL）。
+- 组件无写操作（useMutation / api.post·put·patch·delete / 执行按钮 0 命中）。
+- 无需改 `server/`/`shared/` 即满足 AC（diff 零改动）。
+- 055 价格卡未重复实现派生（价格经 `getPriceView`（055）消费，`taskDataViews.js` 零价格派生）。
+
+### 12.9 残余风险与未验证项
+
+- 未连真实后端/DB：AC2/AC3 的「真实记录」以夹具验证，057 真实 result 持久化证据归 057（F-02）。上线后需跑满一个调度周期。
+- 053 原日志运行时回归脚本（`a11y-053-log-regression.cjs`）因需临时库+登录服务未跑（F-03）；静态核对 `RawLogView`/`logTabs`/日志 service 未改。
+- 未跑 60s 真实墙钟静置（以 `refetchInterval:false` 等静态关闭 + 负向对照等价证明，F-05）。
+- 浏览器仅 1440×900；未做其他视口/缩放/暗色主题（out of scope）。
+- bundle >500 kB 警告为既有，非本卡引入。
+
+### 12.10 判定
+
+**Pass with issues** —— AC1～AC8 全部满足并经独立复核：契约回归（默认 BoardShell 全部 053 断言通过）、总览 unknown 不假绿（五组数据 + 负向对照）、单次请求无轮询（calls=1 + 负向对照）、错误分层（整体五卡统一 vs 单卡隔离 + 负向对照）、四型空态可区分、AC2/3/4 派生、AC8 只读零写操作，均以自建探针（38/38）+ 四处负向对照 + 全量 verify（41/41）+ build/lint 独立取证；Implementer 与 Orchestrator 数据逐一吻合。
+
+**无 BLOCKER / MAJOR**；对 053/056 已验收组件的改动经独立判定为**计划授权内的合理必要扩展、缺省验收行为零回归**（§12.4），仅记 MINOR F-01；其余均为 MINOR（F-02 夹具证据边界、F-03 原日志运行时未跑、F-04 文案、F-05 静置时长），均不阻塞。
+
+本结论为**判定词而非状态**；未改 Task Status / AC / Scope / 合入状态，未 `git add / commit / push`，未关闭 Task 或 Story。登记 `Reviewing`、合入与关闭由 Orchestrator / Human 依 STATES.md §4 处理。
 
 ## 13. Completion Record
 
