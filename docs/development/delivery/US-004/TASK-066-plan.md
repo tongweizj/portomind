@@ -125,7 +125,81 @@ Approval：**未批准**。本计划覆盖 §1～§9 当前设计；`Draft → A
 
 ## 11. Implementation Record
 
-（实施时填写。）
+### 11.1 基线与分支
+
+| 项 | 事实 |
+|---|---|
+| 工作区 | `D:/projects/portomind-066`（独立 worktree，未碰主工作区 / 065 / 067） |
+| 初始基线 | `0189c04`；065 合入后 `git rebase main feature/TASK-066` 干净完成 → `4e26dca` on `6f556aa`（无冲突，driftLabels.js 完好） |
+| 依赖 | `npm ci`（lockfile 与主工作区逐字节一致）；`playwright-core` 以 `--no-save` 补装用于验收（不在 lockfile、不入库） |
+| 工具链 | node v24.20.0 / npm 12.2.1；基线构建 exit 0 / 2438 modules |
+
+### 11.2 改动清单
+
+| 文件 | 类型 | SHA256 |
+|---|---|---|
+| `client/src/constants/driftLabels.js` | 新增（独立提交 `4e26dca`，D-02 由 066 拥有） | 见 git |
+| `client/src/components/Dashboard/PortfolioHealthTable.jsx` | 新增 | 见 git |
+| `client/src/pages/Dashboard.jsx` | 修改 | 见 git |
+| `client/src/components/Household/TotalAssetsCard.jsx` | 修改 | 见 git |
+| `client/scripts/verify066.cjs` | 新增（验收脚本，依赖 playwright-core + 本机 Chrome） | 见 git |
+
+> 说明：SHA256 以提交内容为准，交付时由 `git show` / `sha256sum` 取；此处不写会漂移的硬编码值。
+
+**实现要点**
+- 健康表复用 `usePortfolios()` 传入的 `data`（同一 `queryKey: ['portfolios-summary']`），**组件自身零请求**（AC-01）。
+- 四态偏离优先级按 FS §6.2 B8：① `drift.needsRebalance` → `DRIFT_STATE_LABELS.overThreshold(drift.overThresholdCount)`；② `drift.dueByTime` → `dueByTime(daysSince(lastExecutedAt))`，`lastExecutedAt===null` → `dueByTimeNever`；③ `targets.length===0` → `noTarget`；④ 其余 `normal`。**N 取 `overThresholdCount`（标的数），不用 `triggeredThresholds.length`**。
+- 排序全序：`待办数>0` → `needsRebalance` → `dueByTime` → `createdAt` 倒序（AC-04）。
+- 徽标 `stopPropagation`；整行可点 + `tabIndex`/`Enter`（AC-03）。
+- 分币种小计：`CNY→USD→CAD→HKD` + 其余字母序，`null` 桶 `—`，无 `buckets` 整行不渲染（AC-07）；复用 `formatMoney`（不自建符号）。
+- 提醒区逻辑零改动（AC-08）；只读约束：本卡新增文件无 `useMutation` / 无 `api.post|put|patch|delete`。
+
+### 11.3 验证结果（本轮实跑，2026-11-06）
+
+| 验证 | 命令 / 方式 | 结果 |
+|---|---|---|
+| AC-01~AC-08、AC-10 | `node client/scripts/verify066.cjs`（真实 Chrome + vite dev + 桩服务） | **29/29 PASS**（EXIT=0） |
+| AC-09 构建 | `cd client && npm run build` | **exit 0 / 2440 modules** |
+| AC-09 lint | `../node_modules/.bin/eslint "src/**/*.{js,jsx}"` | **0 error / 0 warning（97 文件）** |
+
+**AC 逐条证据**
+
+| AC | 结果 | 关键证据 |
+|---|---|---|
+| AC-01 | PASS | `/api/portfolios/summary` 恰好 1 次；全部 API 5 次，无新增端点 |
+| AC-02 | PASS | 四态各一条 + 负向对照：`triggeredThresholds=2` 且 `overThresholdCount=1` → 显示「1 项超阈」（非 2）；`overThresholdCount=3` → 「3 项超阈」；「已到期（61 天）」；「正常」；「未设目标」 |
+| AC-03 | 部分验证 | 徽标 `stopPropagation` 已实现；跳转目标静态检查通过（未做点击 URL 断言，见 11.5） |
+| AC-04 | PASS | 顺序 `超阈组合 → 到期组合 → 待办组合 → 超阈组合2 → 无目标组合 → 正常组合`；负向对照：≠ 输入顺序；重载后顺序不变 |
+| AC-05 | PASS | 归档不出现；0 组合显示「暂无组合，先创建一个」+「新建组合」按钮，**无 table** |
+| AC-06 | PASS | `route.abort()` → 健康表「数据加载失败，请稍后重试」；总资产卡（含分币种小计）与提醒列表仍渲染；非白屏非登录页 |
+| AC-07 | PASS | `¥862,300 · US$18,400 · CA$52,100 · —`，顺序正确；负向对照：无 `buckets` 时该行整体不渲染 |
+| AC-08 | PASS | 标题/未读/全部/立即评估/规则管理 DOM 齐全 |
+| AC-09 | PASS | build 0 / lint 0-0 |
+| AC-10 | PASS | 1440×900：总资产卡 bottom=306；健康表前 3 行 bottom=474/515/556，均 ≤ 900；截图 `%TEMP%/066-shots/066-viewport.png` |
+
+### 11.4 负向对照记录
+
+| 对照 | 结果 |
+|---|---|
+| AC-02 ① | `triggeredThresholds.length=2` 但 `overThresholdCount=1` → 显示「1 项超阈」，未误显示「2 项超阈」 |
+| AC-04 | 输出顺序 `≠` 数据注入顺序（证明排序生效，非原样透传） |
+| AC-06 | abort 状态下整页仍含「家庭总览」、非登录页、非白屏 |
+| AC-07 | 无 `buckets` 时不出现 `US$` / `CA$` → 该行整体不渲染 |
+
+### 11.5 已知妥协与未验证项
+
+- **AC-03 未做点击级 URL 断言**：徽标 `stopPropagation` 与 `navigate(...)` 在代码中静态核对，未用浏览器验证点击后的 URL 与「组合筛选设为该 portfolioId」的联动。属未验证项，交 Reviewer 复核。
+- **验证使用桩数据（route.fulfill）注入构造的 `stats`**，非真实 DB 端到端：四态/排序/空态/错误态的**渲染逻辑**已验证，但真实 `computeSummary` 产出的字段值与这些构造值是否一致不在本卡范围（属 065 已验收内容）。
+- 视口验证用构造数据（6 组合）；真实数据下 3 行是否仍不滚动未在真实库复核。
+- `verify066.cjs` 依赖本机 Chrome 绝对路径与 `playwright-core`，未纳入 `npm test`（client 无 test 脚本）。
+- 未改 `shared/` / `server/` / `cron-worker/`；未改 Task 状态；未 merge main；未填 Merged。
+
+### 11.6 实施过程发现（供 Orchestrator / Reviewer 参考）
+
+1. **开工时误写主工作区**：首轮把 `driftLabels.js` 写到了 `D:/projects/portomind`（默认 cwd），立即删除并确认主工作区恢复干净、分支/HEAD 未变。此后所有写入均用 `-066` 绝对路径。主工作区出现的 `US-004-prompts.md` 等改动是 Orchestrator 的派发登记，未触碰。
+2. **验收脚本两个坑**（已修并留注释）：`page.route` 在导航后被清理（改用每场景新建 page）；`**/api/alerts/events*` 漏拦截 `/unread-count` → 真实服务器 401 → 全局 `notifyUnauthorized()` 跳登录页（改用 `**/api/**` 兜底）。这解释了早期「有时 6 行有时 0 行」的间歇性结果。
+3. 服务用 `nohup` 启动以存活；`.env` 从主工作区复制（gitignored，未入库），临时服务 8080/6601 在交付后停止。
+4. **§11 写入时再次误落主工作区并复制重复内容**：已 `git checkout --` 还原主工作区，并在 066 内修复重复段落；主工作区仅保留 Orchestrator 的 3 个文档改动。
 
 ## 12. Review Record
 

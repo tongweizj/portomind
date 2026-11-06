@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router';
 import { Bell, Check, EyeOff, RefreshCw } from 'lucide-react';
 import { EmptyState, ErrorState, LoadingState } from '../components/DataState';
 import TotalAssetsCard from '../components/Household/TotalAssetsCard';
+import PortfolioHealthTable from '../components/Dashboard/PortfolioHealthTable';
 import { usePortfolios } from '../hooks/usePortfolios';
 import { useAlertEvents, useMarkAlertEventRead, useEvaluateAlerts } from '../hooks/useAlerts';
 
@@ -73,7 +74,7 @@ export default function Dashboard() {
   const navigate = useNavigate();
   const [statusFilter, setStatusFilter] = useState('unread');
   const [portfolioFilter, setPortfolioFilter] = useState('');
-  const { data: portfolios = [] } = usePortfolios();
+  const { data: portfolios = [], isLoading: portfoliosLoading, isError: portfoliosError } = usePortfolios();
   const { data: events = [], isLoading, isError } = useAlertEvents({
     status: statusFilter === 'all' ? undefined : statusFilter,
     portfolioId: portfolioFilter || undefined,
@@ -107,6 +108,14 @@ export default function Dashboard() {
 
       {/* 家庭总资产卡（TASK-049：从 /family 搬入，点击进入组合管理） */}
       <TotalAssetsCard />
+
+      {/* TASK-066：组合健康表（AC-01：复用 usePortfolios 同一 queryKey，零新增请求） */}
+      <PortfolioHealthTable
+        portfolios={portfolios}
+        isLoading={portfoliosLoading}
+        isError={portfoliosError}
+        onPortfolioFilter={id => setPortfolioFilter(id)}
+      />
 
       {/* 待处理提醒（原「提醒中心」主体，行为不变） */}
       <h2 className="text-lg font-semibold text-gray-800">待处理提醒</h2>

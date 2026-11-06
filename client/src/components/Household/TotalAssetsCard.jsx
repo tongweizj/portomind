@@ -8,8 +8,28 @@
 import { useNavigate } from 'react-router';
 import { ErrorState, LoadingState } from '../DataState';
 import { useFamilySummary } from '../../hooks/useFamily';
-import { formatCny } from '../../utils/priceDisplay';
+import { formatCny, formatMoney } from '../../utils/priceDisplay';
 import { ROUTES } from '../../constants/routes';
+
+/** 币种展示顺序：CNY → USD → CAD → HKD，其余字母序（AC-07）。 */
+const SUBTOTAL_ORDER = ['CNY', 'USD', 'CAD', 'HKD'];
+
+function formatSubtotal(buckets) {
+  if (!buckets || Object.keys(buckets).length === 0) return null;
+  const keys = Object.keys(buckets).sort((a, b) => {
+    const ai = SUBTOTAL_ORDER.indexOf(a);
+    const bi = SUBTOTAL_ORDER.indexOf(b);
+    if (ai !== -1 && bi !== -1) return ai - bi;
+    if (ai !== -1) return -1;
+    if (bi !== -1) return 1;
+    return a.localeCompare(b);
+  });
+  return keys.map(k => {
+    const amount = buckets[k]?.amount;
+    if (amount == null) return '—';
+    return formatMoney(amount, k);
+  }).join(' · ');
+}
 
 export default function TotalAssetsCard() {
   const navigate = useNavigate();
@@ -41,6 +61,10 @@ export default function TotalAssetsCard() {
     >
       <p className="text-blue-100 text-sm">家庭总资产（RMB 折算）</p>
       <p className="text-4xl font-bold mt-1">{formatCny(totalCny)}</p>
+      {(() => {
+        const sub = formatSubtotal(data?.buckets);
+        return sub ? <p className="text-blue-100 text-sm mt-1">{sub}</p> : null;
+      })()}
       <p className="text-blue-200 text-xs mt-2">
         {data?.asOf ? `数据时点：${new Date(data.asOf).toLocaleString('zh-CN')}` : ''}
         {incomplete ? ' · 部分组合折算不完整（缺价或缺汇率）' : ''}
