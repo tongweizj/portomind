@@ -303,7 +303,8 @@ test('AC-02/05：summary 的 unreadAgg 只统计现存组合，删除 A 后 B �
   }));
   t.mock.method(AlertEvent, 'aggregate', async (pipeline) => {
     pipelines.push(pipeline);
-    return [{ _id: B, count: 1 }];
+    // 资产级事件会形成 null 组；summary 必须忽略该组而不是崩溃
+    return [{ _id: B, count: 1 }, { _id: null, count: 1 }];
   });
   t.mock.method(RebalanceRecord, 'aggregate', async () => []);
   t.mock.method(RebalanceRecord, 'findOne', () => ({

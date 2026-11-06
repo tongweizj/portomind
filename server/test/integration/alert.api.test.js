@@ -8,6 +8,9 @@ const { installAdminSession, uninstallSessionStub, authHeaders } = require('../h
 const AlertRule = require('@portomind/shared/models/alertRule');
 const AlertEvent = require('@portomind/shared/models/alertEvent');
 const Portfolio = require('@portomind/shared/models/portfolio');
+const Transaction = require('@portomind/shared/models/transaction');
+const RebalanceRecord = require('@portomind/shared/models/rebalanceRecord');
+const { deletePortfolioCascade } = require('@portomind/shared/services/portfolio/deletePortfolio');
 const alertEngine = require('@portomind/shared/services/alertEngine.service');
 
 let server;
@@ -178,6 +181,29 @@ test('AC-01/02/03/04：删组合后事件隐藏但库中保留，资产级仍可
   unread = await request('/api/alerts/events/unread-count');
   assert.equal(unread.body.data.count, 2);
   assert.equal(await AlertEvent.countDocuments({ portfolioId: A_ID }), 3);
+});
+
+test('AC-03：deletePortfolioCascade 不触碰 AlertEvent（契约测试）', async (t) => {
+  const A_ID = '64b0000000000000000000a1';
+  t.mock.method(Portfolio, 'findById', async () => ({ _id: A_ID, name: 'A' }));
+  t.mock.method(Portfolio, 'findByIdAndDelete', async () => ({ _id: A_ID }));
+  t.mock.method(Transaction, 'deleteMany', async () => ({ deletedCount: 3 }));
+  t.mock.method(RebalanceRecord, 'deleteMany', async () => ({ deletedCount: 2 }));
+
+  const alertCalls = [];
+  for (const method of ['deleteMany', 'deleteOne', 'findByIdAndDelete']) {
+    if (typeof AlertEvent[method] === 'function') {
+      t.mock.method(AlertEvent, method, async () => {
+        alertCalls.push(method);
+        return { deletedCount: 1 };
+      });
+    }
+  }
+
+  const result = await deletePortfolioCascade(A_ID);
+  assert.equal(result.deletedTransactions, 3);
+  assert.equal(result.deletedRebalanceRecords, 2);
+  assert.deepEqual(alertCalls, []);
 });
 
 test('PATCH /api/alerts/events/:id/read 标记已读', async (t) => {

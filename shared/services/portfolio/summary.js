@@ -101,7 +101,13 @@ async function computeSummary({ includeArchived = false } = {}) {
     { $match: { status: 'unread', ...visibleFilter } },
     { $group: { _id: '$portfolioId', count: { $sum: 1 } } }
   ]);
-  const unreadByPortfolio = new Map(unreadAgg.map(item => [item._id.toString(), item.count]));
+  // 资产级事件（portfolioId=null）会形成 {_id:null} 组；它不是组合，
+  // 不能进入按组合的 unreadAlertCount 映射（否则 null.toString() 抛错）。
+  const unreadByPortfolio = new Map(
+    (Array.isArray(unreadAgg) ? unreadAgg : [])
+      .filter(item => item && item._id != null)
+      .map(item => [item._id.toString(), item.count])
+  );
   // US-004 AC-03：一次 $match + $group 批量取每组合的 PENDING 再平衡建议数；
   // 不逐组合 countDocuments（N+1 禁令）。空列表无需查询。
   let pendingByPortfolio = new Map();
