@@ -5,7 +5,7 @@
 
 ## 当前 Story
 
-> **当前格局（2026-11-06）**：US-001 已 `Completed` 并归档（过程目录在 `delivery/completed/US-001/`）；[US-004](./development/requirements/stories/active/US-004-dashboard-portfolio-health.md) 为**当前推进的 Story**——Story 状态仍为 `Planning`（Story → `Implementing` 归 PM，[STATES.md §4](./os/process/STATES.md#4-谁可以改变状态)），三张下挂 Task 于 2026-11-06 登记实施，其中 065 已交付转 `Reviewing`，066/067 仍在 `Implementing`。US-002 / US-003 / US-005 仍为 `Backlog`，需求留在 `requirements/stories/`，不预建交付目录。
+> **当前格局（2026-11-06）**：US-001 已 `Completed` 并归档（过程目录在 `delivery/completed/US-001/`）；[US-004](./development/requirements/stories/active/US-004-dashboard-portfolio-health.md) 为**当前推进的 Story**——Story 状态仍为 `Planning`（Story → `Implementing` 归 PM，[STATES.md §4](./os/process/STATES.md#4-谁可以改变状态)）；下挂 5 卡：065/067 `Completed`（065 已合入 `main`，067 待合入）、066/068 `Reviewing`、069 待登记。US-002 / US-003 / US-005 仍为 `Backlog`，需求留在 `requirements/stories/`，不预建交付目录。
 
 ### US-004（当前推进）
 
@@ -15,8 +15,8 @@
 | Status | `Planning`（**PM 未推进到 `Implementing`**；Task 层 065/067 `Completed`、066/068 `Reviewing`、069 待登记） |
 | 交付目录 | [US-004 过程资料](./development/delivery/US-004)（TASK-065～069 卡与计划、并行方案、派发记录、提示词存档） |
 | 并行实施 | 065 已合入 `main`（`6f556aa`）并结案；067 已结案（待合入）；**066 与 068 均已交付转 `Reviewing`** |
-| 下一步 | 066 / 068 交独立 Reviewer 复核；067 合入 `main` 并登记 `Merged`；069 收尾（等 065+068 合入） |
-| 阻塞 / 待决策 | **无阻塞。** 各卡计划 `Approved`、OQ-01/02/04/05 已裁决、G-1/G-2 覆盖缺口已闭合 |
+| 下一步 | 066 交独立 Reviewer **首次**复核；068 交独立 Reviewer **返工后复检**（可审对象 `3226dd4`）；067 合入 `main` 并登记 `Merged`；069 收尾（等 065+068 合入） |
+| 阻塞 / 待决策 | **无阻塞**，但 068 存在一个 **待收敛的 BLOCKER 历史**：首轮 `Fail`（F-01/F-02）已返工、尚待复检结论确认关闭。各卡计划 `Approved`、OQ-01/02/04/05 已裁决、G-1/G-2 覆盖缺口已闭合 |
 
 ### US-004 下挂 Task
 
@@ -25,14 +25,16 @@
 | [TASK-065](./development/delivery/US-004/TASK-065.md) | `summary` 四字段 | AC-01～04、AC-14 | **Completed** | — | **已结案（2026-11-06，Human 确认验收通过）**：分支 `feature/TASK-065` @ `5f807a3`（原 `8fde289` rebase）；Reviewer `Pass with issues`、无 BLOCKER，AC-01~04 与 AC-14 全满足。**`Merged` = `6f556aa`**（2026-11-06 `Merge branch 'feature/TASK-065' into main`；`merge-base --is-ancestor 5f807a3 main` = 是）。066/067 可解除降级态；068 前置已随本卡合入解除 | [Completed](./development/delivery/US-004/TASK-065-plan.md) |
 | [TASK-066](./development/delivery/US-004/TASK-066.md) | Dashboard 健康表 + 分币种小计 | AC-05～13 | **Reviewing** | Reviewer（待指派） | **已交付转 `Reviewing`（2026-11-06）**：`7cdefa0`（+ `4e26dca` 建 `driftLabels.js`），新增 `PortfolioHealthTable.jsx` / `verify066.cjs`；Orchestrator 亲跑 build 0、eslint 0、`verify066.cjs` **29/29 PASS**（含 5 处负向对照）。D-02 归属落实；065 已合入故降级态前提解除，AC-02/AC-04 可真实字段验收。交独立 Reviewer | [Approved](./development/delivery/US-004/TASK-066-plan.md)（§11 实施记录） |
 | [TASK-067](./development/delivery/US-004/TASK-067.md) | `PortfolioCard` 四格 | AC-17、AC-18 | **Completed** | — | **已结案（2026-11-06，Human 确认检验通过）**：Reviewer `Pass with issues`，无 BLOCKER/MAJOR，AC-01～AC-04 全满足 + 3 条负向对照。**基线陈旧问题已闭环**：`434a323` 已 merge main（含 065 合入 `6f556aa`），`git diff --stat main...feature/TASK-067 -- shared/ server/` 为空，不回退 065。⚠️ **`Merged` = `Pending`，尚未合入 `main`** | [Completed](./development/delivery/US-004/TASK-067-plan.md)（§12 审查、§13 结案） |
-| [TASK-068](./development/delivery/US-004/TASK-068.md) | 删除组合后事件查询层过滤 | AC-19、AC-14 | **Reviewing** | Reviewer（待指派） | **已交付转 `Reviewing`（2026-11-06）**：提交 `9c8c808`，7 文件 +247/−13；新增 `shared/services/alertVisibility.js` 单一查询层，`getEvents` / `getUnreadCount` / `unreadAgg` 三处同源过滤；Orchestrator 复跑 `test:server` **239/239**、`cron-worker` 零改动。硬前置（065 合入 `6f556aa`）已解除。交独立 Reviewer | [Approved](./development/delivery/US-004/TASK-068-plan.md)（§11 实施记录） |
+| [TASK-068](./development/delivery/US-004/TASK-068.md) | 删除组合后事件查询层过滤 | AC-19、AC-14 | **Reviewing（第二轮）** | Reviewer（待复检） | **首轮独立复核 `Fail`**（F-01 BLOCKER：`null.toString()` 致 summary 500；F-02 MAJOR：AC-03 断言无法证伪物理删除）→ Implementer **`3226dd4` 返工**（加 `_id!=null` 守卫、stub 补 null 样本、增 `deletePortfolioCascade` 契约测试，负向对照可 FAIL），`test:server` **240/240**。**可审对象 = `3226dd4`（非 `9c8c808`）；等待 Reviewer 复检，尚无复检结论**。硬前置（065 合入 `6f556aa`）已解除 | [Approved](./development/delivery/US-004/TASK-068-plan.md)（§11.7 返工、§12 首轮 Fail） |
 | [TASK-069](./development/delivery/US-004/TASK-069.md) | 契约文档同步 | AC-16 | 待登记 | 待指派 | 收尾：等 065+068 合入后，更新 `API_CONTRACT.md` 与 Spec 状态行 | [Draft](./development/delivery/US-004/TASK-069-plan.md) |
 
 > 派发依据：[US-004-04 派发记录](./development/delivery/US-004/US-004-04-dispatch-record-2026-11-06.md)；并行编排见 [US-004-02](./development/delivery/US-004/US-004-02-3card-parallel-plan.md)；三份 Implementer 提示词见 [US-004-prompts.md P-05/06/07](./development/delivery/US-004/US-004-prompts.md)。068 不得与 065 同时派发。
 
 > 2026-11-06（Orchestrator 结案）：TASK-065 实现与独立审查均已完成，Reviewer 判定 **`Pass with issues`**、无 BLOCKER；Human 明确确认「065 已经验收通过」。按 [STATES.md §4](./os/process/STATES.md#4-谁可以改变状态) 登记 `Reviewing → Completed`（Task → Completed 与关闭归 Human）。**`Merged` = `6f556aa`**：2026-11-06 经 `Merge branch 'feature/TASK-065' into main` 合入 `main`，`git merge-base --is-ancestor 5f807a3 main` = 是（此前登记的 `Pending` 已据实更正）。计划同步 `Approved → Completed`。US-004 仍 `Planning`（066 `Implementing`、067 `Reviewing`、068/069 待派），Story 不关闭；066 可解除降级态，068 硬串行前置已随 065 合入解除。AC-01~04 与 AC-14 已在 §8 标记已验证。
 
-> 2026-11-06（Orchestrator 登记 TASK-067 → Reviewing）：Implementer C 交付提交 `8141275`。⚠️ **分支基线陈旧**：`feature/TASK-067` 基于旧 `main`（早于 `d345430`），不含 065 合入 `6f556aa`；故 `git diff main..feature/TASK-067` 会把 065 四字段+156 测试与 BOARD/US-004/prompt 文档**显示为删除**——属 fork 点陈旧的双向 diff 假象，**并非本卡删除它们**（两路合并会保留双方）。**评审与合入前必须先 `git merge main`（rebase 到当前 main）**，否则会回退 065 工作。封面四格源自 `stats`、零新增请求零服务端、降级态显示「—」/「从未」、临时内联文案待 066 的 `driftLabels.js` 合入后切换（D-02）、与 066 健康表逐字一致（D-01 解 B）。Orchestrator 不替代 Reviewer 结论 / Human 关闭。
+> 2026-11-06（Orchestrator 登记 TASK-067 → Reviewing）：Implementer C 交付提交 `8141275`。⚠️ **分支基线陈旧**：`feature/TASK-067` 基于旧 `main`（早于 `d345430`），不含 065 合入 `6f556aa`；故 `git diff main..feature/TASK-067` 会把 065 四字段+156 测试与 BOARD/US-004/prompt 文档**显示为删除**——属 fork 点陈旧的双向 diff 假象，**并非本卡删除它们**（两路合并会保留双方）。**评审与合入前必须先 `git merge main`（rebase 到当前 main）**，否则会回退 065 工作。封面四格源自 `stats`、零新增请求零服务端、降级态显示「—」/「从未」、临时内联文案待 066 的 `driftLabels.js` 合入后切换（D-02）、与 066 健康表逐字一致（D-01 解 B）。Orchestrator 不替代 Reviewer 结论 / Human 关闭。（后续：`434a323` 已 merge main 刷新基线、独立复核 `Pass with issues`、Human 确认结案，见 067 卡 §12/§13。）
+
+> 2026-11-06（Orchestrator 如实登记 TASK-068 首轮 Fail → 返工 → 待复检）：分支 plan §12.10 记录首轮独立 Reviewer 判定 **`Fail`**——F-01（BLOCKER，资产级 `null` 组触发 `null.toString()` 致 `GET /api/portfolios/summary` 500）、F-02（MAJOR，AC-03 测试无法证伪物理删除）、F-03（MINOR）。Implementer 于 `3226dd4` 返工（plan §11.7）：`unreadByPortfolio` 加 `_id!=null` 守卫、stub 补 `{_id:null}` 样本、增 `deletePortfolioCascade` 契约测试，两条负向对照可 FAIL，`test:server` **240/240**。可审对象由 `9c8c808` 更新为 **`3226dd4`**；状态保持 `Reviewing`（第二轮）。**返工后复检结论尚未产生**，Orchestrator 不替 Reviewer 出具 verdict、不改 AC/Scope/代码、不填 `Merged`。此前 BOARD/卡「待首次复核、`9c8c808`、239/239」为历史首轮事实，已更正。
 
 ### US-001（已归档）
 

@@ -15,6 +15,7 @@
 | P-05 | 实施 TASK-065（shared + server 四字段） | Implementer A | 在 `portomind-065` worktree 实施 summary 四字段、验证、提交 | 待使用 |
 | P-06 | 实施 TASK-066（Dashboard 健康表 + 分币种小计） | Implementer B | 在 `portomind-066` worktree 实施健康表；含 `driftLabels.js` 先合入职责 | 待使用 |
 | P-07 | 实施 TASK-067（PortfolioCard 四格） | Implementer C | 在 `portomind-067` worktree 实施四格；消费 B 的 `driftLabels.js` | 待使用 |
+| P-08 | 实施 TASK-068（删组合后事件查询层过滤） | Implementer | 在 `feature/TASK-068` worktree 实施三处出口同源过滤 | 待使用 |
 
 > 状态取值：`草稿` / `待使用` / `已使用` / `已废弃`。
 
@@ -657,3 +658,83 @@ D-02 已裁决：该文件归 B 建，你**不新建**。
 | 2026-11-05 | 新增 | 收录 P-02「登记 US-004 为预研 Story」、P-03「实施 Task 并提交 git」 |
 | 2026-11-06 | 新增 | 收录 P-04「派发 US-004 三卡并行开发」 |
 | 2026-11-06 | 新增 | 收录 P-05「实施 TASK-065」、P-06「实施 TASK-066」、P-07「实施 TASK-067」；P-04 状态改为「已使用」（2026-11-06 实际完成派发） |
+| 2026-11-06 | 新增 | 收录 P-08「实施 TASK-068（删组合后事件查询层过滤）」 |
+
+---
+
+## P-08 · 实施 TASK-068（删组合后事件查询层过滤）
+
+### 元信息
+
+| 项 | 内容 |
+|---|---|
+| 目标角色 | Implementer |
+| 用途 | 在 `feature/TASK-068` worktree 实施「删除组合后其 AlertEvent 查询层隐藏」，三处出口同源，验证并提交 |
+| 前置条件 | TASK-065 已合入 `main`（merge `6f556aa`）；TASK-068 计划已 `Approved` |
+| 创建 / 更新 | 2026-11-06 |
+| 状态 | 待使用 |
+
+### 提示词正文
+
+```text
+# Implementer 提示词：实施 TASK-068（删组合后事件查询层过滤）
+
+## 你的角色与目标
+
+你是本项目的 Implementer。你的任务：实施 TASK-068——删除组合后，其 `AlertEvent` 不再出现在三个查询出口（列表 / 全站未读计数 / summary 的 unreadAlertCount），但**库里保留**（隐藏非删除），资产级事件（`portfolioId = null`）**必须保留**。实现后验证并提交到 feature 分支，不 merge main。
+
+## 开工前必读（按顺序）
+
+1. docs/os/roles/IMPLEMENTER.md —— 你的职责、写入范围、停止条件
+2. docs/development/delivery/US-004/TASK-068.md —— 任务卡（AC-01～AC-07）
+3. docs/development/delivery/US-004/TASK-068-plan.md —— 实施计划（§4 设计、§5 步骤、§7 验证）
+4. docs/development/requirements/specs/FS-portfolio-ia-cleanup.md §6.2 B16、§10 R-9、§11 HD-14 —— 产品规则源头
+5. docs/os/standards/GIT.md —— 分支与提交规范
+
+## 关键事实（065 已合入后，以符号名为准，行号仅参考）
+
+- `summary.js` 的 `unreadAgg` 现为 `:96-99`（`$match: {status:'unread', portfolioId:{$ne:null}}` + `$group by portfolioId`）
+- `alert.controller.js` 的 `getEvents`（`:209`）用 `countDocuments(filter)` + `find(filter)`；`getUnreadCount`（`:239`）用 `countDocuments({status:'unread'})`
+- `deletePortfolioCascade` 只删 Transaction + RebalanceRecord，**不删 AlertEvent**（`shared/services/portfolio/deletePortfolio.js:10-14`）
+
+## 你要做的事（按计划 §4/§5）
+
+1. **新增共享辅助** `shared/services/alertVisibility.js`（优先独立文件）：
+   - `getVisiblePortfolioIds()`：`Portfolio.find({}, {_id:1}).lean()` 取现存组合 id 集合
+   - `visibleAlertFilter(ids)`：返回 `{ $or: [{ portfolioId: { $in: ids } }, { portfolioId: null }] }`
+   - 三处出口复用此单一来源，禁止各写一遍
+
+2. **出口 ③** `summary.js` 的 `unreadAgg`：`$match` 加组合可见性（`$or` 展开进 `$match`），只隐藏已删组合的事件，资产级 `portfolioId:null` 仍保留
+
+3. **出口 ①** `getEvents`：现有用户 filter 基础上 `$and` 上 `visibleAlertFilter`
+
+4. **出口 ②** `getUnreadCount`：`countDocuments({ status:'unread', $or: [...visibleFilter] })`，与出口 ① 同源
+
+5. **测试**：补 `server/test/integration/alert.api.test.js`（或新测试）覆盖 AC-19 ①～④
+
+6. **验证**：`npm run test:server` 全绿；`git status cron-worker` 空输出（AC-07）
+
+## 验收口径（对照 AC-01～AC-07）
+
+- 构造组合 A 3 条未读 + 1 条资产级（portfolioId=null）→ 删 A 后：events 不再返回那 3 条、**仍返回**资产级 1 条；summary 其它组合 unreadAlertCount 不变、全站未读减 3；库里 3 条仍存在（countDocuments 校验）；负向对照未删时三处一致
+- 过滤在**查询层**三处统一，禁止客户端兜底
+
+## git 提交
+
+- 分支 `feature/TASK-068`（从最新 main 切出，065 已在 main 上）
+- 提交信息 `feat(TASK-068): hide deleted-portfolio alert events at query layer`
+- 只提交本卡改动（alertVisibility.js + summary.js 的 unreadAgg + alert.controller.js + 测试），不混入无关改动
+- **不 merge main、不填 Merged**
+
+## 停止条件（停下上报，不擅自处理）
+
+- 实际代码与 §3 Findings 不符（文件结构变动）
+- 发现需要改模型 / 写迁移 / 物理删除 AlertEvent 才能满足 AC（违反 B16 红线）
+- 三处出口的口径无法统一（需要 Human 裁决）
+```
+
+### 备注
+
+- **硬串行已解除**：065 已合入 main，068 可从最新 main 切分支、在 065 的 `pendingAgg` 上下文上叠加 `unreadAgg` 过滤，无需再担心同文件冲突。
+- **资产级事件是红线**：`portfolioId = null` 的事件（规则 `scope='asset'`）必须始终保留，过滤条件漏掉 `{portfolioId:null}` 分支即 AC-01 失败。
+- 068 计划当前为 `Draft`，使用本提示词前须先由 Human 批准（`Draft → Approved`）。

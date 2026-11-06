@@ -2,7 +2,7 @@
 
 ## Status
 
-Status：Approved（2026-11-06，Human 确认已批准当前设计）
+Status：Completed（2026-11-06，Task 已 `Completed`；Human 确认验收通过。计划由 `Approved` 同步为 `Completed`）
 
 Owner：Planner（规划）→ Implementer C（2026-11-06 指派）
 
