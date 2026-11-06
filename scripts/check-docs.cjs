@@ -45,7 +45,7 @@ function storyDirectories(parent) {
   return fs.readdirSync(parent, { withFileTypes: true }).filter(e => e.isDirectory() && /^US-\d+$/.test(e.name)).map(e => path.join(parent, e.name));
 }
 const currentDeliveries = storyDirectories(delivery);
-if (currentDeliveries.length > 1) report('ERROR', delivery, 1, 'multiple-current-deliveries', 'delivery 根目录只能保留一个当前 Story 目录');
+if (currentDeliveries.length > 2) report('ERROR', delivery, 1, 'multiple-current-deliveries', 'delivery 根目录最多保留两个 Story 目录（一个开发中 + 一个预研）');
 for (const name of ['active', 'archived']) {
   const old = path.join(delivery, name);
   if (fs.existsSync(old)) report('ERROR', old, 1, 'legacy-delivery-layout', 'Story 交付目录不再使用 active/ 或 archived/ 层');

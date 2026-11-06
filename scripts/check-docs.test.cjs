@@ -87,11 +87,20 @@ test('flat current, completed and exited Story cards are checked, while plans ar
   assert.ok(result.errors.every(e => e.rule === 'task-status-enum'));
   assert.equal(result.warns.length, 0);
 });
-test('only one current Story directory is allowed, and Story process directories stay flat', t => {
+test('at most two Story directories are allowed, and Story process directories stay flat', t => {
   const root = fixture(t, {
     [card]: '| Status | Planning |',
-    'docs/development/delivery/US-002/note.md': '# Second current Story',
+    'docs/development/delivery/US-002/note.md': '# Second Story (preparation)',
+    'docs/development/delivery/US-003/note.md': '# Third Story (over the limit)',
     'docs/development/delivery/completed/US-003/tasks/TASK-003.md': '| Status | Completed |'
   });
   assert.deepEqual(run(root).errors.map(e => e.rule).sort(), ['multiple-current-deliveries', 'nested-story-directory']);
+});
+
+test('one development Story plus one preparation Story is allowed', t => {
+  const root = fixture(t, {
+    [card]: '| Status | Implementing |',
+    'docs/development/delivery/US-002/note.md': '# Preparation Story'
+  });
+  assert.deepEqual(run(root).errors.map(e => e.rule), []);
 });
