@@ -150,7 +150,92 @@ Approval：**2026-11-05，Human 明确「批准 task064」，据此登记 Draft 
 
 ## 11. Implementation Record
 
-尚未实施。
+**状态：** 实施完成（2026-11-05）。Task Status **未改动**（保持 `Implementing`，状态权限归 Orchestrator / Human）；计划 Status 保持 `Approved`，未改 AC/Scope。
+
+### 11.1 环境
+
+| 项 | 实际值 |
+|---|---|
+| Worktree | `D:\projects\portomind-064`（主工作区未提交 docs 未触碰） |
+| Branch / BASE | `feature/TASK-064` / `main @ d124626`（W0 已满足：`taskSkip.js`、`TaskRun.result` 在位） |
+| Node / npm | `v24.20.0` / `12.2.1`；`npm ci` 隔离安装（515 packages） |
+| DB | `portomind_dev`（家庭服务器；未打印口令） |
+| 基线 | `taskruns=276`、含 result=0、`taskskips=0`、历史无 result=276、未归档组合 4 |
+| 证据边界 | 057 验收脚本已清理其真实 result 记录；本卡真实 Mongo 脚本使用**临时测试夹具**（跑完删除），写侧持久化证据仍归 TASK-057 |
+
+### 11.2 改动文件与 SHA256
+
+| 文件 | 说明 | SHA256 |
+|---|---|---|
+| `shared/services/cronStatus.service.js` | FX 归一化/判级、再平衡归一化/判级、`lastSkip` 批量聚合 + 查询预算 +1 | `1c3af7d1…f498f` |
+| `server/test/helpers/modelStubs.js` | 新增 TaskSkip 聚合替身与 `taskSkipError` 注入 | `d1acbf89…257a` |
+| `server/test/integration/cronStatus.service.test.js` | AC1–AC5 新增 18 条用例（数值/容器/判级/跳过/查询预算） | `2345aaab…5107` |
+| `scripts/verify-task-064.cjs` | 真实 Mongo 集成验收（S1/S2/S3/S5/S6/S8 临时夹具 + 清理） | `3b447c7f…b029` |
+| `docs/handbook/technical/API_CONTRACT.md` | `lastSkip`、FX/再平衡判级、查询预算 +1 | `477f9a43…0144` |
+| `docs/handbook/technical/DATA_MODEL.md` | `TaskRun.result` 读侧口径 + `taskskips` 读取口径（链接写侧 §5.5） | `3aac2f4e…e96d` |
+| `docs/development/delivery/US-001/TASK-064-plan.md` | 本实施记录（§11） | 见交付消息（写入后计算） |
+
+**未改：** `shared/services/fxRate.service.js`（`SUPPORTED_CURRENCIES` 已存在导出，无需改动）、`shared/models/taskSkip.js`（057 所有）、`cron-worker/`、`server/` 路由/认证、价格目标日计算、`TASK-054` 历史结论。
+
+### 11.3 实现要点
+
+- **FX（F1–F3）**：`normalizeFxCurrencies` 逐币种读取；对象形态 `ok` 必须显式布尔，`ok:true` 还要求 `rateToCny` 为正有限数；标量数值=仅观测（`ok:null` + `NUMERIC_OBSERVATION_ONLY`）；数组/非对象/空对象/缺币种/非法项 → `contractReady=false` + `CONTRACT_NOT_READY`/`CURRENCY_MISSING`/`CURRENCY_INVALID`。判级按冻结表：三币全 ok→`ok`；显式失败全败→`bad`、混合→`warn`；无显式失败但有缺失/仅观测时，有成功项→`warn`，否则 `unknown`。
+- **再平衡（F4–F7）**：`due` 仅显式布尔（`null` 保持 `null`）；`suggestionsCount` 仅显式非负有限数（`null` 不折算 0）；`perPortfolio` 对照未归档组合做齐全性核对，缺项→`contractReady=false` + `PER_PORTFOLIO_INCOMPLETE`；脏项剔除 + `PER_PORTFOLIO_DIRTY`。判级：显式失败/子任务 failures→`bad`；到期未解决、`SKIPPED`、未知→`warn`；全部到期项已生成或明确未超阈→`ok`；缺契约→`unknown`。未超阈 `false/0/null` 为正常完成。
+- **lastSkip（F8）**：主视图新增一次 `TaskSkip.aggregate`（`$match` 五任务 + `$sort skippedAt:-1` + `$group $first`，使用 `$$ROOT`），每任务信封新增可选 `lastSkip`；`lastRun` 不变。仅捕获 Mongo 命名空间缺失（code 26 / NamespaceNotFound）为 `null`，其余错误抛出。
+- **查询预算（AC5）**：主视图由 6 次只读查询变为 **7 次**（+1 次 TaskSkip 批量聚合；实际为 4 次 aggregate + Asset/Price/Portfolio 3 次 find；`Price.distinct` 为全缺时的条件诊断查询）。detail 在 skip 查询前返回，**不查询 taskskips**。
+- **detail 零回归**：`buildRebalanceRows` 的逐行归一化被修正（这是 AC3 要求），但 detail 的 `summary.generated` 仍保留原 `?? 0` 表达式（原 `:743`，现文件行号 922，未改）；detail 的 `due/generated/failed/skipped` 汇总口径与既有测试保持一致。
+
+### 11.4 AC1～AC6 逐条结果
+
+| AC | 结果 | 实测证据 |
+|---|---|---|
+| AC1 数值仅观测、不判成功/失败 | **PASS** | 对象三币全 ok→`ok`；标量 `7.13/5.21/0.92`→`contractReady=true`、`level=unknown`、`ok:null`、`NUMERIC_OBSERVATION_ONLY`；USD 0.14 仍只观测；0/负/NaN/Infinity→`CURRENCY_INVALID`、`contractReady=false` |
+| AC2 容器/缺币种/非法项不假绿、不裸 bad | **PASS** | `{}`/数组→`contractReady=false`+`CONTRACT_NOT_READY`、`unknown`；缺 USD→`CURRENCY_MISSING`、`USD.ok:null`、`warn`；`ok:'yes'`→`CURRENCY_INVALID`；全显式失败→`bad` + `FX_CURRENCY_FAILED`；混合→`warn`；缺记录(null)与 `ok:false` 可区分 |
+| AC3 再平衡四语义/跳过/缺项/旧数据 | **PASS** | S6：due null 保持 null；未超阈 `false/0/null` → `ok`；生成项 `recordId` 非空/计数>0；显式失败→`bad`；S7 `status:SKIPPED`、needs/suggestions null、`warn`；缺项→`PER_PORTFOLIO_INCOMPLETE`、contract=false；脏项→note；历史缺 result 保持 `unknown` |
+| AC4 lastSkip 只读、与 lastRun 分离、错误精确 | **PASS** | S8 两条事件：lastSkip 为 `ALREADY_RUNNING`/`DUPLICATE_RUN_KEY`，lastRun 仍为 `RUNNING/STALE`（不被覆盖）；无记录→null；code 26→null；**code 500 必须抛出**（负向对照） |
+| AC5 查询预算/只读/detail 不变 | **PASS** | 单次 TaskSkip aggregate（测试断言 TaskRun=2、FxRate=1、TaskSkip=1；加 3 次 find=7 次只读）；detail 不产生 TaskSkip 查询；GET 无写操作、不触发任务；五任务顺序/错误参数回归通过 |
+| AC6 测试与真实 Mongo | **PASS（真实 Mongo 13/13；其中 S1/S2/S3/S5/S6/S8 为临时夹具）** | `test:server` **232/232**、`test:worker` **78/78**；`scripts/verify-task-064.cjs` 13/13，真实 dev `taskruns 276→276`、`taskskips 0→0`；S1/S3/S5/S6/lastSkip/detail 均从真实 Mongo 读回。057 写侧真实 result 已由 057 脚本清理，故本卡未复用其持久化记录；未取得项明确标为以单元/stub 映射验证 |
+
+### 11.5 负向对照
+
+| AC | 临时缺陷 | 结果 | 恢复 |
+|---|---|---|---|
+| AC2 | 空对象分支标 `contractReady=true` | `AC2 空对象` FAIL | 恢复 SHA256 `1c3af7d1…f498f` |
+| AC3 | `due` 改回 `result ? result.due===true : null` | `AC3 due=null 必须保持` FAIL（实际 false） | 同上 |
+| AC4 | `loadLatestSkips` 捕获全部错误 | 非命名空间错误用例 FAIL（`assert.rejects` 未抛） | 同上 |
+| AC5 | `getStatus` 重复调用 `loadLatestSkips()` 两次 | AC5 查询预算 FAIL（TaskSkip pipeline=2） | 同上 |
+
+每次恢复后重跑相关测试均回到 PASS；最终完整验收 232/78、真实 Mongo 13/13。
+
+### 11.6 查询预算与 detail 回归证据
+
+```text
+主视图（TASK-064 后）：
+  TaskRun.aggregate  ×2   （最新运行 + 再平衡）
+  TaskSkip.aggregate ×1   （lastSkip，批量，新增）
+  FxRate.aggregate   ×1
+  Asset.find / Price.find / Portfolio.find ×3
+  = 7 次只读查询（原 6 次，+1）
+
+detail=rebalance：
+  不调用 TaskSkip.aggregate（在 skip 查询前 return）
+  summary.generated 仍使用原 `(row.suggestionsCount ?? 0) > 0`（行 922，原 743，未改）
+  真实 Mongo + 既有 API 测试均通过
+```
+
+### 11.7 文档与已知限制
+
+1. **真实 Mongo 脚本使用临时测试夹具**：057 脚本已清理其 S1～S10 真实 result；本卡脚本写入 5 条 test TaskRun + 2 条 test TaskSkip 后立即删除（`taskruns 276→276`、`taskskips 0→0`）。这是 adapter 真实读库证据，**不是** 057 写侧持久化证据。
+2. `contractReady` 对“三币齐、纯数值形态”判 `true`（历史容器可用），但 `dataStateLevel=unknown` 且只给 `NUMERIC_OBSERVATION_ONLY`；不宣称成功、不修正汇率方向。
+3. `unknownCount` 未新增为公开字段；未知组合在 `REBALANCE_UNRESOLVED` note 中体现，避免额外契约面。
+4. detail 的逐行 `due/suggestionsCount` 归一化会随 AC3 修正（这是共享归一化预期）；detail **summary** 与 `:743` 表达式未变，既有 detail 测试全过。
+5. `npm run docs:check` 仍有 **2 个既有 ERROR**：`docs/development/delivery` 多个当前 Story 目录、`docs/readme.md:66` broken link；均非本卡新增链接（本卡新增链接未被报错）。
+6. 未改前端/063 消费层；未跑真实 UI 或完整 053/055 回归（不属于本卡）。未新增索引/集合、未写库（服务 GET 路径）。
+7. Task Status 保持 `Implementing`；未自审、未登记 Reviewing/Completed。
+
+### 11.8 交付状态
+
+实现、单测、真实 Mongo 适配器验证与文档同步完成；等待 Orchestrator 登记 `Reviewing` 并安排独立 Reviewer。
 
 ## 12. Review Record
 
