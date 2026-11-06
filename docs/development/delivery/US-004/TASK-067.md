@@ -66,3 +66,7 @@
 - **D-01**：✅ 已裁决（2026-11-06 Human）——AC-18「偏离文案逐字一致」采用**解 B**：逐字一致只约束卡片与健康表重叠的「待办/上次再平衡」文案；卡片 `DriftBadge` 徽标维持两态（P1-1），偏离数据同源即可。
 - **D-02**：✅ 已裁决（2026-11-06 Human）——`driftLabels.js` 由 TASK-066（Implementer B）拥有，本卡消费。
 - OQ-03「组合卡市值单币种简化」为假设项，实施时按「健康表市值列同样按组合本币显示」执行，不跨币种合计。
+
+## 12. Review Record
+
+**独立审查结论：`Pass with issues`**（2026-11-06，独立 Reviewer；无 BLOCKER / MAJOR，残余 MINOR 不阻塞）。评审前置已按要求在分支上 `git merge main` 得到干净基线 `434a323`（原 `8141275` 基于旧 main，未含 065 合入，旧 diff 的「065 内容删除」为假象）；rebase 后确认 065 四字段与 156 行测试完整保留。完整证据、AC-17/AC-18 逐条判定、负向对照、DoD T-1～T-6 见 [TASK-067-plan.md §12 Review Record](./TASK-067-plan.md#12-review-record)。未改 Task Status，关闭与合入登记归 Human。

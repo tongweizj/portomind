@@ -149,7 +149,96 @@ Approval：**未批准**。本计划覆盖 §1～§9 当前设计；`Draft → A
 
 ## 12. Review Record
 
-（按 [REVIEWER.md](../../../os/roles/REVIEWER.md) §7 记录。）
+### 12.1 独立性声明与审查对象
+
+- 依据 [REVIEWER.md §5/§7](../../../os/roles/REVIEWER.md)。**独立 Reviewer，未参与本卡实现或验收脚本编写**；Implementer C 自述（§11）不作结论，全部实跑复核。判定词不是状态，不构成合入许可。
+- **评审前置已执行（用户明确要求）**：`feature/TASK-067` 原 HEAD `8141275`（父 `0189c04` = 旧 main）**不含** 065 合入 `6f556aa`。复核前先在分支上 `git merge main -m "review(TASK-067): merge main to refresh stale base before independent review"`（ort 策略、**无冲突**），得到干净基线 HEAD **`434a323`**；`git merge-base --is-ancestor main HEAD` = 是，065 合入 `6f556aa` 已在 HEAD 中。
+  - rebase 前 `git diff main..feature/TASK-067 --stat` 把 065 四字段（`summary.js -34`）、156 行测试、065/068/070 文档显示为「删除」——确认为**假象**（main 在 `0189c04` 之后新增的内容，旧分支基点上没有），**未据此判 Fail**。
+  - rebase 后复核：`summary.js` 仍含 `pendingRebalanceCount`/`dueByTime`/`overThresholdCount`（grep 5 处命中）；`server/test/integration/portfolio.summary.test.js` 仍 **345 行**（065 的 +156 行增量未丢，AC-01/04 用例在 `:146/:174/:250`）。
+- 正确范围判定（merge-base `96ff382` = 合并前的 main .. HEAD）：`git diff --stat` = **2 文件** —— `client/src/components/PortfolioCard/index.jsx`、`TASK-067-plan.md`；**不含** `shared/`、`server/`、`cron-worker/`、`summary.js`、任何测试文件。
+- 被审文件 SHA256：`PortfolioCard/index.jsx` `f270472379285afe522a3a85cac607594945a6c4c8d08dd1258d9ccf10d05974`（与计划 §11 记录一致）。工作区审查后干净（temp 探针/夹具全删；merge 提交本身已提交）。
+
+### 12.2 实跑证据（不靠代码阅读下结论）
+
+| 命令 / 动作 | 实际输出 |
+|---|---|
+| `npm run build --workspace client` | `✓ built in 2.88s / 3.26s`，exit 0（仅既有 chunk >500 kB 警告） |
+| `eslint "src/**/*.{js,jsx}"` | exit 0，0 error / 0 warning |
+| 真实浏览器（Chrome headless + Vite + stub API，进入 `/portfolios`） | **AC-04 运行时**：portfolios 相关请求 **count=1** = `/api/portfolios/summary?includeArchived=false`，无新增子请求、无 pageerror；真实页面渲染四格与「2 条待确认 / 1 条未读」 |
+| 自建浏览器探针（临时，已删） | **19/19 PASS**：四格真值/分币种不合计/降级/两态徽标/同源/零新增请求 |
+| 负向对照 ×3 | 见 §12.5，均使关键断言 FAIL 后还原 |
+| git merge main（前置） | Merge made by 'ort'，无冲突；main 成为 HEAD 祖先，065 内容保留 |
+
+> 证据增强：计划 §11.6 写「未做真实浏览器 Network 面板截图（无后端运行环境）；AC-04 以静态证明」。本独立复核**已在真实浏览器用 stub API 实跑** `/portfolios` 并计数请求（AC-04 运行时验证成立），比 Implementer 自述证据更强；此为补强，不是缺陷。
+
+### 12.3 AC 逐条判定（AC-17 / AC-18）
+
+| AC | 判定 | 独立实测证据 |
+|---|---|---|
+| **AC-01**（四格全从 stats 派生；US-004/AC-17） | **满足** | 真实浏览器 + 自建探针：① 总市值 `¥82,340.5 + US$1,200` 分币种并列、无跨币种合计（无 `83540`）；② 持仓资产 `3 个` = `positionCount`；③ 待办 `2 条待确认 · 1 条未读` = `pendingRebalanceCount + unreadAlertCount`；④ 上次再平衡 `2026-08-27`（`lastExecutedAt` → `YYYY-MM-DD`）、`null` → 「从未」。四格数据全部取自 `portfolio.stats`，组件无 `useQuery`/`service`/`fetch`/`axios` import |
+| **AC-02**（降级态；US-004/AC-17） | **满足** | 待办 0 → 「—」（不出现 `0 条待确认/0 条未读`）；`lastExecutedAt:null` → 「从未」；空市值桶 → 「—」；`grep -rn "暂无" client/src/components/PortfolioCard/` **exit 1（0 命中）**；缺 065 字段时不崩、不显 0、显示「—」/「从未」 |
+| **AC-03**（同源逐字一致 / D-01 解 B；US-004/AC-18） | **满足** | 与 066 worktree 的 `client/src/constants/driftLabels.js` 字符串级比对：`PENDING_LABELS.pendingRebalance` = `` `${count} 条待确认` ``、`unreadAlert` = `` `${count} 条未读` ``、`none: '—'`、`LAST_REBALANCE_LABELS.never: '从未'` 与组件 `:76/:78/:81/:87` **逐字一致**；「偏离」数据同源取 `stats.drift`（`DriftBadge` 仅读 `drift.needsRebalance`，`:33-35`），**维持两态**「偏离阈值 / 配置正常」，未引入四态（负向对照 NEG-1 证明） |
+| **AC-04**（零新增请求；US-004/AC-17） | **满足（运行时）** | 真实 `/portfolios` 页面：portfolios 相关请求 **1** 次（既有 `/api/portfolios/summary?includeArchived=false`），无卡片二次请求；`git diff --name-only 96ff382..HEAD` 仅 `client/src/components/PortfolioCard/index.jsx` + 文档，无 `shared/`/`server/`/`cron-worker/` 改动；负向对照 NEG-3 注入额外 fetch 即 FAIL |
+| D-02（driftLabels 归属 066） | **满足** | `main` 无 `client/src/constants/driftLabels.js`（`git cat-file -e` 失败）；本分支**未新建**同名文件；组件 `:4-5` 有 TODO 注释「待 B(TASK-066) 的 driftLabels.js 合入 main 后，切换为 import 共享常量；…本卡临时内联文案，绝不新建同名文件」；内联文案与 066 常量逐字一致 |
+| 禁改范围 / 065 不丢失 | **满足** | 正确 diff 无 `shared/`/`server/`/`cron-worker/`；rebase 后 065 四字段与 345 行测试保留（§12.1） |
+
+### 12.4 六点重点核对（用户指定）
+
+1. **四格全从 stats 派生** ✅ 见 AC-01：分币种并列不合计、`positionCount`、待办两数相加、`lastExecutedAt→YYYY-MM-DD / null→从未`。
+2. **降级态** ✅ 待办 0→「—」、无值→「从未」、PortfolioCard 内无「暂无」。
+3. **同源逐字一致（解 B）** ✅ 待办/上次再平衡文案与 066 `driftLabels.js` 逐字一致；偏离数据同源取 `stats.drift`；`DriftBadge` 维持两态（非健康表四态）。
+4. **零服务端零新增请求** ✅ 仅 `PortfolioCard/index.jsx` 改动；运行时请求数 1；无 shared/server/cron-worker 改动。
+5. **D-02** ✅ main 无该文件、本卡未新建、TODO 注释声明待 B 合入后切换。
+6. **rebase 后 065 字段/测试不丢失** ✅ `summary.js` 5 处命中、测试 345 行、AC 用例在。
+
+### 12.5 负向对照记录（临时篡改 `PortfolioCard/index.jsx` → 断言 FAIL → 还原 → 验证干净）
+
+| # | 临时缺陷 | 断言表现 | 还原 |
+|---|---|---|---|
+| NEG-1（AC-03） | `DriftBadge` 改四态文案（`${overThresholdCount} 项超阈` / `正常`） | `AC-03 DriftBadge 维持两态` FAIL（出现「项超阈」）；17/19 PASS | 备份还原，SHA256 回 `f2704723…` |
+| NEG-2（AC-02） | 待办 0 时显示 `` `0 条待确认` `` | `AC-02 待办为 0 → 「—」` 与 `AC-02 待办不显示 0 值兜底` 2 条 FAIL；16/19 PASS | 备份还原 |
+| NEG-3（AC-04） | 组件内注入 `fetch('/api/portfolios/extra-review-probe')` | `AC-04 请求数 = 1` / `无新增 /portfolios 子请求` 2 条 FAIL（count=2）；17/19 PASS | 备份还原 |
+
+还原后重跑自建探针 **19/19 PASS**；`git status --porcelain` 空（temp 探针/夹具最终删除）。
+
+### 12.6 Findings（编号 / 严重度 / 文件:行 / 修法）
+
+| # | 严重度 | 位置 | 现象 | 修法方向 |
+|---|---|---|---|---|
+| F-01 | **MINOR** | `client/src/components/PortfolioCard/index.jsx:4-5, 76, 78, 87` | D-02 要求待 B 的 `driftLabels.js` 合入后切换为 import；当前为临时内联文案（与 066 常量逐字一致），存在两处文案源、长期可能漂移 | 066 合入 main 后按 TODO 切换为 `import { PENDING_LABELS, LAST_REBALANCE_LABELS } from '../../constants/driftLabels'` 并复跑 build/eslint；属计划已声明的临时妥协，不阻塞 |
+| F-02 | **MINOR** | `client/src/components/PortfolioCard/index.jsx:57`（`formatDate`） | `formatDate` 对非法/非 ISO 字符串直接 `String(value).slice(0,10)`，若后端返回异常值会显示截断乱码而非「从未」；当前 065 契约保证 ISO/Date，未触发 | 可加 `YYYY-MM-DD` 正则校验后回退 `null`；非当前契约路径，不阻塞 |
+| F-03 | **MINOR** | 页面级「暂无」文案（非本卡文件） | 真实 `/portfolios` 页面在家庭汇总为空时，`Household/CurrencyBuckets.jsx:13`、`DataState/index.jsx:6` 等**既有组件**显示「暂无资产分桶数据 / 暂无数据」；AC-02 的「DOM grep 不到暂无」按卡片降级态口径（计划 §7 限定 `client/src/components/PortfolioCard/`）已通过 | 若未来产品要求全页零「暂无」，属另卡范围；本卡未引入该文案，不阻塞 |
+| F-04 | MINOR | 计划 §11.6 | Implementer 自述「未做真实浏览器 Network 面板截图，AC-04 以静态证明」；本人已用真实浏览器 + stub API 实跑补强（§12.2） | 证据增强，非缺陷 |
+| F-05 | — | 分支基线 | 原 `8141275` 基于旧 main；按前置已 merge main 得 `434a323` 干净基线；若直接以旧 HEAD 合入将产生 065 内容「删除」假象 | 合入时以 rebase/merge 后基线为准（本复核已处理） |
+
+**无 BLOCKER、无 MAJOR**。`git diff <rebase-base>..feature/TASK-067` 只含 `client/src/components/PortfolioCard/index.jsx` 纯展示改动 + 文档；无 `summary.js` 字段删除、无测试删除；既有 `drift.needsRebalance` 徽标语义未改。
+
+### 12.7 DoD（[DEFINITION_OF_DONE.md §3](../../../os/process/DEFINITION_OF_DONE.md) T-1～T-6）
+
+| # | 要求 | 满足 | 证据 |
+|---|---|---|---|
+| T-1 实现完成 | 改动清单与 Implementing 退出物证一致 | ✅ | 相对 merge-base 仅 2 文件（组件 + plan），与计划 §10 范围一致；merge 后工作区干净 |
+| T-2 验证完成 | 运行类记录实际结果 | ✅ | build exit 0 / eslint 0；真实浏览器 `/portfolios` 请求数 1；自建探针 19/19、3 条负向对照；静态检查（diff/grep/SHA256/逐字比对）记录对象与方法 |
+| T-3 AC 逐条满足 | 对照任务卡 §3 | ✅ | AC-01～04（AC-17/18）逐条实测（§12.3/§12.4） |
+| T-4 审查结论收敛 | 无 BLOCKER；MAJOR 整改或 Human 接受 | ✅ | 本 §12 独立判定 Pass with issues，无 BLOCKER/MAJOR，残余 MINOR 已记录 |
+| T-5 文档同步 | ExecPlan 记录节已填、任务卡仅引用 | ✅ | plan §11 实施记录已填；本 §12 回填；任务卡 `TASK-067.md` 加一行结论 + 链接（REVIEWER §3） |
+| T-6 已知妥协已记录 | 改动清单含「已知妥协」 | ✅ | plan §11.6（真实浏览器 Network 未截图[已被本人补强]、跳转目标属 066、B 合入后切换 import）；本 §12 F-01/F-02/F-04 复核 |
+
+> DoD 满足 ≠ 已合入 main；`Merged`、Task Status 推进与关闭归 Human / Orchestrator（STATES.md §4）。本 Reviewer 未改 Task Status，未 `git add/commit/push`（merge main 为评审前置，已按要求执行并提交为分支上的 merge commit）。
+
+### 12.8 残余风险与未验证项
+
+- **未连真实后端/DB**：浏览器运行时用 stub API 注入组合数据（含 065 真值形态），验证的是请求数与渲染；未在真实 `GET /api/portfolios/summary` 上做端到端文案与 066 健康表「同一真实组合」逐字比对（计划 §11.6 已声明）。
+- **D-02 临时内联**：066 的 `driftLabels.js` 尚未在 main；合入顺序（065 → 066 → 067 或 067 先）需由 Orchestrator 决定，切换 import 后须复跑 build/eslint（F-01）。
+- 「待办」跳转（B9 `?sub=suggestions` / `/` 组合筛选）本卡未实现，属 066 健康表 AC-03（计划 §11.6 已声明，纯展示）。
+- 页面级其他既有组件仍显示「暂无」（F-03），超出本卡口径。
+- 未跑 `npm test` 全 workspace（本卡纯客户端、零后端改动；AC 未要求）。
+
+### 12.9 判定
+
+**Pass with issues** —— 经「评审前置 merge main 得干净基线」后独立复核：AC-01～AC-04（US-004/AC-17、AC-18）全部满足并经实跑验证：四格全从 `stats` 派生、降级态无「暂无」/不显 0、与 066 健康表待办/上次再平衡文案逐字一致且 `DriftBadge` 维持两态、真实浏览器 `/portfolios` portfolios 请求数恒为 1（零新增）、D-02 未新建 `driftLabels.js` 且 TODO 声明切回点、rebase 后 065 四字段与 156 行测试完整保留；build/eslint 全绿、禁改范围守住、3 条负向对照证明断言非恒真；DoD T-1～T-6 逐条满足。**无 BLOCKER / MAJOR**；残余 5 项 MINOR/观察（F-01 D-02 临时内联、F-02 formatDate 容错、F-03 页面级既有「暂无」、F-04 证据增强、F-05 基线说明），均不阻塞。
+
+判定词不是状态，不构成合入许可。Task Status 仍 `Implementing`（登记 `Reviewing` 归 Orchestrator）、`Merged` 与关闭归 Human；本 Reviewer 未改状态、未自行标 Completed、未提交业务改动、未合入 main。
 
 ## 13. Completion Record
 
