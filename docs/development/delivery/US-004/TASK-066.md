@@ -4,8 +4,8 @@
 
 | 字段 | 内容 |
 |---|---|
-| Status | Implementing（2026-11-06，计划已 `Approved`；Orchestrator 登记，Implementer B 实施） |
-| Priority / Owner / Type | `High` / Implementer B / `Feature`（纯客户端） |
+| Status | Reviewing（2026-11-06，实现与自测完成于 worktree `portomind-066` @ `7cdefa0`，等待独立 Reviewer 复核） |
+| Priority / Owner / Type | `High` / Reviewer（待指派） / `Feature`（纯客户端） |
 | Created / Updated | 2026-11-05 / 2026-11-06 |
 | 所属 Story | [US-004](../../requirements/stories/active/US-004-dashboard-portfolio-health.md) |
 | 覆盖的验收条件 | US-004/AC-05～AC-13 |
@@ -78,3 +78,32 @@
 - **OQ-02**：✅ 已裁决（2026-11-05 Human）——本 Story 与 US-003 **无硬依赖**、本 Story 先行；本卡 AC-03「待办」跳转 `?sub=suggestions` 在 US-003 AC-11 落地前落到默认子 Tab（行为等价）。
 - **D-02**：✅ 已裁决（2026-11-06 Human）——本卡（Implementer B）**拥有**共享文案常量 `client/src/constants/driftLabels.js`（健康表四态偏离 + 「待办/上次再平衡」文案），TASK-067 消费。
 - **D-01**：✅ 已裁决（2026-11-06 Human，解 B）——逐字一致只约束「待办/上次再平衡」，偏离徽标维持两态（属 TASK-067 口径，本卡健康表偏离列仍为四态）。
+
+## Orchestrator 交付接收记录（2026-11-06）
+
+依据 [STATES.md §4](../../../os/process/STATES.md#4-谁可以改变状态)：「Task → Reviewing：Implementer 提供改动清单、自测证据、可审对象和已知妥协」。四项齐备，故登记 `Implementing` → **`Reviewing`**。
+
+| 项 | 事实 |
+|---|---|
+| Worktree | `D:/projects/portomind-066` |
+| 分支 / 提交 | `feature/TASK-066` @ **`7cdefa0`**（另有 `4e26dca` 建 `driftLabels.js`） |
+| 改动规模 | 两提交合计：新增 `PortfolioHealthTable.jsx`（217 行）、`verify066.cjs`（201 行）、`driftLabels.js`；改 `TotalAssetsCard.jsx` / `Dashboard.jsx` / 计划 §11 |
+| 范围核对 | `server/` `shared/` `cron-worker/` **零改动** ✓ |
+| 自测证据 | 计划 §11；`verify066.cjs` **29/29 PASS** |
+
+**Orchestrator 独立复验（本轮全部亲跑）**
+
+| 项 | 结果 |
+|---|---|
+| `npm run build`（client） | **exit 0**（2.82s）✓ |
+| `eslint "src/**/*.{js,jsx}"` | **exit 0** ✓ |
+| `verify066.cjs`（启 vite @ 6601 后跑） | **29/29 PASS**，含 5 处负向对照 ✓ |
+| D-02 归属 | `client/src/constants/driftLabels.js` 由 `4e26dca` 建立，健康表 `:29` import 它 ✓ |
+| 零新增请求 | `PortfolioHealthTable.jsx` 不自行调接口，数据由 `Dashboard.jsx` 的 `usePortfolios()` 传入 ✓ |
+| AC-03 点击隔离 | `stopPropagation` 在 `:182` / `:194` ✓ |
+
+**验收脚本的取证特征（须告知 Reviewer）**：`verify066.cjs` 依赖本地 vite dev server（`VERIFY_BASE`，默认 `http://localhost:6601`）+ 本机 Chrome（`CHROME_PATH`），用 `page.route` 拦截 `/api/**` 注入 mock 快照。**不是连真实后端**。Orchestrator 本轮用 `../node_modules/.bin/vite --port 6601` 启动后复跑，跑完已关闭服务、worktree 干净。
+
+**⚠️ 065 已合入，降级态前提解除**：本卡计划 §4 原要求「065 未合入用字段缺失降级」。065 现已合入 `main`（`6f556aa`），四字段在位，故 AC-02/AC-04 的**真实字段验收已可完成**（脚本用的 mock 也含四字段）。Reviewer 需确认实现没有残留不必要的降级掩盖。
+
+**未做的事**：未改 AC / Scope / 代码；未提交合入、未填 `Merged`、未关闭。
