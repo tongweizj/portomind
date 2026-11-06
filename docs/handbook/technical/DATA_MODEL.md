@@ -351,12 +351,14 @@ AlertRule ──_id──> AlertEvent.ruleId（**可空**：再平衡通知没�
 
 `TaskRun` 与 `AlertEvent` 都没有 `expireAfterSeconds`。`AlertEvent` 还有「不可删除」的审计约定，两者叠加意味着**集合无限增长**。做聚合统计时必须带时间范围，不要写全表聚合。
 
-### 5.6 `TaskRun` 缺两类关键字段
+### 5.6 `TaskRun.result` 与跳过观测（TASK-057 已落地）
 
-1. **无 `result` 字段**：运行结果明细无法落库（`strict: true` 会静默丢弃，不报错）。当前只保留 `normalizeCounts()` 白名单内的 `total/success/failure/failures`。
-2. **`status` 无 `SKIPPED`**：跳过（如未到期、非交易日）时只 return、不落库，也没有状态值可表达。
+- `TaskRun.result` 为**可选** `Mixed`（写侧契约见 [CRON_WORKER_DEV §5.5](./CRON_WORKER_DEV.md#55-result-字段与跳过观测task-057)；本节只说明读侧口径，不复制字段表）。
+- `result` 缺失 / `null` = 「契约未就绪 / 结果未知」，读侧**不得**当成 `{}` 后渲染成 0 缺口或全部正常。
+- `TaskRun.status` 仍只有 `RUNNING/SUCCEEDED/PARTIAL/FAILED`，**没有 `SKIPPED`**；防重跳过写独立 `taskskips` 事件，不改写正在运行的 TaskRun。
+- `taskskips` 事件字段：`{taskName,runKey,trigger,reason: ALREADY_RUNNING|DUPLICATE_RUN_KEY,skippedAt,activeRunKey?}`；索引 `{taskName:1,skippedAt:-1}`，无 TTL。读侧按 taskName 取**最新一条**作为可选 `lastSkip`。
 
-**含义**：`SUCCEEDED` 必须读成「**跑完且没有异常抛出**」，不能读成「有数据更新」。做状态看板 / 数据新鲜度判断时，必须另取 `Price.timestamp` 或 `taskName` 专属业务字段交叉验证。
+**含义**：`SUCCEEDED` 仍只能读成「跑完且没有异常抛出」，不能读成「有数据更新」；数据是否到位必须看 `result` 的业务摘要 + `Price.timestamp` 等事实字段交叉验证。
 
 ### 5.7 `Mixed` 字段无 schema 校验
 

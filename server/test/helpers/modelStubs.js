@@ -10,8 +10,9 @@ const Asset = require('@portomind/shared/models/asset');
 const Price = require('@portomind/shared/models/price');
 const Portfolio = require('@portomind/shared/models/portfolio');
 const FxRate = require('@portomind/shared/models/fxRate');
+const TaskSkip = require('@portomind/shared/models/taskSkip');
 
-const MODELS = { TaskRun, Asset, Price, Portfolio, FxRate };
+const MODELS = { TaskRun, Asset, Price, Portfolio, FxRate, TaskSkip };
 
 // 记录每次 aggregate 的管线，供测试断言"查询形状"（D-19/D-18 的唯一真实执行载体）
 const state = { pipelines: [] };
@@ -68,6 +69,11 @@ function applyWorld(world = {}) {
   FxRate.aggregate = async (pipeline) => {
     state.pipelines.push({ model: 'FxRate', pipeline });
     return world.fxCount == null ? [] : [{ _id: 'latest', count: world.fxCount }];
+  };
+  TaskSkip.aggregate = async (pipeline) => {
+    state.pipelines.push({ model: 'TaskSkip', pipeline });
+    if (world.taskSkipError) throw world.taskSkipError;
+    return world.taskSkips || [];
   };
 
   return function restore() {

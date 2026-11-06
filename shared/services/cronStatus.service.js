@@ -1,7 +1,7 @@
 // shared/services/cronStatus.service.js
 //
 // TASK-054（FS C-02）：`GET /api/cron/status` 的**唯一派生实现**（ExecPlan D-9）。
-// 分层：controller 只做参数校验与响应封装；本文件负责 6 次只读查询 + 全部派生。
+// 分层：controller 只做参数校验与响应封装；本文件负责 7 次只读查询 + 全部派生（TASK-064 新增 1 次 TaskSkip 批量聚合）。
 // 契约：ExecPlan §4.3（冻结）。要点：
 //   - 只读：本文件不含任何写操作（不创建、不更新、不删除、不批量写）
 //   - null ≠ 0：result 缺失时数据态数值一律 null（占位 display 由前端决定）
@@ -20,6 +20,8 @@ const Asset = require('../models/asset');
 const Price = require('../models/price');
 const Portfolio = require('../models/portfolio');
 const FxRate = require('../models/fxRate');
+const TaskSkip = require('../models/taskSkip');
+const { SUPPORTED_CURRENCIES } = require('./fxRate.service');
 
 const { isMarketOpenToday } = require('./calendar.service');
 const { MARKET_TIMEZONE, dateBounds, marketDate } = require('../utils/marketTime');
@@ -42,6 +44,14 @@ dayjs.extend(timezone);
 
 const NOTE_PRIORITY = [
   'CONTRACT_NOT_READY',
+  'CURRENCY_MISSING',
+  'CURRENCY_INVALID',
+  'NUMERIC_OBSERVATION_ONLY',
+  'FX_CURRENCY_FAILED',
+  'PER_PORTFOLIO_INCOMPLETE',
+  'PER_PORTFOLIO_DIRTY',
+  'REBALANCE_FAILED',
+  'REBALANCE_UNRESOLVED',
   'NO_TASK_RUN',
   'NO_OPEN_DAY',
   'EXPECTED_ZERO',
@@ -167,6 +177,39 @@ function buildRunSummary(doc, taskName, now) {
       successCount: numOrNull(doc.successCount) ?? 0,
       failureCount: numOrNull(doc.failureCount) ?? 0
     }
+  };
+}
+
+// TASK-064（F8 / AC4）：跳过事件只读观测。仅捕获命名空间缺失；其余 DB 错误必须抛出。
+function isNamespaceMissingError(error) {
+  if (!error) return false;
+  if (error.code === 26) return true;
+  return /ns not found|NamespaceNotFound/i.test(String(error.message || ''));
+}
+
+async function loadLatestSkips() {
+  try {
+    const rows = await TaskSkip.aggregate([
+      { $match: { taskName: { $in: CRON_TASK_NAMES } } },
+      { $sort: { skippedAt: -1 } },
+      { $group: { _id: '$taskName', doc: { $first: '$$ROOT' } } }
+    ]);
+    return Array.isArray(rows) ? rows : [];
+  } catch (error) {
+    if (isNamespaceMissingError(error)) return [];
+    throw error;
+  }
+}
+
+function buildSkipSummary(doc) {
+  if (!doc) return null;
+  const skippedAt = safeDate(doc.skippedAt);
+  return {
+    taskName: doc.taskName ?? null,
+    runKey: doc.runKey ?? null,
+    reason: doc.reason ?? null,
+    skippedAt: skippedAt ? skippedAt.toISOString() : null,
+    trigger: doc.trigger ?? null
   };
 }
 
@@ -461,64 +504,147 @@ async function loadFxCount(tz) {
   return numOrNull(rows[0].count);
 }
 
-function normalizeCurrencies(raw) {
-  if (!raw || typeof raw !== 'object') return null;
-  const normalized = {};
-  for (const [currency, value] of Object.entries(raw)) {
-    if (value && typeof value === 'object') {
-      normalized[currency] = {
-        ok: value.ok === true,
-        rateToCny: numOrNull(value.rateToCny)
-      };
-    } else {
-      normalized[currency] = {
-        ok: value === true || value === 'ok',
-        rateToCny: numOrNull(value)
-      };
-    }
+function positiveRate(value) {
+  return typeof value === 'number' && Number.isFinite(value) && value > 0 ? value : null;
+}
+
+/**
+ * TASK-064（AC1/AC2）：汇率 currencies/rates 归一化。
+ * - 对象形态：ok 必须显式布尔；ok:true 还要求 rateToCny 为正有限数；
+ * - 标量数值形态（历史兼容）：ok:null（仅观测），正数不判成功/失败；
+ * - 数组/非对象/空对象/缺币种/非法项：contractReady=false + 解释 note。
+ */
+function normalizeFxCurrencies(raw) {
+  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) {
+    return {
+      currencies: null,
+      contractReady: false,
+      okCount: 0,
+      failedCount: 0,
+      numericCount: 0,
+      notes: [note('CONTRACT_NOT_READY', 'taskruns.result.currencies 必须是对象（收到数组/非对象/空值）')]
+    };
   }
-  return normalized;
+  if (Object.keys(raw).length === 0) {
+    return {
+      currencies: null,
+      contractReady: false,
+      okCount: 0,
+      failedCount: 0,
+      numericCount: 0,
+      notes: [note('CONTRACT_NOT_READY', 'taskruns.result.currencies 为空对象，缺全部预期币种')]
+    };
+  }
+
+  const currencies = {};
+  const missing = [];
+  const invalid = [];
+  let okCount = 0;
+  let failedCount = 0;
+  let numericCount = 0;
+
+  for (const currency of SUPPORTED_CURRENCIES) {
+    if (!Object.prototype.hasOwnProperty.call(raw, currency)) {
+      missing.push(currency);
+      currencies[currency] = { ok: null, rateToCny: null };
+      continue;
+    }
+    const value = raw[currency];
+    if (typeof value === 'number') {
+      const rate = positiveRate(value);
+      if (rate === null) {
+        invalid.push(currency);
+        currencies[currency] = { ok: null, rateToCny: null };
+      } else {
+        numericCount += 1;
+        currencies[currency] = { ok: null, rateToCny: rate };
+      }
+      continue;
+    }
+    if (value && typeof value === 'object' && !Array.isArray(value)) {
+      const ok = value.ok;
+      if (typeof ok !== 'boolean') {
+        invalid.push(currency);
+        currencies[currency] = { ok: null, rateToCny: null };
+        continue;
+      }
+      if (ok === true) {
+        const rate = positiveRate(value.rateToCny);
+        if (rate === null) {
+          invalid.push(currency);
+          currencies[currency] = { ok: null, rateToCny: null };
+        } else {
+          okCount += 1;
+          currencies[currency] = { ok: true, rateToCny: rate };
+        }
+      } else {
+        failedCount += 1;
+        currencies[currency] = { ok: false, rateToCny: positiveRate(value.rateToCny) };
+      }
+      continue;
+    }
+    invalid.push(currency);
+    currencies[currency] = { ok: null, rateToCny: null };
+  }
+
+  const contractReady = missing.length === 0 && invalid.length === 0;
+  const notes = [];
+  if (!contractReady) notes.push(note('CONTRACT_NOT_READY', 'taskruns.result.currencies 不完整或含非法项'));
+  if (missing.length > 0) notes.push(note('CURRENCY_MISSING', `缺少预期币种：${missing.join(', ')}`));
+  if (invalid.length > 0) notes.push(note('CURRENCY_INVALID', `币种观测非法：${invalid.join(', ')}`));
+  if (numericCount > 0) notes.push(note('NUMERIC_OBSERVATION_ONLY', '存在仅数值观测的币种：仅证明数值可读，不证明同步成功或汇率方向正确'));
+  if (failedCount > 0) notes.push(note('FX_CURRENCY_FAILED', `存在显式失败币种：${failedCount} 个`));
+
+  return { currencies, contractReady, okCount, failedCount, numericCount, notes };
+}
+
+function fxLevel({ currencies, contractReady, okCount, failedCount }) {
+  if (!currencies) return 'unknown';
+  const total = SUPPORTED_CURRENCIES.length;
+  if (contractReady && okCount === total) return 'ok';
+  if (failedCount > 0) return failedCount === total ? 'bad' : 'warn';
+  if (okCount > 0) return 'warn';
+  return 'unknown';
 }
 
 function buildFxDataState(doc, fxCountFromCollection) {
   const result = doc && doc.result ? doc.result : null;
-  let currencies = null;
   let fxCount = fxCountFromCollection;
+  let normalized;
 
-  if (result) {
-    if (result.currencies && typeof result.currencies === 'object') {
-      currencies = normalizeCurrencies(result.currencies);
-    } else if (result.rates && typeof result.rates === 'object') {
-      currencies = normalizeCurrencies(result.rates);
-    }
+  if (!result) {
+    normalized = {
+      currencies: null,
+      contractReady: false,
+      okCount: 0,
+      failedCount: 0,
+      numericCount: 0,
+      notes: [note('CONTRACT_NOT_READY', 'taskruns.result 缺失（等 TASK-057/C-05 落地），汇率币种明细不可得；fxCount 仅表示最新汇率日的记录数')]
+    };
+  } else {
     if (result.fxCount !== undefined && result.fxCount !== null) {
       fxCount = numOrNull(result.fxCount);
     }
-  }
-
-  const contractReady = currencies !== null;
-  let dataStateLevel = 'unknown';
-  if (contractReady) {
-    const entries = Object.values(currencies);
-    const okCount = entries.filter((item) => item.ok).length;
-    if (entries.length > 0 && okCount === entries.length) dataStateLevel = 'ok';
-    else if (okCount === 0) dataStateLevel = 'bad';
-    else dataStateLevel = 'warn';
+    const raw = result.currencies !== undefined ? result.currencies : result.rates;
+    if (raw === undefined) {
+      normalized = {
+        currencies: null,
+        contractReady: false,
+        okCount: 0,
+        failedCount: 0,
+        numericCount: 0,
+        notes: [note('CONTRACT_NOT_READY', 'taskruns.result 缺少 currencies/rates 字段（等 TASK-057/C-05 冻结形态）；fxCount 仅表示最新汇率日的记录数')]
+      };
+    } else {
+      normalized = normalizeFxCurrencies(raw);
+    }
   }
 
   return {
-    contractReady,
-    dataStateLevel,
-    // 降级必须带解释（ExecPlan §4.7：4 项 contractReady=false → notes:[CONTRACT_NOT_READY]）
-    notes: contractReady
-      ? []
-      : [note(
-        'CONTRACT_NOT_READY',
-        result
-          ? 'taskruns.result 缺少 currencies/rates 字段（等 TASK-057/C-05 冻结形态）；fxCount 仅表示最新汇率日的记录数'
-          : 'taskruns.result 缺失（等 TASK-057/C-05 落地），汇率币种明细不可得；fxCount 仅表示最新汇率日的记录数'
-      )],
-    dataState: { fxCount, currencies }
+    contractReady: normalized.contractReady,
+    dataStateLevel: fxLevel(normalized),
+    notes: sortNotes(normalized.notes),
+    dataState: { fxCount, currencies: normalized.currencies }
   };
 }
 
@@ -543,7 +669,29 @@ function loadRebalanceRuns(dateRange) {
   ]);
 }
 
-function buildRebalanceRows({ runs = [], portfolios = [], tz, date = null }) {
+function explicitNonNegativeNumber(value) {
+  return typeof value === 'number' && Number.isFinite(value) && value >= 0 ? value : null;
+}
+
+function rowHasExplicitFailure(row) {
+  return row.status === 'FAILED' || (Array.isArray(row.failures) && row.failures.length > 0);
+}
+
+// TASK-064（AC3）：到期项只有「生成建议」或「明确未超阈」才算完成；未到期不猜。
+function rowIsComplete(row) {
+  if (row.status === 'SKIPPED') return false;
+  if (row.due === false) return true;
+  if (row.due !== true) return false;
+  if (row.needsRebalance === false) {
+    return row.suggestionsCount === 0 && row.recordId === null;
+  }
+  if (row.needsRebalance === true) {
+    return typeof row.suggestionsCount === 'number' && row.suggestionsCount > 0 && row.recordId !== null;
+  }
+  return false;
+}
+
+function buildRebalanceRows({ runs = [], portfolios = [], tz, date = null } = {}) {
   const parentDoc = runs.find((item) => item._id === REBALANCE_PARENT_TASK)?.doc || null;
   const children = new Map();
   for (const item of runs) {
@@ -554,16 +702,41 @@ function buildRebalanceRows({ runs = [], portfolios = [], tz, date = null }) {
   }
 
   const parentResult = parentDoc && parentDoc.result ? parentDoc.result : null;
-  const perPortfolio = parentResult && Array.isArray(parentResult.perPortfolio)
+  const rawPerPortfolio = parentResult && Array.isArray(parentResult.perPortfolio)
     ? parentResult.perPortfolio
     : null;
-  const contractReady = Array.isArray(perPortfolio);
-  // result 为 Mixed 且未经校验：逐项过滤 null/非对象，避免一条脏数据把整个端点打成 500
-  const resultByPortfolio = new Map(
-    (perPortfolio || [])
-      .filter((item) => item && typeof item === 'object')
-      .map((item) => [String(item.portfolioId), item])
-  );
+
+  // TASK-064（F7）：数组存在 ≠ 契约齐备；脏项逐项剔除并计 note，不打 500。
+  const resultByPortfolio = new Map();
+  let dirtyCount = 0;
+  for (const item of rawPerPortfolio || []) {
+    if (!item || typeof item !== 'object' || Array.isArray(item)) {
+      dirtyCount += 1;
+      continue;
+    }
+    if (item.portfolioId === undefined || item.portfolioId === null || String(item.portfolioId).trim() === '') {
+      dirtyCount += 1;
+      continue;
+    }
+    resultByPortfolio.set(String(item.portfolioId), item);
+  }
+
+  const expectedPortfolioIds = portfolios
+    .filter((portfolio) => portfolio.archived !== true)
+    .map((portfolio) => String(portfolio._id));
+  const missingPortfolioIds = expectedPortfolioIds.filter((id) => !resultByPortfolio.has(id));
+  const contractReady = Array.isArray(rawPerPortfolio) && missingPortfolioIds.length === 0;
+
+  const notes = [];
+  if (!Array.isArray(rawPerPortfolio)) {
+    notes.push(note('CONTRACT_NOT_READY', '父任务 rebalance-check 的 result.perPortfolio 缺失或不是数组'));
+  }
+  if (missingPortfolioIds.length > 0) {
+    notes.push(note('PER_PORTFOLIO_INCOMPLETE', `perPortfolio 缺少 ${missingPortfolioIds.length} 个未归档组合`));
+  }
+  if (dirtyCount > 0) {
+    notes.push(note('PER_PORTFOLIO_DIRTY', `perPortfolio 含 ${dirtyCount} 个脏项，已逐项剔除`));
+  }
 
   const rows = portfolios.map((portfolio) => {
     const portfolioId = String(portfolio._id);
@@ -575,14 +748,15 @@ function buildRebalanceRows({ runs = [], portfolios = [], tz, date = null }) {
       accountType: portfolio.accountType ?? 'other',
       schedule: portfolio.rebalanceSettings?.rebalanceSchedule ?? null,
       archived: portfolio.archived === true,
-      due: result ? result.due === true : null,
+      due: result && typeof result.due === 'boolean' ? result.due : null,
       needsRebalance: result && typeof result.needsRebalance === 'boolean'
         ? result.needsRebalance
         : null,
-      suggestionsCount: result ? numOrNull(result.suggestionsCount) : null,
+      suggestionsCount: result ? explicitNonNegativeNumber(result.suggestionsCount) : null,
       recordId: result && result.recordId !== undefined && result.recordId !== null
         ? String(result.recordId)
         : null,
+      status: result && typeof result.status === 'string' ? result.status : null,
       runStatus: child ? child.status ?? null : null,
       failures: child && Array.isArray(child.failures)
         ? child.failures
@@ -613,20 +787,21 @@ function buildRebalanceRows({ runs = [], portfolios = [], tz, date = null }) {
     failures,
     parentResult,
     contractReady,
+    notes,
     perPortfolioDate,
     due: contractReady ? rows.filter((row) => row.due === true).length : null,
     generatedCount: contractReady
-      ? rows.filter((row) => (row.suggestionsCount ?? 0) > 0).length
+      ? rows.filter((row) => row.suggestionsCount !== null && row.suggestionsCount > 0).length
       : null,
     totalPortfolios: parentResult ? numOrNull(parentResult.totalPortfolios) : null,
     skippedCount: parentResult ? numOrNull(parentResult.skippedCount) : null
   };
 }
 
-function rebalanceLevel({ contractReady, due, generatedCount, failures }) {
+function rebalanceLevel({ contractReady, rows = [] }) {
   if (!contractReady) return 'unknown';
-  if (due > 0 && generatedCount < due) return 'bad';
-  if (failures.length > 0) return 'warn';
+  if (rows.some(rowHasExplicitFailure)) return 'bad';
+  if (rows.some((row) => !rowIsComplete(row))) return 'warn';
   return 'ok';
 }
 
@@ -637,14 +812,18 @@ async function buildRebalanceState({ tz }) {
     .lean();
   const portfolios = (portfolioDocs || []).filter((portfolio) => portfolio.archived !== true);
   const built = buildRebalanceRows({ runs, portfolios, tz, date: null });
-  const notes = built.contractReady
-    ? []
-    : [note('CONTRACT_NOT_READY', '父任务 rebalance-check 的 result 缺失（等 TASK-057/C-05 落地），到期/生成数不可得')];
+  const dataStateLevel = rebalanceLevel(built);
+  const notes = [...built.notes];
+  if (dataStateLevel === 'bad') {
+    notes.push(note('REBALANCE_FAILED', '存在失败组合，详见 perPortfolio 的 status/failures'));
+  } else if (dataStateLevel === 'warn') {
+    notes.push(note('REBALANCE_UNRESOLVED', '存在未解决/跳过/未知的到期组合，到期与生成数不可视为完成'));
+  }
 
   return {
     contractReady: built.contractReady,
-    dataStateLevel: rebalanceLevel(built),
-    notes,
+    dataStateLevel,
+    notes: sortNotes(notes),
     dataState: {
       perPortfolioDate: built.perPortfolioDate,
       due: built.due,
@@ -760,11 +939,12 @@ async function getRebalanceDetail({ now, tz, date, portfolioId }) {
 // 对外编排
 // ---------------------------------------------------------------------------
 
-function buildResultTaskEntry({ taskName, doc, now, built }) {
+function buildResultTaskEntry({ taskName, doc, now, built, skipDoc = null }) {
   const { lastRun, stale } = buildRunSummary(doc, taskName, now);
   return {
     taskName,
     lastRun,
+    lastSkip: buildSkipSummary(skipDoc),
     stale,
     contractReady: built.contractReady,
     dataState: built.dataState,
@@ -793,6 +973,10 @@ async function getStatus({ now = new Date(), detail = null, date = null, portfol
   const runByTask = new Map(
     (latestRuns || []).map((item) => [String(item._id), item.doc || null])
   );
+  const latestSkips = await loadLatestSkips();
+  const skipByTask = new Map(
+    (latestSkips || []).map((item) => [String(item._id), item.doc || null])
+  );
 
   const assets = await Asset.find({ active: true })
     .select('symbol name market launchDate')
@@ -803,6 +987,7 @@ async function getStatus({ now = new Date(), detail = null, date = null, portfol
 
   const priceEntry = {
     taskName: 'daily-price-sync',
+    lastSkip: buildSkipSummary(skipByTask.get('daily-price-sync')),
     ...buildRunSummary(runByTask.get('daily-price-sync') || null, 'daily-price-sync', current),
     contractReady: priceState.contractReady,
     dataState: priceState.dataState,
@@ -821,10 +1006,10 @@ async function getStatus({ now = new Date(), detail = null, date = null, portfol
     staleThresholdHours: staleThresholdHours('daily-price-sync'),
     tasks: [
       priceEntry,
-      buildResultTaskEntry({ taskName: 'price-integrity-check', doc: runByTask.get('price-integrity-check') || null, now: current, built: integrity }),
-      buildResultTaskEntry({ taskName: 'alert-evaluate', doc: runByTask.get('alert-evaluate') || null, now: current, built: alerts }),
-      buildResultTaskEntry({ taskName: 'fx-rate-sync', doc: runByTask.get('fx-rate-sync') || null, now: current, built: fx }),
-      buildResultTaskEntry({ taskName: 'rebalance-check', doc: runByTask.get('rebalance-check') || null, now: current, built: rebalance })
+      buildResultTaskEntry({ taskName: 'price-integrity-check', doc: runByTask.get('price-integrity-check') || null, now: current, built: integrity, skipDoc: skipByTask.get('price-integrity-check') || null }),
+      buildResultTaskEntry({ taskName: 'alert-evaluate', doc: runByTask.get('alert-evaluate') || null, now: current, built: alerts, skipDoc: skipByTask.get('alert-evaluate') || null }),
+      buildResultTaskEntry({ taskName: 'fx-rate-sync', doc: runByTask.get('fx-rate-sync') || null, now: current, built: fx, skipDoc: skipByTask.get('fx-rate-sync') || null }),
+      buildResultTaskEntry({ taskName: 'rebalance-check', doc: runByTask.get('rebalance-check') || null, now: current, built: rebalance, skipDoc: skipByTask.get('rebalance-check') || null })
     ]
   };
 }

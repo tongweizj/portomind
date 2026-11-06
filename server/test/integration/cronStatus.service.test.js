@@ -441,3 +441,284 @@ test('U17 查询形状：Q1 每任务只取最新一条、Q5 按最新汇率日�
   assert.ok(fxText.includes('"$sum":1'));
   assert.ok(fxText.includes('"$limit":1'));
 });
+
+test('AC1 S5 对象形态：三币齐全且显式 ok:true 才整体 ok', async () => {
+  useWorld({ latestRuns: [latest('fx-rate-sync', { result: { fxCount: 3, currencies: {
+    USD: { ok: true, rateToCny: 7.13 }, CAD: { ok: true, rateToCny: 5.21 }, HKD: { ok: true, rateToCny: 0.92 }
+  } } })] });
+  const entry = taskEntry(await service.getStatus({ now: new Date('2026-10-26T14:00:00.000Z') }), 3);
+  assert.equal(entry.contractReady, true);
+  assert.equal(entry.dataStateLevel, 'ok');
+  assert.deepEqual(entry.dataState.currencies, {
+    USD: { ok: true, rateToCny: 7.13 },
+    CAD: { ok: true, rateToCny: 5.21 },
+    HKD: { ok: true, rateToCny: 0.92 }
+  });
+  assert.equal(entry.notes.some((n) => n.code === 'NUMERIC_OBSERVATION_ONLY'), false);
+});
+
+test('AC1 标量数值仅观测：ok:null、不判成功也不判失败，带 NUMERIC_OBSERVATION_ONLY', async () => {
+  useWorld({ latestRuns: [latest('fx-rate-sync', { result: { currencies: { USD: 7.13, CAD: 5.21, HKD: 0.92 } } })] });
+  const entry = taskEntry(await service.getStatus({ now: new Date('2026-10-26T14:00:00.000Z') }), 3);
+  assert.equal(entry.contractReady, true);
+  assert.equal(entry.dataStateLevel, 'unknown');
+  assert.deepEqual(entry.dataState.currencies.USD, { ok: null, rateToCny: 7.13 });
+  assert.ok(entry.notes.some((n) => n.code === 'NUMERIC_OBSERVATION_ONLY'));
+  assert.notEqual(entry.dataStateLevel, 'ok');
+  assert.notEqual(entry.dataStateLevel, 'bad');
+});
+
+test('AC1 已知方向错误但合法正值（USD 0.14）仍只算观测，不声称方向已修', async () => {
+  useWorld({ latestRuns: [latest('fx-rate-sync', { result: { currencies: { USD: 0.14, CAD: 5.21, HKD: 0.92 } } })] });
+  const entry = taskEntry(await service.getStatus({ now: new Date('2026-10-26T14:00:00.000Z') }), 3);
+  assert.equal(entry.dataState.currencies.USD.rateToCny, 0.14);
+  assert.equal(entry.dataState.currencies.USD.ok, null);
+  assert.equal(entry.dataStateLevel, 'unknown');
+  assert.ok(entry.notes.some((n) => n.code === 'NUMERIC_OBSERVATION_ONLY'));
+});
+
+test('AC1/AC2 0 / 负数 / NaN / Infinity 数值非法：contractReady=false + CURRENCY_INVALID', async () => {
+  for (const badValue of [0, -1, Number.NaN, Number.POSITIVE_INFINITY]) {
+    useWorld({ latestRuns: [latest('fx-rate-sync', { result: { currencies: { USD: badValue, CAD: 5.21, HKD: 0.92 } } })] });
+    const entry = taskEntry(await service.getStatus({ now: new Date('2026-10-26T14:00:00.000Z') }), 3);
+    assert.equal(entry.contractReady, false);
+    assert.equal(entry.dataStateLevel, 'unknown');
+    assert.ok(entry.notes.some((n) => n.code === 'CURRENCY_INVALID'));
+    assert.equal(entry.dataState.currencies.USD.ok, null);
+  }
+});
+
+test('AC2 空对象 {}：contractReady=false、unknown、解释 note，不假绿', async () => {
+  useWorld({ latestRuns: [latest('fx-rate-sync', { result: { currencies: {} } })] });
+  const entry = taskEntry(await service.getStatus({ now: new Date('2026-10-26T14:00:00.000Z') }), 3);
+  assert.equal(entry.contractReady, false);
+  assert.equal(entry.dataStateLevel, 'unknown');
+  assert.equal(entry.dataState.currencies, null);
+  assert.ok(entry.notes.some((n) => n.code === 'CONTRACT_NOT_READY'));
+});
+
+test('AC2 数组容器被拒绝：contractReady=false + CONTRACT_NOT_READY', async () => {
+  useWorld({ latestRuns: [latest('fx-rate-sync', { result: { currencies: [{ currency: 'USD', ok: true, rateToCny: 7.13 }] } })] });
+  const entry = taskEntry(await service.getStatus({ now: new Date('2026-10-26T14:00:00.000Z') }), 3);
+  assert.equal(entry.contractReady, false);
+  assert.equal(entry.dataStateLevel, 'unknown');
+  assert.equal(entry.dataState.currencies, null);
+  assert.ok(entry.notes.some((n) => n.code === 'CONTRACT_NOT_READY'));
+});
+
+test('AC2 缺 USD：缺记录（ok:null）与显式失败（ok:false）可区分', async () => {
+  useWorld({ latestRuns: [latest('fx-rate-sync', { result: { currencies: { CAD: { ok: true, rateToCny: 5.21 }, HKD: { ok: true, rateToCny: 0.92 } } } })] });
+  const missing = taskEntry(await service.getStatus({ now: new Date('2026-10-26T14:00:00.000Z') }), 3);
+  assert.equal(missing.contractReady, false);
+  assert.equal(missing.dataStateLevel, 'warn');
+  assert.equal(missing.dataState.currencies.USD.ok, null);
+  assert.ok(missing.notes.some((n) => n.code === 'CURRENCY_MISSING'));
+
+  useWorld({ latestRuns: [latest('fx-rate-sync', { result: { currencies: { USD: { ok: false }, CAD: { ok: true, rateToCny: 5.21 }, HKD: { ok: true, rateToCny: 0.92 } } } })] });
+  const failed = taskEntry(await service.getStatus({ now: new Date('2026-10-26T14:00:00.000Z') }), 3);
+  assert.equal(failed.contractReady, true);
+  assert.equal(failed.dataStateLevel, 'warn');
+  assert.equal(failed.dataState.currencies.USD.ok, false);
+  assert.ok(failed.notes.some((n) => n.code === 'FX_CURRENCY_FAILED'));
+});
+
+test('AC2 非法项（ok 非布尔）→ contractReady=false + CURRENCY_INVALID', async () => {
+  useWorld({ latestRuns: [latest('fx-rate-sync', { result: { currencies: { USD: { ok: 'yes', rateToCny: 7.13 }, CAD: { ok: true, rateToCny: 5.21 }, HKD: { ok: true, rateToCny: 0.92 } } } })] });
+  const entry = taskEntry(await service.getStatus({ now: new Date('2026-10-26T14:00:00.000Z') }), 3);
+  assert.equal(entry.contractReady, false);
+  assert.equal(entry.dataState.currencies.USD.ok, null);
+  assert.ok(entry.notes.some((n) => n.code === 'CURRENCY_INVALID'));
+});
+
+test('AC2 判级：三币全显式失败 bad；显式失败与成功混合 warn', async () => {
+  useWorld({ latestRuns: [latest('fx-rate-sync', { result: { currencies: { USD: { ok: false }, CAD: { ok: false }, HKD: { ok: false } } } })] });
+  const allFailed = taskEntry(await service.getStatus({ now: new Date('2026-10-26T14:00:00.000Z') }), 3);
+  assert.equal(allFailed.dataStateLevel, 'bad');
+  assert.ok(allFailed.notes.some((n) => n.code === 'FX_CURRENCY_FAILED'));
+
+  useWorld({ latestRuns: [latest('fx-rate-sync', { result: { currencies: { USD: { ok: false }, CAD: { ok: true, rateToCny: 5.21 }, HKD: { ok: true, rateToCny: 0.92 } } } })] });
+  const mixed = taskEntry(await service.getStatus({ now: new Date('2026-10-26T14:00:00.000Z') }), 3);
+  assert.equal(mixed.dataStateLevel, 'warn');
+  assert.ok(mixed.notes.some((n) => n.code === 'FX_CURRENCY_FAILED'));
+});
+
+test('AC3 S6 四语义：due=null 保持未知；未超阈 0 不算失败；生成数只计显式 >0', async () => {
+  const p1 = '64b000000000000000000101';
+  const p2 = '64b000000000000000000102';
+  const p3 = '64b000000000000000000103';
+  useWorld({
+    portfolios: [p1, p2, p3].map((id) => ({ _id: id, name: id, accountType: 'other', archived: false, rebalanceSettings: { rebalanceSchedule: 'daily' } })),
+    rebalanceRuns: [{
+      _id: 'rebalance-check',
+      doc: priceRun({ taskName: 'rebalance-check', result: { totalPortfolios: 3, skippedCount: 0, perPortfolio: [
+        { portfolioId: p1, due: true, needsRebalance: true, suggestionsCount: 2, recordId: 'rec1', status: 'SUCCEEDED' },
+        { portfolioId: p2, due: true, needsRebalance: false, suggestionsCount: 0, recordId: null, status: 'SUCCEEDED' },
+        { portfolioId: p3, due: false, needsRebalance: null, suggestionsCount: null, recordId: null, status: 'SUCCEEDED' }
+      ] } })
+    }]
+  });
+  const entry = taskEntry(await service.getStatus({ now: new Date('2026-10-26T14:00:00.000Z') }), 4);
+  assert.equal(entry.contractReady, true);
+  assert.equal(entry.dataStateLevel, 'ok');
+  assert.equal(entry.dataState.due, 2);
+  assert.equal(entry.dataState.generatedCount, 1);
+  const byId = new Map(entry.dataState.perPortfolio.map((row) => [row.portfolioId, row]));
+  assert.equal(byId.get(p3).due, false);
+  assert.equal(byId.get(p3).suggestionsCount, null);
+  assert.equal(byId.get(p2).needsRebalance, false);
+  assert.equal(byId.get(p2).suggestionsCount, 0);
+  assert.equal(byId.get(p2).recordId, null);
+  assert.equal(byId.get(p1).suggestionsCount, 2);
+});
+
+test('AC3 显式失败 → bad（不是正常未超阈）；失败与未超阈可区分', async () => {
+  const p1 = '64b000000000000000000111';
+  const p2 = '64b000000000000000000112';
+  useWorld({
+    portfolios: [p1, p2].map((id) => ({ _id: id, name: id, accountType: 'other', archived: false, rebalanceSettings: { rebalanceSchedule: 'daily' } })),
+    rebalanceRuns: [{
+      _id: 'rebalance-check',
+      doc: priceRun({ taskName: 'rebalance-check', result: { totalPortfolios: 2, skippedCount: 0, perPortfolio: [
+        { portfolioId: p1, due: true, needsRebalance: false, suggestionsCount: 0, recordId: null, status: 'SUCCEEDED' },
+        { portfolioId: p2, due: true, needsRebalance: null, suggestionsCount: null, recordId: null, status: 'FAILED', failureReason: 'DB_TIMEOUT' }
+      ] } })
+    }]
+  });
+  const entry = taskEntry(await service.getStatus({ now: new Date('2026-10-26T14:00:00.000Z') }), 4);
+  assert.equal(entry.dataStateLevel, 'bad');
+  assert.ok(entry.notes.some((n) => n.code === 'REBALANCE_FAILED'));
+  assert.equal(entry.dataState.perPortfolio.find((row) => row.portfolioId === p2).status, 'FAILED');
+});
+
+test('AC3 子任务 SKIPPED：status 呈现跳过、字段保持 null、level=warn', async () => {
+  const p1 = '64b000000000000000000121';
+  useWorld({
+    portfolios: [{ _id: p1, name: 'P', accountType: 'other', archived: false, rebalanceSettings: { rebalanceSchedule: 'daily' } }],
+    rebalanceRuns: [{
+      _id: 'rebalance-check',
+      doc: priceRun({ taskName: 'rebalance-check', result: { totalPortfolios: 1, skippedCount: 0, perPortfolio: [
+        { portfolioId: p1, due: true, needsRebalance: null, suggestionsCount: null, recordId: null, status: 'SKIPPED', failureReason: 'SKIPPED:DUPLICATE_RUN_KEY' }
+      ] } })
+    }]
+  });
+  const entry = taskEntry(await service.getStatus({ now: new Date('2026-10-26T14:00:00.000Z') }), 4);
+  assert.equal(entry.dataStateLevel, 'warn');
+  assert.ok(entry.notes.some((n) => n.code === 'REBALANCE_UNRESOLVED'));
+  const row = entry.dataState.perPortfolio[0];
+  assert.equal(row.status, 'SKIPPED');
+  assert.equal(row.needsRebalance, null);
+  assert.equal(row.suggestionsCount, null);
+});
+
+test('AC3 perPortfolio 缺项 → contractReady=false + PER_PORTFOLIO_INCOMPLETE', async () => {
+  const p1 = '64b000000000000000000131';
+  const p2 = '64b000000000000000000132';
+  useWorld({
+    portfolios: [p1, p2].map((id) => ({ _id: id, name: id, accountType: 'other', archived: false, rebalanceSettings: { rebalanceSchedule: 'daily' } })),
+    rebalanceRuns: [{
+      _id: 'rebalance-check',
+      doc: priceRun({ taskName: 'rebalance-check', result: { totalPortfolios: 2, skippedCount: 0, perPortfolio: [
+        { portfolioId: p1, due: true, needsRebalance: false, suggestionsCount: 0, recordId: null, status: 'SUCCEEDED' }
+      ] } })
+    }]
+  });
+  const entry = taskEntry(await service.getStatus({ now: new Date('2026-10-26T14:00:00.000Z') }), 4);
+  assert.equal(entry.contractReady, false);
+  assert.equal(entry.dataStateLevel, 'unknown');
+  assert.equal(entry.dataState.due, null);
+  assert.equal(entry.dataState.generatedCount, null);
+  assert.ok(entry.notes.some((n) => n.code === 'PER_PORTFOLIO_INCOMPLETE'));
+});
+
+test('AC3 脏项逐项剔除并计 note，不打 500', async () => {
+  const p1 = '64b000000000000000000141';
+  useWorld({
+    portfolios: [{ _id: p1, name: 'P', accountType: 'other', archived: false, rebalanceSettings: { rebalanceSchedule: 'daily' } }],
+    rebalanceRuns: [{
+      _id: 'rebalance-check',
+      doc: priceRun({ taskName: 'rebalance-check', result: { totalPortfolios: 1, skippedCount: 0, perPortfolio: [
+        null,
+        { portfolioId: p1, due: true, needsRebalance: false, suggestionsCount: 0, recordId: null, status: 'SUCCEEDED' }
+      ] } })
+    }]
+  });
+  const entry = taskEntry(await service.getStatus({ now: new Date('2026-10-26T14:00:00.000Z') }), 4);
+  assert.equal(entry.contractReady, true);
+  assert.ok(entry.notes.some((n) => n.code === 'PER_PORTFOLIO_DIRTY'));
+  assert.equal(entry.dataState.perPortfolio.length, 1);
+});
+
+test('AC3 due=null 必须保持 unknown（不得转 false）', async () => {
+  const p1 = '64b000000000000000000151';
+  useWorld({
+    portfolios: [{ _id: p1, name: 'P', accountType: 'other', archived: false, rebalanceSettings: { rebalanceSchedule: 'daily' } }],
+    rebalanceRuns: [{
+      _id: 'rebalance-check',
+      doc: priceRun({ taskName: 'rebalance-check', result: { totalPortfolios: 1, skippedCount: 0, perPortfolio: [
+        { portfolioId: p1, due: null, needsRebalance: null, suggestionsCount: null, recordId: null, status: 'SUCCEEDED' }
+      ] } })
+    }]
+  });
+  const entry = taskEntry(await service.getStatus({ now: new Date('2026-10-26T14:00:00.000Z') }), 4);
+  assert.equal(entry.dataStateLevel, 'warn');
+  assert.equal(entry.dataState.perPortfolio[0].due, null);
+  assert.ok(entry.notes.some((n) => n.code === 'REBALANCE_UNRESOLVED'));
+});
+
+test('AC4 lastSkip 与 lastRun 分离：skip 不覆盖/不冒充成功；无记录为 null', async () => {
+  const skippedAt = new Date('2026-10-26T03:00:05.000Z');
+  useWorld({
+    latestRuns: [latest('daily-price-sync', { status: 'RUNNING', startedAt: new Date('2026-10-20T03:00:00.000Z'), endedAt: null })],
+    taskSkips: [
+      { _id: 'daily-price-sync', doc: { taskName: 'daily-price-sync', runKey: '2026-10-26', reason: 'ALREADY_RUNNING', skippedAt, trigger: 'SCHEDULED' } },
+      { _id: 'rebalance-check', doc: { taskName: 'rebalance-check', runKey: '2026-10-26', reason: 'DUPLICATE_RUN_KEY', skippedAt, trigger: 'MANUAL' } }
+    ]
+  });
+  const data = await service.getStatus({ now: new Date('2026-10-26T14:00:00.000Z') });
+  const price = taskEntry(data, 0);
+  assert.equal(price.lastRun.status, 'STALE');
+  assert.equal(price.lastRun.rawStatus, 'RUNNING');
+  assert.notEqual(price.lastRun.status, 'SKIPPED');
+  assert.equal(price.lastSkip.taskName, 'daily-price-sync');
+  assert.equal(price.lastSkip.reason, 'ALREADY_RUNNING');
+  assert.equal(price.lastSkip.skippedAt, skippedAt.toISOString());
+  assert.equal(price.lastSkip.runKey, '2026-10-26');
+  assert.equal(taskEntry(data, 4).lastSkip.reason, 'DUPLICATE_RUN_KEY');
+  assert.equal(taskEntry(data, 1).lastSkip, null);
+});
+
+test('AC4 无跳过记录/命名空间缺失 → lastSkip=null；其他 DB 错误必须抛出', async () => {
+  useWorld({ taskSkips: [] });
+  const empty = await service.getStatus({ now: new Date('2026-10-26T14:00:00.000Z') });
+  for (const entry of empty.tasks) assert.equal(entry.lastSkip, null);
+
+  useWorld({ taskSkipError: Object.assign(new Error('ns not found'), { code: 26 }) });
+  const missingNamespace = await service.getStatus({ now: new Date('2026-10-26T14:00:00.000Z') });
+  for (const entry of missingNamespace.tasks) assert.equal(entry.lastSkip, null);
+
+  useWorld({ taskSkipError: Object.assign(new Error('boom'), { code: 500 }) });
+  await assert.rejects(
+    () => service.getStatus({ now: new Date('2026-10-26T14:00:00.000Z') }),
+    /boom/
+  );
+});
+
+test('AC5 查询预算：主视图新增单次 TaskSkip 批量聚合；detail 不查询 skip', async () => {
+  useWorld({ taskSkips: [{ _id: 'daily-price-sync', doc: { taskName: 'daily-price-sync', skippedAt: new Date() } }] });
+  await service.getStatus({ now: new Date('2026-10-26T14:00:00.000Z') });
+  const skipPipelines = getCapturedPipelines().filter((item) => item.model === 'TaskSkip');
+  assert.equal(skipPipelines.length, 1);
+  const skipText = JSON.stringify(skipPipelines[0].pipeline);
+  assert.ok(skipText.includes('"$sort":{"skippedAt":-1}'));
+  assert.ok(skipText.includes('"$group"'));
+  assert.ok(skipText.includes('$first') && skipText.includes('$$ROOT'));
+  assert.ok(skipText.includes('daily-price-sync'));
+  const aggregateModels = getCapturedPipelines().map((item) => item.model);
+  assert.equal(aggregateModels.filter((model) => model === 'TaskRun').length, 2);
+  assert.equal(aggregateModels.filter((model) => model === 'FxRate').length, 1);
+  assert.equal(aggregateModels.filter((model) => model === 'TaskSkip').length, 1);
+
+  useWorld({ taskSkips: [] });
+  await service.getStatus({ detail: 'rebalance', date: '2026-10-26' });
+  assert.equal(getCapturedPipelines().filter((item) => item.model === 'TaskSkip').length, 0);
+});
