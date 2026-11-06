@@ -4,8 +4,8 @@
 
 | 字段 | 内容 |
 |---|---|
-| Status | Implementing（2026-11-06，计划已 `Approved`；Orchestrator 登记，Implementer C 实施） |
-| Priority / Owner / Type | `High` / Implementer C / `Feature`（纯客户端，零请求零服务端） |
+| Status | **Completed（2026-11-06，独立 Reviewer 判定 `Pass with issues`、无 BLOCKER/MAJOR；Human 确认「检验通过」）**；`Merged` = `Pending`（待 Human 合入 `main`） |
+| Priority / Owner / Type | `High` / — / `Feature`（纯客户端，零请求零服务端） |
 | Created / Updated | 2026-11-05 / 2026-11-06 |
 | 所属 Story | [US-004](../../requirements/stories/active/US-004-dashboard-portfolio-health.md) |
 | 覆盖的验收条件 | US-004/AC-17、AC-18 |
@@ -67,6 +67,76 @@
 - **D-02**：✅ 已裁决（2026-11-06 Human）——`driftLabels.js` 由 TASK-066（Implementer B）拥有，本卡消费。
 - OQ-03「组合卡市值单币种简化」为假设项，实施时按「健康表市值列同样按组合本币显示」执行，不跨币种合计。
 
+---
+
+## 11. Implementation Record（Orchestrator 登记，2026-11-06）
+
+- **交付提交**：`8141275`（`feat(client): TASK-067 add four-cell stats grid to PortfolioCard`），分支 `feature/TASK-067`。
+- **改动文件**：`client/src/components/PortfolioCard/index.jsx`（+87）：`MarketValueRow` 替换为 `StatCells` 四格（总市值 / 持仓资产 / 待办 / 上次再平衡），全部从 `usePortfolios()` 的 `stats` 派生，**零新增请求、零服务端改动**；字段缺失按降级态显示「—」/「从未」（不显示 0、不崩）。
+- **⚠️ 分支基线陈旧**：`feature/TASK-067` 自 `main` 早期 fork（早于 `d345430`），**不含 065 合入（`6f556aa`）**。故 `git diff main..feature/TASK-067` 会把 065 四字段 + 156 行测试、以及 `BOARD`/`US-004`/prompt 等文档**显示为删除**——属 fork 点陈旧的双向 diff 假象，**并非本卡删除它们**；两路合并会保留双方。评审与合入前**必须先把 067 rebase/merge 到当前 main**。
+- **已知妥协**：`main` 尚无 066 的 `driftLabels.js`（D-02 归 B），本卡**临时内联文案**，注释声明待 B 合入后切换为共享常量、绝不新建同名文件；「待办」文案「N 条待确认 / N 条未读」与 066 健康表逐字一致（D-01 解 B）。
+
 ## 12. Review Record
 
 **独立审查结论：`Pass with issues`**（2026-11-06，独立 Reviewer；无 BLOCKER / MAJOR，残余 MINOR 不阻塞）。评审前置已按要求在分支上 `git merge main` 得到干净基线 `434a323`（原 `8141275` 基于旧 main，未含 065 合入，旧 diff 的「065 内容删除」为假象）；rebase 后确认 065 四字段与 156 行测试完整保留。完整证据、AC-17/AC-18 逐条判定、负向对照、DoD T-1～T-6 见 [TASK-067-plan.md §12 Review Record](./TASK-067-plan.md#12-review-record)。未改 Task Status，关闭与合入登记归 Human。
+
+### 审查交接（Orchestrator → Reviewer，2026-11-06）
+
+- **可审对象（前置）**：⚠️ 先在 `feature/TASK-067` 上 `git merge main`（或 rebase 到当前 main，含 065 合入 `6f556aa`）得到干净基线后再评审。未 rebase 的裸分支会让 065 字段/测试与文档看似被删，属假象。
+- **覆盖 AC**：US-004/AC-17、AC-18（四格呈现、降级态、同源逐字一致、零新增请求）。
+- **重点核对**：① 四格全部从 `stats` 派生、Network 中 portfolios 请求数不变（AC-04，运行时验证）；② 「待办」为 0 → 「—」、「上次再平衡」无值 → 「从未」、DOM 无「暂无」（AC-02）；③ 与 TASK-066 健康表「待办/上次再平衡」文案逐字一致、「偏离」同源取 `stats.drift`、卡片 `DriftBadge` 维持两态不扩义（AC-03 / D-01 解 B）；④ `lastExecutedAt` → `YYYY-MM-DD`、分币种不跨币种合计（AC-01 / AC-17）；⑤ 内联文案不得新建 `driftLabels.js`（D-02）；⑥ rebase 后 `summary.js` 仍含 `pendingRebalanceCount`/`dueByTime`/`overThresholdCount`、测试仍 156 行（确认未丢失 065）。
+- **验证命令**（DEPLOYMENT §7 为唯一权威）：`npm run build --workspace client` 与 `eslint` 全绿；浏览器进 `/portfolios` 比对卡片四格与健康表、Network 面板断言请求数不变。
+- **未授权事项**：Orchestrator 不替代 Reviewer 结论、不替代 Human 关闭。
+
+## 13. Completion Record
+
+### 13.1 结案依据（2026-11-06）
+
+| 项 | 事实 |
+|---|---|
+| 结案日期 | 2026-11-06 |
+| 结案依据 | Human「067 检验通过」 |
+| 实现 | `feature/TASK-067` @ `8141275`（四格 stats grid） |
+| 基线刷新 | `434a323` `review(TASK-067): merge main to refresh stale base before independent review` |
+| 审查记录 | `6e18de2`（§12） |
+| 审查判定 | `Pass with issues`，无 BLOCKER/MAJOR |
+| 状态流转 | `Draft` → `Approved` → `Implementing` → `Reviewing` → `Completed` |
+| 合入 | **`Pending`** —— 分支尚未合入 `main` |
+
+### 13.2 基线陈旧问题已闭环
+
+此前登记的风险：`feature/TASK-067` 基于旧 `main`，不含 065 合入 `6f556aa`，
+`git diff main..feature/TASK-067` 会把 065 四字段与 156 行测试**显示为删除**
+（双向 diff 假象）。
+
+**处置**：评审前已执行 `git merge main`（`434a323`）。核对：
+
+- `git merge-base --is-ancestor 6f556aa feature/TASK-067` = **是**（分支含 065）
+- `git diff --stat main...feature/TASK-067 -- shared/ server/` = **空**（不回退 065 字段与测试）
+- merge-base = `96ff382`
+
+### 13.3 DoD 逐条（[DEFINITION_OF_DONE](../../../os/process/DEFINITION_OF_DONE.md) §3）
+
+| # | 要求 | 结论 |
+|---|---|---|
+| T-1 | 实现完成 | ✅ §11 |
+| T-2 | 验证完成，记录实际结果 | ✅ §11 + §12（Reviewer 独立复跑） |
+| T-3 | AC 逐条满足 | ✅ §12.9 AC-01～AC-04 全部满足 |
+| T-4 | 审查收敛，无未决 BLOCKER | ✅ `Pass with issues`，无 BLOCKER/MAJOR |
+| T-5 | 文档同步 | ✅ §12 审查记录、本卡 §13、BOARD |
+| T-6 | 已知妥协已记录 | ✅ §12 残余 5 项 MINOR |
+
+### 13.4 残余 MINOR（不阻塞）
+
+F-01 D-02 临时内联文案（待 066 `driftLabels.js` 合入后切换）、F-02 `formatDate` 容错、
+F-03 页面级既有「暂无」、F-04 证据增强、F-05 基线说明。
+
+### 13.5 合入前置
+
+`feature/TASK-067` @ `6e18de2` 尚未合入 `main`。合入与 `Merged` 登记归 Human。
+合入前建议再确认一次 `git merge-base --is-ancestor 6f556aa feature/TASK-067` = 是。
+
+### 13.6 过程目录处置
+
+按 [DOCS.md §1.1](../../../os/standards/DOCS.md#11-story-交付目录与文档生命周期)，
+本卡与计划留在 `development/delivery/US-004/`，待 US-004 关闭后整体归档。

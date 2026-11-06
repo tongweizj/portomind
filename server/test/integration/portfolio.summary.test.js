@@ -199,7 +199,8 @@ test('AC-03：pendingRebalanceCount 单次聚合，仅 PENDING 计入', async (t
   const executedAt = new Date('2026-02-03T00:00:00.000Z');
 
   t.mock.method(Portfolio, 'find', () => ({
-    sort: () => ({ lean: async () => [p1, p2] })
+    sort: () => ({ lean: async () => [p1, p2] }),
+    lean: async () => [p1, p2]
   }));
   t.mock.method(AlertEvent, 'aggregate', async () => []);
 
@@ -254,7 +255,8 @@ test('AC-04：10 个组合时 RebalanceRecord 查询 ≤ 11，countDocuments = 0
   }));
 
   t.mock.method(Portfolio, 'find', () => ({
-    sort: () => ({ lean: async () => portfolios })
+    sort: () => ({ lean: async () => portfolios }),
+    lean: async () => portfolios
   }));
   t.mock.method(AlertEvent, 'aggregate', async () => []);
 
@@ -285,6 +287,54 @@ test('AC-04：10 个组合时 RebalanceRecord 查询 ≤ 11，countDocuments = 0
   assert.equal(aggregateCalls + findOneCalls, 11);
   assert.ok(aggregateCalls + findOneCalls <= 11);
   assert.equal(countDocumentsCalls, 0);
+});
+
+test('AC-02/05：summary 的 unreadAgg 只统计现存组合，删除 A 后 B 不变', async (t) => {
+  const A = new Types.ObjectId();
+  const B = new Types.ObjectId();
+  const a = makePortfolio({ _id: A, name: 'A' });
+  const b = makePortfolio({ _id: B, name: 'B' });
+  let visible = [a, b];
+  const pipelines = [];
+
+  t.mock.method(Portfolio, 'find', () => ({
+    sort: () => ({ lean: async () => visible }),
+    lean: async () => visible.map((portfolio) => ({ _id: portfolio._id }))
+  }));
+  t.mock.method(AlertEvent, 'aggregate', async (pipeline) => {
+    pipelines.push(pipeline);
+    // 资产级事件会形成 null 组；summary 必须忽略该组而不是崩溃
+    return [{ _id: B, count: 1 }, { _id: null, count: 1 }];
+  });
+  t.mock.method(RebalanceRecord, 'aggregate', async () => []);
+  t.mock.method(RebalanceRecord, 'findOne', () => ({
+    sort: () => ({ lean: async () => null })
+  }));
+  t.mock.method(tracker, 'aggregate', async () => [makePosition()]);
+
+  const before = await computeSummary();
+  assert.equal(before.length, 2);
+  assert.equal(before.find((item) => String(item._id) === String(B)).stats.unreadAlertCount, 1);
+  assert.deepEqual(pipelines[0][0].$match, {
+    status: 'unread',
+    $or: [
+      { portfolioId: { $in: [A, B] } },
+      { portfolioId: null }
+    ]
+  });
+
+  // 删除 A：组合集合只剩 B；B 的未读仍为 1，A 不再出现
+  visible = [b];
+  const after = await computeSummary();
+  assert.equal(after.length, 1);
+  assert.equal(after[0].stats.unreadAlertCount, 1);
+  assert.deepEqual(pipelines[1][0].$match, {
+    status: 'unread',
+    $or: [
+      { portfolioId: { $in: [B] } },
+      { portfolioId: null }
+    ]
+  });
 });
 
 // ───────────────────────── HTTP 契约测试 ─────────────────────────

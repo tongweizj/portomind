@@ -4,8 +4,8 @@
 
 | 字段 | 内容 |
 |---|---|
-| Status | Implementing（2026-11-06，计划已 `Approved`、065 已合入 `main`；Orchestrator 登记） |
-| Priority / Owner / Type | `High` / Implementer / `Feature`（shared + server 查询层） |
+| Status | Reviewing（**第二轮**，2026-11-06）—— 首轮独立 Reviewer 判定 **`Fail`**（F-01 BLOCKER / F-02 MAJOR）；Implementer 于 `3226dd4` 返工修复（`npm run test:server` **240/240**），**等待 Reviewer 复检**。可审对象 = `feature/TASK-068` @ `3226dd4`（非 `9c8c808`）。**尚未有复检结论**；`Merged` = `Pending` |
+| Priority / Owner / Type | `High` / Reviewer（待指派） / `Feature`（shared + server 查询层） |
 | Created / Updated | 2026-11-05 / 2026-11-06 |
 | 所属 Story | [US-004](../../requirements/stories/active/US-004-dashboard-portfolio-health.md) |
 | 覆盖的验收条件 | US-004/AC-19、AC-14（AC-14 的 cron-worker 零改动断言落在本卡） |
@@ -91,3 +91,37 @@
 ## 8. Open Questions
 
 无（HD-14 已裁「全部隐藏」，本卡只落实查询层过滤，不再开题）。
+
+## Orchestrator 交付接收记录（2026-11-06）
+
+依据 [STATES.md §4](../../../os/process/STATES.md#4-谁可以改变状态)：「Task → Reviewing：Implementer 提供改动清单、自测证据、可审对象和已知妥协」。四项齐备，故登记 `Implementing` → **`Reviewing`**。
+
+| 项 | 事实 |
+|---|---|
+| Worktree | `D:/projects/portomind-068` |
+| 分支 / 提交（首轮交付） | `feature/TASK-068` @ **`9c8c808`**（基线 `96ff382` = `main`） |
+| 分支 / 提交（**当前可审对象**） | `feature/TASK-068` @ **`3226dd4`**（返工提交，2026-11-06 12:09；分支 tip）。以下首轮记录中的 `9c8c808` / `239/239` 为**历史首轮事实**，复检以 `3226dd4` / `240/240` 为准 |
+| 改动规模 | 首轮 **7 文件** +247/−13：新增 `shared/services/alertVisibility.js`（39 行共享查询层）、改 `summary.js` / `alert.controller.js` / 3 份测试、计划 §11；返工 `3226dd4` **4 文件** +170/−7（`summary.js` 加 null 守卫、`portfolio.summary.test.js` 补 `{_id:null}` 样本、`alert.api.test.js` 增 `deletePortfolioCascade` 契约测试、计划 §11.7 返工记录） |
+| 范围核对 | `client/`、`cron-worker/` 零改动 ✅；未改模型、未写迁移、未物理删除 `AlertEvent` |
+| 自测证据 | 首轮：计划 §11.3 AC-01～AC-07 逐条 PASS（`239/239`）；**返工后**：计划 §11.7 `npm run test:server` **240/240**、`alert.api.test.js` 12/12、`portfolio.summary.test.js`+`portfolio.archived.test.js` 23/23 |
+
+**Orchestrator 独立复验（本轮亲跑，不采信自述）**
+
+| 项 | 结果 |
+|---|---|
+| `npm run test:server` | **239 pass / 0 fail** ✓ |
+| 三处出口同源 | ✅ `summary.js:17` 与 `alert.controller.js:6` 均 require `alertVisibility`；`getEvents` / `getUnreadCount` / `unreadAgg` 三处都调用 `visibleAlertFilter` |
+| 越界 | `git diff --stat main..HEAD -- cron-worker/ client/` **空** ✓ |
+| AC-14 | `git status --porcelain -- cron-worker/` = **0 行** ✓ |
+
+**⚠️ 分支基线提醒**：068 从 `5083429` 切出，后 fast-forward 到 `96ff382`（实现记录 §11.1 自述）。合入前须确认不含并行会话的其它未提交改动被误带入。
+
+**首轮 Reviewer 复核与返工（2026-11-06，据分支 `TASK-068-plan.md` §12 / §11.7 如实登记）**
+
+| 轮次 | 结论 / 动作 | 事实 |
+|---|---|---|
+| 首轮独立复核 | **`Fail`**（plan §12.10） | **F-01 · BLOCKER**：`summary.js` 的 `unreadByPortfolio` 对资产级事件（`_id:null` 组）调 `null.toString()` → `GET /api/portfolios/summary` 500，AC-02 运行时不满足；**F-02 · MAJOR**：AC-03「隐藏≠删除」断言走测试内存 stub，无法证伪物理删除实现（负向对照 NC-2a 加 `AlertEvent.deleteMany` 后 34/34 仍全绿）；F-03 · MINOR（mock 求值器、未连真实库） |
+| Implementer 返工 | `3226dd4`（plan §11.7） | F-01：`unreadByPortfolio` 构造前过滤 `item._id != null`（与 `pendingByPortfolio` 守卫对齐），stub 补 `{_id:null}` 样本；F-02：新增 `deletePortfolioCascade` 契约测试，拦截 `AlertEvent.deleteMany/deleteOne/findByIdAndDelete` 断言 0 调用；两条负向对照均能 FAIL（移除 null 守卫 → `TypeError`；给 cascade 加 `deleteMany` → 契约测试 FAIL）。`test:server` **240/240**、F-03 保留不阻塞 |
+| 当前 | **等待 Reviewer 复检** | 返工后**尚无复检结论**（无 §12.11 之类记录）；Orchestrator 不替 Reviewer 出具复检 verdict。按 STATES §4 状态保持 `Reviewing`（第二轮），可审对象 `3226dd4` |
+
+**未做的事**：未改 AC / Scope / 代码；未提交合入、未填 `Merged`、未关闭；**未替 Reviewer 写复检结论**。

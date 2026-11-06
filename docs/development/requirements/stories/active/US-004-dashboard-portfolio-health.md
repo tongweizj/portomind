@@ -6,11 +6,11 @@
 |---|---|
 | Story ID | US-004 |
 | Status | Planning |
-| 准备情况 | 预研中：已拆 5 卡（TASK-065～TASK-069），计划齐备；OQ-01 / OQ-02 已裁决，待 Orchestrator 登记实施 |
+| 准备情况 | 5 卡已拆（TASK-065～069）；OQ-01/02/04/05 已裁决、G-1/G-2 覆盖缺口已闭合。当前 065/067 `Completed`、066/068 `Reviewing`、069 未启动；Story 状态仍 `Planning`（推进归 PM） |
 | 产品负责人 | PM；方向、优先级、范围变更与关闭由 Human 决定 |
 | 优先级 | High（Roadmap 第 6 条「dashboard 增加组合健康表」的实体；`FS-portfolio-ia-cleanup` 交付单元 B） |
 | 创建日期 | 2026-11-05 |
-| 最近更新 | 2026-11-05 |
+| 最近更新 | 2026-11-06 |
 | 交付目录 | docs/development/delivery/US-004/（启动时建立） |
 | 需求来源 | Human 2026-11-05 指示整理 `specs/` 遗留需求；本 Story 承接 [FS-portfolio-ia-cleanup](../../specs/FS-portfolio-ia-cleanup.md) **交付单元 B**（B1～B16） |
 
@@ -114,11 +114,11 @@
 
 | Task | 工作摘要 | 覆盖的验收条件 | 必要性 / 关联说明 |
 |---|---|---|---|
-| [TASK-065](../../../delivery/US-004/TASK-065.md) | `summary` 四字段（`lastExecutedAt` / `pendingRebalanceCount` / `drift.dueByTime` / `drift.overThresholdCount`）（B1～B4） | AC-01～AC-04、AC-14 | **✅ 已结案（2026-11-06，Human 确认验收通过）**；`Merged`=`Pending`（分支未合入 main）；服务端与 `shared` 改动；计划 `Approved → Completed` |
-| [TASK-066](../../../delivery/US-004/TASK-066.md) | Dashboard 健康表与分币种小计（B6～B13） | AC-05～AC-13 | 交付必需；纯客户端；排序按 OQ-01 已裁决口径（有事的在上） |
-| [TASK-067](../../../delivery/US-004/TASK-067.md) | 组合卡四格（B15） | AC-17、AC-18 | 交付必需；零请求零服务端，与健康表同源 |
-| [TASK-068](../../../delivery/US-004/TASK-068.md) | 删组合后事件查询层过滤（B16） | AC-19、AC-14 | 交付必需；三处同源；**需 Approved ExecPlan**（DEP-04） |
-| [TASK-069](../../../delivery/US-004/TASK-069.md) | 契约文档同步（B5） | AC-16 | 交付必需 |
+| [TASK-065](../../../delivery/US-004/TASK-065.md) | `summary` 四字段（`lastExecutedAt` / `pendingRebalanceCount` / `drift.dueByTime` / `drift.overThresholdCount`）（B1～B4） | AC-01～AC-04、AC-14 | **✅ 已结案（2026-11-06，Human 确认验收通过）**；`Merged`=`6f556aa`（已合入 `main`）；服务端与 `shared` 改动；计划 `Completed` |
+| [TASK-066](../../../delivery/US-004/TASK-066.md) | Dashboard 健康表与分币种小计（B6～B13） | AC-05～AC-13 | **🟡 `Reviewing`（2026-11-06 交付，待独立 Reviewer 首次复核）**；纯客户端；排序按 OQ-01 已裁决口径（有事的在上）；D-02 `driftLabels.js` 归属落实 |
+| [TASK-067](../../../delivery/US-004/TASK-067.md) | 组合卡四格（B15） | AC-17、AC-18 | **✅ 已结案（2026-11-06，Human 确认检验通过）**；Reviewer `Pass with issues`，无 BLOCKER/MAJOR；`Merged`=`Pending`（待合入）；基线陈旧问题已由 `434a323` merge main 闭环 |
+| [TASK-068](../../../delivery/US-004/TASK-068.md) | 删组合后事件查询层过滤（B16） | AC-19、AC-14 | **🟡 `Reviewing`（第二轮，2026-11-06）**：首轮 Reviewer `Fail`（F-01 BLOCKER / F-02 MAJOR）→ `3226dd4` 返工（240/240）→ **待复检**；三处同源；**需 Approved ExecPlan**（DEP-04） |
+| [TASK-069](../../../delivery/US-004/TASK-069.md) | 契约文档同步（B5） | AC-16 | 交付必需；**未启动**（硬前置：等 065+068 合入）；计划 `Draft` |
 
 > AC-20（独立 Reviewer 复核）是整体交付要求，不拆成单独卡。
 >
@@ -141,9 +141,12 @@
 
 | 验收项 | 结论 | 证据链接 / 对应版本 | 问题或豁免依据 |
 |---|---|---|---|
-| AC-01～AC-04（TASK-065 覆盖） | 已验证（2026-11-06） | [TASK-065 §12 审查结论](../../../delivery/US-004/TASK-065.md)；Reviewer `Pass with issues`，Human 授权关闭 | 仅 065 字段层；仍 `Merged`=`Pending`（分支未合入 main） |
-| AC-05～AC-19（TASK-066/067/068/069 覆盖） | 未验证 | 066/067 `Implementing`、068/069 待派发 | 无豁免 |
-| AC-20（独立 Reviewer 复核） | 部分（065 已独立复核） | 整体交付时再汇总 | 无豁免 |
+| AC-01～AC-04（TASK-065 覆盖） | **已验证（2026-11-06）** | [TASK-065 §12 审查结论](../../../delivery/US-004/TASK-065.md)；Reviewer `Pass with issues`，Human 授权关闭 | 065 已合入 `main`（`6f556aa`） |
+| AC-17、AC-18（TASK-067 覆盖） | **已验证（2026-11-06）** | [TASK-067 §12/§13](../../../delivery/US-004/TASK-067.md)；Reviewer `Pass with issues`，无 BLOCKER/MAJOR，Human 确认结案 | `Merged`=`Pending`（待合入 main） |
+| AC-05～AC-13（TASK-066 覆盖） | 待验证 | [TASK-066 卡](../../../delivery/US-004/TASK-066.md) `Reviewing`；`verify066.cjs` 29/29 PASS（mock 快照，非真实后端） | 无豁免；待独立 Reviewer 首次复核 |
+| AC-19（TASK-068 覆盖） | **待收敛** | [TASK-068 卡](../../../delivery/US-004/TASK-068.md) 与 plan §12（首轮 `Fail`）/§11.7（返工） | 首轮 F-01 BLOCKER / F-02 MAJOR 已返工 `3226dd4`（240/240），**待 Reviewer 复检结论** |
+| AC-16（TASK-069 覆盖） | 未验证 | 069 未启动（等 065+068 合入） | 无豁免 |
+| AC-20（独立 Reviewer 复核） | 部分（065、067 已独立复核；068 首轮 Fail 待复检） | 整体交付时再汇总 | 无豁免 |
 | 团队完成标准 | 未验证 | [DEFINITION_OF_DONE.md](../../../../os/process/DEFINITION_OF_DONE.md) | 无豁免 |
 
 **验收日期：** 待验收
