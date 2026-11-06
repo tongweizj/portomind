@@ -4,7 +4,7 @@
 
 | 字段 | 内容 |
 |---|---|
-| Status | **Completed（2026-11-06，独立 Reviewer 判定 `Pass with issues`、无 BLOCKER/MAJOR；Human 确认「检验通过」）**；`Merged` = `Pending`（待 Human 合入 `main`） |
+| Status | **Completed（2026-11-06，独立 Reviewer 判定 `Pass with issues`、无 BLOCKER/MAJOR；Human 确认「检验通过」）**；`Merged` = `d95be45`（2026-11-06，`Merge branch 'feature/TASK-067' into main`） |
 | Priority / Owner / Type | `High` / — / `Feature`（纯客户端，零请求零服务端） |
 | Created / Updated | 2026-11-05 / 2026-11-06 |
 | 所属 Story | [US-004](../../requirements/stories/active/US-004-dashboard-portfolio-health.md) |
@@ -97,11 +97,11 @@
 | 结案日期 | 2026-11-06 |
 | 结案依据 | Human「067 检验通过」 |
 | 实现 | `feature/TASK-067` @ `8141275`（四格 stats grid） |
-| 基线刷新 | `434a323` `review(TASK-067): merge main to refresh stale base before independent review` |
-| 审查记录 | `6e18de2`（§12） |
+| 基线刷新 | `434a323`（评审前首次刷新）→ `6f5add2`（合入前刷新至 `main` @ `6f0b4df`） |
+| 审查记录 | `6e18de2`（§12）；第二遍复跑记录保留于 `1e6ce28` |
 | 审查判定 | `Pass with issues`，无 BLOCKER/MAJOR |
 | 状态流转 | `Draft` → `Approved` → `Implementing` → `Reviewing` → `Completed` |
-| 合入 | **`Pending`** —— 分支尚未合入 `main` |
+| 合入 | **`d95be45`** —— 2026-11-06 经 `Merge branch 'feature/TASK-067' into main` 合入；分支 tip `6f5add2` 已在 `main` 历史中 |
 
 ### 13.2 基线陈旧问题已闭环
 
@@ -131,10 +131,10 @@
 F-01 D-02 临时内联文案（待 066 `driftLabels.js` 合入后切换）、F-02 `formatDate` 容错、
 F-03 页面级既有「暂无」、F-04 证据增强、F-05 基线说明。
 
-### 13.5 合入前置
+### 13.5 合入登记
 
-`feature/TASK-067` @ `6e18de2` 尚未合入 `main`。合入与 `Merged` 登记归 Human。
-合入前建议再确认一次 `git merge-base --is-ancestor 6f556aa feature/TASK-067` = 是。
+Human 于 2026-11-06 指示完成合并；`feature/TASK-067` @ `6f5add2` 经 merge commit `d95be45` 合入 `main`。
+核对：`git merge-base --is-ancestor 6f5add2 main` = **是**，`git merge-base --is-ancestor 8141275 main` = **是**；合入相对原 `main` 未改动 `shared/`、`server/`、`cron-worker/`。
 
 ### 13.6 过程目录处置
 
