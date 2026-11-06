@@ -6,13 +6,13 @@
 
 | 字段 | 内容 |
 |---|---|
-| Status | Planning |
+| Status | Planning（计划已 `Approved`；**W0 前置未满足**——057 未合入 `main`，暂不登记 `Implementing`） |
 | Priority / Owner / Type | High / 待指派 / Feature |
-| Created / Updated | 2026-10-30 / 2026-10-30 |
+| Created / Updated | 2026-10-30 / 2026-11-05 |
 | 所属 Story | [US-001](../../requirements/stories/active/US-001-cron-worker-health-and-data-completeness.md) |
 | 覆盖的验收条件 | US-001/AC-02、05～08、11（读侧兼容） |
 | Related Spec | [FS P0](../../requirements/specs/FS-cron-worker-status-board.md) |
-| Execution Plan | [Draft](./TASK-064-plan.md)，未批准 |
+| Execution Plan | [Approved：TASK-064](./TASK-064-plan.md)（2026-11-05 批准；含可选 `lastSkip` + 查询预算 +1 契约变化；启动核对见计划 §10.1） |
 
 ## 1. 问题
 
@@ -41,7 +41,7 @@ shared/services/cronStatus.service.js 及关联 server 测试、API_CONTRACT 文
 
 ## 6. Blocking Dependencies
 
-D-01/D-02/D-03契约决定、057结果与跳过载体；保留054 Completed，本卡可先按已知缺陷规划。接口新增可选lastSkip需要Human批准本计划。
+D-01/D-02/D-03 已于 2026-11-04 全部裁决（独立 TaskSkip 集合 / currencies{ok,rateToCny} / 函数内部包裹），契约样例 S1～S10 已冻结于 [TASK-057 计划 §4](./TASK-057-plan.md)。**实施前置（串行，Human 2026-11-05 裁决）**：057 合入 `main` 后启动本卡。接口新增可选 `lastSkip` + 查询预算 +1 随本计划批准覆盖（卡片 AC4 已预授权「若 D-01 采用 TaskSkip 集合」）。保留 054 Completed，不重开。计划批准仍待 Human。
 
 ## 7. Coordination Notes
 
@@ -49,10 +49,35 @@ D-01/D-02/D-03契约决定、057结果与跳过载体；保留054 Completed，�
 
 ## 8. Open Questions
 
-待D-01决定后冻结lastSkip来源；D-02确定每币种真实可观测性。是否修正旧result数字形态须在计划批准中明确，不能绕过Human。
+D-01 已裁决（独立 TaskSkip 集合），lastSkip 来源冻结为 `taskskips` 最近事件；D-02 已裁决（currencies 记数值+完成标志），数字形态语义 = 仅数值观测（不判成败）。旧 `result` 数字形态的修正随本计划（计划 §4-1）送 Human 批准，不绕过。无其他待决项。
 
 ## 9. 记录
 
 2026-10-30，Orchestrator 正式登记：依据 Human 本轮“接收 US-001 规划、条件满足后登记 TASK-063/064”的明确指令、当前 Story 的既有 High 优先级，以及 [STATES.md §4](../../../os/process/STATES.md#4-谁可以改变状态) 对已授权 Story 内常规拆分的权限。已核对所属 Story、AC 关联、范围、依赖及对应 Draft；本卡承接既有读侧兼容修正及获批方案的跳过观测读取，不重开 TASK-054。初始 Status 为 Planning，Owner 待指派；Planner 为既有规划产出角色，不代填实施者。D-01～D-03 的结果契约、真实环境核对及本计划批准尚未齐备，不可实施。接收与审阅清单见 [Orchestrator 接收记录](./US-001-02-planner-return.md#7-orchestrator-接收与-human-审阅清单)。
 
 规划已准备；实施、审查与关闭尚未发生。后续证据写对应计划；本卡仅引用。
+
+2026-11-05，Planner：按已冻结契约（D-01～D-03 + [TASK-057 计划 §4 样例 S1～S10](./TASK-057-plan.md)）重写 [TASK-064 计划](./TASK-064-plan.md)：§3 精确缺陷地图 F1～F8（含实测行号）、§4 归一化修正与判级表、`lastSkip` 批量只读设计、查询预算 +1、验证映射 AC1～AC6。仍为 Draft 待 Human 批准；批准即覆盖卡片 §6 所述契约变化（可选 `lastSkip` 字段 + 查询预算）。
+
+## Orchestrator 计划批准与启动核对（2026-11-05）
+
+依据：Human 指示「批准 task064」；状态权限见 [STATES.md §4](../../../os/process/STATES.md#4-谁可以改变状态)。
+
+| 动作 | 结果 |
+|---|---|
+| 计划状态 | [TASK-064-plan.md](./TASK-064-plan.md) `Draft` → **`Approved`**（依据 §4「ExecPlan Draft → Approved：只有 Human」） |
+| 批准范围 | §1～§9 当前设计，**含 §6 契约变化**：可选 `lastSkip` API 字段、主视图查询预算 +1、FX 与再平衡判级语义修正。不含其他任务。 |
+| Task 状态 | **保持 `Planning`** —— W0 前置未满足，不登记 `Implementing` |
+| Owner | 仍 `待指派` |
+
+**核对结论：设计有效。** 计划 §3 的 F1～F8 八条缺陷经 Orchestrator 亲读逐一核实**属实，行号准确**（`normalizeCurrencies:475` 数值判 `ok:false`；`contractReady = currencies !== null` 空对象判就绪；`okCount === entries.length` 单币种也绿；`due: result ? result.due === true : null` 把 null 读成 false；`(row.suggestionsCount ?? 0) > 0` 未知折算 0；`due > 0 && generatedCount < due → bad` 未超阈误判；`Array.isArray(perPortfolio)` 缺项也标齐备；无 `lastSkip`）。
+
+**⚠️ W0 前置未满足（阻断派发）**
+
+核对 `git merge-base --is-ancestor 5bb47ea main` = **否**。`feature/TASK-057` @ `5bb47ea` 仍在 `Reviewing`（worktree `D:/projects/portomind-057`），**未合入 `main`**。
+
+后果：`shared/models/taskSkip.js` 与真实 `result` 写入在 `main` 上**都不存在**。本卡是 adapter 环，读取对象正是这两者——现在开工等于对着不存在的契约写适配层。
+
+**处置**：057 审查通过并合入 `main` 后，按计划 §10 派发。**不提前登记 `Implementing`**。
+
+**未做的事**：未建分支或 worktree；未改任何代码；未运行测试。
