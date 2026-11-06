@@ -6,8 +6,8 @@
 
 | 字段 | 内容 |
 |---|---|
-| Status | Reviewing（2026-11-05，实现与自测完成于 worktree `D:/projects/portomind-063` @ `9b90fdc`，等待独立 Reviewer 复核） |
-| Priority / Owner / Type | High / Reviewer（待指派） / Feature |
+| Status | Completed（2026-11-05，独立 Reviewer 判定 `Pass with issues`，无 BLOCKER/MAJOR；Human 确认「063 完成」） |
+| Priority / Owner / Type | High / — / Feature |
 | Created / Updated | 2026-10-30 / 2026-11-05 |
 | 所属 Story | [US-001](../../requirements/stories/active/US-001-cron-worker-health-and-data-completeness.md) |
 | 覆盖的验收条件 | US-001/AC-02、05～08、10、11（前端接入与整合） |
@@ -118,3 +118,53 @@ D-04：**已于 2026-11-04 裁决**（旧055 AC6/8/9 澄清，三项全部采纳
 计划 §4 未明文禁止此改动，且 063 必须让五灯显示真实状态、让价格卡替换骨架卡——**不改这两个组件无法实现 AC1/AC6**。但这是对已验收组件契约的实质扩展，**须由 Reviewer 独立确认「缺省行为零回归」**（脚本已覆盖，但应独立复验）。
 
 **未做的事**：未改 AC / Scope；未提交、未合入、未填 `Merged`、未关闭。
+
+## 审查结论接收与完成记录（2026-11-05）
+
+独立 Reviewer 已完成复核，结论写入 [计划 §12](./TASK-063-plan.md#12-review-record)。Human 确认「063 完成」。
+
+| 项 | 结果 |
+|---|---|
+| 判定 | **`Pass with issues`**（按 [REVIEWER.md](../../../os/roles/REVIEWER.md) §5） |
+| BLOCKER / MAJOR | **无** |
+| AC1～AC8 | **全部满足**，经 Reviewer 自建探针 **38/38** + 四处负向对照 + 全量 verify 41/41 独立取证 |
+| 契约回归 | 默认 `<BoardShell />` 通过**全部 053 原验收断言**，判为零回归 |
+
+**Reviewer 对两个最高风险项的独立结论**
+
+**① 053/056 契约变更（§12.4）** —— 判为**计划授权内的合理必要扩展**：
+- 只以纯可选 props 实现，未改 `PriceTaskCard` / `StatusLegend` / `TaskCardShell` / `statusTone`（diff 零改动）
+- 不传新 props 时，五卡仍 `TaskCardShell`、五卡六区域各 5、5 灯 `data-state=unknown` 且无绿色、1 徽章 + 1 快照位、图例仍在、无 undefined/NaN/Invalid Date
+- 一处如实记录的**中性等价差异**（F-01）：默认灯色 `#8A95A5 → #475569`、tooltip「未知」→「未运行」。两者皆中性灰、`data-state` 恒 `unknown`、无成功语义，053 断言不检查精确灰度/文案，故全部仍通过。**非行为回归**
+
+**② 总览 unknown 不假绿（本需求命门）** —— 五组数据实测：
+- 五项全 ok 无缺口 → 「全部正常」
+- 任一 bad → 失败；任一 warn → 需关注
+- `unknown` / `contractReady=false` / `lastRun=null` / 缺项 → **「数据未就绪」，绝不「全部正常」**
+- **负向对照**：改成「无 bad 就正常」→ 5 条断言 FAIL
+
+**其他负向对照**：单次请求无轮询（`calls=1`，加 `refetchInterval` 即 FAIL）、错误分层（整体五卡统一 vs 单卡隔离）、四型空态可区分。
+
+**残余 MINOR（不阻塞）**
+
+- **F-01**：灯色/tooltip 中性等价替换（见上）。
+- **F-02**：夹具用 axios adapter 注入快照，未连真实 `GET /api/cron/status`；057 的真实持久化证据归 057。
+- **F-03**：053 原日志运行时回归未跑（`a11y-053-log-regression.cjs` 需临时库 + 登录服务）；`RawLogView` / `logTabs` / 日志 service 未改，静态核对无回归。
+- **F-04**：文案；**F-05**：静置时长。
+
+**状态处置**
+
+| 项 | 结果 |
+|---|---|
+| 结案日期 | 2026-11-05 |
+| Status | `Reviewing` → **`Completed`** |
+| Merged | **`Pending`** —— 分支尚未合入 `main` |
+| DoD | T-1 实现 ✅ / T-2 验证 ✅ / T-3 AC 逐条 ✅ / T-4 审查收敛 ✅ / T-5 文档同步 ✅ / T-6 已知妥协 ✅ |
+
+### ⚠️ 合入状态：`Pending`
+
+`feature/TASK-063` **尚未合入 `main`**。这是 US-001 最后一个未合入的交付分支。
+
+**Story 级影响**：063 是 11 项 AC 的最后一块前端接入。**合入后 US-001 才具备整体验收条件**（Story → `Reviewing` 由 PM 登记）。
+
+**未做的事**：未改 AC / Scope / 代码；未提交合入、未推送、未关闭 Task 或 Story。

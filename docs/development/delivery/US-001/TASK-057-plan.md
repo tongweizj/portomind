@@ -422,7 +422,7 @@ $ npm run docs:check    → 既有 docs/readme.md:66 broken link（非本卡文�
 | 审查记录 | `54136c2`（§12） |
 | 审查判定 | `Pass with issues`，无 BLOCKER/MAJOR |
 | 状态流转 | `Draft` → `Approved`（2026-11-05）→ `Implementing` → `Reviewing` → `Completed`（2026-11-05） |
-| 合入 | **`Pending`** —— 分支尚未合入 `main` |
+| 合入 | **`Merged`** —— merge commit `1e421db`（2026-11-05 21:15），分支 tip `54136c2` |
 
 ### 13.2 DoD 逐条（[DEFINITION_OF_DONE](../../../os/process/DEFINITION_OF_DONE.md) §3）
 
@@ -435,7 +435,7 @@ $ npm run docs:check    → 既有 docs/readme.md:66 broken link（非本卡文�
 | T-5 | 文档同步 | ✅ §11 的 `CRON_WORKER_DEV.md` §5 / `CRON_WORKER_OPS.md`；本卡与计划 §12～§13、BOARD |
 | T-6 | 已知妥协已记录 | ✅ §11.8 + §12.7（F-01～F-04） |
 
-> 按 DoD §4，「合入 `main`」不属于任务级 DoD；`Merged` 字段单列，由 Human 判定。当前为 `Pending`。
+> 按 DoD §4，「合入 `main`」不属于任务级 DoD；`Merged` 字段单列，由 Human 判定。当前为 `Merged`（`1e421db`）。
 
 ### 13.3 遗留（不阻塞结案）
 

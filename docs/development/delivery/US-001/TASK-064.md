@@ -194,21 +194,29 @@ Reviewer 核实 `git diff d124626..HEAD -- scripts/check-docs.cjs scripts/check-
 |---|---|
 | 结案日期 | 2026-11-05 |
 | Status | `Reviewing` → **`Completed`** |
-| Merged | **`Pending`** —— 分支尚未合入 `main`（见下） |
+| Merged | **`Merged`** —— merge commit `cde811f`（`2026-11-05 22:44`），分支 tip `b23abb9` |
 | DoD | T-1 实现 ✅ / T-2 验证 ✅ / T-3 AC 逐条 ✅ / T-4 审查收敛 ✅（F-01 为合入流程风险非代码缺陷）/ T-5 文档同步 ✅ / T-6 已知妥协 ✅ |
 
-### ⚠️ 合入状态：`Pending`，且必须先 rebase
+### 合入状态：`Merged`（2026-11-05 22:44）
 
-核对 `git merge-base --is-ancestor b23abb9 main` = **否**。`feature/TASK-064`（基点 `d124626`）**不含 `c11bb64`**。
+2026-11-05 Human 提供合入依据并确认后登记。
 
-**合入前置动作（顺序不能颠倒）**：
-1. `git rebase main`（或 `merge main`）
-2. 复验 `scripts/check-docs.cjs:48` 仍为 `> 2`
-3. 重跑 `npm run docs:check` 确认 0 ERROR
-4. 再合入
+```
+cde811f  Merge branch 'feature/TASK-064' into main
+parents = 0ae6442（结案记录）+ b23abb9（分支 tip / 审查记录）
+```
 
-若跳过 1～3 直接合并，`c11bb64` 的修复被回退，`docs:check` 将重新报 `multiple-current-deliveries`。
+`git reflog show --date=iso main`：
 
-**对下游的影响（解除 063 阻塞）**：`TASK-063` 的串行前置是「057 与 064 均合入 `main`」。057 已合入，**064 合入后 063 即可开工**。
+```
+cde811f main@{2026-11-05 22:44:46 -0500}: merge chore/merge-TASK-064: Fast-forward
+0ae6442 main@{2026-11-05 22:42:22 -0500}: commit: docs(us-001): close TASK-064 as Completed (Merged: Pending)
+```
 
-**未做的事**：未改 AC / Scope / 代码；未提交合入、未推送、未关闭 Task 或 Story。
+- `git merge-base --is-ancestor b23abb9 main` = **是**；`cde811f` 亦为 `main` / `origin/main` 祖先
+
+**F-01（合入风险）已闭环**：合入采取合并流程（merge commit），`c11bb64` 的 docs 检查修复**未被回退**——复验 `scripts/check-docs.cjs:48` 仍为 `> 2`，「最多保留两个 Story 目录」，`docs:check` 0 ERROR。
+
+**对下游的影响（已解除 063 阻塞）**：`TASK-063` 的串行前置是「057 与 064 均合入 `main`」。两者均已合入，**063 已可实施**（已完成至 `Completed`）。
+
+**未做的事**：未改 AC / Scope / 代码；未推送、未关闭 Task 或 Story。

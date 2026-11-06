@@ -313,11 +313,11 @@ $ cd client && ../node_modules/.bin/eslint "src/**/*.{js,jsx}"
 |---|---|
 | 结案日期 | 2026-11-04 |
 | 结案指令 | Human：「055 reviewer 的验证通过了，请更新状态」 |
-| 实现 | `feature/TASK-055` @ `3991df8`（worktree `D:/projects/portomind-055`，代码 5 文件 +1150） |
-| 审查记录 | `0f697fd`（§12） |
+| 实现 | `feature/TASK-055` @ `3991df8`（worktree `D:/projects/portomind-055`，代码 5 文件 +1150）<br>⚠️ **rebase 前旧 SHA**；合入后实际为 `827c1dc` |
+| 审查记录 | `0f697fd`（§12）<br>⚠️ **rebase 前旧 SHA**；合入后实际为 `83e9971` |
 | 审查判定 | `Pass with issues`，无 BLOCKER/MAJOR |
 | 状态流转 | `Draft` → `Approved`（2026-11-04）→ `Implementing` → `Reviewing` → `Completed`（2026-11-04） |
-| 合入 | **`Pending`** —— 分支尚未合入 `main` |
+| 合入 | **`Merged`** —— Fast-forward，分支 tip `83e9971`（无 merge commit；2026-11-04 23:31） |
 
 ### 13.2 DoD 逐条（[DEFINITION_OF_DONE](../../../os/process/DEFINITION_OF_DONE.md) §3）
 
@@ -330,7 +330,7 @@ $ cd client && ../node_modules/.bin/eslint "src/**/*.{js,jsx}"
 | T-5 | 文档同步 | ✅ 任务卡、本计划 §11～§13、BOARD |
 | T-6 | 已知妥协已记录 | ✅ §11.7 / §12.6 |
 
-> 按 DoD §4，「合入 `main`」不属于任务级 DoD；`Merged` 字段单列，由 Human 判定。当前为 `Pending`。
+> 按 DoD §4，「合入 `main`」不属于任务级 DoD；`Merged` 字段单列，由 Human 判定。当前为 `Merged`（`83e9971`）。
 
 ### 13.3 遗留（不阻塞结案）
 
@@ -347,9 +347,11 @@ $ cd client && ../node_modules/.bin/eslint "src/**/*.{js,jsx}"
 - 配色唯一来源 `dataStateLevel → getStatusTone()`（056）
 - 063 负责 AC8① 的共享请求层与五卡统一降级
 
-### 13.5 合入前须处理
+### 13.5 合入（已完成）
 
-`feature/TASK-055` 从 `53edb8e` 切出，落后 `main`（`6296fef`，含 055 的批准登记 `45030b0` 与交付登记 `6296fef`）。**合入前须 `git rebase main` 或 `merge main`**，否则会把旧版文档（显示 `Planning`/`Draft`）一起合入。
+**2026-11-04 23:31 已 Fast-forward 合入 `main`**，分支 tip `83e9971`，无 merge commit。
+
+> **历史说明**：合入前该分支从 `53edb8e` 切出、落后 `main`，需 rebase。实际执行了 rebase：旧 tip `0f697fd`（旧审查记录）/ `3991df8`（旧实现）→ 新 tip `83e9971`。**旧 SHA 不在 `main` 中**，此前文档引用旧 SHA 导致误判为「未合入」。当前可审计对象为 `827c1dc`（实现）与 `83e9971`（含审查记录）。
 
 ### 13.6 过程目录处置
 

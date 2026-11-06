@@ -173,7 +173,7 @@ Human 就 [D-04（055 原 AC6/8/9 澄清）](./US-001-02-planner-return.md#d-040
 | 项 | 事实 |
 |---|---|
 | Worktree | `D:/projects/portomind-055`（主工作区未被本卡改动） |
-| 分支 / 提交 | `feature/TASK-055` @ **`3991df8`** |
+| 分支 / 提交 | `feature/TASK-055` @ **`3991df8`**（rebase 前旧 SHA；合入后实际为 `827c1dc` / tip `83e9971`） |
 | 改动规模 | 代码 5 文件 +1150（`priceDataState.js`、`PriceTaskCard.jsx`、3 个验收脚本/夹具）+ 计划 §11 |
 | 范围核对 | 无 `server/` `shared/` `cron-worker/` 改动；未改行情页/账号页/`TaskCardShell`/`BoardShell`/`statusTone` |
 | 自测证据 | 计划 §11.4：AC1～AC11 逐条，脚本 **45/45 PASS** |
@@ -222,15 +222,32 @@ Human 就 [D-04（055 原 AC6/8/9 澄清）](./US-001-02-planner-return.md#d-040
 |---|---|
 | 结案日期 | 2026-11-04 |
 | Status | `Reviewing` → **`Completed`** |
-| Merged | **`Pending`** —— 分支尚未合入 `main`（见下） |
+| Merged | **`Merged`** —— Fast-forward 合入 `main`，无 merge commit；分支 tip `83e9971` |
 | DoD | T-1 实现 ✅ / T-2 验证 ✅ / T-3 AC 逐条 ✅（AC8① 明示为部分）/ T-4 审查收敛 ✅ / T-5 文档同步 ✅ / T-6 已知妥协 ✅ |
 
-### ⚠️ 合入状态：`Pending`
+### 合入状态：`Merged`（Fast-forward，2026-11-04 23:31）
 
-核对 `git merge-base --is-ancestor 0f697fd main` = **否**。`feature/TASK-055` 尚未合入 `main`。
+2026-11-05 Human 提供合入依据并确认后登记。
 
-按 [STATES.md §1](../../../os/process/STATES.md#1-status-与-merged)：「Completed 不表示已提交、已合入或已发布」。故 `Merged` 记 `Pending`，**未填 `Merged`**——合入与 `Merged` 登记归 Human。
+`git reflog show --date=iso main` 记录：
 
-**合入前须处理**：该分支从 `53edb8e` 切出，落后 `main`（`6296fef`），需先 `git rebase main` 或 `merge main`，否则会把旧版文档一起合入。
+```
+83e9971 main@{2026-11-04 23:31:53 -0500}: merge feature/TASK-055: Fast-forward
+ca3f959 main@{2026-11-04 23:30:05 -0500}: commit: docs(us-001): close TASK-055 as Completed (Merged: Pending)
+```
 
-**未做的事**：未改 AC / Scope / 代码；未提交合入、未推送、未关闭 Task 或 Story。
+- `git merge-base --is-ancestor 83e9971 main` = **是**（`origin/main` 同样包含）
+- `main` 首父历史直接包含 `83e9971`，**故无 merge commit**
+
+**⚠️ 旧 SHA 说明（此前易误判）**：055 实际发生过 **rebase** —— `feature/TASK-055` 从旧 tip `0f697fd` rebase 到 `ca3f959`，产生新 tip `83e9971`。因此：
+
+| SHA | 含义 | 是否在 `main` |
+|---|---|---|
+| `3991df8` | rebase 前的**旧实现**提交 | ❌ 不在 |
+| `0f697fd` | rebase 前的**旧审查记录**提交 | ❌ 不在 |
+| `827c1dc` | rebase 后的实现提交 | ✅ 在 |
+| `83e9971` | rebase 后的分支 tip（含审查记录） | ✅ 在 |
+
+本卡此前 §13.1 与计划引用的 `3991df8` / `0f697fd` 是 **rebase 前旧 SHA**，`git merge-base --is-ancestor 0f697fd main` 自然为否——那是**文档引用了失效 SHA**，不是未合入。当前可审计的合入对象是 `827c1dc` / `83e9971`。
+
+**未做的事**：未改 AC / Scope / 代码；未推送、未关闭 Task 或 Story。

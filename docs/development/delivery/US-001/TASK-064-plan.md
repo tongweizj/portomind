@@ -279,7 +279,7 @@ detail=rebalance：
 
 | # | 严重度 | 位置 | 现象 | 对应 AC | 修法方向 |
 |---|---|---|---|---|---|
-| F-01 | **MAJOR（合入风险，非代码缺陷）** | 分支基点 `d124626` vs `main`（`c11bb64` 缺失） | 直接合并会回退 `c11bb64`，`scripts/check-docs.cjs:48` 从 `> 2` 退回 `> 1`，`docs:check` 重新报 `multiple-current-deliveries`；`check-docs.test.cjs` 少一条「一开发+一预研 Story 允许」用例 | 合入 / AC5 文档校验 | **合入前 rebase 最新 `main`，rebase 后验证 `:48` 仍为 `> 2` 且 `docs:check` 不再误报**。不计为 Implementer 缺陷，但必须在结案/合入前解决 |
+| F-01 | **MAJOR（合入风险，非代码缺陷）→ ✅ 已闭环** | 分支基点 `d124626` vs `main`（`c11bb64` 缺失） | 直接合并会回退 `c11bb64`，`scripts/check-docs.cjs:48` 从 `> 2` 退回 `> 1`，`docs:check` 重新报 `multiple-current-deliveries`；`check-docs.test.cjs` 少一条「一开发+一预研 Story 允许」用例 | 合入 / AC5 文档校验 | **已闭环（2026-11-05 22:44 合入时以 merge commit `cde811f` 处理）**：复验 `:48` 仍为 `> 2`、「最多保留两个 Story 目录」，`docs:check` 0 ERROR，`c11bb64` 未被回退 |
 | F-02 | MINOR | `verify-task-064.cjs` / §11.7 | 真实 Mongo 脚本用临时测试夹具（写 5 TaskRun + 2 TaskSkip 后即删），057 写侧真实 result 已被其脚本清理，本卡未复用生产节奏的真实结果；S1～S10 未取得项以单元/stub 映射验证 | AC6 | 上线后跑满一个调度周期再确认数据就绪；计划已如实标注，不阻塞 |
 | F-03 | MINOR | `docs:check` | 既有 `docs/readme.md:66` broken link + 多 Story 目录 ERROR（基点落后叠加）非本卡新增链接 | AC5 文档 | 随 F-01 的 rebase 与既有 docs 治理处理，非本卡范围 |
 | F-04 | MINOR | `unknownCount` | 计划 §4 允许可选 `unknownCount`，实现未新增公开字段，未知组合仅在 `REBALANCE_UNRESOLVED` note 体现（§11.7 已声明） | AC3 | 属实施层自由度（§6 已授权），不阻塞 |
@@ -348,7 +348,7 @@ detail=rebalance：
 | 审查记录 | `b23abb9`（§12） |
 | 审查判定 | `Pass with issues`，无 BLOCKER |
 | 状态流转 | `Draft` → `Approved`（2026-11-05）→ `Implementing` → `Reviewing` → `Completed`（2026-11-05） |
-| 合入 | **`Pending`** —— 分支尚未合入 `main`，且**须先 rebase** |
+| 合入 | **`Merged`** —— merge commit `cde811f`（2026-11-05 22:44），分支 tip `b23abb9` |
 
 ### 13.2 DoD 逐条（[DEFINITION_OF_DONE](../../../os/process/DEFINITION_OF_DONE.md) §3）
 
@@ -361,7 +361,7 @@ detail=rebalance：
 | T-5 | 文档同步 | ✅ `API_CONTRACT.md` / `DATA_MODEL.md`；本卡与计划 §12～§13、BOARD |
 | T-6 | 已知妥协已记录 | ✅ §11.7 + §12.9（F-02～F-05） |
 
-> 按 DoD §4，「合入 `main`」不属于任务级 DoD；`Merged` 字段单列，由 Human 判定。当前为 `Pending`。
+> 按 DoD §4，「合入 `main`」不属于任务级 DoD；`Merged` 字段单列，由 Human 判定。当前为 `Merged`（`cde811f`）。
 
 ### 13.3 遗留（不阻塞结案）
 

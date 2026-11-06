@@ -334,15 +334,29 @@ FS 建议"2 × 周期"，但 5 个任务周期不同、再平衡按组合计划�
 |---|---|
 | 结案日期 | 2026-11-05 |
 | Status | `Reviewing` → **`Completed`** |
-| Merged | **`Pending`** —— 分支尚未合入 `main`（见下） |
+| Merged | **`Merged`** —— merge commit `1e421db`（`2026-11-05 21:15`），分支 tip `54136c2` |
 | DoD | T-1 实现 ✅ / T-2 验证 ✅ / T-3 AC 逐条 ✅ / T-4 审查收敛 ✅ / T-5 文档同步 ✅ / T-6 已知妥协 ✅ |
 
-### ⚠️ 合入状态：`Pending`
+### 合入状态：`Merged`（2026-11-05 21:15）
 
-核对 `git merge-base --is-ancestor 54136c2 main` = **否**。`feature/TASK-057` 领先 `main` 两个提交（`5bb47ea` 实现、`54136c2` 审查记录），**尚未合入**。
+2026-11-05 Human 提供合入依据并确认后登记。
 
-按 [STATES.md §1](../../../os/process/STATES.md#1-status-与-merged)：「Completed 不表示已提交、已合入或已发布」。故 `Merged` 记 `Pending`，**未填 `Merged`**——合入与 `Merged` 登记归 Human。
+```
+1e421db  Merge branch 'feature/TASK-057' into main
+parents = 28d370a（结案记录）+ 54136c2（分支 tip / 审查记录）
+```
 
-**对下游的影响（阻断 064）**：`TASK-064` 计划已于 2026-11-05 批准，但其 W0 前置是「057 合入 `main`」——本卡的 `taskSkip.js` 与真实 `result` 写入是 064 的读取对象。**057 未合入前，064 不可开工。**
+`git reflog show --date=iso main`：
+
+```
+1e421db main@{2026-11-05 21:15:58 -0500}: merge chore/merge-TASK-057: Fast-forward
+28d370a main@{2026-11-05 21:07:58 -0500}: commit: docs(us-001): close TASK-057 as Completed (Merged: Pending)
+```
+
+- `git merge-base --is-ancestor 54136c2 main` = **是**（`origin/main` 同样包含）
+- `git merge-base --is-ancestor 1e421db main` = **是**
+- merge commit 保留了两个父：结案记录 `28d370a` 与分支 tip `54136c2`
+
+**未做的事**：未改 AC / Scope / 代码；未推送、未关闭 Task 或 Story。
 
 **未做的事**：未改 AC / Scope / 代码；未提交合入、未推送、未关闭 Task 或 Story。
