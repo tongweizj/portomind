@@ -3,6 +3,7 @@
 const mongoose = require('mongoose');
 const AlertRule = require('@portomind/shared/models/alertRule');
 const AlertEvent = require('@portomind/shared/models/alertEvent');
+const { getVisiblePortfolioIds, visibleAlertFilter } = require('@portomind/shared/services/alertVisibility');
 // 属性访问（而非解构），便于测试对 evaluateAll 做 stub
 const alertEngine = require('@portomind/shared/services/alertEngine.service');
 const { success, failure, pagination, parsePagination } = require('../utils/apiResponse');
@@ -209,23 +210,25 @@ exports.deleteRule = async (req, res, next) => {
 exports.getEvents = async (req, res, next) => {
   try {
     const { page, pageSize } = parsePagination(req.query);
-    const filter = {};
+    const userFilter = {};
     if (req.query.status) {
       if (!EVENT_STATUSES.includes(req.query.status)) return failure(req, res, 400, 'status 无效');
-      filter.status = req.query.status;
+      userFilter.status = req.query.status;
     }
     if (req.query.level) {
       if (!EVENT_LEVELS.includes(req.query.level)) return failure(req, res, 400, 'level 无效');
-      filter.level = req.query.level;
+      userFilter.level = req.query.level;
     }
     if (req.query.portfolioId) {
       if (!mongoose.Types.ObjectId.isValid(req.query.portfolioId)) return failure(req, res, 400, 'portfolioId 无效');
-      filter.portfolioId = req.query.portfolioId;
+      userFilter.portfolioId = req.query.portfolioId;
     }
     if (req.query.ruleId) {
       if (!mongoose.Types.ObjectId.isValid(req.query.ruleId)) return failure(req, res, 400, 'ruleId 无效');
-      filter.ruleId = req.query.ruleId;
+      userFilter.ruleId = req.query.ruleId;
     }
+    const visibleFilter = visibleAlertFilter(await getVisiblePortfolioIds());
+    const filter = { $and: [userFilter, visibleFilter] };
     const [total, data] = await Promise.all([
       AlertEvent.countDocuments(filter),
       AlertEvent.find(filter).sort({ triggeredAt: -1, _id: -1 }).skip((page - 1) * pageSize).limit(pageSize)
@@ -238,7 +241,8 @@ exports.getEvents = async (req, res, next) => {
 
 exports.getUnreadCount = async (req, res, next) => {
   try {
-    const count = await AlertEvent.countDocuments({ status: 'unread' });
+    const visibleFilter = visibleAlertFilter(await getVisiblePortfolioIds());
+    const count = await AlertEvent.countDocuments({ status: 'unread', ...visibleFilter });
     return success(res, { count });
   } catch (err) {
     next(err);

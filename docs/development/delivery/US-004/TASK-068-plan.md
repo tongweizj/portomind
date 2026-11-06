@@ -117,7 +117,78 @@ $or: [{ portfolioId: { $in: <现存组合 ids> } }, { portfolioId: null }]
 
 ## 11. Implementation Record
 
-（实施时填写。）
+**状态：** 实施完成（2026-11-06）。Task Status 保持 `Implementing`（未改 Reviewing/Completed，权限归 Orchestrator/Human）；计划 Status 保持 `Approved`，未改 AC/Scope。
+
+### 11.1 环境
+
+| 项 | 实际值 |
+|---|---|
+| Worktree | `D:\projects\portomind-068` |
+| Branch / Base | `feature/TASK-068` / `main @ 96ff382`（已从登记提交 `5083429` fast-forward 到最新 main） |
+| Node / npm | `v24.20.0` / `12.2.1`；worktree 无 `node_modules`，已 `npm ci`（隔离安装） |
+| 禁改面 | 未改 `client/`、`cron-worker/`、模型、迁移；未物理删除 `AlertEvent` |
+
+### 11.2 改动文件与 SHA256
+
+| 文件 | 变化 | SHA256 |
+|---|---|---|
+| `shared/services/alertVisibility.js` | 新增：`getVisiblePortfolioIds` + `visibleAlertFilter` 单一来源 | `640565f5b8e6968d575194f7bee6d0b0e664c6d90e21e6bddf030c53c02859bc` |
+| `shared/services/portfolio/summary.js` | `unreadAgg` 的 `$match` 加入组合可见性 | `d4705d748bf5656a4ff9e5ef7b29825e8d652d630c30926f5480b4883185c658` |
+| `server/controllers/alert.controller.js` | `getEvents` / `getUnreadCount` 加同源过滤 | `7914678c3a9ccd491c0e7dc2008cc4f6419ea06fbd18afffcff067e25c359e14` |
+| `server/test/integration/alert.api.test.js` | 过滤形状 + 删除组合/资产级保留用例 | `5615fa7bf8e6e194cbdd07cbda6ecc0e855a6d67494f337a5df470a80bbfd76c` |
+| `server/test/integration/portfolio.summary.test.js` | summary unreadAgg 可见性断言；`Portfolio.find` stub 兼容 helper 的 `.lean()` | `30a1ed2b963cc84060d3399d5b5566ab1d62158d2e8fb8a058458bae1c1a0743` |
+| `server/test/integration/portfolio.archived.test.js` | 既有 `Portfolio.find` stub 补 `.lean()`（不弱化断言） | `ea6e48ee871d1fa6b3bed940f74124d7ca33a48603fc028aeecbf5d456c54897` |
+
+### 11.3 AC-01～AC-07 实测结果
+
+| AC | 结果 | 证据 |
+|---|---|---|
+| AC-01 删 A 后列表隐藏、资产级保留 | **PASS** | 构造 A 3 条未读 + B 1 条未读 + 资产级 1 条；`Portfolio.find` 在删 A 后只返回 B；`GET /alerts/events` 从 5 条降为 **2 条**（B + 资产级），A 三条不返回；资产级 `portfolioId:null` 仍返回 |
+| AC-02 summary/全站计数 | **PASS** | 同一场景全站未读 **5 → 2**（减 3）；summary 测试在 A 存在/删除两态下 B 的 `unreadAlertCount` 都保持 **1**，A 删除后不再出现；`unreadAgg` 的 `$match` 两态分别含 `$in:[A,B]` / `$in:[B]` + `null` 分支 |
+| AC-03 库中保留（隐藏非删除） | **PASS** | 删除后直接 `AlertEvent.countDocuments({portfolioId:A}) === 3`；生产 `deletePortfolioCascade` 未改，无 AlertEvent 删除逻辑；测试夹具中的 A 事件始终在 `allEvents` |
+| AC-04 负向对照（未删时三处一致） | **PASS** | 删除前列表 **5**、全局未读 **5**；删除后 **2 / 2**；资产级始终保留 |
+| AC-05 查询层三处同源 | **PASS** | `shared/services/alertVisibility.js` 被 controller 两出口与 summary 共用；controller 过滤为 `{ $and: [userFilter, visibleAlertFilter] }`，summary 为 `$match: { status:'unread', ...visibleFilter }`；无客户端过滤改动 |
+| AC-06 不改模型/不迁移/全绿 | **PASS** | 未改 `alertEvent` 模型、无迁移、无物理删除；`npm run test:server` **239/239 pass** |
+| AC-07 cron-worker 零改动 | **PASS** | `git status --porcelain -- cron-worker` 空输出 |
+
+**实际命令输出：**
+
+```text
+npm run test:server
+ℹ tests 239
+ℹ pass 239
+ℹ fail 0
+
+node --test test/integration/alert.api.test.js
+ℹ tests 11
+ℹ pass 11
+ℹ fail 0
+
+node --test test/integration/portfolio.summary.test.js test/integration/portfolio.archived.test.js
+ℹ tests 23
+ℹ pass 23
+ℹ fail 0
+```
+
+### 11.4 查询与过滤形状
+
+- 可见组合：`Portfolio.find({}, { _id: 1 }).lean()`（组合数量级个位数；归档组合仍算现存，仅删除组合消失）。
+- 共享条件：`{ $or: [{ portfolioId: { $in: ids } }, { portfolioId: null }] }`。
+- `getEvents`：`{ $and: [userFilter, visibleFilter] }`；数量与列表共用同一 filter。
+- `getUnreadCount`：`{ status:'unread', ...visibleFilter }`。
+- `summary`：`AlertEvent.aggregate([{ $match: { status:'unread', ...visibleFilter } }, { $group by portfolioId }])`；资产级 null 组不会匹配到具体组合，但事件本身不被过滤。
+
+### 11.5 已知妥协与未验证项
+
+1. **测试使用 mock/内存过滤，不连真实 Mongo**：AC-01～04 的删除场景通过 mock `Portfolio.find` 与内存 AlertEvent 过滤器验证，不是真实库删除事务；AC-03 的“库中仍存在”用同一内存集合计数。真实代码未增加删除逻辑，模型/迁移未动。
+2. `getEvents` 现在即使无用户筛选也使用 `$and: [{}, visibleFilter]`；语义等价，保留统一形状。
+3. 为适配 `getVisiblePortfolioIds` 的 `.lean()` 查询，修改了 `portfolio.summary.test.js` / `portfolio.archived.test.js` 中既有 `Portfolio.find` stub（增加 `lean`）；断言未弱化，回归全绿。
+4. 未更新 `API_CONTRACT.md`（本卡 Scope 未列、计划留给 TASK-069 收尾）；三出口行为已在测试中验证。
+5. 未连真实库/未跑全 workspace `npm test`；按本卡验证入口运行 `npm run test:server`。
+
+### 11.6 交付状态
+
+实现、单测、AC-01～07 验证完成；待 Orchestrator 登记 Reviewing 并安排独立 Reviewer。Task Status / Merged 未改。
 
 ## 12. Review Record
 
