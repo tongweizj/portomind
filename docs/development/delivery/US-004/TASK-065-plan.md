@@ -122,7 +122,89 @@ Approval：**未批准**。本计划覆盖 §1～§9 当前设计；`Draft → A
 
 ## 11. Implementation Record
 
-（实施时填写：实际改动、基线与版本、偏差及依据、验证结果、遗留事项。）
+**状态：** 实施完成（2026-11-06）。Task Status 保持 `Implementing`（未改 Reviewing/Completed，权限归 Orchestrator/Human）；计划 Status 保持 `Approved`，未改 AC/Scope。
+
+### 11.1 环境
+
+| 项 | 实际值 |
+|---|---|
+| Worktree | `D:\projects\portomind-065`（独立；主工作区与其他 worktree 未触碰） |
+| Branch / Base | `feature/TASK-065` / `main @ 0189c04` |
+| Node / npm | `v24.20.0` / `12.2.1`；worktree 无 `node_modules`，已 `npm ci`（隔离安装） |
+| 目标文件 | `shared/services/portfolio/summary.js`、`server/test/integration/portfolio.summary.test.js`、`docs/handbook/technical/API_CONTRACT.md` |
+| 禁用面 | 未改 `client/`、`cron-worker/`、`server/routes/`、`getPortfolioById` |
+
+### 11.2 改动文件与 SHA256
+
+| 文件 | 变化 | SHA256 |
+|---|---|---|
+| `shared/services/portfolio/summary.js` | `buildPortfolioSummary` 回传四字段；`computeSummary` 单次 PENDING 聚合 | `8f294728a4da6479f84ce90a8797cefa8c2013008cb2d181d83314659ac9b663` |
+| `server/test/integration/portfolio.summary.test.js` | 新增 5 条 US-004 用例（AC-01～04）+ AC-02 三项同断言 | `b83077cfb81ffbd311abeb9fce924e7b047141eb02e828532bfb7cea558eca7d` |
+| `docs/handbook/technical/API_CONTRACT.md` | summary `stats` 字段集与语义 | `c516e8a3111592def48be842d91c04b963e62e2be1110e0927844509894eef00` |
+
+### 11.3 AC-01～AC-06 实测结果
+
+| AC | 结果 | 证据 |
+|---|---|---|
+| AC-01 四字段 | **PASS** | `buildPortfolioSummary` 纯函数断言：`lastExecutedAt` 原样回传（Date/null）、`pendingRebalanceCount` 默认 0、`drift.dueByTime` 布尔、`drift.overThresholdCount` 整数；`drift === null` 时对象为 null、不构造后两字段 |
+| AC-02 语义不扩义 | **PASS** | 仅 `timeInterval` 触发用例同断言：`needsRebalance === false`、`triggeredThresholds === []`、`dueByTime === true`；`overThresholdCount === 0` |
+| AC-03 pending 批量 | **PASS** | 单次 `$match {status:'PENDING'} + $group {_id:'$portfolioId',count:{$sum:1}}`；构造 2 条 p1 PENDING + 1 条 p2 PENDING + 1 条 EXECUTED + 1 条 REVOKED，p1=2、p2=1；测试断言 `countDocuments` 0 次 |
+| AC-04 不复算 / 查询预算 | **PASS** | `overThresholdCount` 从 `details.filter(d => d.triggeredThresholds.length > 0).length` 派生；构造“1 个标的触发 absolute+relative 两种类型、另两个标的未超阈”，断言 `overThresholdCount === 1`、顶层 `triggeredThresholds.length === 2`。10 组合构造数据：`RebalanceRecord.aggregate` **1 次** + `findOne` **10 次** = **11 次**（≤11）；`countDocuments` **0 次** |
+| AC-05 回归 | **PASS** | `npm run test:server`：**237 tests / 237 pass / 0 fail**；`portfolio.summary.test.js` 15/15、`portfolio.archived.test.js` 7/7；既有“仅时间间隔”用例保留并增强 |
+| AC-06 cron-worker 零改动 | **PASS** | `git status --porcelain -- cron-worker` **空输出**；`git status cron-worker` 仅显示 clean 提示（无改动） |
+
+**实际命令输出：**
+
+```text
+npm run test:server
+ℹ tests 237
+ℹ pass 237
+ℹ fail 0
+
+node --test test/integration/portfolio.summary.test.js test/integration/portfolio.archived.test.js
+ℹ tests 22
+ℹ pass 22
+ℹ fail 0
+```
+
+### 11.4 查询次数实测（AC-03/AC-04）
+
+```text
+2 组合（AC-03）:
+  RebalanceRecord.aggregate  ×1   （$match status=PENDING + $group by portfolioId）
+  RebalanceRecord.findOne    ×2   （每组合既有 EXECUTED lastExecuted 查询）
+  RebalanceRecord.countDocuments ×0
+
+10 组合（AC-04）:
+  RebalanceRecord.aggregate  ×1
+  RebalanceRecord.findOne    ×10  （既有 lastExecuted，每组合一次）
+  合计 = 11（≤ 11）
+  RebalanceRecord.countDocuments ×0
+```
+
+生产代码 `grep countDocuments shared/services/portfolio/summary.js` 仅命中注释，无调用；未新增 `lastExecutedAt` 查询（直接使用既有 `findOne` 结果）。
+
+### 11.5 负向对照
+
+| AC | 临时缺陷 | 实际结果 | 恢复 |
+|---|---|---|---|
+| AC-02 | `dueByTime: driftTriggered.length > 0`（从 `needsRebalance` 派生） | `仅时间间隔触发不计入漂移徽标` FAIL（actual false / expected true） | 恢复 `8f294728…b663` |
+| AC-03 | 改为每组合 `RebalanceRecord.countDocuments(...)` | AC-03 FAIL（actual 0 / expected 2）；AC-04 FAIL（countDocuments actual 10 / expected 0） | 恢复同上 |
+| AC-04 | `overThresholdCount: result.triggeredThresholds.length`（顶层类型数） | `AC-04：overThresholdCount 是标的数…` FAIL（actual 2 / expected 1） | 恢复同上 |
+
+恢复后重跑 `npm run test:server` 仍为 **237/237**。
+
+### 11.6 已知妥协与未验证项
+
+1. **未连真实 Mongo**：AC-03/AC-04 的查询次数通过 Node test 对 Mongoose 模型方法计数验证，不是运行时 explain/真实库查询计划；字段值由真实 `evaluateThresholds` 纯函数计算，但 DB 聚合未在真实库执行。
+2. **空组合列表跳过 pending 聚合**：`portfolios.length === 0` 时不发 `RebalanceRecord.aggregate`；这是避免无意义查询的优化，N>0 时严格一次聚合。既有 `portfolio.archived.test.js` 因此无需新增 DB stub，全部保持通过。
+3. 测试输出存在既有 `summary ↔ thresholdChecker ↔ portfolio/index` 循环依赖的 Node warning（“Accessing non-existent property…”），不影响退出码或断言；本卡未改该既有结构。
+4. 未改前端（TASK-066/067 消费）；`lastExecutedAt` 从既有 `lastExecuted` 结果直接回传，没有新增该字段的查询。
+5. API_CONTRACT 只更新 summary 行；未新增端点、未改路径。
+
+### 11.7 交付状态
+
+实现、单测、查询预算断言与三条负向对照完成；待 Orchestrator 登记 Reviewing 并安排独立 Reviewer。Task Status / Merged 未改。
 
 ## 12. Review Record
 
