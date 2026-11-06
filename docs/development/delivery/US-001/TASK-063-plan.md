@@ -104,7 +104,94 @@ Approval：**2026-11-05 Human 批准当前设计**（Planner 会话确认「批�
 
 ## 11. Implementation Record
 
-尚未实施。
+**状态：** 实施完成（2026-11-05）。Task Status 保持 `Implementing`（未改 Reviewing/Completed，权限归 Orchestrator/Human）；计划 Status 保持 `Approved`，未改 AC/Scope。
+
+### 11.1 环境与前置
+
+| 项 | 实际值 |
+|---|---|
+| Worktree | `D:\projects\portomind-063`（独立；主工作区未跟踪的 `US-004-01-planner-handoff.md` 未触碰） |
+| Branch / Base | `feature/TASK-063` / `main @ 0487ba8` |
+| Node / npm | `v24.20.0` / `12.2.1`；worktree 无 `node_modules`，已 `npm ci`（515 packages，隔离安装） |
+| 前置核对 | 053/055/056 组件在位；064 `lastSkip` 读取路径在位（`grep -c lastSkip`=2）；W0 串行前置满足 |
+| 浏览器 | 本机 Chrome headless（`--headless=new`，1440×900），Vite 6.4.4；夹具用 axios adapter 注入快照 |
+
+### 11.2 改动文件与 SHA256
+
+| 文件 | 说明 | SHA256 |
+|---|---|---|
+| `client/src/services/cronStatus.service.js` | 新增；经 `api.get('/cron/status')` 解包，只有 GET | `13e71f02…7590` |
+| `client/src/hooks/useCronStatus.js` | 新增；固定 `['cron-status']`，首读 + 手动 refetch，关闭焦点/重连/轮询/重挂 | `7dcc8a23…6644` |
+| `client/src/components/CronStatus/taskDataViews.js` | 新增；四卡派生 + 总览判定（单一派生层） | `0c3f3b4b…65be` |
+| `client/src/components/CronStatus/DataTaskCard.jsx` | 新增；六区域数据卡 + lastSkip/notes | `206ed194…daf7` |
+| `client/src/components/CronStatus/CronBoard.jsx` | 新增；共享请求、五卡接线、错误/刷新/总览 | `fe3b95b0…2d71` |
+| `client/src/components/CronStatus/BoardShell.jsx` | 仅加可选 `cardComponents` 与 summary levels；缺省仍 TaskCardShell | `1eee267f…ebca` |
+| `client/src/components/CronStatus/SummaryShell.jsx` | 仅加可选 `levels/overallLevel`；不传仍全部 unknown | `b224b61d…1e03` |
+| `client/src/pages/LogViewer.jsx` | 第 79 行 `<BoardShell />` → `<CronBoard />`；tab/原始日志逻辑未改 | `98fd144a…62b4` |
+| `client/scripts/verify-task-063.cjs` | 静态边界 + 启动 Vite/Chrome 的验收脚本 | `23fd6603…4f2b` |
+| `client/scripts/fixtures/task063-fixture.jsx` | 41 条 AC1–AC7 浏览器断言 | `11f47c2b…f061` |
+| `client/scripts/fixtures/task063-fixture.html` | 夹具页面 | `569d9ce3…b19d` |
+
+未改 `server/`、`shared/`、`cron-worker/`、`client/src/components/CronStatus/PriceTaskCard.jsx`、`priceDataState.js`、`StatusLegend.jsx`、`TaskCardShell.jsx`。
+
+### 11.3 AC1～AC8 实测结果
+
+| AC | 结果 | 实测证据 |
+|---|---|---|
+| AC1 统一 API/五卡/总览真实快照 | **PASS** | 真实浏览器首次读：1 个 `price-card` + 4 个 `task-card`=5；总览 `全部正常` 仅在五任务全 present/有 lastRun/level ok/contractReady/无 stale 时出现；缺任务→`数据未就绪`；五灯 `data-state` 取真实 levels |
+| AC2 完整性/提醒/汇率 | **PASS** | 完整性显示 `应采 / 实际 40 / 40`、缺口、`跳过（无 launchDate）`、缺口摘要；提醒 `零命中属正常` 且 `新建 0` 不判失败；汇率对象显示 `本次写入成功`，混合场景 `同步失败` / `仅观测，不证明同步成功`，并固定标注「不证明汇率方向正确」 |
+| AC3 再平衡首屏 | **PASS** | 父任务 `到期 2 / 总组合 4`、`生成建议 1`、`未超阈 1`、`失败`；显式失败行展示 `DB_TIMEOUT`；contractReady=false 显示「无父结果，未到期未知」，不出现 `到期 0`；未创建详情路由 |
+| AC4 四型空态/lastSkip/stale | **PASS** | 无运行→`暂无运行记录`；契约未就绪→`结果契约未就绪`；零目标 percent=`—` 且无 `0%`；单卡格式异常→仅该卡 bad；lastSkip 与 lastRun 分离（价格在 PriceSlotCard 下独立行，数据卡 `last-skip`），缺失时无空占位；API `stale`→`超时未完成`，总览不全部正常 |
+| AC5 首读/刷新/不轮询/失败分层 | **PASS** | 首次 `calls=1`；点击刷新 `calls=2` 且 `generatedAt` 更新；静置 1200ms 仍 `calls=2`；首次失败→五卡统一 bad + `快照获取失败` + 可重试；有旧快照刷新失败→保留旧数据 + `数据为 … 时快照，刷新失败`（不取本地当前时间） |
+| AC6 共享请求/图例/无 0 兜底 | **PASS** | 五卡共享一次 `/cron/status`，PriceTaskCard 0 次独立请求（`calls=1`）；StatusLegend 原样；新代码无 `|| 0`（静态断言） |
+| AC7 局部异常/日期 | **PASS** | 仅 `price-integrity-check` 字段坏时该卡 bad，其余卡仍 ok；总览不全部正常；日期展示后端 `targetMarketDate`/ISO 字符串，不重推业务目标日 |
+| AC8 只读/build/lint/053 结构 | **PASS（053 原日志运行时未跑，见 §11.6）** | 新代码 `useMutation`/`api.post|put|patch|delete` 0 命中；异常入口为 disabled；`npm run build --workspace client` 成功；`eslint "src/**/*.{js,jsx}"` 0；默认 `<BoardShell />` 仍 5 个 task-card + 六区域各 5 + 5 灯 unknown + 图例 |
+
+**命令实际输出：**
+
+```text
+npm run build --workspace client
+✓ built in 2.74s
+（仅有既有的 chunk >500 kB 警告）
+
+client/node_modules/.bin/eslint "src/**/*.{js,jsx}"
+（exit 0，无输出）
+
+node client/scripts/verify-task-063.cjs
+===== TASK-063 验收：41/41 PASS =====
+```
+
+### 11.4 请求次数证据
+
+| 时点 | `/cron/status` 请求数 | 说明 |
+|---|---|---|
+| 首次挂载 | **1** | 唯一共享查询；五卡同时消费；PriceTaskCard 不请求 |
+| 手动刷新后 | **2** | refetch 只多一次；generatedAt 更新 |
+| 静置 1200ms | **2** | `refetchInterval:false` / 窗焦/重连/重挂均关闭，无轮询 |
+| 整体失败 | **1** | `retry:false`；无重试风暴 |
+| 旧快照刷新失败 | **2** | 第二次失败，保留旧快照并标过时 |
+
+### 11.5 负向对照
+
+| # | 临时缺陷 | 实际失败断言 | 恢复 |
+|---|---|---|---|
+| 1 | 总览忽略缺项（缺失也按正常） | `AC1 缺任务不显示全部正常` FAIL（显示「全部正常」） | 恢复后 41/41 |
+| 2 | 整体失败只让价格卡降级 | `AC5 整体失败五卡统一降级` FAIL | 恢复后 41/41 |
+| 3 | 完整性未知值改 `|| 0` | `未知值不出现 || 0 兜底` + `AC7 单卡格式异常…` FAIL | 恢复后 41/41 |
+| 4 | `refetchInterval: 1000` | `AC5 查询显式关闭自动轮询` + `AC5 无自动轮询` FAIL（calls=3） | 恢复后 41/41 |
+
+### 11.6 已知妥协与未验证项
+
+1. **浏览器夹具用 axios adapter 注入快照，不是真实后端/DB**：真实 Chrome 中执行了组件、查询、刷新和错误路径，但没有连真实 `GET /api/cron/status`；AC2/AC3 的 057 真实 result 持久化证据仍以 057 为准（057 已清理其记录）。因此本卡不能宣称「真实库 AC2/AC3 数据」已验证。
+2. **053 原日志运行时回归未跑**：`a11y-053-log-regression.cjs` 需要临时库 + 登录服务；本环境未启动。`RawLogView`、`logTabs`、日志 service 均未改，tab 编排只替换了看板组件；属于未验证项而非已证通过。
+3. **053 骨架 app 的 board 断言与真实卡天然不同**：原 `e2e-task-053-verify` 面向空骨架（5×`task-card` + 每卡六区域）；本卡按计划把价格槽位换成 055 `PriceTaskCard`，其 DOM 为 `price-card`。**默认 `<BoardShell />` 的 053 结构回归已实测通过**（fixture 2 条），但旧 app 的结构断言不能原样套在真实看板上；计划 §4-2 所警告的断言变化在此如实记录。
+4. `SummaryShell` / `BoardShell` 采用**纯可选新增 props**，缺省行为与 053 骨架一致；未改 `PriceTaskCard`/`StatusLegend`/`TaskCardShell` 契约。
+5. 未实现 `/logs/rebalance` 详情路由、P1/P2、调度控制或汇率方向修复；价格 target 日原样来自后端字符串。
+6. build 仍有既有的 bundle >500 kB 警告，不是本卡引入。
+
+### 11.7 交付状态
+
+实现、构建、lint、41 条真实浏览器断言与四条负向对照完成；待 Orchestrator 登记 Reviewing 并安排独立 Reviewer。Task Status 保持 `Implementing`。
 
 ## 12. Review Record
 

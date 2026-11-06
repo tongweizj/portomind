@@ -1,15 +1,10 @@
 // client/src/components/CronStatus/SummaryShell.jsx
 //
-// TASK-053（C-01）AC3：顶部总览条的 **DOM 结构**就位。
-//
-// 交付的是「位置」，不是「数据」：
-//   - 恰好 5 个健康灯位（一一对应 BOARD_SLOTS 的五个任务）
-//   - 恰好 1 个整体健康徽章
-//   - 恰好 1 行数据快照时间文案
-//
-// 骨架阶段全部是「未知」态（中性灰）。**不得**默认渲染成绿色 —— 那会让用户以为
-// 「五个任务都正常」，是本任务 R-1 明确要避免的误读。真实数据由 TASK-063 填入。
+// TASK-053（C-01）AC3：顶部总览条的 DOM 结构。
+// TASK-063：新增可选 levels / overallLevel，用真实 dataStateLevel 驱动五灯与徽章；
+// 不传时仍为全部 unknown（053 骨架行为不变）。
 import { BOARD_SLOTS, UNKNOWN_TEXT } from './unknownValue';
+import { getStatusTone } from './statusTone';
 
 const NEUTRAL = {
   bg: '#F6F8FA',
@@ -19,17 +14,13 @@ const NEUTRAL = {
   muted: '#8A95A5',
 };
 
-/**
- * 健康灯：骨架阶段恒为「未知」。
- * 用 `data-state="unknown"` 把语义写进 DOM，便于 TASK-056 接入状态色、
- * 也便于测试断言「没有一个是 success/绿」。
- */
-function HealthDot({ label }) {
+function HealthDot({ label, level = 'unknown' }) {
+  const tone = getStatusTone(level);
   return (
     <li
       data-testid="health-dot"
-      data-state="unknown"
-      title={`${label}：${UNKNOWN_TEXT}`}
+      data-state={level}
+      title={`${label}：${tone.label}`}
       style={{ display: 'flex', alignItems: 'center', gap: 6, listStyle: 'none' }}
     >
       <span
@@ -38,8 +29,7 @@ function HealthDot({ label }) {
           width: 8,
           height: 8,
           borderRadius: '50%',
-          // 中性灰，不是绿色：骨架阶段不得给出成功语义
-          backgroundColor: NEUTRAL.muted,
+          backgroundColor: tone.color,
           flex: '0 0 8px',
         }}
       />
@@ -49,10 +39,17 @@ function HealthDot({ label }) {
 }
 
 /**
- * @param {{ snapshotAt?: any, overallState?: string }} props
- *   snapshotAt / overallState 由 TASK-063 传入；骨架阶段一律缺省 → 显示「未知」。
+ * @param {{
+ *   snapshotAt?: any,
+ *   overallState?: string,
+ *   overallLevel?: 'ok'|'warn'|'bad'|'unknown',
+ *   levels?: string[],
+ * }} props
  */
-export default function SummaryShell({ snapshotAt, overallState } = {}) {
+export default function SummaryShell({ snapshotAt, overallState, overallLevel = 'unknown', levels = [] } = {}) {
+  const safeLevels = Array.isArray(levels) ? levels : [];
+  const badgeTone = getStatusTone(overallLevel);
+
   return (
     <section
       data-testid="board-summary"
@@ -74,8 +71,12 @@ export default function SummaryShell({ snapshotAt, overallState } = {}) {
         data-testid="health-dots"
         style={{ display: 'flex', alignItems: 'center', gap: 14, margin: 0, padding: 0 }}
       >
-        {BOARD_SLOTS.map((slot) => (
-          <HealthDot key={slot.key} label={slot.label} />
+        {BOARD_SLOTS.map((slot, index) => (
+          <HealthDot
+            key={slot.key}
+            label={slot.label}
+            level={safeLevels[index] || 'unknown'}
+          />
         ))}
       </ul>
 
@@ -84,7 +85,7 @@ export default function SummaryShell({ snapshotAt, overallState } = {}) {
       {/* 1 个整体健康徽章 */}
       <span
         data-testid="overall-badge"
-        data-state="unknown"
+        data-state={overallLevel}
         style={{
           display: 'inline-flex',
           alignItems: 'center',
@@ -93,7 +94,7 @@ export default function SummaryShell({ snapshotAt, overallState } = {}) {
           borderRadius: 999,
           backgroundColor: NEUTRAL.bg,
           border: `1px solid ${NEUTRAL.border}`,
-          color: NEUTRAL.ink2,
+          color: badgeTone.color,
           fontSize: 12,
           fontWeight: 600,
           whiteSpace: 'nowrap',

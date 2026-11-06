@@ -16,7 +16,7 @@
 //   「返回看板」直接跳 `/logs?tab=board` 即可，不需要返工。
 import { useCallback, useState } from 'react';
 import { useSearchParams } from 'react-router';
-import BoardShell from '../components/CronStatus/BoardShell';
+import CronBoard from '../components/CronStatus/CronBoard';
 import RawLogView from '../components/RawLog/RawLogView';
 import { DEFAULT_LOG_TAB, LOG_TAB_PARAM, LOG_TABS, normalizeLogTab } from '../constants/logTabs';
 
@@ -71,12 +71,12 @@ const LogsPage = () => {
       </div>
 
       {/*
-        看板：仅在 board tab 挂载。骨架阶段不请求接口（AC7：接口未就绪也不得白屏），
-        因此这里没有 loading/error 分支——BoardShell 自包含渲染，全部为「未知」占位。
+        看板：仅在 board tab 挂载。TASK-063 起由 CronBoard 读取一次 /api/cron/status；
+        看板自身处理 loading/error，原始日志 tab 仍各自独立请求，互不影响。
       */}
       {activeTab === DEFAULT_LOG_TAB && (
         <section role="tabpanel" aria-label="任务运行看板">
-          <BoardShell />
+          <CronBoard />
         </section>
       )}
 
