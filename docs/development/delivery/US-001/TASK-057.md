@@ -9,19 +9,19 @@
 **规划核对：** [Planner 回交说明](./US-001-02-planner-return.md)；新增关联不改变本卡 AC、原状态、既有批准或结案结论。
 
 **Status:**  
-`Reviewing`（2026-11-05，实现与自测完成于 worktree `D:/projects/portomind-057` @ `5bb47ea`，等待独立 Reviewer 复核）。
+`Completed`（2026-11-05，独立 Reviewer 判定 `Pass with issues`，无 BLOCKER/MAJOR；Human 确认审查完成）。
 
 **Priority:**  
 `High`（P0 Must Have。它是 `TASK-054`（C-02）数据态、`C-07`（详情页）三列能否成立的**前提**；也是「全绿误导」这条已知缺陷的总闸）
 
 **Owner:**  
-`Reviewer`（待指派独立会话复核；Reviewer ≠ Implementer）。
+`—`（已结案：Implementer 交付、Reviewer `Pass with issues`、Human 确认）。
 
 **Created:**  
 `2026-10-26`
 
 **Updated:**  
-`2026-11-05`（登记实现交付与 Task → Reviewing；原创建日期保留）。
+`2026-11-05`（独立 Reviewer 复核完成，登记 `Completed`；原创建日期保留）。
 
 **Type:**  
 `Feature`（共享内核数据契约 + worker 写库逻辑；属 FS `NG2` 的**例外**，已由 OQ3 裁定放行）
@@ -301,3 +301,48 @@ FS 建议"2 × 周期"，但 5 个任务周期不同、再平衡按组合计划�
 **⚠️ 一处需 Reviewer 重点核对的取证特征**：验收脚本自带 `cleanup()`，跑完即删本脚本创建的 14 条 taskruns 与 2 条 taskskips。故**验收痕迹不会留在库里**——复核时须自行重跑脚本，不能以「库里查不到 057 数据」判为未实施。
 
 **未做的事**：未改 AC / Scope / 代码；未提交、未合入、未填 `Merged`、未关闭。
+
+## 审查结论接收与完成记录（2026-11-05）
+
+独立 Reviewer 已完成复核，结论写入 [计划 §12](./TASK-057-plan.md#12-review-record)（worktree 提交 `54136c2`）。
+
+| 项 | 结果 |
+|---|---|
+| 判定 | **`Pass with issues`**（按 [REVIEWER.md](../../../os/roles/REVIEWER.md) §5） |
+| BLOCKER / MAJOR | **无** |
+| AC1～AC12 | **全部满足**，经 Reviewer **自建真实库探针**独立实测（明确未采纳 Implementer 29/29 或 Orchestrator 复跑结论，均自行重跑） |
+| 负向对照 | **AC2 / AC5 / AC7 各一次**，全部证明断言非恒真，还原后 `git status` 空 |
+| 库未污染 | 前后 `taskruns=276 / with_result=0 / taskskips=0 / 唯一索引 true`；历史 276 条未删改 |
+
+**Reviewer 的关键验证（判定可信的实质依据）**
+
+- **AC5（最高风险）**：并发首跑 `RUNNING` 进行中触发第二次 → 返回 `SKIPPED/ALREADY_RUNNING/skipPersisted=true`，**首跑事后仍 `SUCCEEDED`，未被改成 SKIPPED**。负向：把 `recordSkip` 改成只返回不写库 → 两条断言 FAIL。
+- **AC2**：把 `normalizeCounts` 改成 `Object.assign` 全量透传 → 断言 FAIL（出现 `gap`/`ok`），证明白名单未被放宽。
+- **AC7**：状态判定改为被 `result` 覆盖 → `failureCount>0 → PARTIAL` 断言 FAIL。
+- **AC4**：父任务「未超阈」与「生成建议」两类**确实可区分**（`suggestionsCount=0/recordId=null` vs `recordId` 非空），这是 D5「全绿误导」的解药。
+
+**残余 MINOR（不阻塞）**
+
+- **F-01**：业务引擎（fetcher/ThresholdChecker/汇率 provider 等）在实库脚本中为 mock，验证的是**落库契约与形状**，非真实业务运行；且未跑满一个真实调度周期。
+- **F-02**：`taskskips` 无 TTL / 容量评估（D-01 明确本次不加）；`skipPersisted=false` 的消费方（064 的 `lastSkip`）尚未实现。
+- **F-03**：`docs/readme.md:66` 既有 broken link，非本卡文件。
+- **F-04**：`git worktree list` 实际 2 条（预期 3 条），056 worktree 已注销，属环境事实。
+
+**状态处置**
+
+| 项 | 结果 |
+|---|---|
+| 结案日期 | 2026-11-05 |
+| Status | `Reviewing` → **`Completed`** |
+| Merged | **`Pending`** —— 分支尚未合入 `main`（见下） |
+| DoD | T-1 实现 ✅ / T-2 验证 ✅ / T-3 AC 逐条 ✅ / T-4 审查收敛 ✅ / T-5 文档同步 ✅ / T-6 已知妥协 ✅ |
+
+### ⚠️ 合入状态：`Pending`
+
+核对 `git merge-base --is-ancestor 54136c2 main` = **否**。`feature/TASK-057` 领先 `main` 两个提交（`5bb47ea` 实现、`54136c2` 审查记录），**尚未合入**。
+
+按 [STATES.md §1](../../../os/process/STATES.md#1-status-与-merged)：「Completed 不表示已提交、已合入或已发布」。故 `Merged` 记 `Pending`，**未填 `Merged`**——合入与 `Merged` 登记归 Human。
+
+**对下游的影响（阻断 064）**：`TASK-064` 计划已于 2026-11-05 批准，但其 W0 前置是「057 合入 `main`」——本卡的 `taskSkip.js` 与真实 `result` 写入是 064 的读取对象。**057 未合入前，064 不可开工。**
+
+**未做的事**：未改 AC / Scope / 代码；未提交合入、未推送、未关闭 Task 或 Story。

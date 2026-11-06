@@ -1,6 +1,6 @@
 # Story 交付与任务调度
 
-> 更新日期：2026-10-30。默认一次推进一个 Story，不采用 Sprint。
+> 更新日期：2026-11-05。默认一次推进一个 Story，不采用 Sprint。
 > 状态与权限唯一依据：[STATES.md](./os/process/STATES.md) §2.2–§4；卡片字段是真相，本文件仅汇总。取消条目按 §2.3 排除，单独保留退出索引。历史任务不强制补建 Story。
 
 ## 当前 Story
@@ -8,11 +8,11 @@
 | 项目 | 当前情况 |
 |---|---|
 | Story / 用户价值 | [US-001](./development/requirements/stories/active/US-001-cron-worker-health-and-data-completeness.md)：首屏判断五类任务运行与数据完整性（FS P0） |
-| Status | Implementing（Human 2026-11-04 确认；053 已结案，056 已进入实施） |
-| 交付目录 | [US-001 过程资料](./development/delivery/US-001)（6张专属任务卡、2份Approved计划（053 Completed、056 Approved）、5份Draft、2份交接记录；复用054保持唯一原位置） |
-| PM / 验收负责人 | PM（本 chat 需求整理）/ Human |
-| 下一步 | **053（`Merged` #41）、056（`Merged` `53edb8e`）、055（`Completed`，`Merged` = `Pending`）均已结案**。**055 待 Human 合入**（分支 `feature/TASK-055` @ `0f697fd`，合入前需 rebase 到 `main`）。余：057/063/064 仍为 Draft，D-01～D-03 未决 |
-| 阻塞 / 待决策 | **053、056 无阻塞，已结案并合入**。**055 已结案，无阻塞**，仅待 Human 合入（`Merged` 归 Human）。AC8①（整体失败的五卡统一降级）由 `TASK-063` 承接，已在 055 与 063 双方记录。D-01～D-03 仍未决（影响 057/064/063）。没有新增状态或自动置 Blocked |
+| Status | Implementing（053/054/055/056 结案；057 计划 Approved 并实施中；063/064 待批准） |
+| 交付目录 | [US-001 过程资料](./development/delivery/US-001)（6张专属任务卡、6份计划（3 Completed、1 Approved、2 Draft）、2份交接记录；复用054保持唯一原位置） |
+| PM / 验收负责人 | PM（需求整理与 Story 验收汇总）/ Human |
+| 下一步 | **按 Human 2026-11-05 裁决串行推进：057 → 064 → 063。** 057 已结案（`Completed`，`Merged` = `Pending`）；064 计划已批准但 **W0 前置未满足**（057 未合入 `main`）；063 计划仍 `Draft`。**当前唯一阻塞动作：合入 057。** |
+| 阻塞 / 待决策 | **D-01～D-03 已全部裁决**。待 Human：① **合入 TASK-057 并登记 `Merged`**（`feature/TASK-057` @ `54136c2`，合入后 064 才能开工）；② **合入 TASK-055 并登记 `Merged`**（`feature/TASK-055` 已 fast-forward 到 `83e9971`，在 `main` 祖先中）；③ 批准 063 计划（`Draft`）。没有新增状态或自动置 Blocked |
 
 ### 下挂 Task
 
@@ -22,9 +22,9 @@
 | [TASK-054](./development/tasks/completed/TASK-054-cron-status-aggregate-api.md) | 聚合快照读侧（既有产出） | AC-02～08、10、11 的读侧支撑 | Completed | 既有结案记录 | 复用证据前核对真实项目版本 | [已归档计划](./development/exec-plans/completed/TASK-054-cron-status-aggregate-api.md) |
 | [TASK-055](./development/delivery/US-001/TASK-055.md) | 价格完成度 | AC-03、04、07、10 | Completed | — | **已结案（2026-11-04）**：`feature/TASK-055` @ `0f697fd`（实现 `3991df8`，worktree `D:/projects/portomind-055`）；Reviewer **`Pass with issues`**，无 BLOCKER/MAJOR，11 条 AC 中 10 条满足 + AC4/6/7/9 负向对照成立；AC8① 明示归 063。⚠️ **`Merged` = `Pending`，尚未合入 `main`**，且分支基点落后需 rebase | [Completed](./development/delivery/US-001/TASK-055-plan.md)（§12 审查、§13 结案） |
 | [TASK-056](./development/delivery/US-001/TASK-056.md) | 系统状态色与图例 | AC-02、09 | Completed | — | **已结案并合入（2026-11-04）**：`feature/TASK-056` @ `31b516e` → `Merged` **`53edb8e`**；Reviewer `Pass with issues`，无 BLOCKER/MAJOR，AC1～AC9 全满足 + AC2/AC3 负向对照成立，053 回归 PASS；余 3 项 MINOR。`status*` token 与 `statusTone.js` 已在 `main` | [Completed](./development/delivery/US-001/TASK-056-plan.md)（§12 审查、§13 结案） |
-| [TASK-057](./development/delivery/US-001/TASK-057.md) | 结果写侧及再平衡父任务 | AC-05～08 的写侧支撑 | Planning | 待指派 | 待D-01～03、AC10口径、环境核对及计划批准 | [Draft](./development/delivery/US-001/TASK-057-plan.md)，未批准 |
-| [TASK-063](./development/delivery/US-001/TASK-063.md) | 五卡接入、总览与刷新 | AC-02、05～08、10、11 | Planning | 待指派 | 已登记；**D-04 已裁决**（需按 AC8① 实现五卡统一降级）；余待 D-01～03、055 接口约定及最终契约 | [Draft](./development/delivery/US-001/TASK-063-plan.md)，未批准 |
-| [TASK-064](./development/delivery/US-001/TASK-064.md) | 读侧结果兼容与skip观测 | AC-02、05～08、11 | Planning | 待指派 | 已登记；待D-01～03、057结果契约及计划批准 | [Draft](./development/delivery/US-001/TASK-064-plan.md)，未批准 |
+| [TASK-057](./development/delivery/US-001/TASK-057.md) | 结果写侧及再平衡父任务 | AC-05～08 的写侧支撑 | Completed | — | **已结案（2026-11-05）**：`feature/TASK-057` @ `54136c2`（实现 `5bb47ea`）；Reviewer **`Pass with issues`**，无 BLOCKER/MAJOR，AC1～AC12 全满足 + AC2/AC5/AC7 负向对照成立；库前后 276/0/0 未污染。⚠️ **`Merged` = `Pending`，尚未合入 `main`** | [Completed](./development/delivery/US-001/TASK-057-plan.md)（§12 审查、§13 结案） |
+| [TASK-063](./development/delivery/US-001/TASK-063.md) | 五卡接入、总览与刷新 | AC-02、05～08、10、11 | Planning | 待指派 | **串行**（Human 2026-11-05 裁决）：057/064 合入后才实施，AC2/AC3 以真实记录验收；D-01 已裁决；待批准计划（`Draft`） | [Draft](./development/delivery/US-001/TASK-063-plan.md)，未批准 |
+| [TASK-064](./development/delivery/US-001/TASK-064.md) | 读侧结果兼容与skip观测 | AC-02、05～08、11 | Planning | 待指派 | **计划已批准（2026-11-05，含可选 `lastSkip` + 查询预算 +1）**；⚠️ **W0 前置未满足**：057 尚未合入 `main`，`taskSkip.js` 与真实 `result` 在 main 上不存在 → 暂不登记 `Implementing` | [Approved](./development/delivery/US-001/TASK-064-plan.md)（§10.1 启动核对） |
 
 > 2026-10-30：Orchestrator 按本轮 Human 指令及 STATES.md §4 登记063/064，并接收053/055/056/057规划，将四卡原BACKLOG登记为Planning。各卡记录依据，Owner均待指派；没有卡进入Implementing。
 
@@ -44,25 +44,36 @@
 
 > 2026-11-04（合入）：Human 完成合并 —— `53edb8e` `Merge branch 'feature/TASK-056' into main`。核对 `git merge-base --is-ancestor 31b516e main` = **是**；`main` 上 `statusOk/statusWarn/statusBad/statusIdle` 四 token 与 `statusTone.js` / `StatusLegend.jsx` 均已在位。**`Merged` 由 `Pending` 更正为 `Merged` `53edb8e`**（原 `Pending` 登记基于当时未合入的事实，属如实记录，已在卡与计划 §13 更正）。055 的 B6 缺口随之解除。
 
+> 2026-11-05（PM 同步）：按卡片事实同步 —— ① **TASK-057 计划 `Approved`**（2026-11-05，Human 批准当前设计），D-01～D-03 契约冻结，已登记 `Planning` → `Implementing`；② **TASK-063 改为串行**（Human 2026-11-05 裁决：057/064 合入后才实施，AC2/AC3 以真实记录验收），063/064 计划仍为 `Draft` 待批准。据此同步下挂 Task 行的 Status 与依赖、进度汇总。**同时按 [STATES.md §4](os/process/STATES.md#4-谁可以改变状态) 由 PM 登记 Story `Planning` → `Implementing`**（依据：053/054/055/056 结案、057 已实际启动；此前 Story 卡片与看板不同步，现以卡片为准更正）。**未修改任何 AC、Scope、Task 技术结论或代码**；6 份未提交的 Planner 文档改动保持原状未触碰。
+
+> 2026-11-05（PM 核对）：`TASK-055` 已 `Completed` 但 `Merged` 仍为 `Pending`；`git merge-base --is-ancestor 0f697fd main` = **否**，即 `feature/TASK-055` 尚未合入 `main`，且需先 rebase。该合入与 `Merged` 登记归 Human（[STATES.md §4](os/process/STATES.md#4-谁可以改变状态)），PM 只登记事实、不改其状态。**影响：055 未合入前 AC-03/04 无主干证据，Story 不能进入 `Reviewing`。**
+
+> 2026-11-05（TASK-057 结案）：057 实现与审查均已完成。实现于独立 worktree `D:/projects/portomind-057`（14 文件 +961/−84，`5bb47ea`）；独立 Reviewer 自建真实库探针复核，判定 **`Pass with issues`**——AC1～AC12 全满足、AC2/AC5/AC7 负向对照证明断言非恒真、**AC5 并发首跑未被改 SKIPPED**、AC4 父任务「未超阈 vs 生成建议」可区分、库前后 276/0/0 未污染；无 BLOCKER/MAJOR，余 F-01～F-04 共 4 项 MINOR。审查记录提交 `54136c2`。按 §4 登记 `Reviewing` → **`Completed`**，计划同步 `Approved` → `Completed`。**⚠️ `Merged` = `Pending`**：`git merge-base --is-ancestor 54136c2 main` = 否，分支领先 `main` 两个提交、**尚未合入**。**下游阻断**：064 计划已批准，但其 W0 前置为「057 合入 `main`」——未合入前 064 不可开工。
+
 > 2026-11-04（续）：Human 指示「现在开始 055」。Orchestrator 按 §4 将 TASK-055 计划 `Draft` → **`Approved`**、Task `Planning` → **`Implementing`**，并完成启动核对：B1/B2 由本次批准解除；B4（054 接口）、B5（053 骨架）、B6（056 token）均已在 `main`。实测确认价格 `dataState` 无 `percentage` 字段、恒为对象不会 `null`、单端点返回五卡数据——与 D-04 裁决的三条口径一致。**未建 worktree、未改代码、未跑验证、未指派实施者。**
 
 ### 进度汇总
 
 | 统计范围 | 总数 | Backlog | Planning | Implementing | Reviewing | Blocked | Completed |
 |---|---:|---:|---:|---:|---:|---:|---:|
-| 全部已登记 Story（排除取消） | 1 | 0 | 1 | 0 | 0 | 0 | 0 |
-| 当前 Story 已关联 Task | 7 | 0 | 3 | 0 | 0 | 0 | 4 |
+| 全部已登记 Story（排除取消） | 1 | 0 | 0 | 1 | 0 | 0 | 0 |
+| 当前 Story 已关联 Task | 7 | 0 | 2 | 0 | 0 | 0 | 5 |
 | 尚未关联 Story 的未完成 Task | 5 | 1 | 4 | 0 | 0 | 0 | 0 |
 
-> 统计来自卡片；旧词按 STATES.md §7.1 映射，不证明当前实施授权。已关联任务不重复计入未关联任务。TASK-054 的既有 Completed 计为 1 个支撑任务完成，不表示当前 Story 已验收。共 11 条历史完成记录保留作证据索引，与本 Story 进度不可相加；本轮新增登记2卡已计入，现无待登记卡。
+> 统计来自卡片；旧词按 STATES.md §7.1 映射，不证明当前实施授权。已关联任务不重复计入未关联任务。TASK-054 的既有 Completed 计为 1 个支撑任务完成，不表示当前 Story 已验收。TASK-055 的 `Completed` 计 1 个任务完成，但其 `Merged` 仍为 `Pending`（未合入 `main`），不构成 AC-03/04 的主干证据。共 11 条历史完成记录保留作证据索引，与本 Story 进度不可相加。
 
 ## Story Backlog
 
 | Story | 用户价值 | Priority | 准备情况 | 依赖 / 待决策 |
 |---|---|---|---|---|
-| — | 暂无其他 Story；US-001 已列为当前规划项 | — | — | — |
+| [US-002](./development/requirements/stories/active/US-002-board-drilldown-and-staleness.md) | 从看板追到原因：停滞提示 + 再平衡分发记录页 + 原始日志下钻（承接 US-001 未含的 P1 需求 R6/R7/R10） | High | 可启动；待 Planner 拆 Task | 依赖 TASK-057 合入（AC-05～09 三列）；OQ-01 缓冲值、OQ-02 单日 vs 多日矩阵、OQ-03 停滞提示形态未决 |
+| [US-003](./development/requirements/stories/active/US-003-portfolio-detail-overview-ia.md) | 组合详情「总览」：目标 vs 实际 / 偏离原因 / 删除入口 / 配置分层（Spec 交付单元 A，纯客户端） | High | 可启动；Spec 已 `Approved` 但从未拆 Task | OQ-01 与 US-004 的实施顺序未决；AC-16 的 `lastExecutedAt` 依赖 US-004 的 B1 |
+| [US-004](./development/requirements/stories/active/US-004-dashboard-portfolio-health.md) | Dashboard 组合健康表 + 分币种小计 + 组合卡四格（Spec 交付单元 B，改 `shared`/`server`） | High | 可启动；需 `Approved` ExecPlan | OQ-01 健康表排序档位；OQ-02 顺序；DEP-03（TASK-050）已满足 |
+| [US-005](./development/requirements/stories/active/US-005-transaction-query-filters.md) | 交易流水按时间/类型/多组合筛选，条件写进 URL | Medium | 可启动；复用既有 TASK-045（Backlog） | OQ-01 多值参数形态、OQ-02 是否加索引未决；需 `Approved` ExecPlan |
 
 > PM 按已确认的优先级维护队列，原有 Task 与 Spec 不自动变成 Story。Story 文档入口见 [STORIES.md](./development/requirements/stories/STORIES.md)；状态统一按 STATES.md §6 汇总。
+>
+> 2026-11-05（PM 建卡）：按 Human 指示把 `docs/development/requirements/specs/` 的遗留需求整理为 Story，新建 **US-002～US-005** 四张卡，均为 `Backlog`、均待 Planner 拆 Task。来源分工：US-002 ← `FS-cron-worker-status-board` 的 P1（C-06/C-07/C-08，US-001 明确排除在范围外）；US-003 / US-004 ← `FS-portfolio-ia-cleanup` 的交付单元 A / B（该 Spec 2026-10-26 已 `Approved`，但从未拆过 Task，代码零实现）；US-005 ← `FS-transaction-query-filters`（复用既有 TASK-045）。**未改动任何已有卡的状态、优先级或范围**；规格 P2 的 C-09 历史趋势、C-10 launchDate 引导不建 Story，留 Spec 作 Future 登记。
 
 ## 已完成 Story
 
@@ -94,6 +105,7 @@
 
 | Task | 工作 | 完成日期 | Merged | 记录 |
 |---|---|---|---|---|
+| TASK-057 | `taskruns` 数据契约增强（`result` / `SKIPPED` / 再平衡父任务）（FS **C-05**） | 2026-11-05 | `Pending` | [任务卡](./development/delivery/US-001/TASK-057.md) · [计划](./development/delivery/US-001/TASK-057-plan.md)（仍在 US-001 过程目录；分支 `feature/TASK-057` @ `54136c2` **尚未合入 main**） |
 | TASK-055 | 价格同步「数据态完成度」展示（FS **C-03**） | 2026-11-04 | `Pending` | [任务卡](./development/delivery/US-001/TASK-055.md) · [计划](./development/delivery/US-001/TASK-055-plan.md)（仍在 US-001 过程目录；分支 `feature/TASK-055` @ `0f697fd` **尚未合入 main**，合入前需 rebase） |
 | TASK-056 | 看板系统状态色语义与图例（FS **C-04**） | 2026-11-04 | `Merged` `53edb8e` | [任务卡](./development/delivery/US-001/TASK-056.md) · [计划](./development/delivery/US-001/TASK-056-plan.md)（仍在 US-001 过程目录） |
 | TASK-053 | 日志频道「任务运行看板」tab 骨架（FS **C-01**） | 2026-11-04 | `Merged` #41 | [任务卡](./development/delivery/US-001/TASK-053.md) · [计划](./development/delivery/US-001/TASK-053-plan.md)（仍在 US-001 过程目录，待 Story 关闭后整体归档） |
