@@ -6,8 +6,8 @@
 
 | 字段 | 内容 |
 |---|---|
-| Status | Implementing（2026-11-05，计划已批准；**串行前置已满足**——057 与 064 均已合入 `main`；待 Implementer 在独立 worktree 中实施） |
-| Priority / Owner / Type | High / Implementer（待指派） / Feature |
+| Status | Reviewing（2026-11-05，实现与自测完成于 worktree `D:/projects/portomind-063` @ `9b90fdc`，等待独立 Reviewer 复核） |
+| Priority / Owner / Type | High / Reviewer（待指派） / Feature |
 | Created / Updated | 2026-10-30 / 2026-11-05 |
 | 所属 Story | [US-001](../../requirements/stories/active/US-001-cron-worker-health-and-data-completeness.md) |
 | 覆盖的验收条件 | US-001/AC-02、05～08、10、11（前端接入与整合） |
@@ -83,3 +83,38 @@ D-04：**已于 2026-11-04 裁决**（旧055 AC6/8/9 澄清，三项全部采纳
 **状态登记**：Task `Planning` → **`Implementing`**，Owner → `Implementer`。
 
 **未做的事**：未建分支或 worktree；未改任何代码；未运行测试。
+
+## Orchestrator 交付接收记录（2026-11-05）
+
+依据 [STATES.md §4](../../../os/process/STATES.md#4-谁可以改变状态)：「Task → Reviewing：Implementer 提供改动清单、自测证据、可审对象和已知妥协」。四项齐备，故登记 `Implementing` → **`Reviewing`**。
+
+| 项 | 事实 |
+|---|---|
+| Worktree | `D:/projects/portomind-063` |
+| 分支 / 提交 | `feature/TASK-063` @ **`9b90fdc`**（父 `0487ba8` = `main`） |
+| 改动规模 | **12 文件**，+1637/−44：新增 `CronBoard` / `DataTaskCard` / `taskDataViews` / `cronStatus.service` / `useCronStatus` + 夹具与验收脚本；改 `BoardShell` / `SummaryShell` / `LogViewer` |
+| 范围核对 | 无 `server/` `shared/` `cron-worker/` 改动 ✓ |
+
+**Orchestrator 独立复验（本轮全部亲跑）**
+
+| 项 | 结果 |
+|---|---|
+| `client/scripts/verify-task-063.cjs` | **41/41 PASS** ✓ |
+| `npm run build --workspace client` | **exit 0**（2.77s）✓ |
+| `eslint "src/**/*.{js,jsx}"` | **exit 0** ✓ |
+| 轮询关闭 | `useCronStatus.js:19` 显式 `refetchInterval: false` ✓ |
+| 写操作 | `useMutation` / `api.post/put/patch/delete` **0 命中** ✓ |
+| `|| 0` 兜底 | `taskDataViews` / `CronBoard` **0 命中** ✓ |
+| 总览优先级 | `buildOverview` 实现 bad > warn > 数据未就绪 > 全部正常 ✓ |
+| 053 回归 | 脚本含「默认 BoardShell 五卡结构未回退」「默认总览五灯仍 unknown + 图例保留」两条断言，均 PASS ✓ |
+
+**⚠️ 需 Reviewer 重点核对的契约变更（非越界，但须确认向后兼容）**
+
+交付修改了 053/056 的两个已交付组件，均属**加法式**改动：
+
+1. **`BoardShell.jsx`**：新增可选 props `cardComponents`（槽位 → 卡组件映射）与 `summary.overallLevel` / `summary.levels`。**缺省时仍用 `TaskCardShell`，053 骨架行为不变**。
+2. **`SummaryShell.jsx`**：`HealthDot` 新增可选 `level`，颜色改由 `getStatusTone(level)` 驱动。**不传时仍为 `unknown` + 中性灰，053 行为不变**。
+
+计划 §4 未明文禁止此改动，且 063 必须让五灯显示真实状态、让价格卡替换骨架卡——**不改这两个组件无法实现 AC1/AC6**。但这是对已验收组件契约的实质扩展，**须由 Reviewer 独立确认「缺省行为零回归」**（脚本已覆盖，但应独立复验）。
+
+**未做的事**：未改 AC / Scope；未提交、未合入、未填 `Merged`、未关闭。
