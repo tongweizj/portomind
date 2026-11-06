@@ -1,8 +1,10 @@
 import { ChevronRight } from 'lucide-react';
 import { PORTFOLIO_ACCOUNT_TYPES } from '../../constants/enums';
+import { PENDING_LABELS, LAST_REBALANCE_LABELS } from '../../constants/driftLabels';
+import { lastRebalanceDateStr } from '../../utils/priceDisplay';
 
-// ⚠️ 待 B(TASK-066) 的 driftLabels.js 合入 main 后，切换为 import 共享常量；
-// 当前 main 无该文件（D-02：由 Implementer B 拥有），本卡临时内联文案，绝不新建同名文件。
+// D-02（2026-11-06 Human）：共享文案常量由 TASK-066 的 driftLabels.js 拥有，
+// 本卡（067）只消费；「待办 / 上次再平衡」与健康表逐字一致。
 
 const ACCOUNT_TYPE_LABELS = Object.fromEntries(
   PORTFOLIO_ACCOUNT_TYPES.map(({ value, label }) => [value, label])
@@ -18,13 +20,8 @@ function formatBucket([currency, value]) {
     : `${symbol}${value.toLocaleString('zh-CN', { maximumFractionDigits: 2 })}`;
 }
 
-// 上次再平衡日期 → YYYY-MM-DD；无值返回 null（调用方显示「从未」）。
-// summary 序列化后 lastExecutedAt 已是 ISO 字符串；此处兼容 Date 对象兜底。
-function formatDate(value) {
-  if (value == null) return null;
-  if (value instanceof Date) return value.toISOString().slice(0, 10);
-  return String(value).slice(0, 10);
-}
+// 上次再平衡日期由共享 `lastRebalanceDateStr` 统一格式化（UTC 日期，TASK-066 F-01），
+// 与健康表同源；无值显示「从未」。
 
 function DriftBadge({ drift }) {
   if (drift == null) {
@@ -53,8 +50,8 @@ function StatCells({ stats }) {
   const hasPending = typeof pending === 'number' && pending > 0;
   const hasUnread = typeof unread === 'number' && unread > 0;
 
-  // ④ 上次再平衡：lastExecutedAt（065 新增）→ YYYY-MM-DD，null → 「从未」。
-  const lastExecuted = formatDate(stats?.lastExecutedAt);
+  // ④ 上次再平衡：lastExecutedAt（065 新增）→ YYYY-MM-DD（UTC），null → 「从未」。
+  const lastExecuted = lastRebalanceDateStr(stats?.lastExecutedAt);
 
   return (
     <div className="mt-3 grid grid-cols-2 gap-3 text-sm">
@@ -73,18 +70,18 @@ function StatCells({ stats }) {
         <p className="mt-1 font-medium text-gray-800">
           {hasPending || hasUnread ? (
             <>
-              {hasPending && <span>{pending} 条待确认</span>}
+              {hasPending && <span>{PENDING_LABELS.pendingRebalance(pending)}</span>}
               {hasPending && hasUnread && <span className="text-gray-400"> · </span>}
-              {hasUnread && <span>{unread} 条未读</span>}
+              {hasUnread && <span>{PENDING_LABELS.unreadAlert(unread)}</span>}
             </>
           ) : (
-            '—'
+            PENDING_LABELS.none
           )}
         </p>
       </div>
       <div className="rounded-lg bg-gray-50 p-3">
         <p className="text-xs text-gray-500">上次再平衡</p>
-        <p className="mt-1 font-medium text-gray-800">{lastExecuted || '从未'}</p>
+        <p className="mt-1 font-medium text-gray-800">{lastExecuted ?? LAST_REBALANCE_LABELS.never}</p>
       </div>
     </div>
   );

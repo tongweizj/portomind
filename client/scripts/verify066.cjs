@@ -116,6 +116,43 @@ async function main() {
   check('AC-02 ③ 皆无 → 正常', normal.includes('正常') && !normal.includes('超阈') && !normal.includes('已到期'), normal.substring(0, 90));
   check('AC-02 ④ 无目标 → 未设目标', noTarget.includes('未设目标'), noTarget.substring(0, 90));
 
+  // F-01（复审 MAJOR）单元格级断言：UTC 日期、无「（N 天前）」后缀、null → 从未。
+  // p_over 的 lastExecutedAt = 2026-09-07T00:00:00Z；在 America/Toronto（UTC-4）
+  // 上本地日期是 2026-09-06，旧实现会显示 2026-09-06（且带「N 天前」）。
+  const cells = await page.locator('tbody tr').evaluateAll(rows =>
+    rows.map(r => Array.from(r.querySelectorAll('td')).map(td => td.textContent.trim()))
+  );
+  const cellOf = (name, idx) => {
+    const row = cells.find(c => c[0] === name);
+    return row ? row[idx] : null;
+  };
+  const overLastCell = cellOf('超阈组合', 4);
+  check('F-01 上次再平衡按 UTC 日期显示（不随浏览器时区偏移）',
+    overLastCell === '2026-09-07', 'cell=' + JSON.stringify(overLastCell));
+  check('F-01 上次再平衡不带「（N 天前）」后缀',
+    overLastCell != null && !overLastCell.includes('天前'), 'cell=' + JSON.stringify(overLastCell));
+  const noTargetLastCell = cellOf('无目标组合', 4);
+  check('F-01 lastExecutedAt=null → 从未', noTargetLastCell === '从未',
+    'cell=' + JSON.stringify(noTargetLastCell));
+
+  // F-01 跨视图：组合卡（TASK-067）与健康表对同一 stats 必须逐字一致。
+  const listPage = await newPage(ctx, 'fulfill');
+  await listPage.goto(BASE + '/portfolios', { waitUntil: 'networkidle' });
+  await listPage.waitForSelector('div.grid > div', { timeout: 15000 });
+  await listPage.waitForTimeout(500);
+  const cardOf = name => listPage.locator('div.grid > div').filter({
+    has: listPage.locator('h2', { hasText: new RegExp('^' + name + '$') })
+  }).first();
+  const cardValues = await cardOf('超阈组合').locator('p.mt-1.font-medium').allInnerTexts();
+  const cardLast = cardValues[cardValues.length - 1];
+  check('F-01 两视图逐字一致：组合卡与健康表同一日期', cardLast === overLastCell,
+    'health=' + JSON.stringify(overLastCell) + ' card=' + JSON.stringify(cardLast));
+  const noTargetCardValues = await cardOf('无目标组合').locator('p.mt-1.font-medium').allInnerTexts();
+  check('F-01 两视图逐字一致：null 卡片同为「从未」',
+    noTargetCardValues[noTargetCardValues.length - 1] === noTargetLastCell,
+    'health=' + JSON.stringify(noTargetLastCell) + ' card=' + JSON.stringify(noTargetCardValues[noTargetCardValues.length - 1]));
+  await listPage.close();
+
   const expected = ['超阈组合 ', '到期组合 ', '待办组合 ', '超阈组合2 ', '无目标组合 ', '正常组合 '];
   const order = texts.map(t => { const e = expected.find(k => t.startsWith(k)); return e ? e.trim() : '?'; });
   check('AC-04 排序全序且符合有事的在上',

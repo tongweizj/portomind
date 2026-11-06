@@ -201,6 +201,34 @@ Approval：**未批准**。本计划覆盖 §1～§9 当前设计；`Draft → A
 3. 服务用 `nohup` 启动以存活；`.env` 从主工作区复制（gitignored，未入库），临时服务 8080/6601 在交付后停止。
 4. **§11 写入时再次误落主工作区并复制重复内容**：已 `git checkout --` 还原主工作区，并在 066 内修复重复段落；主工作区仅保留 Orchestrator 的 3 个文档改动。
 
+### 11.7 F-01 整改（2026-11-06，复审 MAJOR）
+
+**触发**：独立 Reviewer 首轮判定 `Pass with issues`，F-01（MAJOR）——健康表用本地时区格式化 `lastExecutedAt` 且带「（N 天前）」后缀，与 067 组合卡的 UTC 日期可能相差一天；Human 裁决 R2 = Option A（去后缀）、R1 = 抽唯一 UTC formatter 由 066/067 共用（§12.6.1）。
+
+**基线**：`git merge main` @ `8b863f0` → 合并提交 `67298c4`（带入 067 卡、068 修复与最新文档）；F-01 代码见随后提交。
+
+**改动**
+
+| 文件 | 改动 |
+|---|---|
+| `client/src/utils/priceDisplay.js` | 新增 `lastRebalanceDateStr(value)` **唯一实现**：`null → null`；`Date → toISOString().slice(0,10)`；字符串取前 10 位并校验 `^\d{4}-\d{2}-\d{2}`，非法 → `null`；UTC 口径，不用本地 getters |
+| `client/src/components/Dashboard/PortfolioHealthTable.jsx` | `formatLastRebalance` 改用 helper，去掉「（N 天前）」后缀；`null → LAST_REBALANCE_LABELS.never`；该列不再用 `daysSince` |
+| `client/src/components/PortfolioCard/index.jsx`（067） | `formatDate` 改为同一 helper；「待办 / 上次再平衡」改用 `PENDING_LABELS` / `LAST_REBALANCE_LABELS`（关闭 067 的 D-02 TODO），文案逐字不变 |
+| `client/scripts/verify066.cjs` | 新增 5 条单元格级断言：UTC 日期（Toronto 下旧实现应为 2026-09-06）、无后缀、`null → 从未`、两视图日期逐字一致、`null` 卡片逐字一致 |
+
+**验证（本轮实跑）**
+
+| 项 | 结果 |
+|---|---|
+| `npm run build --workspace client` | exit 0（2440 modules，2.77s） |
+| `eslint "src/**/*.{js,jsx}"` | 0 error / 0 warning |
+| `node client/scripts/verify066.cjs` | **34/34 PASS**（原 29 + F-01 5）。健康表对 `2026-09-07T00:00:00Z` 在 America/Toronto 显示 `2026-09-07`，组合卡同值 |
+| 自建双时区探针（临时脚本，已删） | America/Toronto 与 Asia/Shanghai 下健康表/组合卡均为 `2026-09-07`，逐字一致 |
+| 负向对照 ① | `lastRebalanceDateStr` 改回本地 getters → F-01 UTC 断言 FAIL（cell=`2026-09-06`），**33/34**；还原后 sha256 复核 |
+| 负向对照 ② | 健康表临时恢复「（1 天前）」→ 3 条 F-01 断言 FAIL（31/34）；还原后 sha256 复核 |
+
+**范围与遗留**：本卡改动不涉及 `shared/` / `server/` / `cron-worker/`（未新增业务逻辑）；`verify066.cjs` 仍为 `page.route` mock 取证，F-03（非真实 DB 端到端）不变。未改 Task 状态、未标 Completed、未合入 `main`、未填 `Merged`；复检由独立 Reviewer 执行。
+
 ## 12. Review Record
 
 （按 [REVIEWER.md](../../../os/roles/REVIEWER.md) §7 记录。）

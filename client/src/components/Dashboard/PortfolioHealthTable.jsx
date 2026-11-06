@@ -27,7 +27,7 @@ import {
   LAST_REBALANCE_LABELS,
   HEALTH_TABLE_COLUMNS
 } from '../../constants/driftLabels';
-import { formatMoney, householdCurrencySymbol, daysSince } from '../../utils/priceDisplay';
+import { formatMoney, householdCurrencySymbol, daysSince, lastRebalanceDateStr } from '../../utils/priceDisplay';
 
 /** 币种展示顺序：CNY → USD → CAD → HKD，其余字母序（与 AC-07 一致）。 */
 const CURRENCY_ORDER = ['CNY', 'USD', 'CAD', 'HKD'];
@@ -76,14 +76,9 @@ function getDriftDisplay(portfolio) {
   return { text: DRIFT_STATE_LABELS.normal, cls: 'text-gray-700' };
 }
 
-/** 「上次再平衡」：`YYYY-MM-DD（N 天前）`；`null` → 「从未」。 */
+/** 「上次再平衡」：`YYYY-MM-DD`（UTC 日期，与组合卡同源）；`null` → 「从未」。 */
 function formatLastRebalance(stats) {
-  const lastExec = stats?.lastExecutedAt;
-  if (lastExec == null) return LAST_REBALANCE_LABELS.never;
-  const d = new Date(lastExec);
-  const ds = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-  const days = daysSince(lastExec);
-  return days != null ? `${ds}（${days} 天前）` : ds;
+  return lastRebalanceDateStr(stats?.lastExecutedAt) ?? LAST_REBALANCE_LABELS.never;
 }
 
 /** 全序排序：待办>0 → 超阈 → 到期 → createdAt 倒序（AC-04）。 */
