@@ -4,7 +4,7 @@
 
 | 字段 | 内容 |
 |---|---|
-| Status | Implementing（2026-11-06，计划已 `Approved`；Orchestrator 登记，Implementer A 实施） |
+| Status | **Completed（2026-11-06，Human 确认验收通过并关闭）**；**`Merged` = `Pending`**（分支 `feature/TASK-065` @ `5f807a3` 尚未合入 `main`，合入登记归 Human） |
 | Priority / Owner / Type | `High` / Implementer A / `Feature`（shared 内核 + server 契约） |
 | Created / Updated | 2026-11-05 / 2026-11-06 |
 | 所属 Story | [US-004](../../requirements/stories/active/US-004-dashboard-portfolio-health.md) |
@@ -78,3 +78,41 @@
 ## 8. Open Questions
 
 无（本卡无未决 OQ）。注意 OQ-01（健康表排序档位）属 TASK-066，与本卡无关。
+
+---
+
+## 11. Implementation Record（Orchestrator 登记，2026-11-06）
+
+- **交付提交**：`8fde289`（`feat(TASK-065): summary stats 四字段与 PENDING 批量聚合`），分支 `feature/TASK-065`，**尚未合入 `main`**（`git merge-base --is-ancestor feature/TASK-065 main` = 否）。
+- **改动文件**（diff `main..feature/TASK-065`）：
+  - `shared/services/portfolio/summary.js`（+34）：`buildPortfolioSummary` 回传 `lastExecutedAt` / `pendingRebalanceCount`；`drift` 新增 `dueByTime`（`timeInterval` 是否触发，**不扩义** `needsRebalance`）与 `overThresholdCount`（从 `details` 派生，标的数非阈值类型数）；`computeSummary` 以**一次** `$match+PENDING` + `$group by portfolioId` 批量取 `pendingRebalanceCount`，空列表不查询。
+  - `server/test/integration/portfolio.summary.test.js`（+156）：新增 AC-01~AC-04 表驱动单测与查询预算断言（AC-03 的 `countDocumentsCalls===0`、AC-04 的 10 组合 `aggregateCalls===1` + `findOneCalls===10` ≤ 11）。
+  - `docs/handbook/technical/API_CONTRACT.md`：`GET /api/portfolios/summary` 字段集同步四字段与量纲说明。
+- **量纲核对**：`overThresholdCount` 取自 `result.details.filter(d=>Array.isArray(d.triggeredThresholds) && d.triggeredThresholds.length>0).length`，未取顶层 `triggeredThresholds.length`；`drift===null` 时后两字段不出现。
+- **禁改范围**：未动 `client/`、`cron-worker/`、`server/routes/`、既有 `needsRebalance` 语义（AC-02 三项同断言保留）。
+- **已知妥协**：交付仍在分支，真实库集成跑与浏览器侧未在 `main` 复验；由 Reviewer 在分支/真实库复核。本卡无未决 OQ。
+
+## 12. Review Record
+
+### 审查交接（Orchestrator → Reviewer，2026-11-06）
+
+- **可审对象**：分支 `feature/TASK-065` @ `8fde289`（未合入 main；可在该分支或 cherry 至干净工作区核验）。
+- **覆盖 AC**：US-004/AC-01~AC-04、AC-14（`cron-worker` 零改动，diff 不含 `cron-worker/`，可由 `git status cron-worker` 验证）。
+- **Implementer 自测**：`server/test/integration/portfolio.summary.test.js` 新增用例随提交；建议独立 Reviewer 在分支基线重跑 `npm run test:server` 取真实结果。
+- **重点核对**：① `overThresholdCount` 量纲（标的数 vs 阈值类型数）；② AC-02 `dueByTime` 不扩义 `needsRebalance`；③ AC-03/AC-04 查询预算（无 N+1、`countDocuments===0`）；④ `drift===null` 时字段不可读；⑤ `API_CONTRACT.md` 与实际契约一致。
+- **未授权事项**：本 Orchestrator 不替代 Reviewer 出具结论，不替代 Human 关闭；`Merged` 与 `Completed` 归 Human。
+
+### 审查结论（2026-11-06）
+
+- **Verdict**：**Pass with issues**（独立 Reviewer 复核；Human 确认验收通过并授权关闭）。
+- **判定**：US-004/AC-01~AC-04、AC-14 全部满足；无 BLOCKER。
+- **重点项复核结果**：① `overThresholdCount` 量纲正确（从 `details` 派生，标的数非阈值类型数）；② AC-02 `dueByTime` 不扩义 `needsRebalance`（三项同断言成立）；③ AC-03/AC-04 查询预算满足（一次 `$match+PENDING` `$group`，无 N+1，`countDocuments===0`）；④ `drift===null` 时 `dueByTime`/`overThresholdCount` 不可读；⑤ `API_CONTRACT.md` 字段集与实际契约一致。
+- **已知妥协 / 残留**：实现仍在分支未合入 `main`；真实库集成跑与浏览器侧未在主干复验（由合入后回归覆盖）。无 MAJOR 需 Human 接受项。
+
+## 13. Completion Record
+
+- **关闭依据**：Human 2026-11-06 明确确认「065 已经验收通过」，按 [STATES.md §4](../../../os/process/STATES.md#4-谁可以改变状态) 登记 `Reviewing → Completed`（Task → Completed 与关闭归 Human）。
+- **AC 证据**：US-004/AC-01~AC-04、AC-14 由独立 Reviewer 复核满足（§12）；测试随 `feature/TASK-065` @ `5f807a3`（原 `8fde289`，后 rebase 至 `5f807a3`）提交，建议合入前在分支重跑 `npm run test:server` 取真实输出。
+- **Merged**：**`Pending`** —— `git merge-base --is-ancestor feature/TASK-065 main` = 否，尚未合入 `main`；合入登记归 Human（仅 Human 可填 `Merged`）。
+- **下游影响**：066/067 依赖本卡 B1~B4 字段，可解除降级态开发；068 硬串行仍等本卡合入 `main` 后派发。
+- **归档与移交**：Story 整体验收与归档待 065/066/067 全部完成后由 PM 汇总、Human 关闭 Story；本卡过程资料留 `delivery/US-004/`，不单独搬迁。

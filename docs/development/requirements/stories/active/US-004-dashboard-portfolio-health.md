@@ -114,7 +114,7 @@
 
 | Task | 工作摘要 | 覆盖的验收条件 | 必要性 / 关联说明 |
 |---|---|---|---|
-| [TASK-065](../../../delivery/US-004/TASK-065.md) | `summary` 四字段（`lastExecutedAt` / `pendingRebalanceCount` / `drift.dueByTime` / `drift.overThresholdCount`）（B1～B4） | AC-01～AC-04、AC-14 | 交付必需；服务端与 `shared` 改动；**需 Approved ExecPlan**（DEP-04） |
+| [TASK-065](../../../delivery/US-004/TASK-065.md) | `summary` 四字段（`lastExecutedAt` / `pendingRebalanceCount` / `drift.dueByTime` / `drift.overThresholdCount`）（B1～B4） | AC-01～AC-04、AC-14 | **✅ 已结案（2026-11-06，Human 确认验收通过）**；`Merged`=`Pending`（分支未合入 main）；服务端与 `shared` 改动；计划 `Approved → Completed` |
 | [TASK-066](../../../delivery/US-004/TASK-066.md) | Dashboard 健康表与分币种小计（B6～B13） | AC-05～AC-13 | 交付必需；纯客户端；排序按 OQ-01 已裁决口径（有事的在上） |
 | [TASK-067](../../../delivery/US-004/TASK-067.md) | 组合卡四格（B15） | AC-17、AC-18 | 交付必需；零请求零服务端，与健康表同源 |
 | [TASK-068](../../../delivery/US-004/TASK-068.md) | 删组合后事件查询层过滤（B16） | AC-19、AC-14 | 交付必需；三处同源；**需 Approved ExecPlan**（DEP-04） |
@@ -141,7 +141,9 @@
 
 | 验收项 | 结论 | 证据链接 / 对应版本 | 问题或豁免依据 |
 |---|---|---|---|
-| AC-01～AC-20 | 未验证 | 尚未进入实现 | 无豁免 |
+| AC-01～AC-04（TASK-065 覆盖） | 已验证（2026-11-06） | [TASK-065 §12 审查结论](../../../delivery/US-004/TASK-065.md)；Reviewer `Pass with issues`，Human 授权关闭 | 仅 065 字段层；仍 `Merged`=`Pending`（分支未合入 main） |
+| AC-05～AC-19（TASK-066/067/068/069 覆盖） | 未验证 | 066/067 `Implementing`、068/069 待派发 | 无豁免 |
+| AC-20（独立 Reviewer 复核） | 部分（065 已独立复核） | 整体交付时再汇总 | 无豁免 |
 | 团队完成标准 | 未验证 | [DEFINITION_OF_DONE.md](../../../../os/process/DEFINITION_OF_DONE.md) | 无豁免 |
 
 **验收日期：** 待验收
