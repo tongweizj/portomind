@@ -6,8 +6,8 @@
 
 | 字段 | 内容 |
 |---|---|
-| Status | Implementing（2026-11-05，计划已批准、**W0 前置已满足**——057 已合入 `main`（`1e421db`），`taskSkip.js` 与 `result` 字段在位；待 Implementer 在独立 worktree 中实施） |
-| Priority / Owner / Type | High / Implementer（待指派） / Feature |
+| Status | Reviewing（2026-11-05，实现与自测完成于 worktree `D:/projects/portomind-064` @ `de045af`，等待独立 Reviewer 复核） |
+| Priority / Owner / Type | High / Reviewer（待指派） / Feature |
 | Created / Updated | 2026-10-30 / 2026-11-05 |
 | 所属 Story | [US-001](../../requirements/stories/active/US-001-cron-worker-health-and-data-completeness.md) |
 | 覆盖的验收条件 | US-001/AC-02、05～08、11（读侧兼容） |
@@ -112,3 +112,42 @@ Human 指示「先完成 task064」。核对 W0 前置：**已满足**。
 **状态登记**：Task `Planning` → **`Implementing`**（依据 [STATES.md §4](../../../os/process/STATES.md#4-谁可以改变状态)「Task → Implementing：当前设计的有效计划批准记录」——计划 2026-11-05 已 `Approved`，且 W0 前置满足）。Owner → `Implementer`。
 
 **未做的事**：未建分支或 worktree；未改任何代码；未运行测试。
+
+## Orchestrator 交付接收记录（2026-11-05）
+
+依据 [STATES.md §4](../../../os/process/STATES.md#4-谁可以改变状态)：「Task → Reviewing：Implementer 提供改动清单、自测证据、可审对象和已知妥协」。四项齐备，故登记 `Implementing` → **`Reviewing`**。
+
+| 项 | 事实 |
+|---|---|
+| Worktree | `D:/projects/portomind-064`（主工作区未被本卡改动） |
+| 分支 / 提交 | `feature/TASK-064` @ **`de045af`**（基点 `d124626`） |
+| 改动规模 | **9 文件**，+899/−77：`cronStatus.service.js`、`server/test/` 2 文件、`scripts/verify-task-064.cjs`、docs 3 |
+| 范围核对 | 无 `cron-worker/` `client/` 改动；未改 `taskSkip.js`、`fxRate.service.js`、server 路由 |
+| 自测证据 | 计划 §11.4：AC1～AC6 逐条；新增 18 条用例 |
+
+**Orchestrator 独立抽验（不采信自述）**
+
+| 项 | 结果 |
+|---|---|
+| F1～F3（FX） | `NUMERIC_OBSERVATION_ONLY` note 已实现（`:595`）✓ |
+| F4～F7（再平衡） | `PER_PORTFOLIO_INCOMPLETE` note 已实现（`:735`）✓ |
+| F8（lastSkip） | 主视图与 detail 均有 `lastSkip` 构造（`:947` / `:990`）✓ |
+| detail 零回归 | 计划 §11.3 声明 detail `summary.generated` 保留原 `?? 0`（行号 922）未改 ✓ |
+| 越界 | `git diff main..HEAD -- cron-worker/ client/` **空** ✓ |
+
+**⚠️ 必须由 Reviewer 核实的风险：分支基点落后，合入会回退一处无关修复**
+
+`feature/TASK-064` 从 `d124626` 切出，**不包含** `c11bb64`（`fix(docs): allow two Story directories under delivery root`）。
+
+该分支 diff 里因此出现：
+
+```
+-if (currentDeliveries.length > 2) ... '最多保留两个 Story 目录'
++if (currentDeliveries.length > 1) ... '只能保留一个当前 Story 目录'
+```
+
+**这是基点落后造成的"假改动"，不是 Implementer 改错**。但若直接合并，会把 `c11bb64` 的修复**回退掉**，`docs:check` 将重新报 `multiple-current-deliveries`。
+
+**处置**：合入前必须 `rebase main` 或 `merge main`，并在 rebase 后确认 `scripts/check-docs.cjs:48` 仍为 `> 2`。此条已写入 Reviewer 提示词。
+
+**未做的事**：未重跑验证（Reviewer 将独立复验）；未改 AC / Scope / 代码；未提交、未合入、未填 `Merged`、未关闭。
