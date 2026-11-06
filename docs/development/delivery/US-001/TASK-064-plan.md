@@ -2,9 +2,9 @@
 
 ## Status
 
-Status：Approved（2026-11-05，Human 批准当前设计）
+Status：Completed（2026-11-05，审查通过后结案）
 
-Owner：Planner（规划完成）→ 待 Orchestrator 登记并指派 Implementer
+Owner：Planner（规划）→ Implementer（2026-11-05 实施，`de045af`）→ Reviewer（`Pass with issues`，`b23abb9`）→ Human（2026-11-05 确认）
 
 Related Task：[TASK-064](./TASK-064.md)；所属 [US-001](../../requirements/stories/active/US-001-cron-worker-health-and-data-completeness.md)。
 
@@ -156,6 +156,54 @@ Approval：**2026-11-05，Human 明确「批准 task064」，据此登记 Draft 
 
 尚未独立审查；Planner 自检不等于 Reviewer 判定。
 
+> **2026-11-05 更新**：独立审查已完成，判定 `Pass with issues`（无 BLOCKER），记录见 §12.1～§12.10（worktree 提交 `b23abb9`）。上句为规划期占位，保留以显示流转。
+
 ## 13. Completion Record
 
-尚未结案；无 Human 关闭或合入决定。
+### 13.1 结案依据（2026-11-05）
+
+| 项 | 事实 |
+|---|---|
+| 结案日期 | 2026-11-05 |
+| 结案依据 | Human「检验完成，没有问题」 |
+| 实现 | `feature/TASK-064` @ `de045af`（9 文件 +899/−77） |
+| 审查记录 | `b23abb9`（§12） |
+| 审查判定 | `Pass with issues`，无 BLOCKER |
+| 状态流转 | `Draft` → `Approved`（2026-11-05）→ `Implementing` → `Reviewing` → `Completed`（2026-11-05） |
+| 合入 | **`Pending`** —— 分支尚未合入 `main`，且**须先 rebase** |
+
+### 13.2 DoD 逐条（[DEFINITION_OF_DONE](../../../os/process/DEFINITION_OF_DONE.md) §3）
+
+| # | 要求 | 结论 |
+|---|---|---|
+| T-1 | 实现完成 | ✅ §11.2（9 文件） |
+| T-2 | 验证完成，记录实际结果 | ✅ §11.4 + §12.4（Reviewer 36/36 独立复核） |
+| T-3 | AC 逐条满足 | ✅ §12.4（AC1～AC6 全部满足） |
+| T-4 | 审查收敛，无未决 BLOCKER，MAJOR 已整改 | ✅ 无 BLOCKER；**F-01 为合入流程风险，非代码缺陷** |
+| T-5 | 文档同步 | ✅ `API_CONTRACT.md` / `DATA_MODEL.md`；本卡与计划 §12～§13、BOARD |
+| T-6 | 已知妥协已记录 | ✅ §11.7 + §12.9（F-02～F-05） |
+
+> 按 DoD §4，「合入 `main`」不属于任务级 DoD；`Merged` 字段单列，由 Human 判定。当前为 `Pending`。
+
+### 13.3 遗留（不阻塞结案）
+
+- **F-01（MAJOR 级合入风险）**：基点落后 `c11bb64`，合入前必须 rebase 并复验 `check-docs.cjs:48` 仍为 `> 2`。
+- **F-02**：S1～S10 以临时夹具/stub 验证，未跑满真实调度周期。
+- **F-03**：既有 docs 问题，非本卡。
+- **F-04**：`unknownCount` 未输出（计划允许在 note 体现）。
+- **F-05**：`taskskips` 容量/TTL 未评估（D-01 明确本次不加）。
+
+### 13.4 对下游的影响（解除 063 阻塞）
+
+`TASK-063` 的串行前置是「057 与 064 均合入 `main`」。057 已合入（`1e421db`），**064 合入后 063 即可开工**。063 计划已 `Approved`，待登记 `Implementing`。
+
+### 13.5 合入前置动作（顺序不能颠倒）
+
+1. `git rebase main`（或 `merge main`）
+2. 复验 `scripts/check-docs.cjs:48` 仍为 `> 2`
+3. 重跑 `npm run docs:check` 确认 0 ERROR
+4. 再合入
+
+### 13.6 过程目录处置
+
+按 [DOCS.md §1.1](../../../os/standards/DOCS.md#11-story-交付目录与文档生命周期)，本卡与计划**留在** `development/delivery/US-001/`，待 Human 关闭 US-001 后整体归档。

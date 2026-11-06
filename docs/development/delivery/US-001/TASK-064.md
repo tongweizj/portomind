@@ -6,8 +6,8 @@
 
 | 字段 | 内容 |
 |---|---|
-| Status | Reviewing（2026-11-05，实现与自测完成于 worktree `D:/projects/portomind-064` @ `de045af`，等待独立 Reviewer 复核） |
-| Priority / Owner / Type | High / Reviewer（待指派） / Feature |
+| Status | Completed（2026-11-05，独立 Reviewer 判定 `Pass with issues`，无 BLOCKER；Human 确认「检验完成，没有问题」） |
+| Priority / Owner / Type | High / — / Feature |
 | Created / Updated | 2026-10-30 / 2026-11-05 |
 | 所属 Story | [US-001](../../requirements/stories/active/US-001-cron-worker-health-and-data-completeness.md) |
 | 覆盖的验收条件 | US-001/AC-02、05～08、11（读侧兼容） |
@@ -151,3 +151,64 @@ Human 指示「先完成 task064」。核对 W0 前置：**已满足**。
 **处置**：合入前必须 `rebase main` 或 `merge main`，并在 rebase 后确认 `scripts/check-docs.cjs:48` 仍为 `> 2`。此条已写入 Reviewer 提示词。
 
 **未做的事**：未重跑验证（Reviewer 将独立复验）；未改 AC / Scope / 代码；未提交、未合入、未填 `Merged`、未关闭。
+
+## 审查结论接收与完成记录（2026-11-05）
+
+独立 Reviewer 已完成复核，结论写入 [计划 §12](./TASK-064-plan.md#12-review-record)（worktree 提交 `b23abb9`）。Human 确认「检验完成，没有问题」。
+
+| 项 | 结果 |
+|---|---|
+| 判定 | **`Pass with issues`**（按 [REVIEWER.md](../../../os/roles/REVIEWER.md) §5） |
+| BLOCKER | **无** |
+| AC1～AC6 | **全部满足**，经 Reviewer 自建探针 **36/36** + 真实 Mongo 重跑 + 全量回归（232/78）独立取证 |
+| 负向对照 | **四处全部成立**（详见下） |
+| 库未污染 | 前后 `276 / 0 / 0`；未新建集合/索引；detail 零回归 |
+
+**Reviewer 的四处负向对照（判定可信的实质依据）**
+
+| AC | 临时注入的缺陷 | 结果 |
+|---|---|---|
+| AC2 | `fxLevel` 改成「有 ok 就整体绿」 | 3 条断言 FAIL（单币种不绿 / 混合→warn / 无显式失败但有成功项→warn） |
+| AC3 | `due` 改回 `result ? result.due === true : null`（F4 回归） | 「due=null 保持 null」FAIL |
+| AC4 | `loadLatestSkips` 无条件 `return []` 吞错 | 「非命名空间 DB 错误必须抛出」FAIL |
+| AC5 | 多加一次 `TaskSkip.aggregate` | 「恰好 1 次批量聚合」FAIL |
+
+全部还原后重跑 36/36 PASS，`git status` 为空。
+
+**F-01（MAJOR 级合入风险，非 Implementer 缺陷）**
+
+Reviewer 核实 `git diff d124626..HEAD -- scripts/check-docs.cjs scripts/check-docs.test.cjs` **为空**——Implementer 从未改这两个文件。分支 diff 里的 `> 2 → > 1` 是**基点落后 `c11bb64` 产生的假改动**。
+
+**合入前必须 rebase main，并复验 `scripts/check-docs.cjs:48` 仍为 `> 2`**，否则会回退 docs 检查修复。
+
+**残余 MINOR（不阻塞）**
+
+- **F-02**：S1～S10 真实结果以临时夹具/stub 验证，未跑满一个真实调度周期。
+- **F-03**：既有 docs 问题（非本卡）。
+- **F-04**：`unknownCount` 未输出（计划 §4-2 允许「在 note 体现」）。
+- **F-05**：`taskskips` 容量/TTL 未评估（D-01 明确本次不加）。
+
+**状态处置**
+
+| 项 | 结果 |
+|---|---|
+| 结案日期 | 2026-11-05 |
+| Status | `Reviewing` → **`Completed`** |
+| Merged | **`Pending`** —— 分支尚未合入 `main`（见下） |
+| DoD | T-1 实现 ✅ / T-2 验证 ✅ / T-3 AC 逐条 ✅ / T-4 审查收敛 ✅（F-01 为合入流程风险非代码缺陷）/ T-5 文档同步 ✅ / T-6 已知妥协 ✅ |
+
+### ⚠️ 合入状态：`Pending`，且必须先 rebase
+
+核对 `git merge-base --is-ancestor b23abb9 main` = **否**。`feature/TASK-064`（基点 `d124626`）**不含 `c11bb64`**。
+
+**合入前置动作（顺序不能颠倒）**：
+1. `git rebase main`（或 `merge main`）
+2. 复验 `scripts/check-docs.cjs:48` 仍为 `> 2`
+3. 重跑 `npm run docs:check` 确认 0 ERROR
+4. 再合入
+
+若跳过 1～3 直接合并，`c11bb64` 的修复被回退，`docs:check` 将重新报 `multiple-current-deliveries`。
+
+**对下游的影响（解除 063 阻塞）**：`TASK-063` 的串行前置是「057 与 064 均合入 `main`」。057 已合入，**064 合入后 063 即可开工**。
+
+**未做的事**：未改 AC / Scope / 代码；未提交合入、未推送、未关闭 Task 或 Story。
