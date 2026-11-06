@@ -2,7 +2,7 @@
 
 ## Metadata
 
-**所属 Story：** [US-001](../../requirements/stories/active/US-001-cron-worker-health-and-data-completeness.md)
+**所属 Story：** [US-001](../../../requirements/stories/active/US-001-cron-worker-health-and-data-completeness.md)
 
 **覆盖的验收条件：** US-001/AC-01、02、07、10、11（骨架）
 
@@ -172,7 +172,7 @@ FS 卡片 `C-01`（PM 拆分，2026-10-26）
 
 ## Orchestrator 状态登记记录（2026-10-31）
 
-依据 [STATES.md §4](../../../os/process/STATES.md#4-谁可以改变状态)：「Task → Reviewing：Implementer 提供改动清单、自测证据、可审对象和已知妥协」。上述三项均已具备，故登记 `Implementing` → `Reviewing`。
+依据 [STATES.md §4](../../../../os/process/STATES.md#4-谁可以改变状态)：「Task → Reviewing：Implementer 提供改动清单、自测证据、可审对象和已知妥协」。上述三项均已具备，故登记 `Implementing` → `Reviewing`。
 
 **登记依据（本轮只读核对，不重跑验证）**
 
@@ -241,10 +241,10 @@ Human 确认「053 任务已经完成了」，指示更新各文档状态。核�
 
 - 本卡：Status / Owner / Updated / Execution Plan 指针 / §6 依赖表
 - [TASK-053-plan.md](./TASK-053-plan.md)：Status → `Completed`，§13 Completion Record 填入结案依据
-- [BOARD.md](../../../BOARD.md)：下挂 Task 表、当前 Story 行、历史完成 Task 表、进度汇总
-- [US-001 故事卡](../../requirements/stories/active/US-001-cron-worker-health-and-data-completeness.md)：053 行的状态与「当前下一步」
+- [BOARD.md](../../../../BOARD.md)：下挂 Task 表、当前 Story 行、历史完成 Task 表、进度汇总
+- [US-001 故事卡](../../../requirements/stories/active/US-001-cron-worker-health-and-data-completeness.md)：053 行的状态与「当前下一步」
 - [TASK-055](./TASK-055.md) B5：硬前置已解除
-- [handbook/manual/CLIENT.md](../../../handbook/manual/CLIENT.md) §3.7：日志章节补看板说明
+- [handbook/manual/CLIENT.md](../../../../handbook/manual/CLIENT.md) §3.7：日志章节补看板说明
 
 **遗留（不阻塞结案，已记录）**
 

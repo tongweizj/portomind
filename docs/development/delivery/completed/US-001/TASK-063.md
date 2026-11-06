@@ -9,9 +9,9 @@
 | Status | Completed（2026-11-05，独立 Reviewer 判定 `Pass with issues`，无 BLOCKER/MAJOR；Human 确认「063 完成」） |
 | Priority / Owner / Type | High / — / Feature |
 | Created / Updated | 2026-10-30 / 2026-11-05 |
-| 所属 Story | [US-001](../../requirements/stories/active/US-001-cron-worker-health-and-data-completeness.md) |
+| 所属 Story | [US-001](../../../requirements/stories/active/US-001-cron-worker-health-and-data-completeness.md) |
 | 覆盖的验收条件 | US-001/AC-02、05～08、10、11（前端接入与整合） |
-| Related Spec | [FS P0](../../requirements/specs/FS-cron-worker-status-board.md) |
+| Related Spec | [FS P0](../../../requirements/specs/FS-cron-worker-status-board.md) |
 | Execution Plan | [Approved](./TASK-063-plan.md)（2026-11-05 Human 批准当前设计；实施前置为 057/064 合入） |
 
 ## 1. 问题
@@ -55,17 +55,17 @@ D-04：**已于 2026-11-04 裁决**（旧055 AC6/8/9 澄清，三项全部采纳
 
 ## 9. 记录
 
-2026-10-30，Orchestrator 正式登记：依据 Human 本轮“接收 US-001 规划、条件满足后登记 TASK-063/064”的明确指令、当前 Story 的既有 High 优先级，以及 [STATES.md §4](../../../os/process/STATES.md#4-谁可以改变状态) 对已授权 Story 内常规拆分的权限。已核对所属 Story、AC 关联、范围、依赖及对应 Draft；本卡只承接既有五卡接入/刷新需求。初始 Status 为 Planning，Owner 待指派；Planner 为既有规划产出角色，不代填实施者。D-01～D-04 中受影响决定、055/063 接入约定及计划批准尚未齐备，不可实施。接收与审阅清单见 [Orchestrator 接收记录](./US-001-02-planner-return.md#7-orchestrator-接收与-human-审阅清单)。
+2026-10-30，Orchestrator 正式登记：依据 Human 本轮“接收 US-001 规划、条件满足后登记 TASK-063/064”的明确指令、当前 Story 的既有 High 优先级，以及 [STATES.md §4](../../../../os/process/STATES.md#4-谁可以改变状态) 对已授权 Story 内常规拆分的权限。已核对所属 Story、AC 关联、范围、依赖及对应 Draft；本卡只承接既有五卡接入/刷新需求。初始 Status 为 Planning，Owner 待指派；Planner 为既有规划产出角色，不代填实施者。D-01～D-04 中受影响决定、055/063 接入约定及计划批准尚未齐备，不可实施。接收与审阅清单见 [Orchestrator 接收记录](./US-001-02-planner-return.md#7-orchestrator-接收与-human-审阅清单)。
 
 规划已准备；实施、审查与关闭尚未发生。后续证据写对应计划；本卡仅引用。
 
 2026-11-05，Planner：按 Human 两项裁决更新规划——①本卡改为**串行**（057/064 合入后实施，AC2/AC3 以真实记录验收）；②TASK-057 计划已获批准。[TASK-063 计划](./TASK-063-plan.md) 已按冻结契约重写（API 信封、055 props、056 statusTone、lastSkip 可选、R-01 落定），仍为 Draft 待 Human 批准。
 
-2026-11-05，Planner（续）：Human 确认「批准 063 计划」——TASK-063 计划登记 **Approved**（覆盖 §1～§9）。实施仍按串行等待 057/064 合入，登记与派发由 Orchestrator 按 [STATES.md §4](../../../os/process/STATES.md) 落实。
+2026-11-05，Planner（续）：Human 确认「批准 063 计划」——TASK-063 计划登记 **Approved**（覆盖 §1～§9）。实施仍按串行等待 057/064 合入，登记与派发由 Orchestrator 按 [STATES.md §4](../../../../os/process/STATES.md) 落实。
 
 ## Orchestrator 启动核对与实施交接（2026-11-05）
 
-依据：计划已 `Approved`（2026-11-05）、Human 指示开始 063；状态权限见 [STATES.md §4](../../../os/process/STATES.md#4-谁可以改变状态)。
+依据：计划已 `Approved`（2026-11-05）、Human 指示开始 063；状态权限见 [STATES.md §4](../../../../os/process/STATES.md#4-谁可以改变状态)。
 
 **结论：串行前置已全部满足，AC1～AC8 可完整实施，无缺口。**
 
@@ -86,7 +86,7 @@ D-04：**已于 2026-11-04 裁决**（旧055 AC6/8/9 澄清，三项全部采纳
 
 ## Orchestrator 交付接收记录（2026-11-05）
 
-依据 [STATES.md §4](../../../os/process/STATES.md#4-谁可以改变状态)：「Task → Reviewing：Implementer 提供改动清单、自测证据、可审对象和已知妥协」。四项齐备，故登记 `Implementing` → **`Reviewing`**。
+依据 [STATES.md §4](../../../../os/process/STATES.md#4-谁可以改变状态)：「Task → Reviewing：Implementer 提供改动清单、自测证据、可审对象和已知妥协」。四项齐备，故登记 `Implementing` → **`Reviewing`**。
 
 | 项 | 事实 |
 |---|---|
@@ -125,7 +125,7 @@ D-04：**已于 2026-11-04 裁决**（旧055 AC6/8/9 澄清，三项全部采纳
 
 | 项 | 结果 |
 |---|---|
-| 判定 | **`Pass with issues`**（按 [REVIEWER.md](../../../os/roles/REVIEWER.md) §5） |
+| 判定 | **`Pass with issues`**（按 [REVIEWER.md](../../../../os/roles/REVIEWER.md) §5） |
 | BLOCKER / MAJOR | **无** |
 | AC1～AC8 | **全部满足**，经 Reviewer 自建探针 **38/38** + 四处负向对照 + 全量 verify 41/41 独立取证 |
 | 契约回归 | 默认 `<BoardShell />` 通过**全部 053 原验收断言**，判为零回归 |
@@ -168,6 +168,6 @@ D-04：**已于 2026-11-04 裁决**（旧055 AC6/8/9 澄清，三项全部采纳
 - `git merge-base --is-ancestor 1a5a666 main` = **是**；分支 tip 与 merge commit 均在 `main` 中
 - 至此 **US-001 七张任务卡的交付分支全部合入 `main`**（053 / 055 / 056 / 057 / 063 / 064）
 
-**Story 级影响**：063 是 11 项 AC 的最后一块前端接入，合入后 **US-001 已具备整体验收条件**。Story → `Reviewing` 由 **PM 登记**（[STATES.md §4](../../../os/process/STATES.md#4-谁可以改变状态)）。
+**Story 级影响**：063 是 11 项 AC 的最后一块前端接入，合入后 **US-001 已具备整体验收条件**。Story → `Reviewing` 由 **PM 登记**（[STATES.md §4](../../../../os/process/STATES.md#4-谁可以改变状态)）。
 
 **未做的事**：未改 AC / Scope / 代码；未推送、未关闭 Task 或 Story。

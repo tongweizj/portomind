@@ -6,7 +6,7 @@
 
 | 项目 | 核对结果 |
 |---|---|
-| 需求依据 | Human 已指定以 [US-001](../../requirements/stories/active/US-001-cron-worker-health-and-data-completeness.md) 进行本次规划交接；当前范围为 FS P0 的 C-01～C-05，11 条 Story AC |
+| 需求依据 | Human 已指定以 [US-001](../../../requirements/stories/active/US-001-cron-worker-health-and-data-completeness.md) 进行本次规划交接；当前范围为 FS P0 的 C-01～C-05，11 条 Story AC |
 | 范围与边界 | 只读看板及必要结果契约；P1 详情页、下钻和超期停滞提示、P2 功能、既有业务缺陷修复均不自动并入 |
 | 状态一致性 | Story 为 Planning；TASK-053/055/056/057 的 BACKLOG 按兼容规则投影为 Backlog，TASK-054 的 COMPLETED 投影为 Completed；看板数量 5 = 4 Backlog + 1 Completed，一致 |
 | 关联一致性 | Story 及看板已关联 5 卡；任务卡尚无所属 Story / 覆盖 Story AC 的反向字段，需 Planner 补齐；不能将建议映射当成已完整覆盖 |
@@ -22,15 +22,15 @@
 
 | 输入 | 用途 |
 |---|---|
-| [US-001](../../requirements/stories/active/US-001-cron-worker-health-and-data-completeness.md) §3～§6 | 当前范围、11 条 AC、依赖与覆盖建议 |
-| [FS](../../requirements/specs/FS-cron-worker-status-board.md) §3、§4、§6、§7.2 | 产品语义及 P0 基线，不照搬过时字段或先后顺序 |
-| [原拆分](../../requirements/specs/FS-cron-worker-status-board-tasks.md) C-01～C-05 | 既有任务来源与 P1/P2 边界 |
+| [US-001](../../../requirements/stories/active/US-001-cron-worker-health-and-data-completeness.md) §3～§6 | 当前范围、11 条 AC、依赖与覆盖建议 |
+| [FS](../../../requirements/specs/FS-cron-worker-status-board.md) §3、§4、§6、§7.2 | 产品语义及 P0 基线，不照搬过时字段或先后顺序 |
+| [原拆分](../../../requirements/specs/FS-cron-worker-status-board-tasks.md) C-01～C-05 | 既有任务来源与 P1/P2 边界 |
 | [TASK-053](./TASK-053.md)、[TASK-055](./TASK-055.md)、[TASK-056](./TASK-056.md)、[TASK-057](./TASK-057.md) | 实际 Scope、任务 AC、依赖、未决问题 |
-| [TASK-054](../../tasks/completed/TASK-054-cron-status-aggregate-api.md) 及 [ExecPlan](../../exec-plans/completed/TASK-054-cron-status-aggregate-api.md) §4.3、§4.8、§11～§13 | 已完成读侧、字段适配、验证证据与移交问题 |
-| [API_CONTRACT](../../../handbook/technical/API_CONTRACT.md) 的 GET /api/cron/status | 现行对外字段、主视图/详情参数及降级行为 |
-| [架构](../../../os/architecture/ARCHITECTURE.md) §4 / §7、[数据模型](../../../handbook/technical/DATA_MODEL.md)、[worker 开发文档](../../../handbook/technical/CRON_WORKER_DEV.md) §5 | 层级边界、TaskRun 和防重契约 |
-| [执行计划规则](../../../os/process/EXECUTION_PLANS.md) §2、[计划模板](../../../os/templates/EXEC_PLAN_TEMPLATE.md)、[任务模板](../../../os/templates/TASK_TEMPLATE.md) | 计划必要性判断、建卡和关联字段 |
-| [DEPLOYMENT](../../../handbook/ops/DEPLOYMENT.md) §7、[测试规范](../../../os/standards/TESTING.md) | 验证入口、证据及覆盖要求 |
+| [TASK-054](../../../tasks/completed/TASK-054-cron-status-aggregate-api.md) 及 [ExecPlan](../../../exec-plans/completed/TASK-054-cron-status-aggregate-api.md) §4.3、§4.8、§11～§13 | 已完成读侧、字段适配、验证证据与移交问题 |
+| [API_CONTRACT](../../../../handbook/technical/API_CONTRACT.md) 的 GET /api/cron/status | 现行对外字段、主视图/详情参数及降级行为 |
+| [架构](../../../../os/architecture/ARCHITECTURE.md) §4 / §7、[数据模型](../../../../handbook/technical/DATA_MODEL.md)、[worker 开发文档](../../../../handbook/technical/CRON_WORKER_DEV.md) §5 | 层级边界、TaskRun 和防重契约 |
+| [执行计划规则](../../../../os/process/EXECUTION_PLANS.md) §2、[计划模板](../../../../os/templates/EXEC_PLAN_TEMPLATE.md)、[任务模板](../../../../os/templates/TASK_TEMPLATE.md) | 计划必要性判断、建卡和关联字段 |
+| [DEPLOYMENT](../../../../handbook/ops/DEPLOYMENT.md) §7、[测试规范](../../../../os/standards/TESTING.md) | 验证入口、证据及覆盖要求 |
 
 ## 3. 需求覆盖预检（交 Planner 核实）
 
@@ -54,7 +54,7 @@ Planner 应为缺口指定明确的 Task（扩展原任务或新增任务须说�
 
 ## 4. 依赖与计划准备
 
-- TASK-054：保持 Completed，不重做、不重新批准已完成计划。先核对真实项目可用基线及适配能力；原卡和旧 Spec 的“未合入”陈述不能覆盖 [BOARD.md](../../../BOARD.md) 的 Human 登记 Merged #36。本轮未重新判定合入。
+- TASK-054：保持 Completed，不重做、不重新批准已完成计划。先核对真实项目可用基线及适配能力；原卡和旧 Spec 的“未合入”陈述不能覆盖 [BOARD.md](../../../../BOARD.md) 的 Human 登记 Merged #36。本轮未重新判定合入。
 - TASK-053：无必要等待 TASK-057 才规划骨架；真实绑定与完整验收不能只交占位。
 - TASK-056：状态 token 与映射会被 TASK-055 和其他卡使用；与 TASK-053 的首屏集成存在交付依赖。
 - TASK-055：依赖 TASK-053 的卡片位置、054 的真实读侧能力及056的状态语义；不可只引用旧卡“先合并054分支”的建议。
@@ -81,7 +81,7 @@ Planner 对每张未完成/新增 Task 列出：计划必要性、依据、计�
 
 ## 6. 既有证据与复用条件
 
-054 的 [ExecPlan](../../exec-plans/completed/TASK-054-cron-status-aggregate-api.md) §11.3、§12.5、§13 提供历史实施、复核和结案依据，关联版本 c7389d1。可作为已交付设计与测试入口的证据索引，本轮不复制测试日志、不重复跑测试。
+054 的 [ExecPlan](../../../exec-plans/completed/TASK-054-cron-status-aggregate-api.md) §11.3、§12.5、§13 提供历史实施、复核和结案依据，关联版本 c7389d1。可作为已交付设计与测试入口的证据索引，本轮不复制测试日志、不重复跑测试。
 
 Planner 应核对实际源码版本、相关文件变化、命令及环境条件后判断证据能否复用；历史测试条数不是当前预期结果，历史通过不覆盖057的新结果形态或本 Story 的前端流程。副本不含可运行系统，本轮未声明 API、数据库或浏览器已验收。
 

@@ -2,7 +2,7 @@
 
 ## Metadata
 
-**所属 Story：** [US-001](../../requirements/stories/active/US-001-cron-worker-health-and-data-completeness.md)
+**所属 Story：** [US-001](../../../requirements/stories/active/US-001-cron-worker-health-and-data-completeness.md)
 
 **覆盖的验收条件：** US-001/AC-05～08（写侧支撑）
 
@@ -235,11 +235,11 @@ FS 建议"2 × 周期"，但 5 个任务周期不同、再平衡按组合计划�
 
 契约冻结、验证映射与回退见 [TASK-057 计划 §4/§6/§7/§9](./TASK-057-plan.md)。
 
-2026-11-05：Human 在 Planner 会话明确「批准 TASK-057 计划」——计划登记 **Approved**（覆盖 §1～§9 当前设计，含上述冻结契约），实施授权成立。同轮 Human 裁决 TASK-063 改为**串行**（057/064 落地后再实施 063），不影响本卡。Task 的 `Planning → Implementing` 登记、`feature/TASK-057` 工作区准备与派发由 Orchestrator 按 [STATES.md §4](../../../os/process/STATES.md) 落实。
+2026-11-05：Human 在 Planner 会话明确「批准 TASK-057 计划」——计划登记 **Approved**（覆盖 §1～§9 当前设计，含上述冻结契约），实施授权成立。同轮 Human 裁决 TASK-063 改为**串行**（057/064 落地后再实施 063），不影响本卡。Task 的 `Planning → Implementing` 登记、`feature/TASK-057` 工作区准备与派发由 Orchestrator 按 [STATES.md §4](../../../../os/process/STATES.md) 落实。
 
 ## Orchestrator 启动核对与实施交接（2026-11-05）
 
-依据：计划已 `Approved`（2026-11-05）、D-01～D-03 契约冻结；状态权限见 [STATES.md §4](../../../os/process/STATES.md#4-谁可以改变状态)。
+依据：计划已 `Approved`（2026-11-05）、D-01～D-03 契约冻结；状态权限见 [STATES.md §4](../../../../os/process/STATES.md#4-谁可以改变状态)。
 
 **结论：设计有效、契约已冻结、AC1～AC12 可实施。但有一项环境前提未就绪（Mongo 未运行），AC1/AC3/AC4/AC5/AC6 无法验证。**
 
@@ -276,7 +276,7 @@ FS 建议"2 × 周期"，但 5 个任务周期不同、再平衡按组合计划�
 
 ## Orchestrator 交付接收记录（2026-11-05）
 
-依据 [STATES.md §4](../../../os/process/STATES.md#4-谁可以改变状态)：「Task → Reviewing：Implementer 提供改动清单、自测证据、可审对象和已知妥协」。四项齐备，故登记 `Implementing` → **`Reviewing`**。
+依据 [STATES.md §4](../../../../os/process/STATES.md#4-谁可以改变状态)：「Task → Reviewing：Implementer 提供改动清单、自测证据、可审对象和已知妥协」。四项齐备，故登记 `Implementing` → **`Reviewing`**。
 
 | 项 | 事实 |
 |---|---|
@@ -308,7 +308,7 @@ FS 建议"2 × 周期"，但 5 个任务周期不同、再平衡按组合计划�
 
 | 项 | 结果 |
 |---|---|
-| 判定 | **`Pass with issues`**（按 [REVIEWER.md](../../../os/roles/REVIEWER.md) §5） |
+| 判定 | **`Pass with issues`**（按 [REVIEWER.md](../../../../os/roles/REVIEWER.md) §5） |
 | BLOCKER / MAJOR | **无** |
 | AC1～AC12 | **全部满足**，经 Reviewer **自建真实库探针**独立实测（明确未采纳 Implementer 29/29 或 Orchestrator 复跑结论，均自行重跑） |
 | 负向对照 | **AC2 / AC5 / AC7 各一次**，全部证明断言非恒真，还原后 `git status` 空 |

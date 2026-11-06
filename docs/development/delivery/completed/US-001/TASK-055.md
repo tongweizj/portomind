@@ -2,7 +2,7 @@
 
 ## Metadata
 
-**所属 Story：** [US-001](../../requirements/stories/active/US-001-cron-worker-health-and-data-completeness.md)
+**所属 Story：** [US-001](../../../requirements/stories/active/US-001-cron-worker-health-and-data-completeness.md)
 
 **覆盖的验收条件：** US-001/AC-03、04、07、10
 
@@ -168,7 +168,7 @@ Human 就 [D-04（055 原 AC6/8/9 澄清）](./US-001-02-planner-return.md#d-040
 
 ## Orchestrator 交付接收记录（2026-11-04）
 
-依据 [STATES.md §4](../../../os/process/STATES.md#4-谁可以改变状态)：「Task → Reviewing：Implementer 提供改动清单、自测证据、可审对象和已知妥协」。四项齐备，故登记 `Implementing` → **`Reviewing`**。
+依据 [STATES.md §4](../../../../os/process/STATES.md#4-谁可以改变状态)：「Task → Reviewing：Implementer 提供改动清单、自测证据、可审对象和已知妥协」。四项齐备，故登记 `Implementing` → **`Reviewing`**。
 
 | 项 | 事实 |
 |---|---|
@@ -197,7 +197,7 @@ Human 就 [D-04（055 原 AC6/8/9 澄清）](./US-001-02-planner-return.md#d-040
 
 | 项 | 结果 |
 |---|---|
-| 判定 | **`Pass with issues`**（按 [REVIEWER.md](../../../os/roles/REVIEWER.md) §5） |
+| 判定 | **`Pass with issues`**（按 [REVIEWER.md](../../../../os/roles/REVIEWER.md) §5） |
 | BLOCKER / MAJOR | **无** |
 | AC1～AC11 | **10 条满足**（AC1/2/3/4/5/6/7/8②/9/10/11），经 Reviewer **自建 Playwright 探针**独立实测 |
 | AC8① | **部分** —— 整体失败的五卡统一降级归 `TASK-063`，Reviewer 确认代码中**未谎报为已实现**（§8 红线未触发） |

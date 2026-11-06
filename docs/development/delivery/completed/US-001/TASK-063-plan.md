@@ -6,11 +6,11 @@ Status：Approved（2026-11-05，Human 批准当前设计）
 
 Owner：Planner（规划完成）→ 待 Orchestrator 登记并指派 Implementer
 
-Related Task：[TASK-063](./TASK-063.md)；所属 [US-001](../../requirements/stories/active/US-001-cron-worker-health-and-data-completeness.md)。
+Related Task：[TASK-063](./TASK-063.md)；所属 [US-001](../../../requirements/stories/active/US-001-cron-worker-health-and-data-completeness.md)。
 
 Branch / Base：实施时从 up-to-date `main` 新建 `feature/TASK-063` 独立 worktree（沿 053/056 惯例）。**实施前置（Human 2026-11-05 裁决「串行」）**：`TASK-057` 与 `TASK-064` 实施并合入 `main` 后才启动本卡实施；规划基线为 2026-11-05 的 `main`（含 053/055/056 交付）。
 
-Approval：**2026-11-05 Human 批准当前设计**（Planner 会话确认「批准 063 计划」）：覆盖 §1～§9。实施前置仍为 057 与 064 合入 `main`（串行）；登记与派发由 Orchestrator 按 [STATES.md §4](../../../os/process/STATES.md) 落实，Planner 不代填状态。
+Approval：**2026-11-05 Human 批准当前设计**（Planner 会话确认「批准 063 计划」）：覆盖 §1～§9。实施前置仍为 057 与 064 合入 `main`（串行）；登记与派发由 Orchestrator 按 [STATES.md §4](../../../../os/process/STATES.md) 落实，Planner 不代填状态。
 
 ## 1. Intent
 
@@ -30,7 +30,7 @@ Approval：**2026-11-05 Human 批准当前设计**（Planner 会话确认「批�
 | 056 已交付并在 `main`：`getStatusTone(status)` 单一映射 + `StatusLegend`；`TaskCardShell` 卡片文案仍为骨架「未知」（056 审查 F-03），真实文案接线归本卡 | `client/src/components/CronStatus/statusTone.js` |
 | client 侧 `cronStatus.service.js` / `useCronStatus` **不存在**，本卡新建；现有解包与错误助手可用 | `client/src/services/api.js`（`api` / `getApiErrorMessage`） |
 | 全局 `QueryClient` 仅配 `retry:1` / `staleTime:60s`，**未关** `refetchOnWindowFocus` 等自动路径 → 本卡必须逐查询显式关闭 | `client/src/main.jsx:6-14` |
-| API 契约：`GET /api/cron/status` → `{generatedAt, timezone, staleThresholdHours, tasks:[5]}`；每项 `{taskName, lastRun(无记录 null), stale, contractReady, dataState, dataStateLevel(ok\|warn\|bad\|unknown), notes[]}`；057 落地前四卡 `result` 派生值为 `null`（`contractReady=false` + `CONTRACT_NOT_READY`） | [API_CONTRACT.md](../../../handbook/technical/API_CONTRACT.md) |
+| API 契约：`GET /api/cron/status` → `{generatedAt, timezone, staleThresholdHours, tasks:[5]}`；每项 `{taskName, lastRun(无记录 null), stale, contractReady, dataState, dataStateLevel(ok\|warn\|bad\|unknown), notes[]}`；057 落地前四卡 `result` 派生值为 `null`（`contractReady=false` + `CONTRACT_NOT_READY`） | [API_CONTRACT.md](../../../../handbook/technical/API_CONTRACT.md) |
 | `BoardShell` 五卡网格现状为固定 `TaskCardShell`；`SummaryShell` props `{snapshotAt, overallState}`；`unknownValue.js` 的 `UNKNOWN` 语义与 `BOARD_SLOTS` 五槽位 | 053/056 交付物 |
 
 证据边界：未连接数据库、未跑应用/测试；以上为静态源码与文档核对。
@@ -68,7 +68,7 @@ Approval：**2026-11-05 Human 批准当前设计**（Planner 会话确认「批�
 
 ## 7. Verification
 
-以下为未来验收设计，未运行；命令入口见 [DEPLOYMENT §7](../../../handbook/ops/DEPLOYMENT.md)，不以历史数量为预期。串行前提下 AC2/AC3 直接以真实数据验证（dev 库含 057 落地后至少一个周期的五任务真实 result，与 057 R-7 同要求）：
+以下为未来验收设计，未运行；命令入口见 [DEPLOYMENT §7](../../../../handbook/ops/DEPLOYMENT.md)，不以历史数量为预期。串行前提下 AC2/AC3 直接以真实数据验证（dev 库含 057 落地后至少一个周期的五任务真实 result，与 057 R-7 同要求）：
 
 | Task AC | 验证方法与期望 |
 |---|---|

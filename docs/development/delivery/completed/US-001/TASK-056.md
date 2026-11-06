@@ -2,7 +2,7 @@
 
 ## Metadata
 
-**所属 Story：** [US-001](../../requirements/stories/active/US-001-cron-worker-health-and-data-completeness.md)
+**所属 Story：** [US-001](../../../requirements/stories/active/US-001-cron-worker-health-and-data-completeness.md)
 
 **覆盖的验收条件：** US-001/AC-02、09
 
@@ -153,7 +153,7 @@ FS §3 给看板定义了 4 种系统状态色：**绿 = 成功/完成/数据齐
 
 ## Orchestrator 启动核对与实施交接（2026-11-04）
 
-依据：Human 指示「先完成 056」；状态权限见 [STATES.md §4](../../../os/process/STATES.md#4-谁可以改变状态)。
+依据：Human 指示「先完成 056」；状态权限见 [STATES.md §4](../../../../os/process/STATES.md#4-谁可以改变状态)。
 
 | 动作 | 结果 |
 |---|---|
@@ -174,7 +174,7 @@ FS §3 给看板定义了 4 种系统状态色：**绿 = 成功/完成/数据齐
 
 ## Orchestrator 交付接收记录（2026-11-04）
 
-依据 [STATES.md §4](../../../os/process/STATES.md#4-谁可以改变状态)：「Task → Reviewing：Implementer 提供改动清单、自测证据、可审对象和已知妥协」。三项齐备，故登记 `Implementing` → **`Reviewing`**。
+依据 [STATES.md §4](../../../../os/process/STATES.md#4-谁可以改变状态)：「Task → Reviewing：Implementer 提供改动清单、自测证据、可审对象和已知妥协」。三项齐备，故登记 `Implementing` → **`Reviewing`**。
 
 | 项 | 事实 |
 |---|---|
@@ -201,7 +201,7 @@ FS §3 给看板定义了 4 种系统状态色：**绿 = 成功/完成/数据齐
 
 | 项 | 结果 |
 |---|---|
-| 判定 | **`Pass with issues`**（按 [REVIEWER.md](../../../os/roles/REVIEWER.md) §5） |
+| 判定 | **`Pass with issues`**（按 [REVIEWER.md](../../../../os/roles/REVIEWER.md) §5） |
 | BLOCKER / MAJOR | **无** |
 | AC1～AC9 | 全部满足，经 Reviewer **自建探针**独立实测（非采纳实现者自述） |
 | 负向对照 | AC2、AC3 各做一次，证明断言非恒真；还原后 `git status` 为空 |
@@ -213,13 +213,13 @@ FS §3 给看板定义了 4 种系统状态色：**绿 = 成功/完成/数据齐
 - **F-02**：验收脚本依赖本机 Chrome + `playwright-core`（worktree `node_modules` 缺后者，需借主工作区），未接入 CI。
 - **F-03**：AC6 的卡片文案仍显示 053 占位的「未知」，未消费本卡映射的「未运行/暂无记录」——属计划 §10.3 写入边界，待 `TASK-063` 接线，非缺陷。
 
-**Task 状态处置**：按 [STATES.md §4](../../../os/process/STATES.md#4-谁可以改变状态)，审查收敛后 `Task → Completed` 与合入 `Merged` **只有 Human 可登记**。故本卡**保持 `Reviewing`**，Owner 改为「待 Human 结案」，未登记 Completed、未填 `Merged`、未关闭。
+**Task 状态处置**：按 [STATES.md §4](../../../../os/process/STATES.md#4-谁可以改变状态)，审查收敛后 `Task → Completed` 与合入 `Merged` **只有 Human 可登记**。故本卡**保持 `Reviewing`**，Owner 改为「待 Human 结案」，未登记 Completed、未填 `Merged`、未关闭。
 
 **未做的事**：未改 AC / Scope / 代码；未提交合入、未推送、未关闭 Task 或 Story。
 
 ## 完成记录（2026-11-04）
 
-Human 指示「056 请登记完成」。按 [STATES.md §4](../../../os/process/STATES.md#4-谁可以改变状态) 登记 `Reviewing` → **`Completed`**。
+Human 指示「056 请登记完成」。按 [STATES.md §4](../../../../os/process/STATES.md#4-谁可以改变状态) 登记 `Reviewing` → **`Completed`**。
 
 | 项 | 事实 |
 |---|---|
@@ -236,7 +236,7 @@ Human 指示「056 请登记完成」。按 [STATES.md §4](../../../os/process/
 
 2026-11-04 Human 完成合并（`53edb8e` `Merge branch 'feature/TASK-056' into main`）。
 
-按 [STATES.md §1](../../../os/process/STATES.md#1-status-与-merged)，`Merged` 由 Human 依实际合入证据判定。本轮登记前复核：
+按 [STATES.md §1](../../../../os/process/STATES.md#1-status-与-merged)，`Merged` 由 Human 依实际合入证据判定。本轮登记前复核：
 - `git merge-base --is-ancestor 31b516e main` = **是**（分支两个提交均已入主线）
 - `main` 的 `design-tokens.js` 含 `statusOk #166534` / `statusWarn #854D0E` / `statusBad #B91C1C` / `statusIdle #475569`
 - `main` 的 `CronStatus/` 含 `statusTone.js` 与 `StatusLegend.jsx`
@@ -245,4 +245,4 @@ Human 指示「056 请登记完成」。按 [STATES.md §4](../../../os/process/
 
 ### 过程目录处置
 
-按 [DOCS.md §1.1](../../../os/standards/DOCS.md#11-story-交付目录与文档生命周期)：「单个 Task 或计划完成只更新其字段与记录，仍留在 Story 目录内，不提前单独移出」。故本卡与计划**保持在** `development/delivery/US-001/`，待 Human 关闭 US-001 后随过程目录整体归档。
+按 [DOCS.md §1.1](../../../../os/standards/DOCS.md#11-story-交付目录与文档生命周期)：「单个 Task 或计划完成只更新其字段与记录，仍留在 Story 目录内，不提前单独移出」。故本卡与计划**保持在** `development/delivery/US-001/`，待 Human 关闭 US-001 后随过程目录整体归档。

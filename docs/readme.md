@@ -10,7 +10,7 @@
 |---|---|
 | 当前 Story、任务进度、下一步交接 | [BOARD.md](./BOARD.md) |
 | Story 的价值、范围与验收条件 | [STORIES.md](./development/requirements/stories/STORIES.md) |
-| 当前 US-001 的任务、计划与交接材料 | [US-001 交付目录](./development/delivery/US-001)；最新进度以看板为准 |
+| 当前 US-001 的任务、计划与交接材料 | [US-001 交付目录](./development/delivery/completed/US-001)；最新进度以看板为准 |
 | 产品方向、需求规格、用户研究 | [PRODUCT.md](./development/requirements/PRODUCT.md)、[PRD.md](./development/requirements/PRD.md)、[specs/](./development/requirements/specs)、[USER_RESEARCH.md](./development/requirements/USER_RESEARCH.md) |
 | 角色职责、状态权限、交付流程 | [roles/](./os/roles)、[STATES.md](./os/process/STATES.md)、[WORKFLOW.md](./os/process/WORKFLOW.md) |
 | 架构边界、技术决策、编码规范 | [ARCHITECTURE.md](./os/architecture/ARCHITECTURE.md)、[adr/](./os/architecture/adr)、[standards/](./os/standards) |
@@ -63,7 +63,7 @@ docs/
 
 - 需求：[产品总览](./development/requirements/PRODUCT.md)、[PRD](./development/requirements/PRD.md)、[用户研究](./development/requirements/USER_RESEARCH.md)、[Spec](./development/requirements/specs)、[场景索引](./development/requirements/scenarios/SCENARIOS.md)、[Story 索引](./development/requirements/stories/STORIES.md)。
 - 原型与设计：[HTML 原型、设计稿与截图](./development/prototypes/README.md)。
-- 交付：从 [BOARD.md](./BOARD.md) 进入 [当前 US-001](./development/delivery/US-001)；任务卡 TASK-编号.md、计划 TASK-编号-plan.md、按序号命名的交接记录直接平铺。Human 关闭后整体移入 [completed/](./development/delivery/completed)，具体规则见 DOCS.md §1.1。
+- 交付：从 [BOARD.md](./BOARD.md) 进入 [当前 US-001](./development/delivery/completed/US-001)；任务卡 TASK-编号.md、计划 TASK-编号-plan.md、按序号命名的交接记录直接平铺。Human 关闭后整体移入 [completed/](./development/delivery/completed)，具体规则见 DOCS.md §1.1。
 - 独立与既有记录：[任务卡](./development/tasks)、[执行计划](./development/exec-plans)、[问题记录](./development/issues.md)。共享资料通过链接复用。
 
 ## 资料入口（handbook）

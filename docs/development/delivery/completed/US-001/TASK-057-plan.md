@@ -6,7 +6,7 @@ Status：Completed（2026-11-05，审查通过后结案）
 
 Owner：Planner（规划）→ Implementer（2026-11-05 实施，`5bb47ea`）→ Reviewer（`Pass with issues`，`54136c2`）→ Human（2026-11-05 确认）
 
-Related Task：[TASK-057](./TASK-057.md)；所属 [US-001](../../requirements/stories/active/US-001-cron-worker-health-and-data-completeness.md)。
+Related Task：[TASK-057](./TASK-057.md)；所属 [US-001](../../../requirements/stories/active/US-001-cron-worker-health-and-data-completeness.md)。
 
 Branch / Base：未来在真实源码工作区从 up-to-date `main` 新建 `feature/TASK-057` 独立 worktree（沿 053/056 惯例）。规划期只读基线为 chore/agent-rules-refactor @ `2bde913`；**2026-11-04 复核**：四个目标文件 SHA256 与 [回交 §2](./US-001-02-planner-return.md) 记录逐一吻合（`taskRun.js` `c366c084…` / `taskRunner.js` `810a7e65…` / `rebalanceScheduler.js` `5e075a73…` / `cronStatus.service.js` `27a3cc56…`），shared/worker 未被 053/056 触及，既有发现仍有效。主工作区另有 `US-001-01-planner-handoff.md` 未提交改动（git 提交被沙箱拦截），不得清理或覆盖。
 
@@ -160,7 +160,7 @@ OQ-5 确认**无需裁决**（源码已有 `TASK_PERIOD_HOURS`/`STALE_FACTOR` �
 
 ## 7. Verification
 
-以下为未来验收设计，未运行。适用命令入口见 [DEPLOYMENT §7](../../../handbook/ops/DEPLOYMENT.md)，不以历史数量作为预期。每条AC均有映射：
+以下为未来验收设计，未运行。适用命令入口见 [DEPLOYMENT §7](../../../../handbook/ops/DEPLOYMENT.md)，不以历史数量作为预期。每条AC均有映射：
 
 | Task AC | 验证方法与期望 |
 |---|---|
@@ -195,7 +195,7 @@ D-01 已定独立集合路线（§6）：**无既有索引迁移**。撤回读�
 - **前置已齐**：W1 环境核对完成（dev 库 `192.168.2.140`/`portomind_dev`，只读实测与计划记录吻合）；W2 冻结样例 S1～S10 就位（§4）。
 - **实施约束（卡片启动核对记录）**：276 条历史数据是 AC8 被测对象，**不得清库**；写入验证使用独立 runKey / 测试组合，不污染既有业务记录。
 - **改动边界**：`shared/models/taskRun.js`（+`result`）、新增 `shared/models/taskSkip.js`、`shared/services/taskRunner.js`、五任务 `execute` 返回值、`cron-worker/src/schedulers/rebalanceScheduler.js`、测试与 `CRON_WORKER_DEV.md §5` 文档；**不改** `server/` `client/`、cron 表达式、防重语义（AC9）。
-- **验证入口**：[DEPLOYMENT §7](../../../handbook/ops/DEPLOYMENT.md)；AC→验证映射见 §7；查库断言**不得**用函数返回值替代。
+- **验证入口**：[DEPLOYMENT §7](../../../../handbook/ops/DEPLOYMENT.md)；AC→验证映射见 §7；查库断言**不得**用函数返回值替代。
 - **已知问题/妥协预告**：R-2 文档体量须实测记录；R-3 父任务 `PARTIAL` 语义不改状态机；R-9 僵尸不参与防重；`rebalanceScheduler.test.js` 3 处断言只做加法适配并写明理由。
 - **回交要求**：实际文件清单与 SHA256、AC 逐条实测、负向对照、测试回归实际输出、妥协与未验证项写 §11；触及范围/AC/重大设计变化或前置缺失时暂停受影响部分并上报。
 
@@ -424,7 +424,7 @@ $ npm run docs:check    → 既有 docs/readme.md:66 broken link（非本卡文�
 | 状态流转 | `Draft` → `Approved`（2026-11-05）→ `Implementing` → `Reviewing` → `Completed`（2026-11-05） |
 | 合入 | **`Merged`** —— merge commit `1e421db`（2026-11-05 21:15），分支 tip `54136c2` |
 
-### 13.2 DoD 逐条（[DEFINITION_OF_DONE](../../../os/process/DEFINITION_OF_DONE.md) §3）
+### 13.2 DoD 逐条（[DEFINITION_OF_DONE](../../../../os/process/DEFINITION_OF_DONE.md) §3）
 
 | # | 要求 | 结论 |
 |---|---|---|
@@ -450,4 +450,4 @@ $ npm run docs:check    → 既有 docs/readme.md:66 broken link（非本卡文�
 
 ### 13.5 过程目录处置
 
-按 [DOCS.md §1.1](../../../os/standards/DOCS.md#11-story-交付目录与文档生命周期)，本卡与计划**留在** `development/delivery/US-001/`，待 Human 关闭 US-001 后整体归档。
+按 [DOCS.md §1.1](../../../../os/standards/DOCS.md#11-story-交付目录与文档生命周期)，本卡与计划**留在** `development/delivery/US-001/`，待 Human 关闭 US-001 后整体归档。

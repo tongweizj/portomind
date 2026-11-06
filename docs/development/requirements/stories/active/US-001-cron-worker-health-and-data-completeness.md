@@ -6,7 +6,7 @@
 |---|---|
 | Story ID | US-001 |
 | Status | Completed（2026-11-05，Human 确认「us 完成了」；七张任务卡全部 `Completed` 并合入 `main`） |
-| 交付目录 | [US-001 过程资料](../../../delivery/US-001) |
+| 交付目录 | [US-001 过程资料](../../../delivery/completed/US-001) |
 | 准备情况 | 已完成：053/055/056/057/063/064 六卡结案并合入；054 既有读侧支撑保持 Completed。Story 整体验收由 Human 授权通过（验收性质见 §8 声明），附 [§8.1](#81-上线后验证待办承接自各任务卡的残余-minor) 六项上线后验证待办 |
 | 产品负责人 | PM；产品方向、范围变更与关闭由 Human 决定 |
 | 优先级 | High，继承来源 Spec 的 P0；本次作为流程测试的当前 Story |
@@ -79,7 +79,7 @@
 | 编号 | 类型 | 内容及影响 | 负责角色 | 解决 / 解除条件 | 当前结论及依据 |
 |---|---|---|---|---|---|
 | DEP-01 | 既有产出 | TASK-054 已登记完成，提供读侧快照 | Planner | 实施前在真实项目核对版本和接口 | 本副本只含文档；不声称已运行 API。BOARD.md 的 Human 合入登记为 Merged #36，旧 FS 的未合入叙述不作为当前判定 |
-| OQ-01 | 待决策 | TASK-057 的跳过记录与唯一键冲突、数据契约问题未闭环 | Planner / Human | 引用卡内 OQ-1、OQ-3 等，确认可实施方案；不能由 PM 擅定技术解法 | **已解除（2026-11-04/05）**：D-01～D-03 由 Human 裁决、计划 2026-11-05 批准，057 已进入 `Implementing`；技术方案由 Planner 冻结于 [TASK-057 计划 §4](../../../delivery/US-001/TASK-057-plan.md) |
+| OQ-01 | 待决策 | TASK-057 的跳过记录与唯一键冲突、数据契约问题未闭环 | Planner / Human | 引用卡内 OQ-1、OQ-3 等，确认可实施方案；不能由 PM 擅定技术解法 | **已解除（2026-11-04/05）**：D-01～D-03 由 Human 裁决、计划 2026-11-05 批准，057 已进入 `Implementing`；技术方案由 Planner 冻结于 [TASK-057 计划 §4](../../../delivery/completed/US-001/TASK-057-plan.md) |
 | OQ-02 | 规格冲突 | 旧 Spec 的 result 字段名及 C-05 必须先于 C-02，与已交付的接口降级设计不一致 | PM / Planner | 梳理读写契约差异；产品语义变化由 Human 决定；更新必要规格 | TASK-054 已完成不重做；新前端消费现行 API，TASK-057 写侧字段须与该接口适配，不能照抄旧字段另起一套 |
 | OQ-03 | 产品结果表达 | TASK-057 汇率结果记录形式未决；采集端全或无不能证明独立逐币种成功 | PM / Planner / Human | 明确显示可证实的数据、数值/标志及未知态，不杜撰可观察性 | **已裁决（2026-11-04，D-02）**：`currencies{ok, rateToCny}` 只记「数值 + 完成标志」，不补造逐币种成败；失败运行记 FAILED + 结果未知。不把 TASK-051 汇率方向修复并入此 Story，同步成功不等于汇率方向正确 |
 | DEP-02 | 实施准备 | 副本只含文档，Planner已只读核对D:/projects/portomind源码；数据库与运行环境未核实 | Orchestrator | 按回交说明核对基线、环境与计划批准 | **已核对（2026-11-05）**：TASK-057 启动核对完成，dev 库（家庭服务器 `portomind_dev`）只读实测 `taskruns` 276 条 / `portfolios` 4 条，前提满足；仍未做代码与浏览器验证，不构成交付测试证据 |
@@ -88,7 +88,7 @@
 
 - **Story 已启动**（`Planning` → `Implementing`）。依据：053 结案并合入（`Merged` #41）、056 结案并合入（`Merged` `53edb8e`）、055 结案、TASK-057 计划 `Approved` 且已登记 `Implementing`；状态权限见 [STATES.md §4](../../../../os/process/STATES.md#4-谁可以改变状态)。
 - **已结案：** `TASK-053`、`TASK-054`（既有完成）、`TASK-055`、`TASK-056`。
-- **实施中：** `TASK-057`（写侧契约；计划 `Approved`，启动核对与环境只读实测见 [TASK-057 启动核对](./../../../delivery/US-001/TASK-057.md#orchestrator-启动核对与实施交接2026-11-05)）。
+- **实施中：** `TASK-057`（写侧契约；计划 `Approved`，启动核对与环境只读实测见 [TASK-057 启动核对](./../../../delivery/completed/US-001/TASK-057.md#orchestrator-启动核对与实施交接2026-11-05)）。
 - **实施顺序（Human 2026-11-05 裁决）：** 057 → 064 → 063，**串行**；057/064 合入前不实施 063，063 的 AC2/AC3 以真实记录验收。
 - **待 Human 决策：** ① `TASK-063`/`TASK-064` 计划仍为 `Draft`，批准权在 Human（[STATES.md §4](../../../../os/process/STATES.md#4-谁可以改变状态)）；② **`TASK-055` 已结案但 `Merged` = `Pending`**——`feature/TASK-055` @ `0f697fd` 未合入 `main` 且基点落后需 rebase，合入与 `Merged` 登记只有 Human 可做。
 - **对整体验收的影响：** 055 未合入主干时，AC-03/AC-04 的价格卡无法在 `main` 上取得真实页面证据，Story 不能进入 `Reviewing`。其余 AC 证据缺口随 057/064/063 推进补齐。
@@ -101,13 +101,13 @@
 
 | Task | 工作摘要 | 覆盖的验收条件 | 必要性 / 关联说明 |
 |---|---|---|---|
-| [TASK-053](../../../delivery/US-001/TASK-053.md) | 看板入口、总览、五卡与原日志保留 | AC-01、02、07、10、11 | **已完成（2026-11-04，`Merged` #41）**；看板骨架与六区域卡片位已入库；骨架与 063 真实接入分开 |
+| [TASK-053](../../../delivery/completed/US-001/TASK-053.md) | 看板入口、总览、五卡与原日志保留 | AC-01、02、07、10、11 | **已完成（2026-11-04，`Merged` #41）**；看板骨架与六区域卡片位已入库；骨架与 063 真实接入分开 |
 | [TASK-054](../../../tasks/completed/TASK-054-cron-status-aggregate-api.md) | 只读聚合及有效目标日、降级 | AC-02～08、10、11 的读侧支撑 | 必需；已有完成证据供复用，不能将历史完成直接当作当前整体验收通过 |
-| [TASK-055](../../../delivery/US-001/TASK-055.md) | 价格完成度与缺失清单 | AC-03、04、07、10 | **已完成（2026-11-04）**；独立 Reviewer `Pass with issues`，无 BLOCKER/MAJOR；⚠️ `Merged` = `Pending`——`feature/TASK-055` @ `0f697fd` **未合入 `main`** 且需 rebase，合入归 Human |
-| [TASK-056](../../../delivery/US-001/TASK-056.md) | 系统状态色及图例 | AC-02、09 | **已完成（2026-11-04，`Merged` `53edb8e`）**；AC1～AC9 全满足，`status*` 四 token 与 `statusTone.js` 已在 `main` |
-| [TASK-057](../../../delivery/US-001/TASK-057.md) | 结果持久化、跳过、再平衡父任务 | AC-05～08 的写侧支撑 | **实施中（计划 `Approved`，2026-11-05 登记 `Implementing`）**；D-01～D-03 已裁决、契约与样例已冻结；待 Implementer 在独立 worktree 实施 |
-| [TASK-063](../../../delivery/US-001/TASK-063.md) | 五卡真实数据绑定、总览及手动刷新 | AC-02、05～08、10、11 | 必需；`Planning`，计划 `Draft` 待 Human 批准；**串行**——057/064 合入后才实施 |
-| [TASK-064](../../../delivery/US-001/TASK-064.md) | 读侧契约兼容与skip观测 | AC-02、05～08、11 | 必需；`Planning`，计划 `Draft` 待 Human 批准；前置为 057 合入 `main` |
+| [TASK-055](../../../delivery/completed/US-001/TASK-055.md) | 价格完成度与缺失清单 | AC-03、04、07、10 | **已完成（2026-11-04）**；独立 Reviewer `Pass with issues`，无 BLOCKER/MAJOR；⚠️ `Merged` = `Pending`——`feature/TASK-055` @ `0f697fd` **未合入 `main`** 且需 rebase，合入归 Human |
+| [TASK-056](../../../delivery/completed/US-001/TASK-056.md) | 系统状态色及图例 | AC-02、09 | **已完成（2026-11-04，`Merged` `53edb8e`）**；AC1～AC9 全满足，`status*` 四 token 与 `statusTone.js` 已在 `main` |
+| [TASK-057](../../../delivery/completed/US-001/TASK-057.md) | 结果持久化、跳过、再平衡父任务 | AC-05～08 的写侧支撑 | **实施中（计划 `Approved`，2026-11-05 登记 `Implementing`）**；D-01～D-03 已裁决、契约与样例已冻结；待 Implementer 在独立 worktree 实施 |
+| [TASK-063](../../../delivery/completed/US-001/TASK-063.md) | 五卡真实数据绑定、总览及手动刷新 | AC-02、05～08、10、11 | 必需；`Planning`，计划 `Draft` 待 Human 批准；**串行**——057/064 合入后才实施 |
+| [TASK-064](../../../delivery/completed/US-001/TASK-064.md) | 读侧契约兼容与skip观测 | AC-02、05～08、11 | 必需；`Planning`，计划 `Draft` 待 Human 批准；前置为 057 合入 `main` |
 
 数据契约卡不自动承担前端实现。063/064已承接缺口，具体需求映射见回交说明；需PM检查覆盖及Human处理冲突，不能把条件方案当作已批准。
 
@@ -175,11 +175,13 @@
 | 后续范围 | P1：停滞提示、原始日志下钻、再平衡分发详情；P2：历史趋势、launchDate 引导，均待后续建 Story |
 | 遗留待办 | [§8.1](#81-上线后验证待办承接自各任务卡的残余-minor) 六项（V-01～V-06），需真实调度周期验证；完成时在 §8 补记录，不重开各 Task |
 
-### 归档（待办）
+### 归档（已完成）
 
-按 [DOCS.md §1.1](../../../../os/standards/DOCS.md#11-story-交付目录与文档生命周期)：Human 关闭 Story 后，**PM 补齐交付摘要与验收结论，Orchestrator 检查下挂工作处置后，将过程目录整体移到 `development/delivery/completed/US-001/`**，并同步 BOARD 与索引。
+按 [DOCS.md §1.1](../../../../os/standards/DOCS.md#11-story-交付目录与文档生命周期)：Human 关闭 Story 后，PM 补齐交付摘要与验收结论，Orchestrator 检查下挂工作处置后，将过程目录整体移到 `development/delivery/completed/US-001/`，并同步 BOARD 与索引。
 
-**当前状态**：Story 已 `Completed`，但过程目录仍在 `development/delivery/US-001/`，**尚未执行整体归档**。归档是独立动作，不自动随 Status 发生。
+**执行结果（2026-11-05）**：过程目录已用 `git mv` 整体移到 [`development/delivery/completed/US-001/`](../../../delivery/completed/US-001)，14 个文件。**归档是移动不是删除**，全部过程资料、审查记录与验证脚本原样保留。
+
+链接同步：目录内 14 份文件的相对路径（深了一层）与 11 个外部引用方的路径均已修正；`docs:check` **0 ERROR**。
 
 ### 退出 / 恢复记录
 

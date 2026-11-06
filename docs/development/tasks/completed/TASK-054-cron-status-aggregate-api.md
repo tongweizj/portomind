@@ -6,7 +6,7 @@
 
 **覆盖的验收条件：** US-001/AC-02～08、10、11（既有读侧支撑）
 
-**规划核对：** [Planner 回交说明](../../delivery/US-001/US-001-02-planner-return.md)；新增关联不改变本卡 AC、原状态、既有批准或结案结论。
+**规划核对：** [Planner 回交说明](../../delivery/completed/US-001/US-001-02-planner-return.md)；新增关联不改变本卡 AC、原状态、既有批准或结案结论。
 
 **Status:**  
 `COMPLETED`（2026-10-27）—— 已实施完成 + **三轮独立复核 + 一轮回归复核全部通过**（无 BLOCKER / 无 MAJOR；8 条 MINOR 已整改，余 2 条 FX 适配器边界项移交 `TASK-057`）：新增 `shared/constants/cronStatus.constants.js`、`shared/services/cronStatus.service.js`、controller / routes、`app.js` 注册 1 行；新增 **28 条测试**（U1–U17 + A1–A11 全绿）；全量回归 `test:server` **180/0**、`test:worker` **77/0**；开发库 + 生产库只读冒烟均通过。**⚠️ 代码尚未合入 `main`**（分支 `feature/TASK-054-cron-status-aggregate-api` = `c7389d1`；`main` / `origin/main` = `1895530`），合并属 Human 职权，见 §11.3。

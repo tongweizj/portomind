@@ -98,7 +98,7 @@
 |---|---|---|---|---|---|
 | DEP-01 | 依赖 | AC-16 的 `lastExecutedAt` 来自 US-004 的服务端改动（B1）；本 Story 自身零服务端改动 | PM / Planner | 两 Story 的实施顺序确定 | **已确定（2026-11-05 Human 裁决，见 OQ-01）**：US-004 先行 → B1 先落地，本 Story 的 AC-16 Chip 可直接显示，无需「先隐藏后补」 |
 | DEP-02 | 依赖 | US-004 的「待办」列跳转目标 `?sub=suggestions` 依赖本 Story 的 AC-11 落地 | PM | 顺序协调 | Spec §9：A 先于 B 更顺，但非硬依赖；US-004 先实施时该链接落到默认子 Tab，行为等价（已被 US-004 OQ-02 采纳） |
-| DEP-03 | 依赖 | 主工作区有 `docs/development/delivery/US-001/` 的未提交 Planner 改动，实施前须确认工作区基线 | Orchestrator | 启动前核对 | 待核对 |
+| DEP-03 | 依赖 | 主工作区有 `docs/development/delivery/completed/US-001/` 的未提交 Planner 改动，实施前须确认工作区基线 | Orchestrator | 启动前核对 | 待核对 |
 | OQ-01 | 已裁决 | 本 Story 与 US-004 的实施顺序：**先 A 后 B**（Spec 建议）还是**先 B 后 A**（可消除 AC-16 的临时隐藏态、少一次返工） | Human | 给出顺序决定 | ✅ 已裁决（2026-11-05 Human，2026-11-05 PM 经 Human 复核确认）：**US-004 先实施，本 Story 随后**。因此 AC-16 的 `lastExecutedAt` Chip 可直接显示，不做「先隐藏后补」 |
 | OQ-02 | 假设 | 「1440×900 不滚动」这类结果性标准不锁像素，允许实现调整间距 | PM / Planner | 实施时确认 | 依 Spec §10 R-6 |
 | OQ-03 | 待决策 | `?record=` 未命中时的 `pageSize=100` 上限是否可接受（超出 100 条即失配） | Human | 接受现状或批准 P1-4 的单条端点 | 待确认；Spec R-8 已登记该风险并明确本次不做 P1-4 |

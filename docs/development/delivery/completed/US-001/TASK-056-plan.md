@@ -6,7 +6,7 @@ Status：Completed
 
 Owner：Planner（规划）→ Implementer（2026-11-04 实施，`6f4b491`）→ Reviewer（`Pass with issues`，`31b516e`）→ Human（2026-11-04 结案）
 
-Related Task：[TASK-056](./TASK-056.md)；所属 [US-001](../../requirements/stories/active/US-001-cron-worker-health-and-data-completeness.md)。
+Related Task：[TASK-056](./TASK-056.md)；所属 [US-001](../../../requirements/stories/active/US-001-cron-worker-health-and-data-completeness.md)。
 
 Branch / Base：从 `main` 的 `dc4b15a` 新建 `feature/TASK-056`，在**独立 worktree** 中实施（不占用主工作区）。规划期只读基线为 `chore/agent-rules-refactor` @ `2bde913`，该提交是当前 `main` 的祖先，且 `git diff 2bde913..main` 对本卡目标文件（`design-tokens.js`、`CronStatus/`、`priceDisplay.js`）无差异——规划期结论仍成立。
 
@@ -58,7 +58,7 @@ components/CronStatus/statusTone.js 维护ok/warn/bad/unknown到token、文字�
 
 ## 7. Verification
 
-以下为未来验收设计，未运行。适用命令入口见 [DEPLOYMENT §7](../../../handbook/ops/DEPLOYMENT.md)，不以历史数量作为预期。每条AC均有映射：
+以下为未来验收设计，未运行。适用命令入口见 [DEPLOYMENT §7](../../../../handbook/ops/DEPLOYMENT.md)，不以历史数量作为预期。每条AC均有映射：
 
 | Task AC | 验证方法与期望 |
 |---|---|
@@ -83,7 +83,7 @@ components/CronStatus/statusTone.js 维护ok/warn/bad/unknown到token、文字�
 
 ### 10.1 启动核对结果（2026-11-04，Orchestrator）
 
-依据：Human 指示「先完成 056」；状态权限见 [STATES.md §4](../../../os/process/STATES.md#4-谁可以改变状态)。本节为只读核对记录。
+依据：Human 指示「先完成 056」；状态权限见 [STATES.md §4](../../../../os/process/STATES.md#4-谁可以改变状态)。本节为只读核对记录。
 
 **结论：设计有效，AC1～AC9 可独立实施，无硬阻塞。发现一处真实缺口（图例无预置插槽），处置方案见下，不阻塞。**
 
@@ -97,7 +97,7 @@ components/CronStatus/statusTone.js 维护ok/warn/bad/unknown到token、文字�
 | AC8 基线 | 全仓 `colors.up\|colors.down` 消费方 **7 文件 13 处**：`priceDisplay.js`(3)、`Asset/AssetDetail.jsx`(2)、`Asset/AssetList.jsx`(1)、`Portfolio/KpiCards.jsx`(2)、`Portfolio/PositionOverview.jsx`(1)、`Account.jsx`(1)、`AccountUsers.jsx`(3)。**卡 §2 的清单少了账号页 2 个文件**（TASK-058 引入，用 `down` 绿表示"成功/启用"）→ AC8 前后对照须按 **7 文件**集合，且**不得**改账号页。 |
 | AC7 对比度预核 | 候选色静态计算（WCAG 公式，白底 `#FFFFFF`）：`#166534` 7.13:1 · `#854D0E` 6.85:1 · `#B91C1C` 6.47:1 · `#475569` 7.58:1，**均 ≥ 4.5:1**。⚠️ 这是公式计算**不是浏览器实测**，不能替代 AC7 的实测记录。 |
 | AC2 取色前提 | 卡 §2 称"Tailwind v4 编译为 `oklch()`"，但 `design-tokens.js` 是**普通 JS 导出的 hex 字面量**、组件用 inline style。`getComputedStyle` 取色仍应遵守（浏览器会归一化），但风险描述的前提在本卡目标文件上不成立。 |
-| 验证入口 | [DEPLOYMENT §7](../../../handbook/ops/DEPLOYMENT.md#7-验证与测试命令)：`cd client && npm run build && npm run lint`。`client/package.json` 有 `build`/`lint`，**无 `test`**；`node_modules/.bin/eslint` 为 v9.39.5；`playwright-core` 可解析。以上只证明工具可达，**不证明任何验证已通过**。 |
+| 验证入口 | [DEPLOYMENT §7](../../../../handbook/ops/DEPLOYMENT.md#7-验证与测试命令)：`cd client && npm run build && npm run lint`。`client/package.json` 有 `build`/`lint`，**无 `test`**；`node_modules/.bin/eslint` 为 v9.39.5；`playwright-core` 可解析。以上只证明工具可达，**不证明任何验证已通过**。 |
 
 ### 10.2 ⚠️ 发现的缺口：图例没有预置插槽
 
@@ -321,7 +321,7 @@ $ cd client && ../node_modules/.bin/eslint "src/**/*.{js,jsx}"
 | 状态流转 | `Draft` → `Approved`（2026-11-04）→ `Implementing`（计划推进）→ `Completed`（2026-11-04） |
 | 合入 | **`Merged`** —— `53edb8e` `Merge branch 'feature/TASK-056' into main`（`git merge-base --is-ancestor 31b516e main` = 是） |
 
-### 13.2 DoD 逐条（[DEFINITION_OF_DONE](../../../os/process/DEFINITION_OF_DONE.md) §3）
+### 13.2 DoD 逐条（[DEFINITION_OF_DONE](../../../../os/process/DEFINITION_OF_DONE.md) §3）
 
 | # | 要求 | 结论 |
 |---|---|---|
@@ -347,4 +347,4 @@ $ cd client && ../node_modules/.bin/eslint "src/**/*.{js,jsx}"
 
 ### 13.5 过程目录处置
 
-按 [DOCS.md §1.1](../../../os/standards/DOCS.md#11-story-交付目录与文档生命周期)，本卡与计划**留在** `development/delivery/US-001/`，待 Human 关闭 US-001 后整体归档。
+按 [DOCS.md §1.1](../../../../os/standards/DOCS.md#11-story-交付目录与文档生命周期)，本卡与计划**留在** `development/delivery/US-001/`，待 Human 关闭 US-001 后整体归档。

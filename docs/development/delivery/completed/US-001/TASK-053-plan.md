@@ -6,7 +6,7 @@ Status：Completed
 
 Owner：Implementer（2026-10-30 实施）→ Reviewer（2026-10-31 复检 `Pass with issues`）→ Human（2026-11-04 确认完成并合入）
 
-Related Task：[TASK-053](./TASK-053.md)；所属 [US-001](../../requirements/stories/active/US-001-cron-worker-health-and-data-completeness.md)。
+Related Task：[TASK-053](./TASK-053.md)；所属 [US-001](../../../requirements/stories/active/US-001-cron-worker-health-and-data-completeness.md)。
 
 Branch / Base：实施工作区 `D:/projects/portomind`，分支 `feature/TASK-053`，基线提交 `6e013d7`（= 本地 `main` = `origin/main`，含 PR #40）。**2026-11-04 已通过 PR #41 合入 `main`（merge commit `ecd9314`）。** 计划 §10.1 记录的 6 份文件 SHA256 在实施前逐一复核，**全部一致**（`LogViewer.jsx` 9dbe0c12… / `api.js` 705d0376… / `log.service.js` 998017ec… / `router.jsx` 1a28a6a8… / `Sidebar.jsx` b7351b42… / `client/package.json` 3a575006…）。
 
@@ -16,9 +16,9 @@ Branch / Base：实施工作区 `D:/projects/portomind`，分支 `feature/TASK-0
 
 Approval：2026-10-30，Human 在本 chat 明确：“我批准 TASK-053 当前 Draft 的设计，批准范围仅限 TASK-053，不包含其他任务或 D-01～D-04 的待决方案。”本记录由 Orchestrator 按该 Human 决定登记 Draft → Approved，不是 Orchestrator 自行批准。批准的 §1～§9 设计未改变；其 UTF-8/LF 摘要 SHA256 为 422ceff1f595304fa87c767b1f74eb669eae08bbabe58cfdb1f27ab9df2c20be。Approved 不代表已经启动实施。
 
-实施开始：2026-10-30，Implementer 按本计划 §10 交接实际开始，计划由 Approved 登记为 Implementing（依据 [STATES.md](../../../os/process/STATES.md) §4：计划实施推进归 Implementer）。进度与证据见 §11。
+实施开始：2026-10-30，Implementer 按本计划 §10 交接实际开始，计划由 Approved 登记为 Implementing（依据 [STATES.md](../../../../os/process/STATES.md) §4：计划实施推进归 Implementer）。进度与证据见 §11。
 
-**结案：2026-11-04**，Human 确认完成并合入 `main`（PR #41 / `ecd9314`）；计划由 Implementing 登记为 **Completed**，依据 [STATES.md](../../../os/process/STATES.md) §3「Completed：计划工作完成，验证与审查记录齐全」。结案记录见 §13。
+**结案：2026-11-04**，Human 确认完成并合入 `main`（PR #41 / `ecd9314`）；计划由 Implementing 登记为 **Completed**，依据 [STATES.md](../../../../os/process/STATES.md) §3「Completed：计划工作完成，验证与审查记录齐全」。结案记录见 §13。
 
 ## 1. Intent
 
@@ -55,7 +55,7 @@ Approval：2026-10-30，Human 在本 chat 明确：“我批准 TASK-053 当前 
 
 ## 7. Verification
 
-以下为未来验收设计，未运行。适用命令入口见 [DEPLOYMENT §7](../../../handbook/ops/DEPLOYMENT.md)，不以历史数量作为预期。每条AC均有映射：
+以下为未来验收设计，未运行。适用命令入口见 [DEPLOYMENT §7](../../../../handbook/ops/DEPLOYMENT.md)，不以历史数量作为预期。每条AC均有映射：
 
 | Task AC | 验证方法与期望 |
 |---|---|
@@ -89,7 +89,7 @@ URL同步死循环、残留query覆盖原日志选择、组件重构引起分页
 | 相关源码 | 已只读查看 LogViewer.jsx、log.service.js、router.jsx 与 client/package.json：原页面仍为 server/task 两视图、使用局部 state；日志调用为 GET，/logs 路由存在，CronStatus 组件目录尚不存在。相关目标文件的 git status 无改动输出。LogViewer.jsx、api.js 的 SHA256 与 Planner §2 指纹一致。 |
 | 依赖与范围 | 053 只交付 URL tab、未知骨架和原日志隔离；不调用 /cron/status，不实现真实数据、比例、状态色或 lastSkip，因此 D-01～D-04、055/056/057/063/064 不构成本卡骨架实施的硬前置。后续接入仍须其各自批准，不能借本批准实施。054 的既有完成与合入记录未动。 |
 | 验证要求 | 已核对 Task §3 与本计划 §7 的八项 AC 映射：URL/历史、五灯五卡未知态、原日志改前后对照、只读负向检查、错误隔离及 client build/lint。当前 client manifest 有 build/lint 入口，没有 test 脚本；vite、eslint、playwright-core 与 Chrome 文件存在，仅证明工具路径可找到，不证明验证已通过。未启动服务、浏览器或数据库，未运行应用测试/build/lint。 |
-| 工作区与分支 | 当前真实源码目录处于 chore/agent-rules-refactor，存在多项无关未提交修改（含 client/scripts/e2e-task-058-u2.mjs、package.json、scripts/sync-db.cjs 及旧文档）。feature/TASK-053 引用检查退出码为1；worktree清单仅有D:/projects/portomind，feature/TASK-053*本地分支列表为空，没有已建立的本任务独立检出目录。按 [GIT.md](../../../os/standards/GIT.md) 和根 AGENTS.md 的分支要求，不能把该共享目录登记为已就绪的实施工作区。不得清理、覆盖或提交这些既有修改。 |
+| 工作区与分支 | 当前真实源码目录处于 chore/agent-rules-refactor，存在多项无关未提交修改（含 client/scripts/e2e-task-058-u2.mjs、package.json、scripts/sync-db.cjs 及旧文档）。feature/TASK-053 引用检查退出码为1；worktree清单仅有D:/projects/portomind，feature/TASK-053*本地分支列表为空，没有已建立的本任务独立检出目录。按 [GIT.md](../../../../os/standards/GIT.md) 和根 AGENTS.md 的分支要求，不能把该共享目录登记为已就绪的实施工作区。不得清理、覆盖或提交这些既有修改。 |
 
 本轮输入指纹（SHA256，仅固定读取对象，不是测试证据）：
 
@@ -109,7 +109,7 @@ URL同步死循环、残留query覆盖原日志选择、组件重构引起分页
 - 文档与状态登记目录：当前 portomind20261030 副本；任务需求见 [TASK-053](./TASK-053.md)，批准的实现设计与验证要求见本计划 §4～§7。源码来源已确认是 D:/projects/portomind，但该目录不是已获准使用的独立实施工作区。
 - 待交角色：Implementer；当前 Owner 仍待指派，没有实际开发会话已接手。Reviewer 另行独立安排，不能由本次实现者自审。
 - 写入边界：仅 Task Scope 与计划 §4/§5 的客户端文件；不改侧栏、server/shared/worker、调度或结果契约，不实施其他任务或 D-01～D-04 的推荐方案。AC、范围或重大设计有变化时先回交，不以本批准覆盖新设计。
-- 首先保留原日志筛选、分页与日期的可重复行为对照，再实现；交付文件清单/版本、AC1～AC8 结果、负向检查、实际 build/lint 证据、妥协与未验证项。验证命令入口引用 [DEPLOYMENT §7](../../../handbook/ops/DEPLOYMENT.md#7-验证与测试命令)，历史运行结果不代替本次验证。
+- 首先保留原日志筛选、分页与日期的可重复行为对照，再实现；交付文件清单/版本、AC1～AC8 结果、负向检查、实际 build/lint 证据、妥协与未验证项。验证命令入口引用 [DEPLOYMENT §7](../../../../handbook/ops/DEPLOYMENT.md#7-验证与测试命令)，历史运行结果不代替本次验证。
 
 ### 10.3 剩余启动动作
 
@@ -128,7 +128,7 @@ URL同步死循环、残留query覆盖原日志选择、组件重构引起分页
 | 分支 / 基线 | `feature/TASK-053` @ `6e013d7`（= 本地 `main` = `origin/main`，含 PR #40） |
 | 起始工作树 | 干净（`git status --porcelain` 空）→ 不存在需要保留的他人未提交改动 |
 | 文件指纹核对 | 计划 §10.1 的 6 份 SHA256 **全部一致**（LogViewer / api.js / log.service.js / router.jsx / Sidebar.jsx / client package.json）→ 批准设计所依据的源码未被改动 |
-| 计划状态推进 | `Approved` → `Implementing`（依据 [STATES.md](../../../os/process/STATES.md) §4：计划实施推进归 Implementer） |
+| 计划状态推进 | `Approved` → `Implementing`（依据 [STATES.md](../../../../os/process/STATES.md) §4：计划实施推进归 Implementer） |
 
 **边界遵守**：只改 `client/` 前端；未动 `server/` `shared/` `cron-worker/`、未动侧栏、未动两个日志接口、未创建 `/logs/rebalance`；未实施 TASK-055/056/057/063/064 或 D-01～D-04。
 
@@ -428,7 +428,7 @@ git add -n client/src/components/Logs/
 
 **Fail** — AC5 不满足（F-02，MAJOR），且存在交付阻断（F-01，BLOCKER）。
 
-不满足 `Pass`（AC 未全部满足）与 `Pass with issues`（存在 BLOCKER 与未整改的 MAJOR）。按 [REVIEWER.md](../../../os/roles/REVIEWER.md) §5.1，BLOCKER 不得据此通过或合入。
+不满足 `Pass`（AC 未全部满足）与 `Pass with issues`（存在 BLOCKER 与未整改的 MAJOR）。按 [REVIEWER.md](../../../../os/roles/REVIEWER.md) §5.1，BLOCKER 不得据此通过或合入。
 
 ### 12.8 交回 Orchestrator 的事项
 
@@ -436,7 +436,7 @@ git add -n client/src/components/Logs/
 2. **F-02（MAJOR）**：退回 Implementer，修复筛选条件跨视图保持，并扩充对照断言；修复后需重新独立复核该条。
 3. **F-03（MINOR）**：由 Orchestrator 决定补写计划 §10.4 或修正 Task 卡引用。
 4. **F-04 / F-05（MINOR）**：记录为残余风险，由 Orchestrator 决定是否纳入后续任务。
-5. 按 [STATES.md](../../../os/process/STATES.md) §4，Task 现处 `Implementing`，**尚未满足进入 `Reviewing` 的条件**（实施者未登记交付、本轮审查已给出 Fail）。是否登记 `Reviewing`、返工回 `Implementing`，由 Orchestrator 依权限处理。
+5. 按 [STATES.md](../../../../os/process/STATES.md) §4，Task 现处 `Implementing`，**尚未满足进入 `Reviewing` 的条件**（实施者未登记交付、本轮审查已给出 Fail）。是否登记 `Reviewing`、返工回 `Implementing`，由 Orchestrator 依权限处理。
 6. 本轮**未**修改 AC / Scope / 业务代码 / Status / 合入状态；**未** git add / commit / push；**未**关闭 Task、Story 或计划。
 
 ### 12.9 Reviewer 复检记录（2026-10-31，复检）
@@ -526,7 +526,7 @@ git add -n client/src/components/Logs/
 | 验证证据 | `e2e-task-053-verify` 33/33、`e2e-task-053-f02` 7/7、build exit 0、eslint 0-0、`check:ignored` PASS（§11.3 / §11.8；提交后复验见任务卡完成记录） |
 | 状态流转 | `Draft` → `Approved`（2026-10-30）→ `Implementing`（2026-10-30）→ `Completed`（2026-11-04） |
 
-### 13.2 DoD 逐条（[DEFINITION_OF_DONE](../../../os/process/DEFINITION_OF_DONE.md) §3）
+### 13.2 DoD 逐条（[DEFINITION_OF_DONE](../../../../os/process/DEFINITION_OF_DONE.md) §3）
 
 | # | 要求 | 结论 |
 |---|---|---|
@@ -549,6 +549,6 @@ git add -n client/src/components/Logs/
 
 ### 13.4 过程目录处置
 
-按 [DOCS.md §1.1](../../../os/standards/DOCS.md#11-story-交付目录与文档生命周期)：「单个 Task 或计划完成只更新其字段与记录，**仍留在 Story 目录内，不提前单独移出**」。故本卡与计划**保持在** `development/delivery/US-001/`，待 Human 关闭 US-001 后随过程目录整体归档。
+按 [DOCS.md §1.1](../../../../os/standards/DOCS.md#11-story-交付目录与文档生命周期)：「单个 Task 或计划完成只更新其字段与记录，**仍留在 Story 目录内，不提前单独移出**」。故本卡与计划**保持在** `development/delivery/US-001/`，待 Human 关闭 US-001 后随过程目录整体归档。
 
 ---

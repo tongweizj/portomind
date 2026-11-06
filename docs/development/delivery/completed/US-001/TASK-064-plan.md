@@ -6,7 +6,7 @@ Status：Completed（2026-11-05，审查通过后结案）
 
 Owner：Planner（规划）→ Implementer（2026-11-05 实施，`de045af`）→ Reviewer（`Pass with issues`，`b23abb9`）→ Human（2026-11-05 确认）
 
-Related Task：[TASK-064](./TASK-064.md)；所属 [US-001](../../requirements/stories/active/US-001-cron-worker-health-and-data-completeness.md)。
+Related Task：[TASK-064](./TASK-064.md)；所属 [US-001](../../../requirements/stories/active/US-001-cron-worker-health-and-data-completeness.md)。
 
 Branch / Base：实施时从 up-to-date `main` 新建 `feature/TASK-064` 独立 worktree（沿 053/056 惯例）。**实施前置（串行，衔接 057 W5）**：`TASK-057` 合入 `main` 后启动——`shared/models/taskSkip.js` 与真实 `result` 写入是本卡的读取对象。规划期基线为 2026-11-05 的 `main`；目标文件 `shared/services/cronStatus.service.js` SHA256 `27a3cc56…` 与规划期记录一致（057 是写侧、文件零重叠，未触碰本卡目标）。
 
@@ -57,7 +57,7 @@ Approval：**2026-11-05，Human 明确「批准 task064」，据此登记 Draft 
    - 信封每任务新增**可选** `lastSkip: {taskName, runKey, reason, skippedAt, trigger} | null`；`lastRun` 照旧来自 TaskRun，`lastSkip` **不替换、不覆盖**、不冒充成功结果；不改任何正在跑的记录（只读）。
    - 无集合/无记录 → `lastSkip: null` 并兼容（063 按「有则展示、无则省略」）。错误处理**精确**：只捕获「命名空间不存在」类明确错误（Mongo `NamespaceNotFound`/code 26）按无记录处理；其余 DB 错误**如实抛出**，不吞成正常（§8）。
 
-4. **查询预算（AC5）**：主视图聚合查询 **+1**（批量 skip 查询，一次拿五项）；写入 [API_CONTRACT.md](../../../handbook/technical/API_CONTRACT.md) 与 §11 实测记录；detail、错误参数（`detail?/date?/portfolioId?`）、五任务顺序、既有字段、价格目标日/`timezone` 语义**零回归**。仅 GET 只读，不触发任务、不写任何集合；不自动创建集合/索引（创建归 057）。
+4. **查询预算（AC5）**：主视图聚合查询 **+1**（批量 skip 查询，一次拿五项）；写入 [API_CONTRACT.md](../../../../handbook/technical/API_CONTRACT.md) 与 §11 实测记录；detail、错误参数（`detail?/date?/portfolioId?`）、五任务顺序、既有字段、价格目标日/`timezone` 语义**零回归**。仅 GET 只读，不触发任务、不写任何集合；不自动创建集合/索引（创建归 057）。
 
 5. **文档同步（AC5/卡片 Scope）**：`API_CONTRACT.md` 补 `lastSkip` 可选字段、FX 判级语义、再平衡判级语义、查询预算 +1；`DATA_MODEL.md` 补 `taskskips` 读取口径与 `result` 契约引用（写侧定义归 057 的 `CRON_WORKER_DEV.md §5`，此处只链接不复制）。
 
@@ -86,7 +86,7 @@ Approval：**2026-11-05，Human 明确「批准 task064」，据此登记 Draft 
 
 ## 7. Verification
 
-以下为未来验收设计，未运行；命令入口见 [DEPLOYMENT §7](../../../handbook/ops/DEPLOYMENT.md)，不以历史数量为预期。stub 单测只证明读侧映射；**真实持久化证据由 057 提供**，读侧 stub 不得冒充写侧证据（AC6）。每条 AC 映射：
+以下为未来验收设计，未运行；命令入口见 [DEPLOYMENT §7](../../../../handbook/ops/DEPLOYMENT.md)，不以历史数量为预期。stub 单测只证明读侧映射；**真实持久化证据由 057 提供**，读侧 stub 不得冒充写侧证据（AC6）。每条 AC 映射：
 
 | Task AC | 验证方法与期望 |
 |---|---|
@@ -121,12 +121,12 @@ Approval：**2026-11-05，Human 明确「批准 task064」，据此登记 Draft 
 - **Task / AC**：[TASK-064](./TASK-064.md) §3，AC1～AC6 逐条对照。
 - **契约基准**：[TASK-057 计划 §4 冻结样例 S1～S10](./TASK-057-plan.md) + 4 条兼容说明；落地形态与样例不符时**停下上报**。
 - **改动边界**：`shared/services/cronStatus.service.js`、`shared/services/fxRate.service.js`（**仅**加 `SUPPORTED_CURRENCIES` 导出）、`server/test/integration/*`、`docs/handbook/technical/API_CONTRACT.md` / `DATA_MODEL.md`；**读** `shared/models/taskSkip.js`（057 所有，不改）。不改 `cron-worker/`、任务执行、汇率采集规则、路由与认证。
-- **验证入口**：[DEPLOYMENT §7](../../../handbook/ops/DEPLOYMENT.md)；查询预算与真实 Mongo 联调结果记 §11。
+- **验证入口**：[DEPLOYMENT §7](../../../../handbook/ops/DEPLOYMENT.md)；查询预算与真实 Mongo 联调结果记 §11。
 - **回交要求**：文件清单与 SHA256、AC 逐条实测、负向对照、查询预算前后对比、detail 回归结果、妥协与未验证项写 §11。
 
 ### 10.1 启动核对结果（2026-11-05，Orchestrator）
 
-依据：Human 指示「批准 task064」；状态权限见 [STATES.md §4](../../../os/process/STATES.md#4-谁可以改变状态)。
+依据：Human 指示「批准 task064」；状态权限见 [STATES.md §4](../../../../os/process/STATES.md#4-谁可以改变状态)。
 
 **结论：设计有效，F1～F7 缺陷经 Orchestrator 亲读逐一核实属实（含行号）；但 W0 前置未满足——057 未合入 `main`，本卡不可开工。**
 
@@ -350,7 +350,7 @@ detail=rebalance：
 | 状态流转 | `Draft` → `Approved`（2026-11-05）→ `Implementing` → `Reviewing` → `Completed`（2026-11-05） |
 | 合入 | **`Merged`** —— merge commit `cde811f`（2026-11-05 22:44），分支 tip `b23abb9` |
 
-### 13.2 DoD 逐条（[DEFINITION_OF_DONE](../../../os/process/DEFINITION_OF_DONE.md) §3）
+### 13.2 DoD 逐条（[DEFINITION_OF_DONE](../../../../os/process/DEFINITION_OF_DONE.md) §3）
 
 | # | 要求 | 结论 |
 |---|---|---|
@@ -384,4 +384,4 @@ detail=rebalance：
 
 ### 13.6 过程目录处置
 
-按 [DOCS.md §1.1](../../../os/standards/DOCS.md#11-story-交付目录与文档生命周期)，本卡与计划**留在** `development/delivery/US-001/`，待 Human 关闭 US-001 后整体归档。
+按 [DOCS.md §1.1](../../../../os/standards/DOCS.md#11-story-交付目录与文档生命周期)，本卡与计划**留在** `development/delivery/US-001/`，待 Human 关闭 US-001 后整体归档。

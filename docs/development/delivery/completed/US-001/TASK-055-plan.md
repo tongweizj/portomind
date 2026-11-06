@@ -6,7 +6,7 @@ Status：Completed
 
 Owner：Planner（规划）→ Implementer（2026-11-04 实施，`3991df8`）→ Reviewer（`Pass with issues`，`0f697fd`）→ Human（2026-11-04 结案）
 
-Related Task：[TASK-055](./TASK-055.md)；所属 [US-001](../../requirements/stories/active/US-001-cron-worker-health-and-data-completeness.md)。
+Related Task：[TASK-055](./TASK-055.md)；所属 [US-001](../../../requirements/stories/active/US-001-cron-worker-health-and-data-completeness.md)。
 
 Branch / Base：从 `main` 的 `53edb8e` 新建 `feature/TASK-055`，在**独立 worktree** 中实施。规划期只读基线为 `chore/agent-rules-refactor` @ `2bde913`（该提交是 `main` 祖先）。**关键前置已就绪**：`TASK-056` 的 `status*` token 与 `statusTone.js` 已随 `53edb8e` 合入 `main`，AC2 可直接引用。
 
@@ -60,7 +60,7 @@ missing列表按symbol/name/market展示和折叠；缺失总数用实际数组�
 
 ## 7. Verification
 
-以下为未来验收设计，未运行。适用命令入口见 [DEPLOYMENT §7](../../../handbook/ops/DEPLOYMENT.md)，不以历史数量作为预期。每条AC均有映射：
+以下为未来验收设计，未运行。适用命令入口见 [DEPLOYMENT §7](../../../../handbook/ops/DEPLOYMENT.md)，不以历史数量作为预期。每条AC均有映射：
 
 | Task AC | 验证方法与期望 |
 |---|---|
@@ -91,7 +91,7 @@ missing列表按symbol/name/market展示和折叠；缺失总数用实际数组�
 
 ### 10.1 启动核对结果（2026-11-04，Orchestrator）
 
-依据：Human 指示「完成合并了！现在开始 055」；状态权限见 [STATES.md §4](../../../os/process/STATES.md#4-谁可以改变状态)。
+依据：Human 指示「完成合并了！现在开始 055」；状态权限见 [STATES.md §4](../../../../os/process/STATES.md#4-谁可以改变状态)。
 
 **结论：设计有效，AC1～AC11 可实施，无硬阻塞。**
 
@@ -104,7 +104,7 @@ missing列表按symbol/name/market展示和折叠；缺失总数用实际数组�
 | 数据契约（实测） | 价格 `dataState` = `{ targetMarketDate, calendarPrevOpenDay, expected, fetched, missing[], byMarket, notListed, unsupportedMarkets, dayPriceSymbolCount }`；外层 `dataStateLevel`（ok/warn/bad/unknown）、`contractReady`（价格恒 `true`）。**无 `percentage` 字段**，`dataState` 恒为对象不会 `null` |
 | AC6 依据 | 接口无百分比 → 前端必须算；D-04 已裁决允许**唯一一处**纯展示 helper |
 | AC8 分层 | 单端点返回五卡数据 → ①整体失败归 `TASK-063`；②单卡数据异常归本卡 |
-| 验证入口 | [DEPLOYMENT §7](../../../handbook/ops/DEPLOYMENT.md#7-验证与测试命令)：`cd client && npm run build && npm run lint`。`client` 无 `test` 脚本；eslint v9.39.5 |
+| 验证入口 | [DEPLOYMENT §7](../../../../handbook/ops/DEPLOYMENT.md#7-验证与测试命令)：`cd client && npm run build && npm run lint`。`client` 无 `test` 脚本；eslint v9.39.5 |
 
 ### 10.2 已准备、尚未派发的交接
 
@@ -319,7 +319,7 @@ $ cd client && ../node_modules/.bin/eslint "src/**/*.{js,jsx}"
 | 状态流转 | `Draft` → `Approved`（2026-11-04）→ `Implementing` → `Reviewing` → `Completed`（2026-11-04） |
 | 合入 | **`Merged`** —— Fast-forward，分支 tip `83e9971`（无 merge commit；2026-11-04 23:31） |
 
-### 13.2 DoD 逐条（[DEFINITION_OF_DONE](../../../os/process/DEFINITION_OF_DONE.md) §3）
+### 13.2 DoD 逐条（[DEFINITION_OF_DONE](../../../../os/process/DEFINITION_OF_DONE.md) §3）
 
 | # | 要求 | 结论 |
 |---|---|---|
@@ -355,4 +355,4 @@ $ cd client && ../node_modules/.bin/eslint "src/**/*.{js,jsx}"
 
 ### 13.6 过程目录处置
 
-按 [DOCS.md §1.1](../../../os/standards/DOCS.md#11-story-交付目录与文档生命周期)，本卡与计划**留在** `development/delivery/US-001/`，待 Human 关闭 US-001 后整体归档。
+按 [DOCS.md §1.1](../../../../os/standards/DOCS.md#11-story-交付目录与文档生命周期)，本卡与计划**留在** `development/delivery/US-001/`，待 Human 关闭 US-001 后整体归档。
