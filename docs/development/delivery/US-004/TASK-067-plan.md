@@ -171,6 +171,21 @@ Approval：**未批准**。本计划覆盖 §1～§9 当前设计；`Draft → A
 
 > 证据增强：计划 §11.6 写「未做真实浏览器 Network 面板截图（无后端运行环境）；AC-04 以静态证明」。本独立复核**已在真实浏览器用 stub API 实跑** `/portfolios` 并计数请求（AC-04 运行时验证成立），比 Implementer 自述证据更强；此为补强，不是缺陷。
 
+**复跑记录（2026-11-06，应用户「请再测一次」要求，独立第二遍完整执行）**：
+
+| 复跑项 | 结果 |
+|---|---|
+| 基线复核 | HEAD 由 `434a323` → `6e18de2`（本次 §12 结论已提交）；main 由 `96ff382` → `ca351b4`（Orchestrator 登记 066 交付/067 状态）；merge-base 仍 `96ff382`；`PortfolioCard/index.jsx` SHA256 仍 `f2704723…`（实现一字未变） |
+| D-02 前提复核 | `main` 与分支 HEAD **仍无** `driftLabels.js`；066 worktree 常量文案未变，逐字一致 4/4 PASS；组件 `:4-5` TODO 注释仍在 |
+| 065 不丢失复核 | `summary.js` 四字段 grep 5 处、`portfolio.summary.test.js` 345 行；`npm run test:server` **237/237**（065 无回归） |
+| `npm run build --workspace client` | `✓ built in 2.80s`，exit 0 |
+| `eslint "src/**/*.{js,jsx}"` | exit 0，0 error |
+| 真实浏览器 `/portfolios`（Chrome + Vite + stub API，独立重建探针） | **AC-04 运行时**：portfolios 请求 **count=1**（`/api/portfolios/summary?includeArchived=false`），无新增子请求、无 pageerror，页面渲染四格与「2 条待确认 / 1 条未读」 |
+| 自建浏览器探针（重建、临时、已删） | **19/19 PASS**（与首遍逐项一致，非 flaky） |
+| 正确范围 / 禁改 / 零请求 / 暂无 | 与首遍一致：3 文件、无 shared/server/cron-worker、组件无 fetch/axios/useQuery、PortfolioCard 无「暂无」 |
+
+复跑结论：**所有证据稳定复现，判定不变（Pass with issues）**。另如实记录：main 上存在 `974a3f6 docs(us-004): close TASK-067 as Completed (Merged: Pending)` 等状态登记提交，属 Orchestrator/Human 职权，**非本 Reviewer 所为**；本复核全程未改 Task Status、未标 Completed、未合入。
+
 ### 12.3 AC 逐条判定（AC-17 / AC-18）
 
 | AC | 判定 | 独立实测证据 |
