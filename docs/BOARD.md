@@ -25,7 +25,7 @@
 | [TASK-065](./development/delivery/US-004/TASK-065.md) | `summary` 四字段 | AC-01～04、AC-14 | **Completed** | — | **已结案（2026-11-06，Human 确认验收通过）**：分支 `feature/TASK-065` @ `5f807a3`（原 `8fde289` rebase）；Reviewer `Pass with issues`、无 BLOCKER，AC-01~04 与 AC-14 全满足。**`Merged` = `6f556aa`**（2026-11-06 `Merge branch 'feature/TASK-065' into main`；`merge-base --is-ancestor 5f807a3 main` = 是）。066/067 可解除降级态；068 前置已随本卡合入解除 | [Completed](./development/delivery/US-004/TASK-065-plan.md) |
 | [TASK-066](./development/delivery/US-004/TASK-066.md) | Dashboard 健康表 + 分币种小计 | AC-05～13 | Implementing | Implementer B | **拥有 `driftLabels.js`**（D-02）：先建纯常量文件并尽早合入 main 供 067 消费。065 未合入则用降级态开发，AC-02/AC-04 标注待补验。worktree `portomind-066` | [Approved](./development/delivery/US-004/TASK-066-plan.md) |
 | [TASK-067](./development/delivery/US-004/TASK-067.md) | `PortfolioCard` 四格 | AC-17、AC-18 | **Reviewing** | Reviewer（待指派） | **已交付转 `Reviewing`（2026-11-06，Implementer C）**：提交 `8141275`。⚠️ **分支基于旧 main（不含 065 合入 `6f556aa`）**，评审/合入前须先 `git merge main` 到当前 main，否则会回退 065 字段/测试与文档（双向 diff 假象）。零请求零服务端，四格同源。worktree `portomind-067` | [Approved](./development/delivery/US-004/TASK-067-plan.md) |
-| [TASK-068](./development/delivery/US-004/TASK-068.md) | 删除组合后事件查询层过滤 | AC-19、AC-14 | **Implementing** | Implementer | **硬前置已解除**：065 已合入 `main`（`6f556aa`），`summary.js` 同改冲突不再。2026-11-06 计划经 Human 批准并登记 `Implementing`；worktree `portomind-068` @ `feature/TASK-068`（基线 `5083429`）。三处同源出口过滤；以符号名 `unreadAgg`/`getEvents`/`getUnreadCount` 为准，勿套旧行号 | [Approved](./development/delivery/US-004/TASK-068-plan.md) |
+| [TASK-068](./development/delivery/US-004/TASK-068.md) | 删除组合后事件查询层过滤 | AC-19、AC-14 | **Reviewing** | Reviewer（待指派） | **已交付转 `Reviewing`（2026-11-06）**：提交 `9c8c808`，7 文件 +247/−13；新增 `shared/services/alertVisibility.js` 单一查询层，`getEvents` / `getUnreadCount` / `unreadAgg` 三处同源过滤；Orchestrator 复跑 `test:server` **239/239**、`cron-worker` 零改动。硬前置（065 合入 `6f556aa`）已解除。交独立 Reviewer | [Approved](./development/delivery/US-004/TASK-068-plan.md)（§11 实施记录） |
 | [TASK-069](./development/delivery/US-004/TASK-069.md) | 契约文档同步 | AC-16 | 待登记 | 待指派 | 收尾：等 065+068 合入后，更新 `API_CONTRACT.md` 与 Spec 状态行 | [Draft](./development/delivery/US-004/TASK-069-plan.md) |
 
 > 派发依据：[US-004-04 派发记录](./development/delivery/US-004/US-004-04-dispatch-record-2026-11-06.md)；并行编排见 [US-004-02](./development/delivery/US-004/US-004-02-3card-parallel-plan.md)；三份 Implementer 提示词见 [US-004-prompts.md P-05/06/07](./development/delivery/US-004/US-004-prompts.md)。068 不得与 065 同时派发。
@@ -93,10 +93,10 @@
 |---|---:|---:|---:|---:|---:|---:|---:|
 | 全部已登记 Story（排除取消） | 2 | 0 | 1 | 0 | 0 | 0 | 1 |
 | US-001 已关联 Task（已归档，全 Completed） | 7 | 0 | 0 | 0 | 0 | 0 | 7 |
-| US-004 已关联 Task | 5 | 0 | 1 | 2 | 1 | 0 | 1 |
+| US-004 已关联 Task | 5 | 0 | 1 | 1 | 2 | 0 | 1 |
 | 尚未关联 Story 的未完成 Task | 5 | 1 | 4 | 0 | 0 | 0 | 0 |
 
-> 统计来自卡片；旧词按 STATES.md §7.1 映射，不证明当前实施授权。已关联任务不重复计入未关联任务。US-001 七张卡全部 `Completed` 并已合入 `main`、过程目录已归档；TASK-054 的既有 Completed 计为 1 个支撑任务完成，不表示 US-001 已验收（Story 另由 Human 关闭）。US-004 的 1 张 `Planning` 为 069（收尾，等 065+068 合入）；2 张 `Implementing` 为 066 与 068（068 硬前置已随 065 合入解除，2026-11-06 启动）；1 张 `Reviewing` 为 067（⚠️ 分支须先 rebase 到含 065 的当前 main 再评审）；1 张 `Completed` 为 065（`Merged`=`6f556aa`）。共 13 条历史完成记录保留作证据索引，与本 Story 进度不可相加。
+> 统计来自卡片；旧词按 STATES.md §7.1 映射，不证明当前实施授权。已关联任务不重复计入未关联任务。US-001 七张卡全部 `Completed` 并已合入 `main`、过程目录已归档；TASK-054 的既有 Completed 计为 1 个支撑任务完成，不表示 US-001 已验收（Story 另由 Human 关闭）。US-004 的 1 张 `Planning` 为 069（收尾，等 065+068 合入）；1 张 `Implementing` 为 066；2 张 `Reviewing` 为 067（⚠️ 分支须先 rebase 到含 065 的当前 main 再评审）与 068（2026-11-06 交付）；1 张 `Completed` 为 065（`Merged`=`6f556aa`）。共 13 条历史完成记录保留作证据索引，与本 Story 进度不可相加。
 
 ## Story Backlog
 
