@@ -393,7 +393,23 @@ async function integrityCheck(options = {}) {
     taskName: TASK_NAME,
     runKey,
     trigger,
-    execute: () => runIntegrityCheck(options)
+    execute: async () => {
+      const report = await runIntegrityCheck(options);
+      return {
+        ...report,
+        result: {
+          totals: report.totals,
+          checkedCount: report.checkedCount,
+          skippedCount: report.skippedCount,
+          completenessRatio: report.completenessRatio,
+          gapAssets: Array.isArray(report.assets)
+            ? report.assets
+              .filter((asset) => Number(asset.missingCount) > 0)
+              .map((asset) => ({ symbol: asset.symbol, missingCount: asset.missingCount }))
+            : []
+        }
+      };
+    }
   });
 }
 

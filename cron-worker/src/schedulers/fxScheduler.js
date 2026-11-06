@@ -13,16 +13,31 @@ const { marketDate } = require('@portomind/shared/utils/marketTime');
 const DEFAULT_FX_SYNC_CRON = '30 9 * * *';
 
 // runKey 保持与迁移前一致（daily:<调度时区当日日期>），避免 taskruns 历史断代。
-async function syncLatestRatesTracked() {
-  const timezone = resolveTimezone();
+async function syncLatestRatesTracked(options = {}) {
+  const timezone = options.timezone || resolveTimezone();
+  const trigger = options.trigger || 'SCHEDULED';
+  const runKey = options.runKey || `daily:${marketDate(new Date(), timezone)}`;
   return runTrackedTask({
     taskName: 'fx-rate-sync',
-    runKey: `daily:${marketDate(new Date(), timezone)}`,
-    trigger: 'SCHEDULED',
+    runKey,
+    trigger,
     execute: async () => {
-      const records = await syncLatestRates();
+      const records = await syncLatestRates(options.syncOptions || {});
       taskLogger.info('FX_SYNC_DONE', { count: records.length });
-      return { totalCount: 1, successCount: 1, failureCount: 0, fxCount: records.length };
+      const currencies = {};
+      for (const record of records || []) {
+        if (!record || !record.currency) continue;
+        currencies[record.currency] = {
+          ok: true,
+          rateToCny: Number(record.rateToCny)
+        };
+      }
+      return {
+        totalCount: 1,
+        successCount: 1,
+        failureCount: 0,
+        result: { fxCount: (records || []).length, currencies }
+      };
     }
   });
 }

@@ -11,6 +11,8 @@ const assert = require('node:assert');
 const Portfolio = require('@portomind/shared/models/portfolio');
 const TaskRun = require('@portomind/shared/models/taskRun');
 const ThresholdChecker = require('@portomind/shared/services/rebalance/thresholdChecker');
+const SuggestionGenerator = require('@portomind/shared/services/rebalance/suggestionGenerator');
+const AlertCenterService = require('@portomind/shared/services/alertCenter.service');
 const {
   runRebalanceCheck,
   isScheduleDue,
@@ -74,6 +76,9 @@ test('runRebalanceCheck：未到期组合（weekly 非周一）不执行', async
       { _id: PID_A, archived: false, rebalanceSettings: { rebalanceSchedule: 'weekly' } }
     ]
   }));
+  // TASK-057 D-03：父任务现在也会写 TaskRun；为保持原断言不变，仅补写库 mock（加法适配）
+  t.mock.method(TaskRun, 'create', async () => ({ _id: { toString: () => 'taskrun-fake-id' } }));
+  t.mock.method(TaskRun, 'updateOne', async () => ({}));
   const checkMock = t.mock.method(ThresholdChecker, 'checkThresholds', async () => ({
     needsRebalance: false
   }));
@@ -110,4 +115,59 @@ test('runRebalanceCheck：单个组合失败不中断其余组合', async (t) =>
   assert.equal(calls, 2, '第二个组合仍被执行');
   assert.equal(summary.failureCount, 1);
   assert.equal(summary.failures[0].message, 'boom');
+});
+
+test('runRebalanceCheck：父任务 result.perPortfolio 区分未到期 / 未超阈 / 生成建议', async (t) => {
+  const PID_C = '64b00000000000000000000c';
+  t.mock.method(Portfolio, 'find', () => ({
+    lean: async () => [
+      { _id: PID_A, archived: false, rebalanceSettings: { rebalanceSchedule: 'daily' } },
+      { _id: PID_B, archived: false, rebalanceSettings: { rebalanceSchedule: 'weekly' } },
+      { _id: PID_C, archived: false, rebalanceSettings: { rebalanceSchedule: 'daily' } }
+    ]
+  }));
+  t.mock.method(TaskRun, 'create', async () => ({ _id: { toString: () => 'taskrun-fake-id' } }));
+  const updates = [];
+  t.mock.method(TaskRun, 'updateOne', async (_filter, update) => { updates.push(update.$set); return {}; });
+  t.mock.method(ThresholdChecker, 'checkThresholds', async (pid) => ({
+    needsRebalance: pid === PID_C
+  }));
+  t.mock.method(SuggestionGenerator, 'getSuggestions', async () => ({
+    recordId: 'record-1',
+    suggestions: [{ symbol: 'AAA' }, { symbol: 'BBB' }]
+  }));
+  t.mock.method(AlertCenterService, 'notify', async () => ({}));
+
+  // 2026-10-20 为周二：weekly 的 PID_B 未到期
+  const summary = await runRebalanceCheck({ now: new Date('2026-10-20T14:00:00Z') });
+  const parentSet = updates.find((set) => set.taskName === 'rebalance-check');
+
+  assert.equal(summary.totalCount, 3);
+  assert.equal(summary.dueCount, 2);
+  assert.equal(summary.skippedCount, 1);
+  assert.equal(summary.failureCount, 0);
+  assert.ok(parentSet && parentSet.result, '父任务必须落 result');
+  assert.equal(parentSet.result.totalPortfolios, 3);
+  assert.equal(parentSet.result.dueCount, 2);
+  assert.equal(parentSet.result.skippedCount, 1);
+  assert.equal(parentSet.result.perPortfolio.length, 3);
+
+  const byId = new Map(parentSet.result.perPortfolio.map((item) => [item.portfolioId, item]));
+  const itemA = byId.get(PID_A);
+  const itemB = byId.get(PID_B);
+  const itemC = byId.get(PID_C);
+
+  // 未超阈：needsRebalance=false，且 suggestionsCount=0 / recordId=null
+  assert.equal(itemA.due, true);
+  assert.equal(itemA.needsRebalance, false);
+  assert.equal(itemA.suggestionsCount, 0);
+  assert.equal(itemA.recordId, null);
+  // 未到期：due=false，不猜 needsRebalance
+  assert.equal(itemB.due, false);
+  assert.equal(itemB.needsRebalance, null);
+  // 生成建议：recordId 非空且 suggestionsCount>0，与未超阈可区分
+  assert.equal(itemC.due, true);
+  assert.equal(itemC.needsRebalance, true);
+  assert.equal(itemC.suggestionsCount, 2);
+  assert.equal(itemC.recordId, 'record-1');
 });

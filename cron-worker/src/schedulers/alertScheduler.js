@@ -12,16 +12,28 @@ const { marketDate } = require('@portomind/shared/utils/marketTime');
 const DEFAULT_ALERT_EVAL_CRON = '0 4 * * *';
 
 // runKey 保持与迁移前一致（daily:<调度时区当日日期>），避免 taskruns 历史断代。
-async function evaluateAllTracked() {
-  const timezone = resolveTimezone();
+async function evaluateAllTracked(options = {}) {
+  const timezone = options.timezone || resolveTimezone();
+  const trigger = options.trigger || 'SCHEDULED';
+  const runKey = options.runKey || `daily:${marketDate(new Date(), timezone)}`;
   return runTrackedTask({
     taskName: 'alert-evaluate',
-    runKey: `daily:${marketDate(new Date(), timezone)}`,
-    trigger: 'SCHEDULED',
+    runKey,
+    trigger,
     execute: async () => {
-      const stats = await evaluateAll();
+      const stats = await evaluateAll(options.now ? { now: options.now } : undefined);
       taskLogger.info('ALERT_EVALUATE_DONE', stats);
-      return { totalCount: 1, successCount: 1, failureCount: 0, ...stats };
+      return {
+        totalCount: 1,
+        successCount: 1,
+        failureCount: 0,
+        result: {
+          evaluated: Number(stats.evaluated || 0),
+          created: Number(stats.created || 0),
+          archived: Number(stats.archived || 0),
+          failed: Number(stats.failed || 0)
+        }
+      };
     }
   });
 }

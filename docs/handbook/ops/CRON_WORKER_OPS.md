@@ -126,19 +126,27 @@ npm run check:integrity -- --dry-run                          # 只出预览报�
 
 ### 7.1 任务留痕位置
 
-- **结构化任务记录**：`taskruns` 集合（每类任务一行，含 status / 计数 / failures）。
+- **结构化任务记录**：`taskruns` 集合（每类任务一行，含 status / 计数 / failures / **result 摘要**）；防重跳过是独立事件，写在 `taskskips` 集合（TASK-057）。
 - **任务日志**：仓库根 `logs/task-YYYY-MM-DD.log`（按天切割，注意当天日期）。
 
 ### 7.2 常用巡检
 
 ```bash
-# 最近 10 条任务状态（应能观察到 5 类 taskName）
+# 最近 10 条任务状态（应能观察到 5 类业务任务 + rebalance-check 父任务）
 mongosh 'mongodb://127.0.0.1:27017/portomind_dev' \
   --eval 'db.taskruns.find({}, {taskName:1,status:1,startedAt:1,failureCount:1}).sort({startedAt:-1}).limit(10)'
 
 # 最近一次价格同步明细
 mongosh 'mongodb://127.0.0.1:27017/portomind_dev' \
   --eval 'db.taskruns.find({taskName:"daily-price-sync"}).sort({startedAt:-1}).limit(1)'
+
+# 最近一次父任务再平衡结果（TASK-057）
+mongosh 'mongodb://127.0.0.1:27017/portomind_dev' \
+  --eval 'db.taskruns.find({taskName:"rebalance-check"}).sort({startedAt:-1}).limit(1)'
+
+# 最近跳过事件（防重；不写 taskruns，TASK-057）
+mongosh 'mongodb://127.0.0.1:27017/portomind_dev' \
+  --eval 'db.taskskips.find().sort({skippedAt:-1}).limit(10)'
 
 # 最近一次健康检查报告
 tail -50 logs/task-$(TZ=America/Toronto date +%F).log | grep 'INTEGRITY_CHECK_END'
@@ -165,7 +173,7 @@ mongosh 'mongodb://127.0.0.1:27017/portomind_dev' \
 |---|---|
 | 启动无 `SCHEDULERS_STARTED` | 查看是否抛错 / `SCHEDULER_ENABLED=false` / `MONGO_URI` 未配或连不上 |
 | 任务「没跑」 | 先确认 worker 进程存活（`count:5`）；`server` 不跑定时任务，定时任务只在 cron-worker |
-| `SKIPPED` 状态 | 正常防重（已在跑 / 重复 runKey）；误起多实例时多余实例会得到 SKIPPED |
+| `SKIPPED`（`runTrackedTask` 返回值） | 正常防重（已在跑 / 重复 runKey）；**不写 `taskruns`**，事件查 `taskskips`；误起多实例时多余实例不会重复跑 |
 | 上游限流 / 超时 | `yahooFetcher` 自动回退域名 + 指数退避重试（最多 3 次）；批量回补调低 `--concurrency` |
 | CN 节假日错判 | `shared/config/markets.js` 的 `CN_HOLIDAYS` 是静态表，需逐年按交易所公告补充（2027+ 未维护） |
 | 价格日期错位 | 改 `MARKET_TIMEZONE` 会重排日期归桶，导致新旧数据边界错位，**改动前先评估** |

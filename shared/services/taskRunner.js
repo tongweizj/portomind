@@ -1,23 +1,54 @@
 const TaskRun = require('../models/taskRun');
+const TaskSkip = require('../models/taskSkip');
 const { taskLogger } = require('../config/logger');
 
 const activeTasks = new Map();
 
 function normalizeCounts(result = {}) {
-  return {
+  const normalized = {
     totalCount: Number(result.totalCount || 0),
     successCount: Number(result.successCount || 0),
     failureCount: Number(result.failureCount || 0),
     failures: Array.isArray(result.failures) ? result.failures : []
   };
+  // TASK-057（AC2）：只透传调用方**显式**包进 result 键的内容。
+  // 顶层裸字段（ok/gap/...）继续丢弃，白名单没有被改成全量透传。
+  if (Object.prototype.hasOwnProperty.call(result, 'result')) {
+    normalized.result = result.result;
+  }
+  return normalized;
+}
+
+/**
+ * TASK-057（D-01）：跳过事件写入独立 taskskips 集合。
+ * 不得因观测写入失败而放行业务或谎称可查询；失败只记受控日志 + skipPersisted=false。
+ */
+async function recordSkip({ taskName, runKey, trigger, reason, activeRunKey }) {
+  const payload = { taskName, runKey, trigger, reason, skippedAt: new Date() };
+  if (activeRunKey) payload.activeRunKey = activeRunKey;
+  try {
+    const doc = await TaskSkip.create(payload);
+    return { skipPersisted: true, skipId: doc && doc._id ? String(doc._id) : undefined };
+  } catch (error) {
+    taskLogger.error('TASK_SKIP_RECORD_FAILED', {
+      taskName,
+      runKey,
+      trigger,
+      reason,
+      message: error && error.message ? error.message : 'unknown'
+    });
+    return { skipPersisted: false };
+  }
 }
 
 async function runTrackedTask({ taskName, runKey, trigger = 'SCHEDULED', execute }) {
   if (activeTasks.has(taskName)) {
+    const activeRunKey = activeTasks.get(taskName);
     taskLogger.warn('TASK_SKIPPED_ALREADY_RUNNING', {
-      taskName, runKey, trigger, activeRunKey: activeTasks.get(taskName)
+      taskName, runKey, trigger, activeRunKey
     });
-    return { taskName, runKey, trigger, status: 'SKIPPED', reason: 'ALREADY_RUNNING' };
+    const persisted = await recordSkip({ taskName, runKey, trigger, reason: 'ALREADY_RUNNING', activeRunKey });
+    return { taskName, runKey, trigger, status: 'SKIPPED', reason: 'ALREADY_RUNNING', ...persisted };
   }
 
   activeTasks.set(taskName, runKey);
@@ -30,7 +61,8 @@ async function runTrackedTask({ taskName, runKey, trigger = 'SCHEDULED', execute
     } catch (error) {
       if (error && error.code === 11000) {
         taskLogger.warn('TASK_SKIPPED_DUPLICATE_RUN_KEY', { taskName, runKey, trigger });
-        return { taskName, runKey, trigger, status: 'SKIPPED', reason: 'DUPLICATE_RUN_KEY' };
+        const persisted = await recordSkip({ taskName, runKey, trigger, reason: 'DUPLICATE_RUN_KEY' });
+        return { taskName, runKey, trigger, status: 'SKIPPED', reason: 'DUPLICATE_RUN_KEY', ...persisted };
       }
       throw error;
     }
@@ -79,4 +111,4 @@ async function runTrackedTask({ taskName, runKey, trigger = 'SCHEDULED', execute
   }
 }
 
-module.exports = { runTrackedTask };
+module.exports = { runTrackedTask, normalizeCounts, recordSkip };
