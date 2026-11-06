@@ -14,6 +14,7 @@ const AlertEvent = require('../../models/alertEvent');
 const tracker = require('./positionTracker');
 const aggregator = require('./assetClassAggregator');
 const { evaluateThresholds } = require('../rebalance/thresholdChecker');
+const { getVisiblePortfolioIds, visibleAlertFilter } = require('../alertVisibility');
 
 const DRIFT_THRESHOLDS = ['absoluteDeviation', 'relativeDeviation'];
 
@@ -93,11 +94,20 @@ async function computeSummary({ includeArchived = false } = {}) {
   const filter = includeArchived ? {} : { archived: { $ne: true } };
   const portfolios = await Portfolio.find(filter).sort({ createdAt: -1 }).lean();
   // CM-12：每组合待处理提醒数（未读 AlertEvent），供组合卡片徽标展示（批次1 落地）
+  // US-004 B16：只统计仍存在组合的事件；资产级事件（portfolioId=null）仍保留在
+  // 查询结果中，但在按组合分组的 unreadAlertCount 里没有可归属组合。
+  const visibleFilter = visibleAlertFilter(await getVisiblePortfolioIds());
   const unreadAgg = await AlertEvent.aggregate([
-    { $match: { status: 'unread', portfolioId: { $ne: null } } },
+    { $match: { status: 'unread', ...visibleFilter } },
     { $group: { _id: '$portfolioId', count: { $sum: 1 } } }
   ]);
-  const unreadByPortfolio = new Map(unreadAgg.map(item => [item._id.toString(), item.count]));
+  // 资产级事件（portfolioId=null）会形成 {_id:null} 组；它不是组合，
+  // 不能进入按组合的 unreadAlertCount 映射（否则 null.toString() 抛错）。
+  const unreadByPortfolio = new Map(
+    (Array.isArray(unreadAgg) ? unreadAgg : [])
+      .filter(item => item && item._id != null)
+      .map(item => [item._id.toString(), item.count])
+  );
   // US-004 AC-03：一次 $match + $group 批量取每组合的 PENDING 再平衡建议数；
   // 不逐组合 countDocuments（N+1 禁令）。空列表无需查询。
   let pendingByPortfolio = new Map();

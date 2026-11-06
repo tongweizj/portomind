@@ -34,7 +34,7 @@ test('computeSummary：默认过滤 archived != true', async (t) => {
   const filters = [];
   t.mock.method(Portfolio, 'find', (filter) => {
     filters.push(filter);
-    return { sort: () => ({ lean: async () => [] }) };
+    return { sort: () => ({ lean: async () => [] }), lean: async () => [] };
   });
   // summary 现聚合未读提醒数（CM-12），stub 掉无 MongoDB 的 aggregate
   const AlertEvent = require('@portomind/shared/models/alertEvent');
@@ -50,7 +50,7 @@ test('computeSummary：includeArchived=true 时不过滤', async (t) => {
   const filters = [];
   t.mock.method(Portfolio, 'find', (filter) => {
     filters.push(filter);
-    return { sort: () => ({ lean: async () => [] }) };
+    return { sort: () => ({ lean: async () => [] }), lean: async () => [] };
   });
   const AlertEvent = require('@portomind/shared/models/alertEvent');
   t.mock.method(AlertEvent, 'aggregate', async () => []);
