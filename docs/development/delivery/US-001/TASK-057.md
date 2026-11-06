@@ -9,19 +9,19 @@
 **规划核对：** [Planner 回交说明](./US-001-02-planner-return.md)；新增关联不改变本卡 AC、原状态、既有批准或结案结论。
 
 **Status:**  
-`Planning`（2026-10-30，Orchestrator 已接收规划并提交 Human 审阅；Draft 未批准，未获业务代码实施授权）。
+`Implementing`（2026-11-05，计划已批准、D-01～D-03 契约冻结，启动核对完成；待 Implementer 在独立 worktree 中实施）。
 
 **Priority:**  
 `High`（P0 Must Have。它是 `TASK-054`（C-02）数据态、`C-07`（详情页）三列能否成立的**前提**；也是「全绿误导」这条已知缺陷的总闸）
 
 **Owner:**  
-`待指派`（本轮仅接收规划，未指派实施者或独立 Reviewer）。
+`Implementer`（待指派；独立 Reviewer 另行安排）。
 
 **Created:**  
 `2026-10-26`
 
 **Updated:**  
-`2026-10-30`（Orchestrator接收规划，更新Status及Owner；原创建日期保留）。
+`2026-11-05`（计划登记 Approved、启动核对完成、Task → Implementing；原创建日期保留）。
 
 **Type:**  
 `Feature`（共享内核数据契约 + worker 写库逻辑；属 FS `NG2` 的**例外**，已由 OQ3 裁定放行）
@@ -33,7 +33,7 @@
 `ADR-002-single-scheduler.md`（不改调度归属，只补落库与父任务包裹）
 
 **Execution Plan:**  
-[Draft：TASK-057](./TASK-057-plan.md)（未批准；以本次规划与原卡约束共同核对，不构成实施授权）
+[Approved：TASK-057](./TASK-057-plan.md)（2026-11-05 Human 批准当前设计；D-01～D-03 契约与 AC10 口径已冻结，实施交接见计划 §10）
 
 **来源：**  
 FS 卡片 `C-05`（PM 拆分，2026-10-26）
@@ -165,8 +165,8 @@ FS 卡片 `C-05`（PM 拆分，2026-10-26）
 
 | 编号 | 依赖 | 状态 |
 |---|---|---|
-| **B1** | Human 批准本卡计划，并裁决 §7 的 **OQ-1**（SKIPPED 载体）与 **OQ-3**（父任务包裹位置） | 🔶 **OQ 裁决已齐**（2026-11-04，见文末 Planner 裁决记录）；**计划批准仍待 Human**，批准前不得开工 |
-| **B2** | Planner 产出 ExecPlan 并经 Human Plan Review（须冻结 `result` 的字段名与裁剪口径） | ⏳ 阻塞 |
+| **B1** | Human 批准本卡计划，并裁决 §7 的 **OQ-1**（SKIPPED 载体）与 **OQ-3**（父任务包裹位置） | ✅ **已满足**（2026-11-04 OQ 裁决齐 + 2026-11-05 Human 批准计划当前设计）；余 Orchestrator 登记与派发 |
+| **B2** | Planner 产出 ExecPlan 并经 Human Plan Review（须冻结 `result` 的字段名与裁剪口径） | ✅ **已满足**（2026-11-05 Human 批准；§4 字段契约与 D-01～D-03 已冻结） |
 | **B3** | 独立 Reviewer 复核 | ⏳ 交付时 |
 | **B4** | 实库核查（`portomind_dev`）确认"上线首日无 `result`"已被读侧正确降级 | ⏳ 交付时（`TASK-054` 的 `contractReady` 路径） |
 
@@ -233,4 +233,32 @@ FS 建议"2 × 周期"，但 5 个任务周期不同、再平衡按组合计划�
 - **AC10 措辞更正获准**（既有 AC 的实质变更，依据 Human 本轮明确决定执行）：「229 条全绿」→「全量回归全绿、数量以实际为准」，229 条（152+77）记为 2026-10-26 旧基线。Story AC 不变。
 - OQ-5 确认无需裁决（`cronStatus.constants.js` 已有单一常量来源）。
 
-契约冻结、验证映射与回退见 [TASK-057 计划 §4/§6/§7/§9](./TASK-057-plan.md)。**计划本身仍为 Draft**：待 Human 明确批准当前设计后由 Orchestrator 按 STATES.md §4 登记 Approved 并派发；本记录不是实施授权。
+契约冻结、验证映射与回退见 [TASK-057 计划 §4/§6/§7/§9](./TASK-057-plan.md)。
+
+2026-11-05：Human 在 Planner 会话明确「批准 TASK-057 计划」——计划登记 **Approved**（覆盖 §1～§9 当前设计，含上述冻结契约），实施授权成立。同轮 Human 裁决 TASK-063 改为**串行**（057/064 落地后再实施 063），不影响本卡。Task 的 `Planning → Implementing` 登记、`feature/TASK-057` 工作区准备与派发由 Orchestrator 按 [STATES.md §4](../../../os/process/STATES.md) 落实。
+
+## Orchestrator 启动核对与实施交接（2026-11-05）
+
+依据：计划已 `Approved`（2026-11-05）、D-01～D-03 契约冻结；状态权限见 [STATES.md §4](../../../os/process/STATES.md#4-谁可以改变状态)。
+
+**结论：设计有效、契约已冻结、AC1～AC12 可实施。但有一项环境前提未就绪（Mongo 未运行），AC1/AC3/AC4/AC5/AC6 无法验证。**
+
+| 启动项 | 核对事实 |
+|---|---|
+| 基线 | `main` = `83e9971`；`feature/TASK-057` 分支**不存在**，需新建 + 独立 worktree |
+| 依赖 B1/B2 | ✅ 已满足（OQ 裁决齐 + 2026-11-05 批准） |
+| `taskRun.js` 现状 | 35 行，**无 `result` 字段**；唯一索引 `{taskName:1,runKey:1}` 在 L32；status 枚举 4 态无 SKIPPED。SHA256 `c366c084…` 与计划记录**吻合** |
+| `taskRunner.js` 现状 | 82 行；`normalizeCounts` L6-13 只保留 4 个计数字段（确认会丢弃 `result`）；两条跳过分支 L16-21 / L30-35 只打日志返回，**未落库**。SHA256 `810a7e65…` **吻合** |
+| `rebalanceScheduler.js` 现状 | `runRebalanceCheck` 直接 `Portfolio.find` 后逐组合 `runTrackedTask`，**无父任务包裹**；返回 flat summary。SHA256 `5e075a73…` **吻合** |
+| AC10 既有断言 | `cron-worker/test/rebalanceScheduler.test.js` 存在，D-03 要求只做加法适配 |
+| 测试入口 | `test:server` / `test:worker` 均在根 `package.json`；`cron-worker` 用 `node --test` |
+
+**⚠️ 环境前提未就绪（阻断 AC1/AC3/AC4/AC5/AC6）**
+
+实测 2026-11-05：`mongodb://127.0.0.1:27017` **连接被拒**（`ECONNREFUSED`），无 `mongod` 进程，27017 端口未监听。
+
+本卡 AC1（`findById` 回读）、AC3（逐任务查库）、AC4（父 result 动态基数、dev 库实测 4）、AC5（两条跳过路径可查询）、AC6（`collection.indexes()` 断言 unique）**全部要求真实 Mongo**，且 AC 明写「凡"查库可读到"的断言，**不得**用函数返回值替代」。故实施前必须先起 Mongo。
+
+**处置**：Implementer 须先确认/启动开发库（`server/.env` 指向 `portomind_dev`）；无法启动时**暂停受影响部分并上报**，不得用 mock 顶替后声称通过。
+
+**未做的事**：未建分支或 worktree；未改任何代码；未运行测试；未启动数据库。
