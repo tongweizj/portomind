@@ -253,12 +253,23 @@ FS 建议"2 × 周期"，但 5 个任务周期不同、再平衡按组合计划�
 | AC10 既有断言 | `cron-worker/test/rebalanceScheduler.test.js` 存在，D-03 要求只做加法适配 |
 | 测试入口 | `test:server` / `test:worker` 均在根 `package.json`；`cron-worker` 用 `node --test` |
 
-**⚠️ 环境前提未就绪（阻断 AC1/AC3/AC4/AC5/AC6）**
+**✅ 环境前提已就绪（2026-11-05 复核，更正前一轮结论）**
 
-实测 2026-11-05：`mongodb://127.0.0.1:27017` **连接被拒**（`ECONNREFUSED`），无 `mongod` 进程，27017 端口未监听。
+前一轮仅测本机 `127.0.0.1:27017` 便判「未就绪」，属**核对方式错误**——本项目 dev 库在**家庭服务器**上。按 `server/.env` 实际配置（`MONGO_URI` 指向 `192.168.2.140:27017/portomind_dev?authSource=admin`，含认证）实测：
 
-本卡 AC1（`findById` 回读）、AC3（逐任务查库）、AC4（父 result 动态基数、dev 库实测 4）、AC5（两条跳过路径可查询）、AC6（`collection.indexes()` 断言 unique）**全部要求真实 Mongo**，且 AC 明写「凡"查库可读到"的断言，**不得**用函数返回值替代」。故实施前必须先起 Mongo。
+| 项 | 实测值 |
+|---|---|
+| 连接 | **CONNECTED**，库名 `portomind_dev`，**14 个集合** |
+| `taskruns` | **276 条**；**含 `result` 的 0 条**（AC1/AC8 的历史基线成立） |
+| `taskruns` 索引 | `_id`；`{startedAt:-1, taskName:1}`；**`{taskName:1, runKey:1}` unique=true**（AC6 基线成立） |
+| `portfolios` | 4 条，**归档 0、未归档 4**（== AC4 要求的动态基数 4） |
+| `taskName` 分布 | `daily-price-sync` 56 · `rebalance-suggestions:*` 4×45 · `price-integrity-check` 16 · `alert-evaluate` 12 · `fx-rate-sync` 12 |
+| `taskName='rebalance-check'` 父任务 | **0 条**（D-03 尚未实施，符合预期） |
+| `status='RUNNING'` 僵尸 | 1 条（读侧 stale 归 054/064，本卡不回填） |
+| 其他集合 | `assets` 44 · `prices` 80163 · `fxrates` 27 · `rebalancerecords` 135 · `alertevents` 36 · `transactions` 50 · `users` 1 · `sessions` 1 · `alertrules` 0 · `valuations` 0 |
 
-**处置**：Implementer 须先确认/启动开发库（`server/.env` 指向 `portomind_dev`）；无法启动时**暂停受影响部分并上报**，不得用 mock 顶替后声称通过。
+**结论：AC1/AC3/AC4/AC5/AC6 的查库前提全部满足**，且实测值与计划记录（AC4 的 4、AC8 的旧数据）**逐一吻合**。
 
-**未做的事**：未建分支或 worktree；未改任何代码；未运行测试；未启动数据库。
+**两条实施约束**：① 这 276 条历史数据是 AC8「历史无 result 兼容」的被测对象，**不得清库**；② 在该库上的写入验证应使用独立 `runKey`/测试组合，避免污染既有业务记录。
+
+**未做的事**：未建分支或 worktree；未改任何代码；未运行测试；未写入数据库（仅只读查询）。
