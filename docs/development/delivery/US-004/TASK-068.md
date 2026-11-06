@@ -4,14 +4,30 @@
 
 | 字段 | 内容 |
 |---|---|
-| Priority / Owner / Type | `High` / 待指派 / `Feature`（shared + server 查询层） |
-| Created / Updated | 2026-11-05 / 2026-11-05 |
+| Status | Implementing（2026-11-06，计划已 `Approved`、065 已合入 `main`；Orchestrator 登记） |
+| Priority / Owner / Type | `High` / Implementer / `Feature`（shared + server 查询层） |
+| Created / Updated | 2026-11-05 / 2026-11-06 |
 | 所属 Story | [US-004](../../requirements/stories/active/US-004-dashboard-portfolio-health.md) |
 | 覆盖的验收条件 | US-004/AC-19、AC-14（AC-14 的 cron-worker 零改动断言落在本卡） |
 | Related Product Spec / ADR | [FS-portfolio-ia-cleanup](../../requirements/specs/FS-portfolio-ia-cleanup.md) §6.2（B16）、§7（AC42）、§10（R-9）、§11（HD-14） |
-| Execution Plan | [Draft：TASK-068-plan](./TASK-068-plan.md)（**需 Approved**，DEP-04：shared + server 查询层改动，三处同源） |
+| Execution Plan | [Approved：TASK-068-plan](./TASK-068-plan.md)（2026-11-06 Human 批准） |
 
-> 待 Orchestrator 正式登记的任务内容，当前不含 Status，不属于已登记任务或实施队列。
+## 启动核对与实施交接（2026-11-06，Orchestrator）
+
+按 [STATES.md §4](../../../os/process/STATES.md#4-谁可以改变状态) 登记 `Planning` → **`Implementing`**，依据「当前设计的有效计划批准记录」。
+
+| 启动项 | 核对事实 |
+|---|---|
+| 计划批准 | ✅ 2026-11-06 Human 确认「批准」，[计划](./TASK-068-plan.md) `Draft` → `Approved` |
+| **硬前置（串行解除）** | ✅ **TASK-065 已合入 `main`**（`6f556aa` `Merge branch 'feature/TASK-065' into main`，父 `49d4e0a` + `beb6882`）；`git merge-base --is-ancestor 5f807a3 main` = 是 |
+| 同改文件冲突 | ✅ 已解除。`summary.js` 上 `unreadAgg`（`:96`）、`pendingAgg`（`:105`）均在位；068 的 `unreadAgg` 改动叠在 065 之后，不再存在并行冲突 |
+| 068 范围 | `summary.js` + `server/controllers/alert.controller.js` + 新增 `shared/services/alertQuery.js`（三处同源出口） |
+| `main` 基线 | `6f556aa` |
+| G-1 覆盖 | ✅ AC-14（`cron-worker` 零改动）已在 068 AC-07 |
+
+**实施要点**（来自计划 §3 事实）：规划期行号已因 065 合入漂移，以**符号名**为准 —— `unreadAgg` / `AlertEvent.aggregate` / `getEvents` / `getUnreadCount`，不要硬套旧行号。
+
+**未做的事**：未建 worktree、未改代码、未跑验证。
 
 ## 1. 问题
 
