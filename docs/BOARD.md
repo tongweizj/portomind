@@ -1,9 +1,11 @@
 # Story 交付与任务调度
 
-> 更新日期：2026-11-05。默认一次推进一个 Story，不采用 Sprint。
+> 更新日期：2026-11-05。默认只推进一个当前 Story（开发中），可另有一个预研 Story 做前期准备（拆 Task、写计划、提示词等）；不采用 Sprint。
 > 状态与权限唯一依据：[STATES.md](./os/process/STATES.md) §2.2–§4；卡片字段是真相，本文件仅汇总。取消条目按 §2.3 排除，单独保留退出索引。历史任务不强制补建 Story。
 
 ## 当前 Story
+
+> **当前格局（2026-11-05）**：US-001 = 当前 Story（`Implementing`，开发中）；[US-004](./development/requirements/stories/active/US-004-dashboard-portfolio-health.md) = 预研 Story（`Planning`，拆卡与计划已完成，**不进入实施**）。这是 [DOCS.md §1.1](./os/standards/DOCS.md#11-story-交付目录与文档生命周期) 允许的上限（一个开发中 + 一个预研），不新增第三个交付目录。US-002 / US-003 / US-005 仍为 `Backlog`，需求留在 `requirements/stories/`，不预建交付目录。
 
 | 项目 | 当前情况 |
 |---|---|
@@ -67,13 +69,15 @@
 | Story | 用户价值 | Priority | 准备情况 | 依赖 / 待决策 |
 |---|---|---|---|---|
 | [US-002](./development/requirements/stories/active/US-002-board-drilldown-and-staleness.md) | 从看板追到原因：停滞提示 + 再平衡分发记录页 + 原始日志下钻（承接 US-001 未含的 P1 需求 R6/R7/R10） | High | 可启动；待 Planner 拆 Task | 依赖 TASK-057 合入（AC-05～09 三列）；OQ-01 缓冲值、OQ-02 单日 vs 多日矩阵、OQ-03 停滞提示形态未决 |
-| [US-003](./development/requirements/stories/active/US-003-portfolio-detail-overview-ia.md) | 组合详情「总览」：目标 vs 实际 / 偏离原因 / 删除入口 / 配置分层（Spec 交付单元 A，纯客户端） | High | 可启动；Spec 已 `Approved` 但从未拆 Task | OQ-01 与 US-004 的实施顺序未决；AC-16 的 `lastExecutedAt` 依赖 US-004 的 B1 |
-| [US-004](./development/requirements/stories/active/US-004-dashboard-portfolio-health.md) | Dashboard 组合健康表 + 分币种小计 + 组合卡四格（Spec 交付单元 B，改 `shared`/`server`） | High | 可启动；需 `Approved` ExecPlan | OQ-01 健康表排序档位；OQ-02 顺序；DEP-03（TASK-050）已满足 |
+| [US-003](./development/requirements/stories/active/US-003-portfolio-detail-overview-ia.md) | 组合详情「总览」：目标 vs 实际 / 偏离原因 / 删除入口 / 配置分层（Spec 交付单元 A，纯客户端） | High | 可启动；Spec 已 `Approved` 但从未拆 Task | 顺序已裁（US-004 先行，US-003 侧 OQ-01 = US-004 侧 OQ-02）；AC-16 的 `lastExecutedAt` 依赖 US-004 的 B1，因 US-004 先行故无需临时隐藏；余 OQ-03（`?record=` 上限）待确认 |
+| [US-004](./development/requirements/stories/active/US-004-dashboard-portfolio-health.md) | Dashboard 组合健康表 + 分币种小计 + 组合卡四格（Spec 交付单元 B，改 `shared`/`server`） | High | **预研中（已拆 5 卡，待登记实施）**——Status `Planning`，当前唯一的预研 Story | 交付目录 [delivery/US-004](./development/delivery/US-004)（TASK-065～069 + 5 份 Draft 计划 + 实施提示词）；**OQ-01 / OQ-02 均已裁决**（排序=有事的在上，原型 `unvaluable`/`missing` 两档不采用；顺序=本 Story 先行）；TASK-065 / TASK-068 需 `Approved` ExecPlan |
 | [US-005](./development/requirements/stories/active/US-005-transaction-query-filters.md) | 交易流水按时间/类型/多组合筛选，条件写进 URL | Medium | 可启动；复用既有 TASK-045（Backlog） | OQ-01 多值参数形态、OQ-02 是否加索引未决；需 `Approved` ExecPlan |
 
 > PM 按已确认的优先级维护队列，原有 Task 与 Spec 不自动变成 Story。Story 文档入口见 [STORIES.md](./development/requirements/stories/STORIES.md)；状态统一按 STATES.md §6 汇总。
 >
-> 2026-11-05（PM 建卡）：按 Human 指示把 `docs/development/requirements/specs/` 的遗留需求整理为 Story，新建 **US-002～US-005** 四张卡，均为 `Backlog`、均待 Planner 拆 Task。来源分工：US-002 ← `FS-cron-worker-status-board` 的 P1（C-06/C-07/C-08，US-001 明确排除在范围外）；US-003 / US-004 ← `FS-portfolio-ia-cleanup` 的交付单元 A / B（该 Spec 2026-10-26 已 `Approved`，但从未拆过 Task，代码零实现）；US-005 ← `FS-transaction-query-filters`（复用既有 TASK-045）。**未改动任何已有卡的状态、优先级或范围**；规格 P2 的 C-09 历史趋势、C-10 launchDate 引导不建 Story，留 Spec 作 Future 登记。
+> 2026-11-05（PM 登记预研）：按新规则把 **US-004 由 `Backlog` 登记为 `Planning`（预研 Story）**。依据：Planner 已拆出 TASK-065～TASK-069 并回写 Story §6，符合 [STATES.md §2.2](./os/process/STATES.md#22-story-状态)「Planning = 已定优先级、正在完善范围与任务拆分」与 §4「Story → Backlog / Planning 归 PM」。**预研不进入实施**——Task 状态登记仍归 Orchestrator，US-004 不会被写成 `Implementing`。同轮核对 AC 覆盖，发现两处缺口（AC-14 `cron-worker` 零改动无卡承接、AC-05 的 1440×900 不滚动断言未覆盖），已记入 Story §6 交回 Planner，**PM 未自行补卡、未改 AC**。US-001 仍是唯一「当前 Story」。
+
+> 2026-11-05（PM 建卡）：按 Human 指示把 `docs/development/requirements/specs/` 的遗留需求整理为 Story，新建 **US-002～US-005** 四张卡。来源分工：US-002 ← `FS-cron-worker-status-board` 的 P1（C-06/C-07/C-08，US-001 明确排除在范围外）；US-003 / US-004 ← `FS-portfolio-ia-cleanup` 的交付单元 A / B（该 Spec 2026-10-26 已 `Approved`，但从未拆过 Task，代码零实现）；US-005 ← `FS-transaction-query-filters`（复用既有 TASK-045）。**未改动任何已有卡的状态、优先级或范围**；规格 P2 的 C-09 历史趋势、C-10 launchDate 引导不建 Story，留 Spec 作 Future 登记。
 
 ## 已完成 Story
 

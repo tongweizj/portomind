@@ -30,7 +30,7 @@ Backlog · Planning · Implementing · Reviewing · Blocked · Completed
 
 ### 2.2 Story 状态
 
-Story 复用 Task 六态，不新增枚举。默认只推进一个当前 Story。
+Story 复用 Task 六态，不新增枚举。默认只推进一个当前 Story（开发中）；可另有一个预研 Story 做前期准备（拆 Task、写计划、提示词等），Status 为 Planning，不进入实施。
 
 | 状态 | Story 含义与条件 |
 |---|---|

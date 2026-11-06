@@ -12,7 +12,7 @@
 | 所属 Story | [US-001](../../requirements/stories/active/US-001-cron-worker-health-and-data-completeness.md) |
 | 覆盖的验收条件 | US-001/AC-02、05～08、10、11（前端接入与整合） |
 | Related Spec | [FS P0](../../requirements/specs/FS-cron-worker-status-board.md) |
-| Execution Plan | [Draft](./TASK-063-plan.md)，未批准 |
+| Execution Plan | [Approved](./TASK-063-plan.md)（2026-11-05 Human 批准当前设计；实施前置为 057/064 合入） |
 
 ## 1. 问题
 
@@ -43,18 +43,22 @@ TASK-053 只做占位骨架、055 只做价格卡、057 不改前端，当前没
 
 ## 6. Blocking Dependencies
 
-053 骨架、055 价格、056 映射；054读侧已存在。完整验收须057真实结果、064读侧兼容与 lastSkip（若方案获批）。可先以已冻结读侧契约规划/开发未知态，但不能仅以 mock 完成整体验收。
+053 骨架、055 价格、056 映射均已在 `main`（055/056 已结案）；054 读侧已存在。**2026-11-05 Human 裁决：本卡串行**——057 与 064 实施并合入后才启动本卡实施，AC2/AC3 届时以真实记录验收（不以 mock 顶替）。D-01 已批（独立 TaskSkip 集合），lastSkip 为 064 可选字段、缺失兼容。**计划已于 2026-11-05 获 Human 批准。**
 
 ## 7. Coordination Notes
 
-新增本任务填补 Story 既有 AC 的实现缺口，不扩展 Story 范围。需 ExecPlan：涉及跨组件接口、状态处理或共享读侧兼容，当前 Draft 未获批准。当前不实施。
+新增本任务填补 Story 既有 AC 的实现缺口，不扩展 Story 范围。ExecPlan 已获 Human 批准（2026-11-05）；实施按串行等待 057/064 合入，由 Orchestrator 派发。
 
 ## 8. Open Questions
 
-D-04：**已于 2026-11-04 裁决**（旧055 AC6/8/9 澄清，三项全部采纳）——AC6 允许一处纯展示换算；AC8 分两层，本卡承接①整体失败；AC9 空态分三型，价格卡不设 null 分支。详见 [TASK-055 §3](./TASK-055.md) 与 [回交 §4](./US-001-02-planner-return.md#d-04055原ac689澄清不改story-ac)。D-01 选择的跳过载体仍影响 lastSkip 字段。
+D-04：**已于 2026-11-04 裁决**（旧055 AC6/8/9 澄清，三项全部采纳）——AC6 允许一处纯展示换算；AC8 分两层，本卡承接①整体失败；AC9 空态分三型，价格卡不设 null 分支。详见 [TASK-055 §3](./TASK-055.md) 与 [回交 §4](./US-001-02-planner-return.md#d-04055原ac689澄清不改story-ac)。D-01 已于 2026-11-04 裁决为独立 TaskSkip 集合：lastSkip 为 064 读侧可选字段，本卡按「有则独立展示、无则兼容省略」实现，无待决。
 
 ## 9. 记录
 
 2026-10-30，Orchestrator 正式登记：依据 Human 本轮“接收 US-001 规划、条件满足后登记 TASK-063/064”的明确指令、当前 Story 的既有 High 优先级，以及 [STATES.md §4](../../../os/process/STATES.md#4-谁可以改变状态) 对已授权 Story 内常规拆分的权限。已核对所属 Story、AC 关联、范围、依赖及对应 Draft；本卡只承接既有五卡接入/刷新需求。初始 Status 为 Planning，Owner 待指派；Planner 为既有规划产出角色，不代填实施者。D-01～D-04 中受影响决定、055/063 接入约定及计划批准尚未齐备，不可实施。接收与审阅清单见 [Orchestrator 接收记录](./US-001-02-planner-return.md#7-orchestrator-接收与-human-审阅清单)。
 
 规划已准备；实施、审查与关闭尚未发生。后续证据写对应计划；本卡仅引用。
+
+2026-11-05，Planner：按 Human 两项裁决更新规划——①本卡改为**串行**（057/064 合入后实施，AC2/AC3 以真实记录验收）；②TASK-057 计划已获批准。[TASK-063 计划](./TASK-063-plan.md) 已按冻结契约重写（API 信封、055 props、056 statusTone、lastSkip 可选、R-01 落定），仍为 Draft 待 Human 批准。
+
+2026-11-05，Planner（续）：Human 确认「批准 063 计划」——TASK-063 计划登记 **Approved**（覆盖 §1～§9）。实施仍按串行等待 057/064 合入，登记与派发由 Orchestrator 按 [STATES.md §4](../../../os/process/STATES.md) 落实。

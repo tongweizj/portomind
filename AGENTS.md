@@ -116,7 +116,7 @@ Before editing, inspect the working tree and preserve unrelated work. Read only 
 
 Human sets priority → [PM](./docs/os/roles/PRODUCT_MANAGER.md) prepares Story → [Orchestrator](./docs/os/roles/ORCHESTRATOR.md) coordinates Planner → Implementer → Reviewer → PM summarizes Story acceptance → Human closes. Permissions belong to [STATES.md](./docs/os/process/STATES.md) §4.
 
-Default to one Story at a time. Handoffs identify the task, Story AC, scope, authorization or plan exemption, dependencies, expected output, evidence and next owner. Describe a handoff as delivered or started only when that actually happened.
+Default to one Story in development at a time; one additional Story may be in preparation (splitting tasks, writing plans/prompts) at Planning without starting implementation. Handoffs identify the task, Story AC, scope, authorization or plan exemption, dependencies, expected output, evidence and next owner. Describe a handoff as delivered or started only when that actually happened.
 
 Role documents define permitted work; runtime filesystem and tool permissions are enforced by the host. Do not assume documentation has configured isolation or automatic agent dispatch.
 

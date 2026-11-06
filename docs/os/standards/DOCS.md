@@ -36,7 +36,7 @@
 
 - 全局调度入口固定为 docs/BOARD.md，只保存当前 Story、队列、状态投影与证据链接，不复制需求或实施正文。
 - Story 是长期保留的需求与交付记录，放 development/requirements/stories/；产品当前规则写产品文档/Spec，重要技术取舍写架构文档/ADR，回归能力保留为测试或脚本。
-- 当前 Story 的过程目录直接放 development/delivery/US-<编号>/；delivery 根目录只保留一个当前 Story 目录，不设 active/ 层。排队 Story 的需求保留在 requirements/stories/，不提前建立多个当前交付目录。规划、角色切换及返工沿用同一目录。
+- 当前 Story 的过程目录直接放 development/delivery/US-<编号>/；delivery 根目录最多保留**两个** Story 目录——**一个当前 Story 目录**（开发中）与**一个预研 Story 目录**（前期准备：拆 Task、写 ExecPlan、写提示词等，不进入实施），不设 active/ 层。其余排队 Story 的需求仍保留在 requirements/stories/，不提前建立交付目录。预研 Story 由 PM 登记为 Planning 后才由 Planner 拆卡。规划、角色切换及返工沿用同一目录。
 - Story 过程目录内不再分子目录。任务卡命名 TASK-<编号>.md，对应计划命名 TASK-<编号>-plan.md；以相同任务编号相邻排列。Task 编号全局唯一，不因换 Story 重编。文件名只区分资料，不表示状态或批准。
 - 交接信息默认写在 Story 的当前进度或 Task/ExecPlan 的交接节。确需独立记录时，直接放同一 Story 目录，命名 US-<编号>-<两位递增序号>-<内容>.md，例如 US-001-01-planner-handoff.md；不要求固定生成 handoff/return 两份文件。其他证据按 TASK-<编号>-evidence-<名称>.<扩展名> 命名，同样平铺存放。
 - 单个 Task 或计划完成只更新其字段与记录，仍留在 Story 目录内，不提前单独移出。

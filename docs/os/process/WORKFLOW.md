@@ -12,7 +12,7 @@
 6. Human 根据证据关闭 Task；PM 在必要 Task 完成后汇总 Story 整体验收，Human 关闭 Story。
 7. PM 更新 Story 交付摘要、验收依据与需求队列；Orchestrator 按 [DOCS.md §1.1](../standards/DOCS.md#11-story-交付目录与文档生命周期) 整体归档本 Story 的过程目录并同步看板及链接。Completed 不表示已合入或发布。
 
-默认一次推进一个 Story，独立 Task 可不关联 Story；并行任务按依赖及文件写入冲突协调。没有 Spec 不阻止需求交付，免计划也不免除必要验证和审查。
+默认只推进一个当前 Story（开发中），可另有一个预研 Story 做前期准备（拆 Task、写计划、提示词等，Status 为 Planning，不进入实施）；独立 Task 可不关联 Story；并行任务按依赖及文件写入冲突协调。没有 Spec 不阻止需求交付，免计划也不免除必要验证和审查。
 
 ## 2. 返工与阻塞
 
