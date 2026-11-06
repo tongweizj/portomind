@@ -6,9 +6,9 @@
 
 | 字段 | 内容 |
 |---|---|
-| Status | Planning |
-| Priority / Owner / Type | High / 待指派 / Feature |
-| Created / Updated | 2026-10-30 / 2026-10-30 |
+| Status | Implementing（2026-11-05，计划已批准；**串行前置已满足**——057 与 064 均已合入 `main`；待 Implementer 在独立 worktree 中实施） |
+| Priority / Owner / Type | High / Implementer（待指派） / Feature |
+| Created / Updated | 2026-10-30 / 2026-11-05 |
 | 所属 Story | [US-001](../../requirements/stories/active/US-001-cron-worker-health-and-data-completeness.md) |
 | 覆盖的验收条件 | US-001/AC-02、05～08、10、11（前端接入与整合） |
 | Related Spec | [FS P0](../../requirements/specs/FS-cron-worker-status-board.md) |
@@ -62,3 +62,24 @@ D-04：**已于 2026-11-04 裁决**（旧055 AC6/8/9 澄清，三项全部采纳
 2026-11-05，Planner：按 Human 两项裁决更新规划——①本卡改为**串行**（057/064 合入后实施，AC2/AC3 以真实记录验收）；②TASK-057 计划已获批准。[TASK-063 计划](./TASK-063-plan.md) 已按冻结契约重写（API 信封、055 props、056 statusTone、lastSkip 可选、R-01 落定），仍为 Draft 待 Human 批准。
 
 2026-11-05，Planner（续）：Human 确认「批准 063 计划」——TASK-063 计划登记 **Approved**（覆盖 §1～§9）。实施仍按串行等待 057/064 合入，登记与派发由 Orchestrator 按 [STATES.md §4](../../../os/process/STATES.md) 落实。
+
+## Orchestrator 启动核对与实施交接（2026-11-05）
+
+依据：计划已 `Approved`（2026-11-05）、Human 指示开始 063；状态权限见 [STATES.md §4](../../../os/process/STATES.md#4-谁可以改变状态)。
+
+**结论：串行前置已全部满足，AC1～AC8 可完整实施，无缺口。**
+
+| 启动项 | 核对事实 |
+|---|---|
+| 基线 | `main` = `cde811f`（064 合入后）；`feature/TASK-063` 分支**不存在**，需新建 + worktree |
+| **串行前置①（057）** | ✅ 已合入 `main`（`1e421db`）；`shared/models/taskSkip.js` 与 `TaskRun.result` 在位 |
+| **串行前置②（064）** | ✅ 已合入 `main`（`cde811f`）；`lastSkip` 读取路径在位（`cronStatus.service.js:947` / `:990`），`NUMERIC_OBSERVATION_ONLY` / `PER_PORTFOLIO_INCOMPLETE` note 已实现 |
+| 053 骨架 | ✅ `BoardShell` / `SummaryShell` / `TaskCardShell` / `unknownValue` 均在 `main` |
+| 055 价格卡 | ✅ `PriceTaskCard.jsx` + `priceDataState.js` 在位；**尚未被任何组件挂载**（grep 0 命中）——接线即本卡核心工作 |
+| 056 映射 | ✅ `statusTone.js` + `StatusLegend.jsx` + 四个 `status*` token 在位 |
+| API 信封 | ✅ 每项 `{taskName, lastRun, lastSkip, stale, contractReady, dataState, dataStateLevel, notes[]}` |
+| `check-docs` 修复 | ✅ `c11bb64` 未被 064 合入回退（`:48` 仍为 `> 2`）；`docs:check` 0 ERROR |
+
+**状态登记**：Task `Planning` → **`Implementing`**，Owner → `Implementer`。
+
+**未做的事**：未建分支或 worktree；未改任何代码；未运行测试。
