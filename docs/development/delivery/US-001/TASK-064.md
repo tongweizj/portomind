@@ -6,8 +6,8 @@
 
 | 字段 | 内容 |
 |---|---|
-| Status | Planning（计划已 `Approved`；**W0 前置未满足**——057 未合入 `main`，暂不登记 `Implementing`） |
-| Priority / Owner / Type | High / 待指派 / Feature |
+| Status | Implementing（2026-11-05，计划已批准、**W0 前置已满足**——057 已合入 `main`（`1e421db`），`taskSkip.js` 与 `result` 字段在位；待 Implementer 在独立 worktree 中实施） |
+| Priority / Owner / Type | High / Implementer（待指派） / Feature |
 | Created / Updated | 2026-10-30 / 2026-11-05 |
 | 所属 Story | [US-001](../../requirements/stories/active/US-001-cron-worker-health-and-data-completeness.md) |
 | 覆盖的验收条件 | US-001/AC-02、05～08、11（读侧兼容） |
@@ -79,5 +79,36 @@ D-01 已裁决（独立 TaskSkip 集合），lastSkip 来源冻结为 `taskskips
 后果：`shared/models/taskSkip.js` 与真实 `result` 写入在 `main` 上**都不存在**。本卡是 adapter 环，读取对象正是这两者——现在开工等于对着不存在的契约写适配层。
 
 **处置**：057 审查通过并合入 `main` 后，按计划 §10 派发。**不提前登记 `Implementing`**。
+
+**未做的事**：未建分支或 worktree；未改任何代码；未运行测试。
+
+## W0 前置解除与实施交接（2026-11-05）
+
+Human 指示「先完成 task064」。核对 W0 前置：**已满足**。
+
+| 项 | 事实 |
+|---|---|
+| 057 合入 | ✅ `feature/TASK-057` 经 **`1e421db`** 合入 `main`；`git merge-base --is-ancestor 54136c2 main` = 是 |
+| 前置物 1 | ✅ `shared/models/taskSkip.js` 存在（1400 B） |
+| 前置物 2 | ✅ `shared/models/taskRun.js:30` 有 `result: { type: mongoose.Schema.Types.Mixed }` |
+| `main` 基线 | `a8687a4`（含 US-002/003/005 登记与 TASK-065~069 卡片，与本卡无关） |
+| 目标文件 | `shared/services/cronStatus.service.js` SHA256 `27a3cc56…`，与计划记录**一致**（057 未触碰） |
+
+**F1～F7 行号复验（057 合入后无漂移）**
+
+| # | 位置 | 复核结果 |
+|---|---|---|
+| F1 | `:475` `ok: value === true \|\| value === 'ok'` | ✅ 行号准确 |
+| F2 | `:499` `contractReady = currencies !== null` | ✅ 行号准确 |
+| F3 | `:503-505` `okCount === entries.length` | ✅ 行号准确 |
+| F4 | `:578` `due: result ? result.due === true : null` | ✅ 行号准确 |
+| F5 | `:619` `(row.suggestionsCount ?? 0) > 0` | ✅ 行号准确 |
+| F6 | `:628` `due > 0 && generatedCount < due → 'bad'` | ✅ 行号准确 |
+| F7 | `:560` `contractReady = Array.isArray(perPortfolio)` | ✅ 行号准确 |
+| F8 | 全文件无 `lastSkip` | ✅ 确认 |
+
+**⚠️ 本轮新发现**：`(row.suggestionsCount ?? 0) > 0` 在 **两处**出现——`:619`（主视图 `generatedCount`）与 **`:743`**（detail 视图的 `summary.generated`）。计划 §4-6 要求「detail 视图零回归」，故 `:743` **不在本卡修复范围**；实施时不要顺手改它，否则违反零回归红线。此条已写入交接。
+
+**状态登记**：Task `Planning` → **`Implementing`**（依据 [STATES.md §4](../../../os/process/STATES.md#4-谁可以改变状态)「Task → Implementing：当前设计的有效计划批准记录」——计划 2026-11-05 已 `Approved`，且 W0 前置满足）。Owner → `Implementer`。
 
 **未做的事**：未建分支或 worktree；未改任何代码；未运行测试。
