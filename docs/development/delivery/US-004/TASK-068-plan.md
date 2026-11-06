@@ -2,7 +2,7 @@
 
 ## Status
 
-Status：Approved（2026-11-06，Human 批准当前设计）
+Status：Completed（2026-11-06，Task 已 `Completed` 并合入 `main`；计划由 `Approved` 同步为 `Completed`，实施 §11、审查 §12 记录齐备）
 
 Owner：Planner（规划）→ Implementer（2026-11-06 指派）
 
@@ -406,7 +406,17 @@ node --test test/integration/portfolio.summary.test.js test/integration/portfoli
 
 ## 13. Completion Record
 
-（AC 与验证证据引用、关闭依据、归档与移交。）
+**结案（2026-11-06）**
+
+| 项 | 事实 |
+|---|---|
+| 覆盖 AC | US-004 / AC-19、AC-14 全部满足（逐条见 §11.3 与 §12.3 / §12.11 复检表） |
+| 实现 | `9c8c808`（首轮，`alertVisibility.js` 单一查询层 + 三出口同源过滤）→ `3226dd4`（返工：F-01 null 组守卫、F-02 级联删除契约测试、回归样本） |
+| 审查 | 首轮 `Fail`（§12.10：F-01 BLOCKER、F-02 MAJOR、F-03 MINOR）→ 二审复检 **`Pass with issues`**（§12.11：F-01/F-02 已解决、AC-01～AC-07 全满足） |
+| 残余 | MINOR F-03（mock 求值器、未连真实库）、F-05（哈希口径）；MAJOR F-04（返工提交改写 §12.2 哈希表）已由 Reviewer 恢复原值并留痕，流程事件接受按 Human 关闭指令登记 |
+| 验证 | `npm run test:server` **240/240**、`alert.api.test.js` 12/12、summary+archived 23/23、`docs:check` 0 ERROR；`cron-worker`/`client`/模型/迁移零改动 |
+| 关闭依据 | Human 2026-11-06 确认完成并合入；按 [STATES.md §4](../../../os/process/STATES.md#4-谁可以改变状态) 登记 `Completed` |
+| 合入 | **`6f0b4df`** `Merge branch 'feature/TASK-068' into main`（`git merge-base --is-ancestor 84a50d4 main` = 是） |
 
 ## 自检
 

@@ -4,7 +4,7 @@
 
 | 字段 | 内容 |
 |---|---|
-| Status | Reviewing（**第二轮**，2026-11-06）—— 首轮独立 Reviewer 判定 **`Fail`**（F-01 BLOCKER / F-02 MAJOR）；Implementer 于 `3226dd4` 返工修复（`npm run test:server` **240/240**），**等待 Reviewer 复检**。可审对象 = `feature/TASK-068` @ `3226dd4`（非 `9c8c808`）。**尚未有复检结论**；`Merged` = `Pending` |
+| Status | **Completed（2026-11-06，Human 确认完成并合入）**：首轮独立复核 `Fail`（F-01 BLOCKER / F-02 MAJOR）→ `3226dd4` 返工（`test:server` **240/240**）→ **二审复检 `Pass with issues`**（plan §12.11：F-01/F-02 已整改并经负向对照确认解决，AC-01～AC-07 全满足）；**`Merged` = `6f0b4df`**（2026-11-06 `Merge branch 'feature/TASK-068' into main`；`git merge-base --is-ancestor 84a50d4 main` = 是）。残余 MINOR F-03/F-05 记录在案；MAJOR F-04 已由 Reviewer 恢复原值并留痕 |
 | Priority / Owner / Type | `High` / Reviewer（待指派） / `Feature`（shared + server 查询层） |
 | Created / Updated | 2026-11-05 / 2026-11-06 |
 | 所属 Story | [US-004](../../requirements/stories/active/US-004-dashboard-portfolio-health.md) |
@@ -122,6 +122,7 @@
 |---|---|---|
 | 首轮独立复核 | **`Fail`**（plan §12.10） | **F-01 · BLOCKER**：`summary.js` 的 `unreadByPortfolio` 对资产级事件（`_id:null` 组）调 `null.toString()` → `GET /api/portfolios/summary` 500，AC-02 运行时不满足；**F-02 · MAJOR**：AC-03「隐藏≠删除」断言走测试内存 stub，无法证伪物理删除实现（负向对照 NC-2a 加 `AlertEvent.deleteMany` 后 34/34 仍全绿）；F-03 · MINOR（mock 求值器、未连真实库） |
 | Implementer 返工 | `3226dd4`（plan §11.7） | F-01：`unreadByPortfolio` 构造前过滤 `item._id != null`（与 `pendingByPortfolio` 守卫对齐），stub 补 `{_id:null}` 样本；F-02：新增 `deletePortfolioCascade` 契约测试，拦截 `AlertEvent.deleteMany/deleteOne/findByIdAndDelete` 断言 0 调用；两条负向对照均能 FAIL（移除 null 守卫 → `TypeError`；给 cascade 加 `deleteMany` → 契约测试 FAIL）。`test:server` **240/240**、F-03 保留不阻塞 |
-| 当前 | **等待 Reviewer 复检** | 返工后**尚无复检结论**（无 §12.11 之类记录）；Orchestrator 不替 Reviewer 出具复检 verdict。按 STATES §4 状态保持 `Reviewing`（第二轮），可审对象 `3226dd4` |
+| 二审复检 | **`Pass with issues`**（plan §12.11，2026-11-06） | 独立 Reviewer 对 `3226dd4` 复检：F-01 加守卫后 P1 探针 `NO_CRASH`、NC-F01 负向对照 FAIL 证断言有牙；F-02 契约测试在临时加 `AlertEvent.deleteMany` 时 FAIL、还原后 PASS。AC-01～AC-07 全满足，`test:server` 240/240 亲跑。残余 MINOR F-03（mock 求值器）、F-05（哈希口径）；MAJOR F-04（返工提交改写 §12.2 哈希表）由 Reviewer 恢复原值并留痕 |
+| 合入 | **`6f0b4df`**（2026-11-06） | `Merge branch 'feature/TASK-068' into main`；`git merge-base --is-ancestor 84a50d4 main` = 是。合入相对原 `main` 仅 7 文件（`alertVisibility.js` +39、`summary.js`、`alert.controller.js`、3 份测试、计划），未触及 `client/`、`cron-worker/`、模型与迁移 |
 
-**未做的事**：未改 AC / Scope / 代码；未提交合入、未填 `Merged`、未关闭；**未替 Reviewer 写复检结论**。
+**未做的事**：未改 AC / Scope / 代码；未替 Reviewer 写复检结论（§12.11 由独立 Reviewer 出具）。合入与 `Merged` 登记归 Human，本节按 Human 2026-11-06「067、068 已完成代码合并和提交」指令与 git 证据登记。
