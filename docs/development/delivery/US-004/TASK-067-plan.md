@@ -100,7 +100,52 @@ Approval：**未批准**。本计划覆盖 §1～§9 当前设计；`Draft → A
 
 ## 11. Implementation Record
 
-（实施时填写。）
+（Implementer C，2026-11-06，基线 `main` @ `0189c04`，worktree `D:/projects/portomind-067`，分支 `feature/TASK-067`）
+
+### 改动范围
+
+| 文件 | 说明 | SHA256 |
+|---|---|---|
+| `client/src/components/PortfolioCard/index.jsx` | 新增四格展示（总市值 / 持仓资产 / 待办 / 上次再平衡），并删除原 `MarketValueRow` 与旧「N 条未读提醒」徽标（其职责并入「待办」格） | `f270472379285afe522a3a85cac607594945a6c4c8d08dd1258d9ccf10d05974` |
+
+唯一改动文件。未改 `shared/`、`server/`、`cron-worker/`、Dashboard 健康表、`drift.needsRebalance` 徽标语义。
+
+### driftLabels.js 处理方式（D-02）
+
+- `main` @ `0189c04` 上**无** `client/src/constants/driftLabels.js`（已核实），本卡**未新建**该文件。
+- 交付时本卡临时内联文案（见组件顶部注释），文案字面与 TASK-066 已建常量 `PENDING_LABELS` / `LAST_REBALANCE_LABELS` **逐字一致**（已核对 066 worktree `feature/TASK-066` @ `f72f40f` 的 `client/src/constants/driftLabels.js`：`pendingRebalance: ${count} 条待确认`、`unreadAlert: ${count} 条未读`、`lastRebalance never: 从未`）。
+- **待 B 的 driftLabels.js 合入 main 后切换为 import**（组件顶部已标注 TODO 注释，含切回点）。
+
+### AC 逐条结果
+
+| AC | 结果 | 证据 |
+|---|---|---|
+| AC-01 四格呈现 | ✅ | SSR 渲染真实 `PortfolioCard`：总市值 `¥82,340.5 + US$1,200`（分币种并列、无跨币种合计 83540）、持仓资产 `3 个`、待办 `2 条待确认 + 1 条未读`、上次再平衡 `2026-08-27`。 |
+| AC-02 空态 | ✅ | 待办 0 → 「—」；`lastExecutedAt: null` → 「从未」；`grep "暂无" client/src/components/PortfolioCard/` 无结果（exit 1）。 |
+| AC-03 同源逐字一致（解 B） | ✅ | 待办/上次再平衡文案与 066 `driftLabels.js` 逐字一致（`N 条待确认`/`N 条未读`/`从未`/`YYYY-MM-DD`）；偏离数据同源取 `stats.drift`（无各算一套）；`DriftBadge` 维持两态「偏离阈值/配置正常」。 |
+| AC-04 零新增请求 | ✅ | 组件仅新增 `lucide-react`/`constants/enums`（均为既有 import），无 `useQuery`/`service`/`fetch`/`axios` 引入；数据全部取自 `portfolio.stats`（`usePortfolios()` 既有 `portfolios-summary` 查询），改动前后请求路径不变。 |
+
+### 验证命令
+
+- `cd client && npm run build` → exit 0（vite build 成功，2438 modules）。
+- `cd client && ../node_modules/.bin/eslint "src/**/*.{js,jsx}"` → exit 0（0 error）。
+- 渲染实测：19 项断言全部 PASS（四格真实值 / 降级态 / 待办 0 → — / 无值 → 从未 / 无「暂无」/ 字段缺失不崩不显 0 / 无 stats 兜底 / 仅未读 / 仅待确认）。
+- 负向对照：把 `DriftBadge` 换成四态文案后，卡片与健康表偏离列字面不一致（「偏离阈值」≠「2 项超阈」），AC-03 逐字一致断言会失败——证明本卡未改徽标语义。
+
+### 待 065 合入后补验清单
+
+- 真实 `pendingRebalanceCount` / `lastExecutedAt` 落到 `stats` 后，四格「待办」「上次再平衡」显示真实值（当前以字段缺失降级态验证：不崩、不显 0、显示「—」/「从未」）。
+- 与 TASK-066 健康表对**同一真实组合**做端到端文案逐字比对（当前为常量表核对 + 组件级 SSR 断言）。
+- 切回 `driftLabels.js` import（B 合入后）并复跑 build + eslint。
+
+### 已知妥协与未验证项
+
+- 未做真实浏览器 Network 面板截图（无后端运行环境）；AC-04 以「无新增请求入口 + 数据源复用既有 query」静态证明，配合 `usePortfolios()` 既有 `queryKey: ['portfolios-summary']` 缓存机制佐证。
+- 「待办」跳转目标（B9：`?sub=suggestions` / `/` 组合筛选）属 TASK-066 健康表 AC-03 口径；本卡四格为纯展示，未加跳转（与计划 §4「本卡主要做展示」一致）。
+
+### 提交
+
+- 提交到 `feature/TASK-067`，正文带 `TASK-067`。不 merge main、不改 Task 状态、不填 Merged。
 
 ## 12. Review Record
 
