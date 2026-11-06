@@ -124,7 +124,7 @@ $or: [{ portfolioId: { $in: <现存组合 ids> } }, { portfolioId: null }]
 | 项 | 实际值 |
 |---|---|
 | Worktree | `D:\projects\portomind-068` |
-| Branch / Base | `feature/TASK-068` / `main @ 96ff382`（已从登记提交 `5083429` fast-forward 到最新 main） |
+| Branch / Base | `feature/TASK-068`；初始基线 `main @ 96ff382`，2026-11-06 已 `git merge main` 到 `ca351b4`（无冲突） |
 | Node / npm | `v24.20.0` / `12.2.1`；worktree 无 `node_modules`，已 `npm ci`（隔离安装） |
 | 禁改面 | 未改 `client/`、`cron-worker/`、模型、迁移；未物理删除 `AlertEvent` |
 
@@ -132,12 +132,12 @@ $or: [{ portfolioId: { $in: <现存组合 ids> } }, { portfolioId: null }]
 
 | 文件 | 变化 | SHA256 |
 |---|---|---|
-| `shared/services/alertVisibility.js` | 新增：`getVisiblePortfolioIds` + `visibleAlertFilter` 单一来源 | `4943a57bb342b2dda16939e1373498690f975b54996ad0f2832f1cc039788761` |
-| `shared/services/portfolio/summary.js` | `unreadAgg` 的 `$match` 加入组合可见性 | `8a71df85f9fec0049a3c8f40e60c529f3e498508fe2b564cff9794d65d4345ed` |
-| `server/controllers/alert.controller.js` | `getEvents` / `getUnreadCount` 加同源过滤 | `7914678c3a9ccd491c0e7dc2008cc4f6419ea06fbd18afffcff067e25c359e14` |
-| `server/test/integration/alert.api.test.js` | 过滤形状 + 删除组合/资产级保留用例 | `2ecc10948c5cd79136e10467c20bf4ea4cfb9d8db5da9dfbea2db7bc65bf200a` |
-| `server/test/integration/portfolio.summary.test.js` | summary unreadAgg 可见性断言；`Portfolio.find` stub 兼容 helper 的 `.lean()` | `434b6eb5dcd3e07c00048e20644c2c110a81397697fc806b9d207d177f1bb42f` |
-| `server/test/integration/portfolio.archived.test.js` | 既有 `Portfolio.find` stub 补 `.lean()`（不弱化断言） | `ea6e48ee871d1fa6b3bed940f74124d7ca33a48603fc028aeecbf5d456c54897` |
+| `shared/services/alertVisibility.js` | 新增：`getVisiblePortfolioIds` + `visibleAlertFilter` 单一来源 | `640565f5b8e6968d575194f7bee6d0b0e664c6d90e21e6bddf030c53c02859bc` |
+| `shared/services/portfolio/summary.js` | `unreadAgg` 的 `$match` 加入组合可见性 | `0410bfce3a330059cc696f317f53f2a83288b0127b3f28f52b6dadee2705c6f4` |
+| `server/controllers/alert.controller.js` | `getEvents` / `getUnreadCount` 加同源过滤 | `d654884f3979d61fa25a6f4710bd44e08ac3442e96a2e4049203577ab3cd19cb` |
+| `server/test/integration/alert.api.test.js` | 过滤形状 + 删除组合/资产级保留用例 | `2ec35541c80fb0428f281f21c438c34a54468f52f16d442216496ed814ea95f3` |
+| `server/test/integration/portfolio.summary.test.js` | summary unreadAgg 可见性断言；`Portfolio.find` stub 兼容 helper 的 `.lean()` | `38691ce49ab8fdf3f012dad8d3ae42992de1ca140c40d4526f2a43995ee6f95f` |
+| `server/test/integration/portfolio.archived.test.js` | 既有 `Portfolio.find` stub 补 `.lean()`（不弱化断言） | `4a819088aa5ff258fc27226eae157de70ca343a49b2bdf599c5af7dce6d172d9` |
 
 ### 11.3 AC-01～AC-07 实测结果
 
@@ -188,7 +188,7 @@ node --test test/integration/portfolio.summary.test.js test/integration/portfoli
 
 ### 11.6 交付状态
 
-实现、单测、AC-01～07 验证完成；待 Orchestrator 登记 Reviewing 并安排独立 Reviewer。Task Status / Merged 未改。
+实现、单测、AC-01～07 验证完成；Reviewer 二轮复检已记录（§12.11 `Pass with issues`，F-01/F-02 解决）。Task Status / Merged 未改，交 Orchestrator/Human 安排后续。
 
 ### 11.7 Reviewer Fail 返工（2026-11-06）
 
@@ -220,6 +220,23 @@ node --test test/integration/portfolio.summary.test.js test/integration/portfoli
 
 `git status --porcelain -- cron-worker` 仍为空；未改模型/迁移/客户端，未 merge main、未填 Merged。等待 Reviewer 复检。
 
+
+### 11.8 返工后交付核对（2026-11-06）
+
+| 项 | 值 |
+|---|---|
+| 当前分支 HEAD | **`bc080f9`**（`Merge branch 'main' into feature/TASK-068`） |
+| 实现提交 | **`3226dd4`**（F-01/F-02 修复；内容哈希见 §11.2） |
+| 审查记录提交 | **`92c1b91`**（保留首轮 §12 Fail 与 Reviewer 二轮 §12.11，内容未由实现方改写） |
+| main 合入基线 | `ca351b4`；`git merge main` 成功、**无冲突**；未 merge 到 main |
+| 与 main 关系 | `main` 是 HEAD 祖先；分支包含 main 上的 066/067 文档，无代码漂移 |
+| 验证 | `npm run test:server` **240/240 pass**；`docs:check` 0 ERROR；`git status --porcelain -- cron-worker` 空 |
+| 代码改动 | 自 `3226dd4` 后无新业务代码改动；本轮仅更新 §11 交付记录 |
+| 未决 findings | F-03（MINOR，测试使用内存 mock/未连真实 Mongo）、F-04/F-05（Reviewer 记录的流程与哈希口径，见 §12）保留；首轮 F-01/F-02 已修复 |
+| 合入状态 | **未合入 main、未填 Merged**；等待 Orchestrator/Human 按流程复检与合入 |
+
+本轮未改 AC/Scope/Task Status，未创建空提交；§12 审查原文（含首轮 Fail 与 Reviewer 二轮记录）保持原样。
+
 ## 12. Review Record
 
 （2026-11-06，按 [REVIEWER.md](../../../os/roles/REVIEWER.md) §7 记录。以下为独立 Reviewer 复核记录。）
@@ -242,10 +259,10 @@ node --test test/integration/portfolio.summary.test.js test/integration/portfoli
 |---|---|
 | `shared/services/alertVisibility.js` | `640565f5b8e6968d575194f7bee6d0b0e664c6d90e21e6bddf030c53c02859bc` |
 | `shared/services/portfolio/summary.js` | `d4705d748bf5656a4ff9e5ef7b29825e8d652d630c30926f5480b4883185c658` |
-| `server/controllers/alert.controller.js` | `7914678c3a9ccd491c0e7dc2008cc4f6419ea06fbd18afffcff067e25c359e14` |
+| `server/controllers/alert.controller.js` | `d654884f3979d61fa25a6f4710bd44e08ac3442e96a2e4049203577ab3cd19cb` |
 | `server/test/integration/alert.api.test.js` | `5615fa7bf8e6e194cbdd07cbda6ecc0e855a6d67494f337a5df470a80bbfd76c` |
 | `server/test/integration/portfolio.summary.test.js` | `30a1ed2b963cc84060d3399d5b5566ab1d62158d2e8fb8a058458bae1c1a0743` |
-| `server/test/integration/portfolio.archived.test.js` | `ea6e48ee871d1fa6b3bed940f74124d7ca33a48603fc028aeecbf5d456c54897` |
+| `server/test/integration/portfolio.archived.test.js` | `4a819088aa5ff258fc27226eae157de70ca343a49b2bdf599c5af7dce6d172d9` |
 
 > **注（2026-11-06 二轮复检补记）**：本表是首轮 @ `9c8c808` 的 Reviewer 实测原值。返工提交 `3226dd4` 曾把其中 4 个值改写为返工后工作区字节哈希（`4943a57b`/`8a71df85`/`2ecc1094`/`434b6eb5`），Reviewer 复检时已恢复原值——审查记录归 Reviewer 所有，实现方不得改写（见 F-04）。返工后版本的哈希见 §12.11；哈希口径问题见 F-05。
 
