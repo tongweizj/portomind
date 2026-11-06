@@ -1,6 +1,6 @@
 // cron-worker/src/schedulers/rebalanceScheduler.js
 //
-// 再平衡分发器（TASK-005 重构）：
+// 再平衡分发器（TASK-005 重构；TASK-057 增加父任务记录）。
 //
 // 迁移前，server 侧的 services/rebalance/scheduleManager.js 会为**每个组合**按
 // rebalanceSettings.rebalanceSchedule 单独注册一个 node-cron 任务，并在组合新增/改动时
@@ -16,11 +16,16 @@
 //   - runKey 语义与迁移前完全一致（`${schedule}:${当日日期}`），taskruns 历史不断代；
 //   - 组合数量增长时不会为每个组合常驻一个 cron 任务。
 //
+// TASK-057（D-03）：在函数内部用 runTrackedTask('rebalance-check', runKey=marketDate(now,tz))
+// 包住整轮分发，让「未到期」「整批崩溃」都能在 taskruns 里被观测；父任务 result.perPortfolio
+// 记录每个未归档组合的 due / needsRebalance / suggestionsCount / recordId / status。
+//
 // 不变量：AUTO 再平衡**只生成建议 + 提醒，永不自动交易**（执行仍只由 MANUAL 端点触发）。
 
 const { createCronScheduler, resolveTimezone } = require('./cronScheduler');
 const { taskLogger } = require('@portomind/shared/config/logger');
 const { runTrackedTask } = require('@portomind/shared/services/taskRunner');
+const TaskRun = require('@portomind/shared/models/taskRun');
 const Portfolio = require('@portomind/shared/models/portfolio');
 const ThresholdChecker = require('@portomind/shared/services/rebalance/thresholdChecker');
 const SuggestionGenerator = require('@portomind/shared/services/rebalance/suggestionGenerator');
@@ -52,74 +57,192 @@ function isScheduleDue(schedule, now = new Date(), timezone = resolveTimezone())
   return rule(weekdayInZone(now, timezone), dayOfMonth);
 }
 
-// 执行一轮分发。返回汇总计数，便于测试与观测。
-async function runRebalanceCheck({ now = new Date(), timezone = resolveTimezone() } = {}) {
-  const portfolios = await Portfolio.find({ archived: { $ne: true } }).lean();
-  const summary = {
-    taskName: 'rebalance-check',
-    totalCount: portfolios.length,
-    dueCount: 0,
-    skippedCount: 0,
-    failureCount: 0,
-    failures: []
-  };
-
+// TASK-057（D-03）：父任务 rebalance-check 在函数内部包裹（任何调用路径都可观测）。
+// 公开函数仍返回原 flat summary 字段给既有调用者；额外事实进 result.perPortfolio。
+async function runRebalanceCheck({
+  now = new Date(),
+  timezone = resolveTimezone(),
+  trigger = 'SCHEDULED'
+} = {}) {
   const periodKey = marketDate(now, timezone);
+  let summary = null;
+  let perPortfolio = [];
 
-  for (const portfolio of portfolios) {
-    // 防御性二次检查：查询与执行之间数据可能变化，归档组合一律不执行（CM-20）
-    if (portfolio.archived === true) {
-      summary.skippedCount += 1;
-      taskLogger.info('REBALANCE_SCHEDULE_SKIPPED_ARCHIVED', { portfolioId: String(portfolio._id) });
-      continue;
-    }
+  const parent = await runTrackedTask({
+    taskName: 'rebalance-check',
+    runKey: periodKey,
+    trigger,
+    execute: async () => {
+      const portfolios = await Portfolio.find({ archived: { $ne: true } }).lean();
+      summary = {
+        taskName: 'rebalance-check',
+        totalCount: portfolios.length,
+        dueCount: 0,
+        skippedCount: 0,
+        failureCount: 0,
+        failures: []
+      };
+      perPortfolio = [];
 
-    const pid = String(portfolio._id);
-    const settings = portfolio.rebalanceSettings || {};
-    const schedule = settings.rebalanceSchedule || 'daily';
-
-    if (!isScheduleDue(schedule, now, timezone)) {
-      summary.skippedCount += 1;
-      continue;
-    }
-    summary.dueCount += 1;
-
-    try {
-      await runTrackedTask({
-        taskName: `rebalance-suggestions:${pid}`,
-        runKey: `${schedule}:${periodKey}`,
-        trigger: 'SCHEDULED',
-        execute: async () => {
-          const { needsRebalance } = await ThresholdChecker.checkThresholds(pid);
-          if (!needsRebalance) return { totalCount: 1, successCount: 1, failureCount: 0 };
-
-          const result = await SuggestionGenerator.getSuggestions(pid, {
-            feeModel: settings.feeModel || {},
-            cashBudget: 0,
-            mode: 'AUTO'
-          });
-          await AlertCenterService.notify({
-            portfolioId: pid,
-            record: { _id: result.recordId, timestamp: new Date() },
-            suggestions: result.suggestions
-          });
-          return { totalCount: 1, successCount: 1, failureCount: 0 };
+      for (const portfolio of portfolios) {
+        // 防御性二次检查：查询与执行之间数据可能变化，归档组合一律不执行（CM-20）
+        if (portfolio.archived === true) {
+          summary.skippedCount += 1;
+          taskLogger.info('REBALANCE_SCHEDULE_SKIPPED_ARCHIVED', { portfolioId: String(portfolio._id) });
+          continue;
         }
+
+        const pid = String(portfolio._id);
+        const settings = portfolio.rebalanceSettings || {};
+        const schedule = settings.rebalanceSchedule || 'daily';
+
+        if (!isScheduleDue(schedule, now, timezone)) {
+          summary.skippedCount += 1;
+          perPortfolio.push({
+            portfolioId: pid,
+            due: false,
+            needsRebalance: null,
+            suggestionsCount: null,
+            recordId: null,
+            status: 'SKIPPED'
+          });
+          continue;
+        }
+        summary.dueCount += 1;
+
+        const childTaskName = `rebalance-suggestions:${pid}`;
+        const childRunKey = `${schedule}:${periodKey}`;
+        try {
+          const child = await runTrackedTask({
+            taskName: childTaskName,
+            runKey: childRunKey,
+            trigger,
+            execute: async () => {
+              const { needsRebalance } = await ThresholdChecker.checkThresholds(pid);
+              if (!needsRebalance) {
+                return {
+                  totalCount: 1,
+                  successCount: 1,
+                  failureCount: 0,
+                  result: { needsRebalance: false, suggestionsCount: 0, recordId: null }
+                };
+              }
+
+              const result = await SuggestionGenerator.getSuggestions(pid, {
+                feeModel: settings.feeModel || {},
+                cashBudget: 0,
+                mode: 'AUTO'
+              });
+              await AlertCenterService.notify({
+                portfolioId: pid,
+                record: { _id: result.recordId, timestamp: new Date() },
+                suggestions: result.suggestions
+              });
+              const suggestionsCount = Array.isArray(result.suggestions) ? result.suggestions.length : 0;
+              return {
+                totalCount: 1,
+                successCount: 1,
+                failureCount: 0,
+                result: {
+                  needsRebalance: true,
+                  suggestionsCount,
+                  recordId: result.recordId ? String(result.recordId) : null
+                }
+              };
+            }
+          });
+
+          if (child.status === 'SKIPPED') {
+            // 子任务本次被跳过：只有读到同 key 的真实既有 result 才引用，否则 unknown。
+            let existing = null;
+            try {
+              existing = await TaskRun.findOne({ taskName: childTaskName, runKey: childRunKey }).lean();
+            } catch (error) {
+              taskLogger.error('REBALANCE_CHILD_LOOKUP_FAILED', {
+                portfolioId: pid,
+                message: error.message
+              });
+            }
+            const existingResult = existing && existing.result && typeof existing.result === 'object'
+              ? existing.result
+              : null;
+            perPortfolio.push({
+              portfolioId: pid,
+              due: true,
+              needsRebalance: existingResult && typeof existingResult.needsRebalance === 'boolean'
+                ? existingResult.needsRebalance
+                : null,
+              suggestionsCount: existingResult && Number.isFinite(existingResult.suggestionsCount)
+                ? existingResult.suggestionsCount
+                : null,
+              recordId: existingResult && existingResult.recordId ? String(existingResult.recordId) : null,
+              status: existing ? existing.status : 'SKIPPED',
+              skipReason: child.reason
+            });
+          } else {
+            const result = child.result && typeof child.result === 'object' ? child.result : {};
+            perPortfolio.push({
+              portfolioId: pid,
+              due: true,
+              needsRebalance: typeof result.needsRebalance === 'boolean' ? result.needsRebalance : null,
+              suggestionsCount: Number.isFinite(result.suggestionsCount) ? result.suggestionsCount : null,
+              recordId: result.recordId ? String(result.recordId) : null,
+              status: child.status
+            });
+          }
+        } catch (error) {
+          // 逐组合故障隔离：单个组合失败不中断其余组合
+          summary.failureCount += 1;
+          summary.failures.push({ item: pid, category: error.category || 'INTERNAL', message: error.message });
+          perPortfolio.push({
+            portfolioId: pid,
+            due: true,
+            needsRebalance: null,
+            suggestionsCount: null,
+            recordId: null,
+            status: 'FAILED',
+            failureReason: error.message
+          });
+          taskLogger.error('REBALANCE_SCHEDULER_FAILED', { portfolioId: pid, message: error.message });
+        }
+      }
+
+      taskLogger.info('REBALANCE_CHECK_DONE', {
+        totalCount: summary.totalCount,
+        dueCount: summary.dueCount,
+        skippedCount: summary.skippedCount,
+        failureCount: summary.failureCount
       });
-    } catch (error) {
-      // 逐组合故障隔离：单个组合失败不中断其余组合
-      summary.failureCount += 1;
-      summary.failures.push({ item: pid, category: error.category || 'INTERNAL', message: error.message });
-      taskLogger.error('REBALANCE_SCHEDULER_FAILED', { portfolioId: pid, message: error.message });
+
+      return {
+        totalCount: summary.totalCount,
+        successCount: Math.max(0, summary.dueCount - summary.failureCount),
+        failureCount: summary.failureCount,
+        failures: summary.failures,
+        result: {
+          totalPortfolios: perPortfolio.length,
+          dueCount: summary.dueCount,
+          skippedCount: summary.skippedCount,
+          perPortfolio
+        }
+      };
     }
+  });
+
+  if (parent.status === 'SKIPPED') {
+    return {
+      taskName: 'rebalance-check',
+      totalCount: 0,
+      dueCount: 0,
+      skippedCount: 0,
+      failureCount: 0,
+      failures: [],
+      status: parent.status,
+      reason: parent.reason,
+      skipPersisted: parent.skipPersisted
+    };
   }
 
-  taskLogger.info('REBALANCE_CHECK_DONE', {
-    totalCount: summary.totalCount,
-    dueCount: summary.dueCount,
-    skippedCount: summary.skippedCount,
-    failureCount: summary.failureCount
-  });
   return summary;
 }
 

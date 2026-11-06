@@ -77,7 +77,10 @@ async function dailySync(options = {}) {
     taskName: 'daily-price-sync',
     runKey,
     trigger,
-    execute: () => syncActiveAssetPrices(options.dependencies)
+    execute: async () => {
+      const summary = await syncActiveAssetPrices(options.dependencies);
+      return { ...summary, result: { skippedCount: summary.skippedCount } };
+    }
   });
 }
 

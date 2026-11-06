@@ -26,7 +26,8 @@ const TaskRunSchema = new mongoose.Schema({
     provider: String,
     retryable: Boolean,
     message: String
-  }]
+  }],
+  result: { type: mongoose.Schema.Types.Mixed }
 }, { versionKey: false });
 
 TaskRunSchema.index({ taskName: 1, runKey: 1 }, { unique: true });

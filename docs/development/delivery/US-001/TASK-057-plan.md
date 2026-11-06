@@ -101,7 +101,126 @@ D-01 已定独立集合路线（§6）：**无既有索引迁移**。撤回读�
 
 ## 11. Implementation Record
 
-尚未实施。
+**状态：** 实施完成（2026-11-05）。Task Status **未改动**（仍为 `Implementing`，状态权限归 Orchestrator / Human）；计划 Status 未改（worktree 基于 `aa2c877`；主工作区另有尚未提交的「Approved」文档改动，本 worktree 未复制、未覆盖）。
+
+### 11.1 环境与数据库
+
+| 项 | 实际值 |
+|---|---|
+| Worktree | `D:\projects\portomind-057`（主工作区 `D:\projects\portomind` 的未提交 docs 未触碰） |
+| Branch / BASE | `feature/TASK-057` / `main @ aa2c877` |
+| Node / npm | `v24.20.0` / `12.2.1`；`npm ci` 隔离安装（515 packages） |
+| DB | `portomind_dev`（家庭服务器，`server/.env` 的 `MONGO_URI`；未打印口令） |
+| taskruns 基线 | **276 条**，含 `result` 的 **0 条** |
+| 索引 | `_id`；`{startedAt:-1, taskName:1}`；**`{taskName:1, runKey:1} unique=true`** |
+| 未归档组合 | **4**（AC4 动态基数实测） |
+| 历史 `RUNNING` 僵尸 | 1 条；**未回填**（读侧归 054/064） |
+| 写入保护 | 只用 `test:057:<timestamp>` 测试键与专用历史日期 `2000-01-03`；不 drop、不清库；脚本结束只删除本次创建的 14 条 TaskRun + 2 条 TaskSkip，前后均为 **276** 条 |
+
+### 11.2 改动文件与 SHA256
+
+| 文件 | 说明 | SHA256 |
+|---|---|---|
+| `shared/models/taskRun.js` | 仅新增可选 `result: mongoose.Schema.Types.Mixed`；status 枚举/唯一索引零改动 | `78e201e4…96eb` |
+| `shared/models/taskSkip.js` | 新增 `taskskips` 事件模型 + `{taskName:1,skippedAt:-1}` 索引；无 TTL | `8187ca6c…5051` |
+| `shared/services/taskRunner.js` | result 显式透传；两条跳过路径写 TaskSkip + `skipPersisted`；状态机不变 | `0a7641c4…b7f` |
+| `shared/tasks/dailySync.js` | 价格 execute 返回 `result.skippedCount` | `138bca05…781b` |
+| `cron-worker/src/tasks/integrityCheck.js` | 完整性 execute 返回 D-02 摘要（totals/checked/skipped/ratio/gapAssets） | `cff1f209…a789` |
+| `cron-worker/src/schedulers/alertScheduler.js` | 提醒 result 四字段；可选 `runKey/trigger`（默认值不变） | `1b253258…3279` |
+| `cron-worker/src/schedulers/fxScheduler.js` | 汇率 result.currencies 数值 + ok；可选 `runKey/trigger`（默认值不变） | `7b00e365…82b6` |
+| `cron-worker/src/schedulers/rebalanceScheduler.js` | D-03 父任务 `rebalance-check` 包裹 + `result.perPortfolio`；flat summary 保留 | `73978968…acad` |
+| `cron-worker/test/rebalanceScheduler.test.js` | D-03 加法适配（test 2 补 TaskRun mock）+ 新父 result 用例 | `e69d83ab…fe5a` |
+| `server/test/integration/taskrun.logging.test.js` | TaskSkip mock、result 透传/裸字段/状态机/skip 写失败/index 用例 | `ac029d5a…b026` |
+| `scripts/verify-task-057.cjs` | 真实 Mongo + 真实代码的 AC1–AC8 验收脚本（根 scripts，不占 server 路由） | `0be41b10…e665` |
+| `docs/handbook/technical/CRON_WORKER_DEV.md` | §5.1/5.2/5.3 + 新增 §5.5（result/SKIPPED 口径/父任务） | `5771bd3d…0111` |
+| `docs/handbook/ops/CRON_WORKER_OPS.md` | 巡检位置/命令/SKIPPED 状态表与新口径一致 | `053558ee…4109` |
+| `docs/development/delivery/US-001/TASK-057-plan.md` | 本实施记录（§11） | 见交付消息（写入后计算，自引用无法内嵌） |
+
+**未改：** `client/`、`server/src` 路由/中间件、`cron-worker` 的 cron 注册与调度算法、`shared/services/cronStatus.service.js`（读侧归一化归 064）、status 枚举、TaskRun 唯一索引。
+
+### 11.3 实现要点（对应冻结契约）
+
+- **D-01**：`runTrackedTask` 的两条跳过分支均 `TaskSkip.create`；TaskRun 不写 SKIPPED、正在跑的记录不被覆盖；写失败 `skipPersisted=false` + 受控日志 `TASK_SKIP_RECORD_FAILED`，业务仍跳过。
+- **D-02**：`normalizeCounts` 保留 4 个计数字段 + 仅 `hasOwnProperty('result')` 时透传；各任务 result 形状按冻结字段；完整性不存 `assets[]`/`missingRanges[]`；汇率只记真实返回的币种记录，不补造。
+- **D-03**：`runRebalanceCheck` 内部 `runTrackedTask('rebalance-check', runKey=marketDate(now,tz), trigger)`；父 `result` 含 `totalPortfolios/dueCount/skippedCount/perPortfolio`；`perPortfolio` 长度 = 未归档组合数；未到期 `needsRebalance=null`、未超阈 `false/0/null`、生成 `recordId` 非空且 `suggestionsCount>0`、失败保留 `failureReason`；子任务跳过时先查同 key 既有 result，否则 unknown + `skipReason`。
+- **AC9**：默认 cron 常量仍为 `0 3 / 30 3 / 0 4 / 30 9 / 0 0`；`SCHEDULE_DUE_RULES` 未变；逐组合 `runKey` 仍为 `${schedule}:${periodKey}`；父任务 runKey 为 `marketDate(now,tz)`（D-03 新增，属批准范围）；`server/` 无 `node-cron`/`cron.schedule`。
+- **测试适配理由**：`rebalanceScheduler.test.js` 第 2 个用例原先只 mock `Portfolio.find`，D-03 后父任务也会写 TaskRun，故**只补** `TaskRun.create/updateOne` mock（未删/未弱化任何到期、归档、故障隔离断言）；新增 1 条父 result 用例。
+
+### 11.4 AC1～AC12 逐条结果
+
+| AC | 结果 | 实测证据 |
+|---|---|---|
+| AC1 schema result + findById 回读；先红后绿 | **PASS** | 改 schema 前：`PRE_CHANGE_RESULT_FIELD= undefined (RED)`；改后实库回读 `result={"kept":{"a":1},"nested":"yes"}`（findById/查库，不是返回值） |
+| AC2 白名单 + 负向对照 | **PASS** | `normalizeCounts` 结果键为 `failureCount/failures/result/successCount/totalCount`；实库文档无顶层 `ok/gap`；负向：临时改为 `Object.assign(normalized,result)` 后 AC2 单测 FAIL（`actual` 出现 `ok/gap`），恢复后 PASS |
+| AC3 五类任务 result 查库 | **PASS** | 价格 `{"skippedCount":1}`；完整性 `totals{2,1,1}/checkedCount1/skippedCount0/ratio0.5/gapAssets[1]`；提醒 `evaluated3/created1/archived0/failed2`；汇率 `currencies{USD 7.1,CAD 5.2,HKD 0.91, ok:true}`；父任务见 AC4 |
+| AC4 父任务 record + perPortfolio | **PASS** | `rebalance-check` 落库，`result.perPortfolio.length=4` = 未归档组合数；每项含 6 字段；生成项 `recordId=test-record-057,suggestionsCount=2,needsRebalance=true`；未超阈项 `false/0/null`；flat summary `totalCount4/dueCount4/skippedCount0` |
+| AC5 两条跳过路径 + 首跑不被覆盖 | **PASS** | ALREADY_RUNNING：`taskskips` 1 条、`activeRunKey` 为测试首跑键、`skipPersisted=true`；首跑 TaskRun 最终 `SUCCEEDED`；DUPLICATE：`taskskips` 1 条；既有 TaskRun 仍 `SUCCEEDED` |
+| AC6 防重 + 唯一索引 | **PASS** | 实库索引 `{taskName:1,runKey:1} unique=true`；二次触发后同 key 计数 `1` |
+| AC7 状态机 | **PASS** | 合法 result + failureCount0 → `SUCCEEDED`；failureCount1 → `PARTIAL`；未捕获异常 → 落库 `FAILED`；负向：临时改状态判定后 PARTIAL 用例 FAIL，恢复后 PASS |
+| AC8 历史无 result 兼容 | **PASS** | 实库 276 条无 result 可读；`getStatus` 不报错，`rebalance-check.contractReady=false`（不把 null 当 {} 渲染 0 缺口） |
+| AC9 调度语义零改动 | **PASS** | 默认 cron/`SCHEDULE_DUE_RULES` 未变；逐组合 runKey 未变；`server/` 无 cron；父 runKey 为 D-03 新增 |
+| AC10 全量回归 | **PASS** | `test:server` **214/214**；`test:worker` **78/78**；均 exit 0 |
+| AC11 文档 | **PASS（本卡范围）** | 更新 DEV §5.1/5.2/5.3 + §5.5、OPS 7.1/7.2/7.3 状态表；`docs:check` 仍有**既有** `docs/readme.md:66` broken link（与本卡无关，未修） |
+| AC12 独立 Reviewer | **未进行** | 本记录为 Implementer 自测，不构成 Reviewer 判定；不得记为通过 |
+
+**实库验收汇总：`TASK057_ENV=D:/projects/portomind/server/.env node scripts/verify-task-057.cjs` → 29/29 PASS。**
+
+### 11.5 负向对照记录
+
+| AC | 临时缺陷 | 结果 | 恢复 |
+|---|---|---|---|
+| AC1 | 改 schema 前先写 result 并回读 | `PRE_CHANGE_RESULT_FIELD= undefined`（RED） | 随后新增 schema 字段，回读非空（GREEN） |
+| AC2 | `normalizeCounts` 改为 `Object.assign(normalized,result)` | `AC2 normalizeCounts...` FAIL（actual 出现 `gap/ok`）+ result 用例 FAIL | 恢复备份；SHA256 `0a7641c4…b7f` |
+| AC5 | `recordSkip` 不写 TaskSkip，仅返回 `skipPersisted:true` | 两条 AC5 断言 FAIL（`taskskips` 0 条），26/28 PASS | 恢复；SHA256 `0a7641c4…b7f` |
+| AC7 | 有 result 时强制 `SUCCEEDED`，覆盖 failureCount 判定 | `AC7 failureCount>0 → PARTIAL` FAIL（实际 SUCCEEDED），27/28 PASS | 恢复；SHA256 `0a7641c4…b7f` |
+
+每次恢复后重新跑真实库验收均回到 **29/29 PASS**；测试写入全部清理，TaskRun 276 条不变。
+
+### 11.6 数据库实测输出（前后对比）
+
+```text
+DB=portomind_dev taskruns_before=276
+...（29/29 PASS）...
+cleanup: taskruns=14, taskskips=2
+after: taskruns=276 (with_result=0, test_keys=0, taskskips=0)
+
+taskskips_indexes = [
+  {key:{_id:1}},
+  {key:{taskName:1, skippedAt:-1}, background:true}
+]
+taskruns_indexes = [
+  {key:{_id:1}},
+  {key:{startedAt:-1,taskName:1}, background:true},
+  {key:{taskName:1,runKey:1}, background:true, unique:true}
+]
+```
+
+> `taskskips` 集合与索引由新模型首次写入创建；没有 drop、没有清库、没有改既有索引。历史 276 条与 4 个未归档组合未被修改。
+
+### 11.7 回归与验证命令
+
+```text
+$ npm run test:server   → 214 pass / 0 fail（exit 0）
+$ npm run test:worker   →  78 pass / 0 fail（exit 0）
+$ TASK057_ENV=... node scripts/verify-task-057.cjs → 29/29 PASS
+$ npm run docs:check    → 既有 docs/readme.md:66 broken link（非本卡文件；本卡新增链接可达）
+```
+
+### 11.8 已知妥协与未验证项
+
+1. **AC12 未进行**：需 Orchestrator 安排独立 Reviewer；本记录不替代审查。
+2. **业务引擎在实库脚本中使用 mock**：价格 fetcher、完整性 countAsset、提醒 evaluateAll、汇率 provider、再平衡 ThresholdChecker/SuggestionGenerator/AlertCenter 均用可控返回，避免真实外部调用与业务数据写入；验证的是**落库契约/形状**，不是真实行情/再平衡业务运行。
+3. **AC4 父任务**使用真实 dev 的 4 个未归档组合 + 专用历史日期 `2000-01-03`，并对生成分支使用 mock 建议（recordId `test-record-057`）；未创建真实 `rebalancerecords`/提醒。脚本已清理 14 条测试 TaskRun。
+4. **未跑满一个真实调度周期**：没有等 5 类任务在生产节奏各跑一次；AC8 的「上线首日读侧降级」以历史 276 条 + `getStatus` 验证，不宣称已生产就绪。
+5. **`taskskips` 无 TTL/容量评估**（D-01 明确本次不加）；事件量增长与清理策略未验证。
+6. **skipPersisted=false 的消费方**：当前只记录标志，TASK-064 读侧尚未消费；不得把未持久化事件当成可查询。
+7. **汇率方向**不归本卡（TASK-051）；`currencies` 记录真实数值后可能直接暴露已知方向错误，属预期。
+8. 未改动历史僵尸 `RUNNING`；未做 `taskruns` TTL/归档。
+9. `docs:check` 的既有 broken link 未修（非本卡范围）。
+
+### 11.9 交付状态
+
+实现、实库验证、全量回归、文档同步完成；**Task Status 保持 `Implementing`**，未改 AC/Scope/status 枚举/唯一索引/调度语义。等待 Orchestrator 登记 `Reviewing` 并安排独立 Reviewer（AC12）。
 
 ## 12. Review Record
 

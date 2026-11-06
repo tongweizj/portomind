@@ -112,6 +112,7 @@ module.exports = { startXxxScheduler };
 | `alert-evaluate` | 提醒评估 |
 | `fx-rate-sync` | 汇率同步 |
 | `rebalance-suggestions:<portfolioId>` | 某组合的再平衡建议生成 |
+| `rebalance-check` | 再平衡分发的**父任务**（TASK-057；记录 due / skipped / perPortfolio） |
 
 ### 5.2 runKey（防重键）
 
@@ -120,7 +121,8 @@ module.exports = { startXxxScheduler };
 | 价格同步 / 完整性检查 自动 | 市场日期（`marketDate()`，如 `2026-10-17`） |
 | 价格同步 / 完整性检查 手动 | `manual:<ISO 时间>` |
 | 提醒评估 / 汇率同步 自动 | `daily:<调度时区当日日期>` |
-| 再平衡 自动 | `<schedule>:<当日日期>`（如 `monthly:2026-10-01`） |
+| 再平衡 自动（逐组合子任务） | `<schedule>:<当日日期>`（如 `monthly:2026-10-01`） |
+| 再平衡 自动（父任务 `rebalance-check`） | `marketDate(now, timezone)`（如 `2026-10-01`） |
 
 ### 5.3 状态四态
 
@@ -129,9 +131,9 @@ module.exports = { startXxxScheduler };
 | `SUCCEEDED` | `failureCount === 0` | 无 |
 | `PARTIAL` | 存在失败项（资产级 / 汇率级） | 看 `failures[]`（`item/category/provider/retryable/message`） |
 | `FAILED` | 任务级异常（未捕获） | 看任务日志 |
-| `SKIPPED` | 已在跑或重复 runKey（防重兜底） | 无需处理 |
+| `SKIPPED` | `runTrackedTask` 的**返回值**（已在跑 / 重复 runKey）；**不写入 `taskruns`** | 无需处理；事件见 `taskskips`（§5.5） |
 
-> 监控与告警如何解读这些状态，见 [运维手册 §7](../ops/CRON_WORKER_OPS.md#7-监控与巡检)。
+> `taskruns.status` 的 schema 枚举仍只有 `RUNNING / SUCCEEDED / PARTIAL / FAILED`；TASK-057 **不新增 SKIPPED 状态**。监控与告警如何解读这些状态，见 [运维手册 §7](../ops/CRON_WORKER_OPS.md#7-监控与巡检)。
 
 ### 5.4 退出码约定
 
@@ -139,6 +141,26 @@ module.exports = { startXxxScheduler };
 - `historySync` 在存在失败资产时退出码为 `1`。
 
 可用于告警脚本判断（例如 CI / cron 的 `|| notify`）。
+
+### 5.5 result 字段与跳过观测（TASK-057）
+
+`taskruns.result` 为可选 `Schema.Types.Mixed`（schema 只**新增**该字段；status 枚举与唯一索引零改动）。`runTrackedTask` 只透传调用方**显式包进 `result` 键**的内容；顶层裸字段（`ok` / `gap` 等）继续丢弃。
+
+`result` 缺失（历史记录 / 尚未跑满一个周期）表示「契约未就绪」，读侧**不得**把它当成空对象 `{}` 后渲染成「0 缺口 / 全部正常」。
+
+| taskName | `result` 形状（冻结） |
+|---|---|
+| `daily-price-sync` | `{ skippedCount }`（休市跳过数） |
+| `price-integrity-check` | `{ totals:{expectedCount,actualCount,missingCount}, checkedCount, skippedCount, completenessRatio, gapAssets:[{symbol,missingCount}] }`（不存 `assets[]` / `missingRanges[]` / 堆栈） |
+| `alert-evaluate` | `{ evaluated, created, archived, failed }` |
+| `fx-rate-sync` | `{ fxCount, currencies:{ USD:{ok:true,rateToCny}, CAD:{…}, HKD:{…} } }`；`ok:true` 仅表示该币种本次真实写入完成，失败运行记 `FAILED` 且不补造成功标志 |
+| `rebalance-check` | `{ totalPortfolios, dueCount, skippedCount, perPortfolio:[{portfolioId,due,needsRebalance,suggestionsCount,recordId,status,failureReason?,skipReason?}] }` |
+
+`perPortfolio` 长度 = 未归档组合数（动态）；未到期 `due=false` 且 `needsRebalance=null`；未超阈 `needsRebalance=false`、`suggestionsCount=0`、`recordId=null`；生成建议则 `recordId` 非空且 `suggestionsCount>0`；失败保留阶段性事实；子任务被跳过的组合只能在读到同 key 的既有 `result` 时引用，否则 `needsRebalance=null` 并以 `skipReason` 标明原因。
+
+**跳过（防重）不写 `taskruns`**，写独立 `taskskips` 集合（TASK-057 D-01）：
+
+`{ taskName, runKey, trigger, reason: 'ALREADY_RUNNING' | 'DUPLICATE_RUN_KEY', skippedAt, activeRunKey? }`，索引 `{ taskName: 1, skippedAt: -1 }`，本次不加 TTL。`runTrackedTask` 跳过返回值带 `skipPersisted`：`false` 表示事件写入失败（只记受控日志；业务仍跳过，不谎称可查询）。
 
 ---
 
