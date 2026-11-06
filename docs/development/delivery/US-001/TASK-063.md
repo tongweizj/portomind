@@ -158,13 +158,16 @@ D-04：**已于 2026-11-04 裁决**（旧055 AC6/8/9 澄清，三项全部采纳
 |---|---|
 | 结案日期 | 2026-11-05 |
 | Status | `Reviewing` → **`Completed`** |
-| Merged | **`Pending`** —— 分支尚未合入 `main` |
+| Merged | **`Merged`** —— merge commit `d1b1e4a`，分支 tip `1a5a666` |
 | DoD | T-1 实现 ✅ / T-2 验证 ✅ / T-3 AC 逐条 ✅ / T-4 审查收敛 ✅ / T-5 文档同步 ✅ / T-6 已知妥协 ✅ |
 
-### ⚠️ 合入状态：`Pending`
+### 合入状态：`Merged`（2026-11-05）
 
-`feature/TASK-063` **尚未合入 `main`**。这是 US-001 最后一个未合入的交付分支。
+`d1b1e4a  Merge branch 'feature/TASK-063' into main`
 
-**Story 级影响**：063 是 11 项 AC 的最后一块前端接入。**合入后 US-001 才具备整体验收条件**（Story → `Reviewing` 由 PM 登记）。
+- `git merge-base --is-ancestor 1a5a666 main` = **是**；分支 tip 与 merge commit 均在 `main` 中
+- 至此 **US-001 七张任务卡的交付分支全部合入 `main`**（053 / 055 / 056 / 057 / 063 / 064）
 
-**未做的事**：未改 AC / Scope / 代码；未提交合入、未推送、未关闭 Task 或 Story。
+**Story 级影响**：063 是 11 项 AC 的最后一块前端接入，合入后 **US-001 已具备整体验收条件**。Story → `Reviewing` 由 **PM 登记**（[STATES.md §4](../../../os/process/STATES.md#4-谁可以改变状态)）。
+
+**未做的事**：未改 AC / Scope / 代码；未推送、未关闭 Task 或 Story。

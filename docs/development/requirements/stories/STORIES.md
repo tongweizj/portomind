@@ -6,7 +6,7 @@
 
 | Story | 标题 / 用户价值 | 文件链接 |
 |---|---|---|
-| US-001 | 判断每日定时任务的运行与数据完整性（FS P0 首批） | [Story](./active/US-001-cron-worker-health-and-data-completeness.md) |
+| US-001 | 判断每日定时任务的运行与数据完整性（FS P0 首批）— **Completed（2026-11-05）** | [Story](./active/US-001-cron-worker-health-and-data-completeness.md) |
 | US-002 | 从看板追到原因——停滞提示、再平衡分发记录与原始日志下钻（FS-cron-worker-status-board P1） | [Story](./active/US-002-board-drilldown-and-staleness.md) |
 | US-003 | 组合详情「总览」——卡片说偏了，点进去看得见（FS-portfolio-ia-cleanup 交付单元 A） | [Story](./active/US-003-portfolio-detail-overview-ia.md) |
 | US-004 | Dashboard 组合健康表——首屏回答「哪个账户该先动」（FS-portfolio-ia-cleanup 交付单元 B） | [Story](./active/US-004-dashboard-portfolio-health.md) |

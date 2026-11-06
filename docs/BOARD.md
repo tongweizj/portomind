@@ -10,11 +10,11 @@
 | 项目 | 当前情况 |
 |---|---|
 | Story / 用户价值 | [US-001](./development/requirements/stories/active/US-001-cron-worker-health-and-data-completeness.md)：首屏判断五类任务运行与数据完整性（FS P0） |
-| Status | Implementing（053/054/055/056 结案；057 计划 Approved 并实施中；063/064 待批准） |
-| 交付目录 | [US-001 过程资料](./development/delivery/US-001)（6张专属任务卡、6份计划（3 Completed、1 Approved、2 Draft）、2份交接记录；复用054保持唯一原位置） |
-| PM / 验收负责人 | PM（需求整理与 Story 验收汇总）/ Human |
-| 下一步 | **US-001 七张任务卡全部 Completed。** 053/055/056/057/064 已合入 `main`；**063 已结案但未合入**（`9b90fdc`）——063 是 11 项 AC 的最后一块前端接入，**合入后 Story 才具备整体验收条件**。 |
-| 阻塞 / 待决策 | **任务层无阻塞，七卡全部 Completed。** 待 Human：① **合入 TASK-063 并登记 `Merged`**（`feature/TASK-063` @ `9b90fdc`）——这是 Story 进入整体验收的最后一个动作；② Story → `Reviewing` 由 **PM 登记**（STATES.md §2.2 / §4），Orchestrator 不代填；③ Story 级遗留（各卡 MINOR 多为「上线后跑满一个调度周期再验」）建议合并成一条 Story 级待办。 |
+| Status | **Completed**（2026-11-05，Human 确认「us 完成了」；七张任务卡全部 `Completed` 并合入 `main` @ `d1b1e4a`） |
+| 交付目录 | [US-001 过程资料](./development/delivery/US-001)（6 张专属任务卡 + 6 份计划，全部 `Completed`；1 份 Planner 交接 + 2 份回交记录；复用 054 保持唯一原位置）。**待归档**：Story 已关闭但过程目录尚未移到 `delivery/completed/US-001/` |
+| PM / 验收负责人 | PM（需求整理与 Story 验收汇总）/ Human（已关闭） |
+| 下一步 | **US-001 全部完成。** 剩余为两项独立动作：① **归档**过程目录到 `development/delivery/completed/US-001/`（[DOCS.md §1.1](./os/standards/DOCS.md#11-story-交付目录与文档生命周期)）；② 完成后主动作 [Story §8.1 六项上线后验证待办](./development/requirements/stories/active/US-001-cron-worker-health-and-data-completeness.md#81-上线后验证待办承接自各任务卡的残余-minor)（V-01～V-06），需真实调度周期 |
+| 阻塞 / 待决策 | **无阻塞。** 说明：Story 级 11 项 AC 的**端到端串联验收未单独执行**——本轮结论依据 Human 明示关闭（属 Human 授权），逐条 AC 的部分由各任务卡的独立审查覆盖。验收性质已在 Story §8 顶部声明。若要补做端到端验收，属可选加强项，非阻塞 |
 
 ### 下挂 Task
 
@@ -58,7 +58,7 @@
 
 | 统计范围 | 总数 | Backlog | Planning | Implementing | Reviewing | Blocked | Completed |
 |---|---:|---:|---:|---:|---:|---:|---:|
-| 全部已登记 Story（排除取消） | 1 | 0 | 0 | 1 | 0 | 0 | 0 |
+| 全部已登记 Story（排除取消） | 1 | 0 | 0 | 0 | 0 | 0 | 1 |
 | 当前 Story 已关联 Task | 7 | 0 | 0 | 0 | 0 | 0 | 7 |
 | 尚未关联 Story 的未完成 Task | 5 | 1 | 4 | 0 | 0 | 0 | 0 |
 
@@ -83,7 +83,7 @@
 
 | Story | 交付结果 | 完成日期 | 验收记录 |
 |---|---|---|---|
-| — | 暂无 | — | — |
+| [US-001](./development/requirements/stories/active/US-001-cron-worker-health-and-data-completeness.md) | 日志频道 `/logs` 任务运行看板：三 tab + 五卡真实数据 + 总览 + 状态色图例 + 手动刷新 + 四型空态 + 错误分层；后端补 `taskruns.result` / `taskskips` / 再平衡父任务 / 读侧归一化。七张任务卡全部 `Completed` 并合入 `main` @ `d1b1e4a` | 2026-11-05 | [Story §8](./development/requirements/stories/active/US-001-cron-worker-health-and-data-completeness.md#8-整体验收记录)（Human 授权通过，含验收性质声明）· 遗留 [§8.1 V-01～V-06](./development/requirements/stories/active/US-001-cron-worker-health-and-data-completeness.md#81-上线后验证待办承接自各任务卡的残余-minor) |
 
 ## 已退出 Story
 
