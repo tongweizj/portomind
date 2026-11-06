@@ -239,7 +239,100 @@ detail=rebalance：
 
 ## 12. Review Record
 
-尚未独立审查；Planner 自检不等于 Reviewer 判定。
+### 12.1 审查对象与基线
+
+| 项 | 事实 |
+|---|---|
+| 审查角色 | 独立 Reviewer（独立会话，非实现者，未自审通过） |
+| 工作目录 | `D:/projects/portomind-064`（独立 worktree） |
+| 分支 / SHA | `feature/TASK-064` @ `de045af`（基点 `d124626`） |
+| 工作区状态 | 干净（`git status --porcelain` 空；交付已提交；审查后 temp 探针全部删除） |
+| 真实数据库 | `portomind_dev`（家庭服务器，`server/.env` 的 `MONGO_URI`，未打印口令）；连接 OK，`taskruns=276 / taskskips=0` |
+| 被审文件 SHA256 | `cronStatus.service.js` `1c3af7d1…f498f`；`modelStubs.js` `d1acbf89…257a`；`cronStatus.service.test.js` `2345aaab…5107`；`verify-task-064.cjs` `3b447c7f…b029`；`API_CONTRACT.md` `477f9a43…0144`；`DATA_MODEL.md` `3aac2f4e…e96d` |
+
+### 12.2 首要核实：分支基点落后（合入风险，非 Implementer 缺陷）
+
+- `feature/TASK-064` 从 `d124626` 切出，**不包含 `c11bb64`**（`git merge-base --is-ancestor c11bb64 HEAD` = 否）。
+- `git diff d124626..HEAD -- scripts/check-docs.cjs scripts/check-docs.test.cjs` **为空**——Implementer 从未改这两个文件，分支 diff 里没有任何 check-docs 相关意图。**判定为假改动**（基点落后产生），**不计为 Implementer 缺陷**。
+- 但以 `main` 为参照：`git diff main..HEAD -- scripts/check-docs.cjs` 显示 `> 2` → `> 1`，且 `check-docs.test.cjs` 删除「one development Story plus one preparation Story is allowed」用例。**若直接合并，将回退 `c11bb64`，`docs:check` 会重新报 `multiple-current-deliveries`**（因 delivery 根目录现有 US-001/US-002/US-003 等目录）。
+- **处置建议（合入前必做）**：将 `feature/TASK-064` **rebase 到最新 `main`**，并在 rebase 后验证 `scripts/check-docs.cjs:48` 仍为 `if (currentDeliveries.length > 2)`、`docs:check` 不再误报。本卡代码本身不含该缺陷。
+
+### 12.3 方法声明（独立性）
+
+- 未直接采纳 Implementer 的 232/78、13/13 或 Orchestrator 抽验为结论；自行重跑确认：`test:server` **232/232**、`test:worker` **78/78**（均 exit 0）、`verify-task-064.cjs` **13/13**。
+- **自建探针** `review-064-probe.cjs`（临时，已删）：经仓库自身 stub harness 把世界状态注入**真实 `getStatus`**，覆盖 AC1–AC6 共 36 条断言（FX 数值/容器/判级六分支、再平衡 F4–F7/S9、lastSkip、查询预算、detail 不查 skip），**36/36 PASS**。
+- 对 **AC2 / AC3 / AC4 / AC5** 各做一次负向对照（临时篡改 `cronStatus.service.js` → 断言 FAIL → 还原 → `git status` 空）。
+- 真实 Mongo：Implementer 脚本自带 cleanup（before=276 / after=276，taskskips 0→0），本人独立重跑取证；另用自有 dbcheck 复核前后一致。
+
+### 12.4 AC1–AC6 逐条判定（独立实测）
+
+| AC | 判定 | 证据（本探针 / 独立核对） |
+|---|---|---|
+| AC1 | 满足 | 标量 `7.13/5.21/0.92` → `ok:null` + `NUMERIC_OBSERVATION_ONLY`、`level=unknown`（不判成功也不判失败）、`contractReady=true`；`0`/负/`NaN`/`Infinity`/字符串 `"7.13"` → `CURRENCY_INVALID`+`contractReady=false`；USD `0.14` 方向错误但合法正值仍只观测（不宣称方向已修） |
+| AC2 | 满足（已负向对照） | 空对象 `{}`→`contractReady=false`+`CONTRACT_NOT_READY`；数组容器拒绝；缺 USD→`CURRENCY_MISSING` 列明币种；只给 1 币种 `ok:true`→`warn` 不整体绿；`ok` 非布尔→`CURRENCY_INVALID`；**判级表六分支逐一实测**：三币全 ok→`ok`、全败→`bad`、混合→`warn`、无显式失败有缺失但有成功项→`warn`、无成功项→`unknown`、缺契约→`unknown`；显式 `ok:false` 与缺记录展示语义可区分。**负向**：`fxLevel` 改「有 ok 就整体绿」→ 3 条判级断言 FAIL |
+| AC3 | 满足（含 detail 零回归） | S6 语义：`due=null` 保持 `null`（F4）、`suggestionsCount=null` 保持未知不折算 0（F5）、**未超阈 `needsRebalance:false/0/null` 判 `ok` 非 `bad`**（F6，本卡最重要修正）、`generatedCount` 只计显式>0；缺项 `perPortfolio`→`contractReady=false`+`PER_PORTFOLIO_INCOMPLETE`（F7）；`status:'SKIPPED'` 项 needs/suggestions 保持 null、呈 `warn`；S9 历史无 result→`contractReady=false`/`unknown` 降级。**负向**：`due` 改回 `result ? result.due===true : null` → F4 断言 FAIL。**detail 零回归**：`summary.generated` 仍为 `(row.suggestionsCount ?? 0) > 0`（行 922，原 743 表达式未改）；`due/generated/failed/skipped` 汇总口径不变；detail 不查询 taskskips（AC5 测试通过）；既有 detail 相关单测 232/232 全绿 |
+| AC4 | 满足（已负向对照） | 主视图每任务 `lastSkip` 与 `lastRun` 分离；首跑 `RUNNING` 记录 `rawStatus=RUNNING` 未被改成 SKIPPED（只读）；skip 事件 `ALREADY_RUNNING`/`DUPLICATE_RUN_KEY` 来自 `taskskips`；无记录/命名空间缺失（code 26）→`lastSkip:null` 兼容；**非命名空间错误（code 500 超时/权限）必须抛出**。**负向**：`loadLatestSkips` 改成无条件 `return []` 吞错 → 「必须抛出」断言 FAIL |
+| AC5 | 满足（已负向对照） | 主视图 `TaskSkip.aggregate` 恰好 **1 次**批量（`$match {taskName:$in 五任务}` + `$sort skippedAt:-1` + `$group $first $$ROOT`），只读预算 6→7（+1）；detail 在 skip 查询前 return、`TaskSkip` 查询数 0；`GET` 路径服务内 0 个 `create/update/delete` 调用（不触发任务、不写库）；五任务顺序、错误参数（`detail?/date?/portfolioId?`）由 232/232 回归覆盖。**负向**：`loadLatestSkips` 内多一次聚合 → count=2 → 「恰好 1 次」断言 FAIL |
+| AC6 | 满足（证据边界诚实） | 新增 18 条测试覆盖数字汇率/空对象/非法缺币种/完整与缺 result/skip 覆盖/RUNNING+STALE 保留；真实 Mongo `verify-task-064.cjs` 13/13（临时夹具写入 5 TaskRun + 2 TaskSkip 后立即删除，276→276、0→0）。计划 §7/§11.7 明确「stub 单测只证明读侧映射，真实持久化证据由 057 提供」「这是 adapter 真实读库证据，**不是** 057 写侧持久化证据」——**未把 stub 冒充写侧证据**，S1～S10 未复用项如实标注 |
+
+### 12.5 Findings
+
+| # | 严重度 | 位置 | 现象 | 对应 AC | 修法方向 |
+|---|---|---|---|---|---|
+| F-01 | **MAJOR（合入风险，非代码缺陷）** | 分支基点 `d124626` vs `main`（`c11bb64` 缺失） | 直接合并会回退 `c11bb64`，`scripts/check-docs.cjs:48` 从 `> 2` 退回 `> 1`，`docs:check` 重新报 `multiple-current-deliveries`；`check-docs.test.cjs` 少一条「一开发+一预研 Story 允许」用例 | 合入 / AC5 文档校验 | **合入前 rebase 最新 `main`，rebase 后验证 `:48` 仍为 `> 2` 且 `docs:check` 不再误报**。不计为 Implementer 缺陷，但必须在结案/合入前解决 |
+| F-02 | MINOR | `verify-task-064.cjs` / §11.7 | 真实 Mongo 脚本用临时测试夹具（写 5 TaskRun + 2 TaskSkip 后即删），057 写侧真实 result 已被其脚本清理，本卡未复用生产节奏的真实结果；S1～S10 未取得项以单元/stub 映射验证 | AC6 | 上线后跑满一个调度周期再确认数据就绪；计划已如实标注，不阻塞 |
+| F-03 | MINOR | `docs:check` | 既有 `docs/readme.md:66` broken link + 多 Story 目录 ERROR（基点落后叠加）非本卡新增链接 | AC5 文档 | 随 F-01 的 rebase 与既有 docs 治理处理，非本卡范围 |
+| F-04 | MINOR | `unknownCount` | 计划 §4 允许可选 `unknownCount`，实现未新增公开字段，未知组合仅在 `REBALANCE_UNRESOLVED` note 体现（§11.7 已声明） | AC3 | 属实施层自由度（§6 已授权），不阻塞 |
+| F-05 | — | `taskskips` 容量 | 无 TTL/容量评估（D-01 明确本次不加）；`skipPersisted=false` 消费方未实现 | AC4 | 留待后续，不阻塞 |
+
+无 BLOCKER。F-01 为**合入流程风险**（MAJOR 级登记、须 rebase 解决），非本卡实现代码缺陷，按交接 §3 要求单独登记、不算 Implementer 缺陷。
+
+### 12.6 负向对照记录（篡改 → 断言 FAIL → 还原 → `git status` 空）
+
+| AC | 临时缺陷 | 断言表现 | 还原 |
+|---|---|---|---|
+| AC2 | `fxLevel` 改为 `if (okCount > 0) return 'ok'`（有 ok 就整体绿） | 「只给 1 币种不整体绿」「混合→warn」「无显式失败但有成功项→warn」3 条 FAIL；33/36 PASS | 备份还原，SHA256 回 `1c3af7d1…` |
+| AC3 | `due` 改回 `result ? result.due === true : null`（F4 回归） | 「F4 due=null 保持 null」FAIL（实际 false）；34/36 PASS | 备份还原 |
+| AC4 | `loadLatestSkips` catch 内无条件 `return []` 吞所有错误 | 「非命名空间 DB 错误必须抛出」FAIL（threw=false）；35/36 PASS | 备份还原 |
+| AC5 | `loadLatestSkips` 内多加一次 `TaskSkip.aggregate` | 「恰好 1 次批量聚合」FAIL（count=2）；35/36 PASS | 备份还原 |
+
+还原后重跑自建探针 **36/36 PASS**；每次 `git status --porcelain` 均为空（仅余 temp 探针，最终全部删除）。
+
+### 12.7 数据库前后条数（未污染证明）
+
+| 时点 | taskruns | with_result | taskskips | 测试键 |
+|---|---|---|---|---|
+| 审查前 | **276** | 0 | **0** | 0 |
+| `verify-task-064.cjs` 运行中（本人重跑取证） | +5 TaskRun / +2 TaskSkip → cleanup | — | — | 自有 `test:064:*`，即删 |
+| verify 脚本后（脚本自报 before=after） | **276** | 0 | **0** | 0 |
+| **审查结束（自有 dbcheck）** | **276** | **0** | **0** | **0** |
+
+历史 276 条（AC3/S9 被测对象）未删改；`taskskips` 集合（057 创建，空）未 drop、未新建集合/索引、未改唯一索引；本卡 GET 路径 0 写调用。
+
+### 12.8 停下上报条件逐条排除
+
+- DB 连接 OK（276/0）。
+- **未改** `cron-worker/`、`client/`（`git diff --name-only d124626..HEAD` 无相关文件）。
+- detail 行为未改变（`summary.generated` 行 922 `?? 0` 保留、detail 不查 taskskips、既有 detail 测试全绿）。
+- 054 既有结论未改（未触碰历史文档/路由）。
+- 未新增索引/集合（`shared/models/` 零 diff；`taskskips` 为 057 既有）。
+- 读侧 stub 未被冒充真实持久化证据（§11.7 明确区分，AC6 诚实标注）。
+- 无 AC 与实现不可调和的冲突。
+
+### 12.9 残余风险与未验证项
+
+- **F-01 合入风险未在本卡内解决**：rebase main 属合入流程动作，Reviewer 不做；须由 Orchestrator/Human 在合入前执行并复验 `check-docs.cjs:48`。
+- 未跑真实 UI / 完整 053/055 回归（Out of Scope）；未跑满一个真实调度周期，S1～S10 真实结果以临时夹具/stub 验证（F-02）。
+- `taskskips` 容量/TTL 与 063 消费层未联调；汇率方向错误（TASK-051）不归本卡，`currencies` 记真实数值可能暴露已知缺陷，属预期。
+- `docs:check` 既有 broken link 与多 Story 目录 ERROR 未修（F-03）。
+
+### 12.10 判定
+
+**Pass with issues** —— AC1～AC6 全部满足并经独立复核：FX 数值仅观测/容器拒绝/判级六分支、再平衡 F4–F7 与「未超阈判 ok」、lastSkip 只读与错误精确处理、查询预算 +1 单次批量、detail 零回归、AC6 证据边界诚实，均以自建探针（36/36）+ 真实 Mongo 重跑 + 全量回归（232/78）+ 四处负向对照独立取证；Implementer 与 Orchestrator 数据逐一吻合。
+
+**无 BLOCKER**；**一项 MAJOR 级合入风险 F-01**（分支基点落后 `c11bb64`，直接合并会回退 docs 检查修复）——按交接 §3 明确要求登记为**合入风险、非 Implementer 缺陷**，合入前须 rebase main 并复验 `check-docs.cjs:48` 仍为 `> 2`；其余均为 MINOR（F-02 临时夹具证据边界、F-03 既有 docs 问题、F-04 unknownCount 未输出、F-05 taskskips 容量），均不阻塞本卡代码判定。
+
+本结论为**判定词而非状态**；未改 Task Status / AC / Scope / 合入状态，未 `git add / commit / push`，未关闭 Task 或 Story。rebase、登记 `Reviewing`、合入与关闭由 Orchestrator / Human 依 STATES.md §4 处理。
 
 ## 13. Completion Record
 
