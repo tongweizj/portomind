@@ -5,7 +5,7 @@
 
 ## 当前 Story
 
-> **当前格局（2026-11-05）**：US-001 = 当前 Story（`Implementing`，开发中）；[US-004](./development/requirements/stories/active/US-004-dashboard-portfolio-health.md) = 预研 Story（`Planning`，拆卡与计划已完成，**不进入实施**）。这是 [DOCS.md §1.1](./os/standards/DOCS.md#11-story-交付目录与文档生命周期) 允许的上限（一个开发中 + 一个预研），不新增第三个交付目录。US-002 / US-003 / US-005 仍为 `Backlog`，需求留在 `requirements/stories/`，不预建交付目录。
+> **当前格局（2026-11-06）**：US-001 已 `Completed` 并归档（过程目录在 `delivery/completed/US-001/`）；[US-004](./development/requirements/stories/active/US-004-dashboard-portfolio-health.md) 已 `Planning`（预研）→ 三张下挂 Task（065/066/067）于 2026-11-06 登记 `Implementing`，进入实施。**Story 状态仍为 `Planning`**——Story → `Implementing` 归 PM（[STATES.md §4](./os/process/STATES.md#4-谁可以改变状态)），Orchestrator 只登记 Task，未代填。US-002 / US-003 / US-005 仍为 `Backlog`，需求留在 `requirements/stories/`，不预建交付目录。
 
 | 项目 | 当前情况 |
 |---|---|
@@ -60,8 +60,9 @@
 
 | 统计范围 | 总数 | Backlog | Planning | Implementing | Reviewing | Blocked | Completed |
 |---|---:|---:|---:|---:|---:|---:|---:|
-| 全部已登记 Story（排除取消） | 1 | 0 | 0 | 0 | 0 | 0 | 1 |
-| 当前 Story 已关联 Task | 7 | 0 | 0 | 0 | 0 | 0 | 7 |
+| 全部已登记 Story（排除取消） | 2 | 0 | 1 | 0 | 0 | 0 | 1 |
+| US-001 已关联 Task（已归档） | 7 | 0 | 0 | 0 | 0 | 0 | 7 |
+| US-004 已关联 Task | 5 | 0 | 2 | 3 | 0 | 0 | 0 |
 | 尚未关联 Story 的未完成 Task | 5 | 1 | 4 | 0 | 0 | 0 | 0 |
 
 > 统计来自卡片；旧词按 STATES.md §7.1 映射，不证明当前实施授权。已关联任务不重复计入未关联任务。TASK-054 的既有 Completed 计为 1 个支撑任务完成，不表示当前 Story 已验收。TASK-055 的 `Completed` 计 1 个任务完成，但其 `Merged` 仍为 `Pending`（未合入 `main`），不构成 AC-03/04 的主干证据。共 11 条历史完成记录保留作证据索引，与本 Story 进度不可相加。
@@ -72,7 +73,7 @@
 |---|---|---|---|---|
 | [US-002](./development/requirements/stories/active/US-002-board-drilldown-and-staleness.md) | 从看板追到原因：停滞提示 + 再平衡分发记录页 + 原始日志下钻（承接 US-001 未含的 P1 需求 R6/R7/R10） | High | 可启动；待 Planner 拆 Task | 依赖 TASK-057 合入（AC-05～09 三列）；OQ-01 缓冲值、OQ-02 单日 vs 多日矩阵、OQ-03 停滞提示形态未决 |
 | [US-003](./development/requirements/stories/active/US-003-portfolio-detail-overview-ia.md) | 组合详情「总览」：目标 vs 实际 / 偏离原因 / 删除入口 / 配置分层（Spec 交付单元 A，纯客户端） | High | 可启动；Spec 已 `Approved` 但从未拆 Task | 顺序已裁（US-004 先行，US-003 侧 OQ-01 = US-004 侧 OQ-02）；AC-16 的 `lastExecutedAt` 依赖 US-004 的 B1，因 US-004 先行故无需临时隐藏；余 OQ-03（`?record=` 上限）待确认 |
-| [US-004](./development/requirements/stories/active/US-004-dashboard-portfolio-health.md) | Dashboard 组合健康表 + 分币种小计 + 组合卡四格（Spec 交付单元 B，改 `shared`/`server`） | High | **预研中（已拆 5 卡，待登记实施）**——Status `Planning`，当前唯一的预研 Story | 交付目录 [delivery/US-004](./development/delivery/US-004)（TASK-065～069 + 5 份 Draft 计划 + 实施提示词）；**OQ-01 / OQ-02 均已裁决**（排序=有事的在上，原型 `unvaluable`/`missing` 两档不采用；顺序=本 Story 先行）；TASK-065 / TASK-068 需 `Approved` ExecPlan |
+| [US-004](./development/requirements/stories/active/US-004-dashboard-portfolio-health.md) | Dashboard 组合健康表 + 分币种小计 + 组合卡四格（Spec 交付单元 B，改 `shared`/`server`） | High | **实施中（Story 仍 `Planning`，三张下挂 Task 已 `Implementing`）** | 交付目录 [delivery/US-004](./development/delivery/US-004)（TASK-065～069）。**2026-11-06**：065/066/067 三份计划经 Human 确认批准并登记 `Implementing`，各自独立 worktree（`portomind-065/066/067`）；**OQ-01/02/04/05 全部已裁决**（排序=有事的在上、本 Story 先行、偏离徽标两态解 B、`driftLabels.js` 归 066）；G-1/G-2 覆盖缺口已闭合。**068 硬串行**（同改 `summary.js`，等 065 合入后才派）；069 收尾 |
 | [US-005](./development/requirements/stories/active/US-005-transaction-query-filters.md) | 交易流水按时间/类型/多组合筛选，条件写进 URL | Medium | 可启动；复用既有 TASK-045（Backlog） | OQ-01 多值参数形态、OQ-02 是否加索引未决；需 `Approved` ExecPlan |
 
 > PM 按已确认的优先级维护队列，原有 Task 与 Spec 不自动变成 Story。Story 文档入口见 [STORIES.md](./development/requirements/stories/STORIES.md)；状态统一按 STATES.md §6 汇总。
