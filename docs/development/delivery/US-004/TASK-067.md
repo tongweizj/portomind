@@ -4,14 +4,13 @@
 
 | 字段 | 内容 |
 |---|---|
-| Priority / Owner / Type | `High` / 待指派 / `Feature`（纯客户端，零请求零服务端） |
-| Created / Updated | 2026-11-05 / 2026-11-05 |
+| Status | Implementing（2026-11-06，计划已 `Approved`；Orchestrator 登记，Implementer C 实施） |
+| Priority / Owner / Type | `High` / Implementer C / `Feature`（纯客户端，零请求零服务端） |
+| Created / Updated | 2026-11-05 / 2026-11-06 |
 | 所属 Story | [US-004](../../requirements/stories/active/US-004-dashboard-portfolio-health.md) |
 | 覆盖的验收条件 | US-004/AC-17、AC-18 |
 | Related Product Spec / ADR | [FS-portfolio-ia-cleanup](../../requirements/specs/FS-portfolio-ia-cleanup.md) §6.2（B15）、§7（AC41）、§10（R-10）、§11（HD-13） |
-| Execution Plan | [Draft：TASK-067-plan](./TASK-067-plan.md)（原免计划，按 Human 要求补计划） |
-
-> 待 Orchestrator 正式登记的任务内容，当前不含 Status，不属于已登记任务或实施队列。
+| Execution Plan | [Approved：TASK-067-plan](./TASK-067-plan.md)（2026-11-06 Human 确认批准） |
 
 ## 1. 问题
 
@@ -30,7 +29,7 @@
 
 - [ ] AC-01：卡片新增四格全部呈现：① 总市值（`marketValueByCurrency` 分币种并列，不跨币种合计）② 持仓资产（`positionCount`）③ 待办（`pendingRebalanceCount` + `unreadAlertCount`）④ 上次再平衡（`lastExecutedAt` → `YYYY-MM-DD`，`null` → 「从未」）（对应 US-004/AC-17）。
 - [ ] AC-02：「待办」为 0 显示「—」；「上次再平衡」无值显示「从未」，DOM 中 `grep` 不到「暂无」（对应 US-004/AC-17）。
-- [ ] AC-03：**同源逐字一致**——同一组合在卡片与健康表（TASK-066）的「偏离」文案逐字一致（对应 US-004/AC-18）。
+- [ ] AC-03：**同源**（D-01 已裁，解 B，2026-11-06 Human）——卡片与健康表（TASK-066）的「待办」「上次再平衡」文案**逐字一致**（「N 条待确认」/「N 条未读」/「从未」/`YYYY-MM-DD`）；「偏离」数据同源取 `stats.drift`（不各算一套），但**卡片 `DriftBadge` 徽标维持现状两态**（「偏离阈值」/「配置正常」），不改语义、不改成健康表四态（P1-1）。逐字一致**不**要求卡片偏离徽标与健康表偏离列字面相同（对应 US-004/AC-18）。
 - [ ] AC-04：进入 `/portfolios` 时 Network 中 portfolios 相关请求数**不变**（对比改动前基线，零新增请求）（对应 US-004/AC-17）。
 
 ## 4. Scope
@@ -56,7 +55,7 @@
 | 编号 | 依赖 | 状态 |
 |---|---|---|
 | B1 | 前置 TASK-065：`stats` 新增 `lastExecutedAt` / `pendingRebalanceCount` | 待办理（缺字段时「待办/上次再平衡」显示降级态，验收需真实字段） |
-| B2 | 与 TASK-066 同源对齐（文案逐字一致） | 协调 |
+| B2 | 与 TASK-066 同源对齐（「待办/上次再平衡」文案逐字一致；偏离徽标维持两态） | 协调 |
 
 ## 7. Coordination Notes
 
@@ -64,4 +63,6 @@
 
 ## 8. Open Questions
 
-无（OQ-03「组合卡市值单币种简化」为假设项，实施时按「健康表市值列同样按组合本币显示」执行，不跨币种合计）。
+- **D-01**：✅ 已裁决（2026-11-06 Human）——AC-18「偏离文案逐字一致」采用**解 B**：逐字一致只约束卡片与健康表重叠的「待办/上次再平衡」文案；卡片 `DriftBadge` 徽标维持两态（P1-1），偏离数据同源即可。
+- **D-02**：✅ 已裁决（2026-11-06 Human）——`driftLabels.js` 由 TASK-066（Implementer B）拥有，本卡消费。
+- OQ-03「组合卡市值单币种简化」为假设项，实施时按「健康表市值列同样按组合本币显示」执行，不跨币种合计。

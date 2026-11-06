@@ -2,11 +2,13 @@
 
 ## Status
 
-Status：Draft
+Status：Approved（2026-11-06，Human 确认已批准当前设计）
 
-Owner：Planner（规划）→ 待 Orchestrator 登记并指派 Implementer
+Owner：Planner（规划）→ Implementer B（2026-11-06 指派）
 
 Related Task：[TASK-066](./TASK-066.md)；所属 [US-004](../../requirements/stories/active/US-004-dashboard-portfolio-health.md)。
+
+Approval：**2026-11-06，Human 明确确认「我已经批准了」**（Orchestrator 会话核对时本文件仍为 `Draft`、无 Approval 段；经 Human 当面确认后由 Orchestrator 据其决定登记，**不是自行批准**）。批准覆盖本文件 §1～§9 当前设计，不含其他任务。此登记不改变设计内容。
 
 Branch / Base：实施时从 up-to-date `main` 新建 `feature/TASK-066` 独立 worktree。规划期基线为 2026-11-05 的 `main`；目标文件 `client/src/pages/Dashboard.jsx`、`client/src/components/Household/TotalAssetsCard.jsx`、`client/src/hooks/usePortfolios.js` 已亲读核实（见 §3）。
 
@@ -77,7 +79,8 @@ Approval：**未批准**。本计划覆盖 §1～§9 当前设计；`Draft → A
 | 项 | 结果 | 依据 |
 |---|---|---|
 | 排序档位 | 「有事的在上」= 待办→超阈→到期→`createdAt` 倒序；不采用原型 `unvaluable`/`missing` | OQ-01 已裁（2026-11-05 Human） |
-| 与 US-003 顺序 | 无硬依赖；`?sub=suggestions` 未落地时落到默认子 Tab（行为等价） | OQ-02 核对（2026-11-05 Planner） |
+| 与 US-003 顺序 | 无硬依赖；`?sub=suggestions` 未落地时落到默认子 Tab（行为等价）；本 Story 先行 | OQ-02 已裁（2026-11-05 Human） |
+| 共享常量归属 | 本卡（Implementer B）拥有 `driftLabels.js`，TASK-067 消费 | D-02 已裁（2026-11-06 Human） |
 
 无待 Human 新决事项。
 
@@ -94,6 +97,7 @@ Approval：**未批准**。本计划覆盖 §1～§9 当前设计；`Draft → A
 | AC-07（分币种小计） | 构造 buckets | 顺序 CNY→USD→CAD→HKD；null 桶「—」；无数据不渲染 |
 | AC-08（提醒区不变） | 回归筛选/已读/忽略/立即评估/规则管理 | 行为与改动前一致 |
 | AC-09（构建） | `npm run build --workspace client` + eslint | exit 0 / 0 error |
+| AC-10（视口不滚动） | 1440×900 视口打开 Dashboard（浏览器实测，不留像素锁死） | 总资产金额、分币种小计一行、健康表 3 行**不滚动可见**（对应 Story AC-05，G-2 缺口补） |
 
 命令入口见 [DEPLOYMENT.md §7](../../../handbook/ops/DEPLOYMENT.md)。**不写测试数量**。
 

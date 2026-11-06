@@ -2,11 +2,13 @@
 
 ## Status
 
-Status：Draft
+Status：Approved（2026-11-06，Human 确认已批准当前设计）
 
-Owner：Planner（规划）→ 待 Orchestrator 登记并指派 Implementer
+Owner：Planner（规划）→ Implementer C（2026-11-06 指派）
 
 Related Task：[TASK-067](./TASK-067.md)；所属 [US-004](../../requirements/stories/active/US-004-dashboard-portfolio-health.md)。
+
+Approval：**2026-11-06，Human 明确确认「我已经批准了」**（Orchestrator 会话核对时本文件仍为 `Draft`、无 Approval 段；经 Human 当面确认后由 Orchestrator 据其决定登记，**不是自行批准**）。批准覆盖本文件 §1～§9 当前设计，不含其他任务。此登记不改变设计内容。
 
 Branch / Base：实施时从 up-to-date `main` 新建 `feature/TASK-067` 独立 worktree。规划期基线为 2026-11-05 的 `main`；目标文件 `client/src/components/PortfolioCard/index.jsx`、`client/src/hooks/usePortfolios.js` 已亲读核实（见 §3）。
 
@@ -22,7 +24,7 @@ Approval：**未批准**。本计划覆盖 §1～§9 当前设计；`Draft → A
 
 关键约束：
 - **零请求零服务端**：四格数据全部取自 `usePortfolios()` 返回的 `stats`（TASK-065 落地后含 `lastExecutedAt`/`pendingRebalanceCount`）。
-- **同源逐字一致**（R-10）：卡片「偏离」文案与健康表（TASK-066）逐字一致。
+- **同源（D-01 解 B，已裁）**：卡片与健康表「待办」「上次再平衡」文案**逐字一致**；「偏离」数据同源取 `stats.drift`，但卡片 `DriftBadge` 徽标维持两态（P1-1），不改成语健康表四态。逐字一致**不**要求偏离徽标与健康表偏离列字面相同。
 - **不扩义**：徽标仍用 `drift.needsRebalance`（P1-1 未做前不改语义）。
 
 ## 3. Repository Findings（2026-11-05 亲读 `main`，行号为现状）
@@ -44,14 +46,14 @@ Approval：**未批准**。本计划覆盖 §1～§9 当前设计；`Draft → A
    - 布局沿用卡片既有 Tailwind 风格（`text-sm text-gray-*`），不引入新设计 token。
    - 徽标跳转目标与 TASK-066 `B9` 一致（「N 条待确认」→ `?sub=suggestions`，「N 条未读」→ `/` 组合筛选）；本卡主要做展示，跳转行为与健康表约定一致即可。
 
-2. **同源逐字一致**：卡片「偏离」文案（`DriftBadge`）与 TASK-066 健康表「偏离」列文案**逐字一致**——建议两处共享同一文案常量（如 `client/src/constants/driftLabels.js`，或在两卡各写但用测试锁定一致，实施时选共享常量更稳）。
+2. **同源（D-01 解 B）**：卡片「待办」「上次再平衡」文案与 TASK-066 健康表**逐字一致**，共享同一文案常量 `client/src/constants/driftLabels.js`（**由 TASK-066 / Implementer B 拥有，本卡消费**，D-02 已裁）。「偏离」数据同源取 `stats.drift`（不各算一套），卡片 `DriftBadge` 徽标维持现状两态，不改成四态。
 
 3. **零改动红线**：不改 `shared`/`server`/`cron-worker`；不改 `drift.needsRebalance` 徽标语义；不新增请求（复用 `stats`）。
 
 ## 5. Work Breakdown
 
 - [ ] W1：`PortfolioCard` 新增四格展示（含 `lastExecutedAt`/`pendingRebalanceCount` 降级态：字段缺失时「待办」「上次再平衡」显示「—」/「从未」）。
-- [ ] W2：与 TASK-066 对齐「偏离」文案（共享常量或测试锁定逐字一致）。
+- [ ] W2：消费 TASK-066 拥有的 `driftLabels.js` 共享常量，对齐「待办/上次再平衡」文案（逐字一致）；偏离徽标维持两态。
 - [ ] W3：验证（§7）：Network 请求数不变、四格呈现、`grep` 不到「暂无」、文案逐字一致。
 - [ ] W4：`npm run build --workspace client` + eslint。
 
@@ -60,7 +62,8 @@ Approval：**未批准**。本计划覆盖 §1～§9 当前设计；`Draft → A
 | 项 | 结果 | 依据 |
 |---|---|---|
 | 市值口径 | 按组合本币分币种并列，不跨币种合计（OQ-03 假设：市值单币种简化） | Spec OQ-03 / 产品硬约束 |
-| 与 TASK-066 同源 | 「偏离」文案逐字一致，建议共享常量 | Spec R-10 / AC-18 |
+| D-01（逐字一致口径） | 解 B：逐字一致只约束「待办/上次再平衡」；偏离徽标维持两态、数据同源 | 2026-11-06 Human 裁决 |
+| D-02（常量归属） | `driftLabels.js` 由 TASK-066（Implementer B）拥有，本卡消费 | 2026-11-06 Human 裁决 |
 
 无待 Human 新决事项。
 
@@ -70,7 +73,7 @@ Approval：**未批准**。本计划覆盖 §1～§9 当前设计；`Draft → A
 |---|---|---|
 | AC-01（四格呈现） | 进入 `/portfolios` 观察卡片 | 总市值/持仓资产/待办/上次再平衡四格全部呈现 |
 | AC-02（空态） | 构造待办=0、无 lastExecutedAt | 「待办」显示「—」、「上次再平衡」显示「从未」；`grep -rn "暂无" client/src` 无结果 |
-| AC-03（逐字一致） | 构造同一组合，比对卡片与健康表「偏离」文本 | 文案逐字一致 |
+| AC-03（同源逐字一致，解 B） | 构造同一组合，比对卡片与健康表「待办」「上次再平衡」文本；确认偏离徽标仍两态 | 「待办/上次再平衡」文案逐字一致；偏离徽标维持「偏离阈值/配置正常」两态，数据同源 |
 | AC-04（零请求） | Network 面板对比改动前基线 | portfolios 相关请求数不变 |
 
 命令入口见 [DEPLOYMENT.md §7](../../../handbook/ops/DEPLOYMENT.md)。
@@ -79,7 +82,7 @@ Approval：**未批准**。本计划覆盖 §1～§9 当前设计；`Draft → A
 
 | # | 风险 | 应对 |
 |---|---|---|
-| R-1 | 口径分裂：卡片与健康表偏离文案不一致 | 共享常量或测试锁定；AC-03 |
+| R-1 | 口径分裂：卡片与健康表「待办/上次再平衡」文案不一致 | 共享 `driftLabels.js` 常量（D-02：066 拥有）；AC-03 |
 
 ## 9. Rollback
 

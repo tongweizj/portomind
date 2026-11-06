@@ -2,11 +2,13 @@
 
 ## Status
 
-Status：Draft
+Status：Approved（2026-11-06，Human 确认已批准当前设计）
 
-Owner：Planner（规划）→ 待 Orchestrator 登记并指派 Implementer
+Owner：Planner（规划）→ Implementer A（2026-11-06 指派）
 
 Related Task：[TASK-065](./TASK-065.md)；所属 [US-004](../../requirements/stories/active/US-004-dashboard-portfolio-health.md)。
+
+Approval：**2026-11-06，Human 明确确认「我已经批准了」**（Orchestrator 会话核对时，本文件仍为 `Draft`、无 Approval 段；经 Human 当面确认后由 Orchestrator 据其决定登记，**不是自行批准**）。批准覆盖本文件 §1～§9 当前设计，不含其他任务。此登记不改变设计内容。
 
 Branch / Base：实施时从 up-to-date `main` 新建 `feature/TASK-065` 独立 worktree（沿 053/056 惯例）。规划期基线为 2026-11-05 的 `main`；目标文件 `shared/services/portfolio/summary.js` 与 `server/test/integration/portfolio.summary.test.js` 已亲读核实（见 §3）。
 
@@ -91,6 +93,7 @@ Approval：**未批准**。本计划覆盖 §1～§9 当前设计；`Draft → A
 | AC-03（pending 口径） | 构造 2 条 PENDING + 1 条 EXECUTED + 1 条 REVOKED | `pendingRebalanceCount===2` |
 | AC-04（N+1） | 构造 10 个组合，断言 `RebalanceRecord` 查询次数 ≤ 11 且 `countDocuments===0` | 1 聚合 + 10 次 findOne = 11；无逐组合 countDocuments |
 | AC-05（回归） | `npm run test:server`（命令入口见 [DEPLOYMENT.md §7](../../../handbook/ops/DEPLOYMENT.md)） | 全绿；既有 `portfolio.summary.test.js` F-06 用例不破 |
+| AC-06（cron-worker 零改动） | `git status cron-worker` 空输出（对应 Story AC-14，G-1 补） | 空输出，改动范围不触达 `cron-worker/` |
 
 命令入口：`npm run test:server`（server 单测）；`npm test`（全部 workspace，按需）。**不写测试数量**（以实际输出为准）。
 

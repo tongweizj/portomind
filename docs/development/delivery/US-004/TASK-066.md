@@ -4,14 +4,13 @@
 
 | 字段 | 内容 |
 |---|---|
-| Priority / Owner / Type | `High` / 待指派 / `Feature`（纯客户端） |
-| Created / Updated | 2026-11-05 / 2026-11-05 |
+| Status | Implementing（2026-11-06，计划已 `Approved`；Orchestrator 登记，Implementer B 实施） |
+| Priority / Owner / Type | `High` / Implementer B / `Feature`（纯客户端） |
+| Created / Updated | 2026-11-05 / 2026-11-06 |
 | 所属 Story | [US-004](../../requirements/stories/active/US-004-dashboard-portfolio-health.md) |
 | 覆盖的验收条件 | US-004/AC-05～AC-13 |
 | Related Product Spec / ADR | [FS-portfolio-ia-cleanup](../../requirements/specs/FS-portfolio-ia-cleanup.md) §4.3（Dashboard 线框）、§6.2（B6～B13）、§7（AC24～AC32）、§10（R-5） |
-| Execution Plan | [Draft：TASK-066-plan](./TASK-066-plan.md)（原免计划，按 Human 要求补计划） |
-
-> 待 Orchestrator 正式登记的任务内容，当前不含 Status，不属于已登记任务或实施队列。
+| Execution Plan | [Approved：TASK-066-plan](./TASK-066-plan.md)（2026-11-06 Human 确认批准） |
 
 ## 1. 问题
 
@@ -37,6 +36,7 @@
 - [ ] AC-07：总资产卡内新增一行分币种小计：按 `buckets` 逐币种显示，`null` 桶显示「—」，币种顺序固定 `CNY → USD → CAD → HKD`，其余按字母序追加；无数据时该行整体不渲染（对应 US-004/AC-05、AC-06）。
 - [ ] AC-08：提醒区（筛选 / 标记已读 / 忽略 / 立即评估 / 规则管理）行为与改动前一致，逻辑零改动（对应 US-004/AC-13）。
 - [ ] AC-09：`npm run build --workspace client` exit 0；eslint 0 error。
+- [ ] AC-10：1440×900 视口下打开 Dashboard，**不滚动即可见**：总资产金额、分币种小计一行、健康表 3 行（对应 US-004/AC-05 的视口条件，PM G-2 缺口补）。
 
 ## 4. Scope
 
@@ -66,7 +66,7 @@
 | 编号 | 依赖 | 状态 |
 |---|---|---|
 | B1 | 前置 TASK-065：四字段（`lastExecutedAt`/`pendingRebalanceCount`/`dueByTime`/`overThresholdCount`）落地后才可完整渲染 | 待办理（可用「字段缺失降级」先做骨架，但验收需真实字段） |
-| B2 | OQ-01（排序档位）、OQ-02（与 US-003 顺序）待 Human 裁决 | 待 Human |
+| B2 | OQ-01 / OQ-02 均已裁决（见 §8） | ✅ 已满足 |
 
 ## 7. Coordination Notes
 
@@ -75,4 +75,6 @@
 ## 8. Open Questions
 
 - **OQ-01**：✅ 已裁决（2026-11-05 Human）——「**有事的在上**」（`待办数>0 → 超阈 → 到期 → createdAt 倒序`）；原型多加的 `unvaluable` / `missing` 两档**不采用**。
-- **OQ-02**（待 Human）：本 Story 与 US-003 的实施顺序。经核对二者**无硬依赖**，可独立推进（详见 Story 卡 §5 DEP-01/DEP-02 与 US-003 §5 DEP-01/DEP-02）。影响面：本卡 AC-03「待办」列跳转目标 `?sub=suggestions` 在 US-003 AC-11 落地前落到默认子 Tab（`suggestions` 本就是默认视图，行为等价）。
+- **OQ-02**：✅ 已裁决（2026-11-05 Human）——本 Story 与 US-003 **无硬依赖**、本 Story 先行；本卡 AC-03「待办」跳转 `?sub=suggestions` 在 US-003 AC-11 落地前落到默认子 Tab（行为等价）。
+- **D-02**：✅ 已裁决（2026-11-06 Human）——本卡（Implementer B）**拥有**共享文案常量 `client/src/constants/driftLabels.js`（健康表四态偏离 + 「待办/上次再平衡」文案），TASK-067 消费。
+- **D-01**：✅ 已裁决（2026-11-06 Human，解 B）——逐字一致只约束「待办/上次再平衡」，偏离徽标维持两态（属 TASK-067 口径，本卡健康表偏离列仍为四态）。

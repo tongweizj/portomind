@@ -4,14 +4,13 @@
 
 | 字段 | 内容 |
 |---|---|
-| Priority / Owner / Type | `High` / 待指派 / `Feature`（shared 内核 + server 契约） |
-| Created / Updated | 2026-11-05 / 2026-11-05 |
+| Status | Implementing（2026-11-06，计划已 `Approved`；Orchestrator 登记，Implementer A 实施） |
+| Priority / Owner / Type | `High` / Implementer A / `Feature`（shared 内核 + server 契约） |
+| Created / Updated | 2026-11-05 / 2026-11-06 |
 | 所属 Story | [US-004](../../requirements/stories/active/US-004-dashboard-portfolio-health.md) |
-| 覆盖的验收条件 | US-004/AC-01～AC-04（AC-04 的 N+1 禁令与量纲约束落在本卡） |
+| 覆盖的验收条件 | US-004/AC-01～AC-04、AC-14（AC-14 的 cron-worker 零改动断言落在本卡） |
 | Related Product Spec / ADR | [FS-portfolio-ia-cleanup](../../requirements/specs/FS-portfolio-ia-cleanup.md) §6.2（B1～B4）、§7（AC20～AC23）、§10（R-1、R-7）；[API_CONTRACT.md](../../../handbook/technical/API_CONTRACT.md) `GET /api/portfolios/summary` |
-| Execution Plan | [Draft：TASK-065-plan](./TASK-065-plan.md)（**需 Approved**，DEP-04：多模块 + 服务端契约变更） |
-
-> 待 Orchestrator 正式登记的任务内容，当前不含 Status，不属于已登记任务或实施队列。
+| Execution Plan | [Approved：TASK-065-plan](./TASK-065-plan.md)（2026-11-06 Human 确认批准） |
 
 ## 1. 问题
 
@@ -37,6 +36,7 @@
 - [ ] AC-03：`pendingRebalanceCount` 用**一次** `$match + $group by portfolioId` 的聚合批量取（`status:'PENDING'`），**禁止**在 `portfolios.map` 内逐组合 `countDocuments`；`EXECUTED` / `REVOKED` 不计入（对应 US-004/AC-03）。
 - [ ] AC-04：`overThresholdCount` 从 `evaluateThresholds` 已返回的 `details` 派生，**不得**逐组合复算；在 10 个组合的构造数据上断言 `RebalanceRecord` 查询次数 ≤ 11（1 次聚合 + 每组合 1 次 `lastExecuted` 既有查询）且 `countDocuments` 调用次数 = 0（对应 US-004/AC-04，**不靠耗时判定**）。
 - [ ] AC-05：新增单测覆盖 AC-01～AC-04 边界（含 AC-02 三项同断言、AC-03 的 EXECUTED/REVOKED 排除、AC-04 的查询次数断言）；`npm test` 全绿（数量以实际为准）；既有 `portfolio.summary.test.js` 与 `portfolio.archived.test.js` 不回归。
+- [ ] AC-06：交付后 `git status cron-worker` 空输出——本卡不改调度进程，改动范围不触达 `cron-worker/`（对应 US-004/AC-14，PM G-1 缺口补）。
 
 ## 4. Scope
 

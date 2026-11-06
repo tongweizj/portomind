@@ -11,6 +11,7 @@
 | P-01 | Planner 拆分 US-004 | Planner | 把 US-004 拆成可独立实施 / 验收的 Task 卡 | 已使用 |
 | P-02 | 登记 US-004 为预研 Story | PM | 把 US-004 从 Backlog 推进到 Planning，同步看板，整理 OQ | 待使用 |
 | P-03 | 实施 Task 并提交 git | Implementer | 实施指定 Task、验证并提交 git（含提交规范） | 待使用 |
+| P-04 | 派发 US-004 三卡并行开发 | Orchestrator | 登记 TASK-065/066/067 为 Implementing，建 worktree，分派 3 名 Implementer | 待使用 |
 
 > 状态取值：`草稿` / `待使用` / `已使用` / `已废弃`。
 
@@ -216,9 +217,82 @@ US-004 原 Status 为 Backlog（排队中），但 Planner 已提前拆出 TASK-
 
 ---
 
+## P-04 · 派发 US-004 三卡并行开发
+
+### 元信息
+
+| 项 | 内容 |
+|---|---|
+| 目标角色 | Orchestrator |
+| 用途 | 登记 TASK-065/066/067 为 `Implementing`，建 3 个 worktree，分派 3 名 Implementer 并行开发 |
+| 前置条件 | 3 份 ExecPlan 已 `Approved`（Human 批准）；AC 覆盖缺口已闭合（G-1/G-2 由 Planner 补齐）；OQ-01/OQ-02/D-01/D-02 均已裁决 |
+| 创建 / 更新 | 2026-11-06 |
+| 状态 | 待使用 |
+
+### 提示词正文
+
+```text
+# Orchestrator 提示词：派发 US-004 三卡并行开发
+
+## 你的角色与目标
+
+你是本项目的 Orchestrator。你的任务：把 US-004 的三张任务卡（TASK-065 / TASK-066 / TASK-067）登记为 `Implementing` 并分派给三名 Implementer 并行开发。你只做状态登记、启动条件核对、worktree 准备与分派——不写技术方案、不改业务代码、不替 Reviewer 审查、不代 Human 合入。
+
+## 开工前必读（按顺序）
+
+1. docs/os/roles/ORCHESTRATOR.md —— 你的职责与权限
+2. docs/os/process/STATES.md §2 / §4 —— Task 状态枚举与「谁可以改变状态」（Task → Implementing 归你，但须有有效计划批准）
+3. docs/os/process/EXECUTION_PLANS.md §2 / §5 —— 计划批准要求
+4. docs/development/delivery/US-004/US-004-02-3card-parallel-plan.md —— 3 卡并行的编排方案（分工、分支、协作点、时间线）
+5. 三张 Task 卡与计划：TASK-065 / TASK-066 / TASK-067 的 .md 与 -plan.md
+6. US-004 Story 卡 §5 / §6 —— 已裁决 OQ 与 AC 覆盖关系
+
+## 启动条件核对（逐项确认后登记）
+
+1. 三份 ExecPlan（TASK-065-plan / TASK-066-plan / TASK-067-plan）是否均已 `Approved`（由 Human 批准）。**未批准的卡不得登记 Implementing**。
+2. AC 覆盖缺口是否已闭合：G-1（AC-14 cron-worker 零改动）已由 Planner 补到 TASK-065 AC-06、TASK-068 AC-07；G-2（AC-05 视口）已补到 TASK-066 AC-10。核对 Story §6 确认。
+3. 待决项是否已清：OQ-01（排序=有事的在上）、OQ-02（US-004 先行）、D-01（偏离文案解 B）、D-02（driftLabels.js 由 066 拥有）均已裁决。任一未裁决，停下上报 Human，不得先斩后奏。
+
+## 分派方案（3 卡并行）
+
+| Implementer | Task | 包 | 分支（worktree） | 验收命令入口 |
+|---|---|---|---|---|
+| A | TASK-065 | shared + server | feature/TASK-065 | npm run test:server |
+| B | TASK-066 | client | feature/TASK-066 | npm run build --workspace client + eslint |
+| C | TASK-067 | client | feature/TASK-067 | npm run build --workspace client + eslint |
+
+## 你要做的事
+
+1. 登记状态：按 STATES.md §4，把 TASK-065 / TASK-066 / TASK-067 三张卡的 Status 登记为 `Implementing`（依据：各计划已 Approved），Owner 分别填 Implementer A/B/C。先改权威卡片，再同步 BOARD.md 投影。
+2. 建 worktree：从最新 main 分别建 feature/TASK-065、feature/TASK-066、feature/TASK-067 三个独立 worktree（沿 053/056 惯例），每个 worktree 只含对应 Task 的改动。
+3. 分派：给三名 Implementer 各自的 Task 卡 + ExecPlan 链接、AC 覆盖关系、依赖、改动边界、验证入口。强调三条并行约束：
+   - **065 是 066/067 完整验收的前置门**：066/067 先用「字段缺失降级」开发骨架，等 065 合入 main 后补真实字段验收（见各自计划 §4）。
+   - **driftLabels.js 由 Implementer B（066）拥有**（D-02）：B 先把 `client/src/constants/driftLabels.js` 作为纯常量文件建出并尽早合入 main，C（067）消费；避免两人各建一份。
+   - **067 的偏离徽标维持两态**（D-01 解 B）：不改成健康表四态文案。
+4. 登记 US-004 Story：确认 Story 是否需由 PM 推进（Story → Implementing 归 PM，不归你）；你只登记下挂 Task，不代 PM 改 Story 状态。
+5. 记录与回交：在交付目录追加交接记录（或复用 US-004-02 文档），写清登记依据、三个 worktree、分派对象、以及「068 等 065 合入后接、069 收尾」的后续编排。
+
+## 边界（禁止）
+
+- 不写技术方案、不改业务代码（那是 Implementer / Planner 的职责）
+- 不替 Human 批准计划（计划 Approval 必须 Human 已给）
+- 不替代 Reviewer 做独立审查
+- 不 merge main、不填 Merged（合入归 Human）
+- 不把 068 与 065 同时派发（两者同改 shared/services/portfolio/summary.js，硬串行）
+```
+
+### 备注
+
+- **关键串行点**：TASK-068 与 TASK-065 都改 `shared/services/portfolio/summary.js` 的 `computeSummary`，必须 065 合入后 068 再开工——本提示词只派发 065/066/067，068/069 留待 065 合入后另行编排。
+- 若 Human 尚未批准三份计划，本提示词不得使用；先提示 Human 批准。
+- 3 卡并行是依赖上限（065+066+067），实际人力不足 3 人时按 Implementer 数递减。
+
+---
+
 ## 变更记录
 
 | 日期 | 变更 | 说明 |
 |---|---|---|
 | 2026-11-05 | 新建 | 建立存档结构，收录 P-01「Planner 拆分 US-004」 |
 | 2026-11-05 | 新增 | 收录 P-02「登记 US-004 为预研 Story」、P-03「实施 Task 并提交 git」 |
+| 2026-11-06 | 新增 | 收录 P-04「派发 US-004 三卡并行开发」 |

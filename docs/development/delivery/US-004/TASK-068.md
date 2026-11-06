@@ -7,7 +7,7 @@
 | Priority / Owner / Type | `High` / 待指派 / `Feature`（shared + server 查询层） |
 | Created / Updated | 2026-11-05 / 2026-11-05 |
 | 所属 Story | [US-004](../../requirements/stories/active/US-004-dashboard-portfolio-health.md) |
-| 覆盖的验收条件 | US-004/AC-19 |
+| 覆盖的验收条件 | US-004/AC-19、AC-14（AC-14 的 cron-worker 零改动断言落在本卡） |
 | Related Product Spec / ADR | [FS-portfolio-ia-cleanup](../../requirements/specs/FS-portfolio-ia-cleanup.md) §6.2（B16）、§7（AC42）、§10（R-9）、§11（HD-14） |
 | Execution Plan | [Draft：TASK-068-plan](./TASK-068-plan.md)（**需 Approved**，DEP-04：shared + server 查询层改动，三处同源） |
 
@@ -37,6 +37,7 @@
 - [ ] AC-04：负向对照——未删除时三处计数一致（对应 US-004/AC-19 ④）。
 - [ ] AC-05：过滤在**查询层**（三处统一），不得只在客户端过滤；资产级（`portfolioId=null`）事件始终保留。
 - [ ] AC-06：不删数据、不加字段、不写迁移；`npm test` 全绿（覆盖 alert 相关集成测试）。
+- [ ] AC-07：交付后 `git status cron-worker` 空输出——本卡不改调度进程，改动范围不触达 `cron-worker/`（对应 US-004/AC-14，PM G-1 缺口补）。
 
 ## 4. Scope
 

@@ -103,6 +103,8 @@
 | OQ-01 | 已裁决 | 健康表排序规则：Spec 写的是「有事的在上」（HD-8 由 Orchestrator 起草时按推荐定，**未经单独裁决**）；原型实现多加了 `unvaluable` / `missing` 两档 | Human | 确认排序档位 | ✅ 已裁决（2026-11-05 Human，2026-11-05 PM 经 Human 复核确认）：**有事的在上**（待办→超阈→到期→`createdAt` 倒序），原型多加的 `unvaluable`/`missing` 两档**不采用** |
 | OQ-02 | 已裁决 | 本 Story 与 US-003 的实施顺序（同 US-003 的 OQ-01） | Human | 给出顺序决定 | ✅ 已裁决（2026-11-05 Human，2026-11-05 PM 经 Human 复核确认）：二者**无硬依赖**，US-003 未排期不阻塞本 Story；**本 Story 可先行**。US-004「待办」跳转 `?sub=suggestions` 在 US-003 AC-11 落地前落到默认子 Tab（行为等价） |
 | OQ-03 | 假设 | 组合卡的「市值」实现为单币种简化（原型标注「市值单币种简化」），不跨币种合计 | PM / Planner | 实施时确认 | 符合产品硬约束「货币换算只发生在家庭层」；健康表市值列同样按组合本币显示 |
+| OQ-04 | 已裁决 | AC-18「偏离文案逐字一致」口径（D-01）：卡片 `DriftBadge` 两态 vs 健康表四态 | Human | 定「逐字一致」边界 | ✅ 已裁决（2026-11-06 Human，**解 B**）：逐字一致只约束「待办/上次再平衡」；卡片偏离徽标维持两态（P1-1），偏离数据同源取 `stats.drift` |
+| OQ-05 | 已裁决 | 共享文案常量 `driftLabels.js` 归属（D-02） | Human | 定拥有方 | ✅ 已裁决（2026-11-06 Human）：由 TASK-066（Implementer B）拥有，TASK-067 消费 |
 
 **当前下一步：** 拆分已完成（TASK-065～TASK-069，见 §6）。OQ-01 / OQ-02 均已裁决，**无待决 OQ 阻塞实施**；DEP-04 仍要求 TASK-065 / TASK-068 实施前先出 `Approved` ExecPlan。Task 状态登记与派发归 Orchestrator（[STATES.md §4](../../../../os/process/STATES.md#4-谁可以改变状态)），PM 不代登记；本 Story 保持 `Planning`（预研），进入实施需 Human 决定。
 
@@ -112,22 +114,22 @@
 
 | Task | 工作摘要 | 覆盖的验收条件 | 必要性 / 关联说明 |
 |---|---|---|---|
-| [TASK-065](../../../delivery/US-004/TASK-065.md) | `summary` 四字段（`lastExecutedAt` / `pendingRebalanceCount` / `drift.dueByTime` / `drift.overThresholdCount`）（B1～B4） | AC-01～AC-04 | 交付必需；服务端与 `shared` 改动；**需 Approved ExecPlan**（DEP-04） |
+| [TASK-065](../../../delivery/US-004/TASK-065.md) | `summary` 四字段（`lastExecutedAt` / `pendingRebalanceCount` / `drift.dueByTime` / `drift.overThresholdCount`）（B1～B4） | AC-01～AC-04、AC-14 | 交付必需；服务端与 `shared` 改动；**需 Approved ExecPlan**（DEP-04） |
 | [TASK-066](../../../delivery/US-004/TASK-066.md) | Dashboard 健康表与分币种小计（B6～B13） | AC-05～AC-13 | 交付必需；纯客户端；排序按 OQ-01 已裁决口径（有事的在上） |
 | [TASK-067](../../../delivery/US-004/TASK-067.md) | 组合卡四格（B15） | AC-17、AC-18 | 交付必需；零请求零服务端，与健康表同源 |
-| [TASK-068](../../../delivery/US-004/TASK-068.md) | 删组合后事件查询层过滤（B16） | AC-19 | 交付必需；三处同源；**需 Approved ExecPlan**（DEP-04） |
+| [TASK-068](../../../delivery/US-004/TASK-068.md) | 删组合后事件查询层过滤（B16） | AC-19、AC-14 | 交付必需；三处同源；**需 Approved ExecPlan**（DEP-04） |
 | [TASK-069](../../../delivery/US-004/TASK-069.md) | 契约文档同步（B5） | AC-16 | 交付必需 |
 
 > AC-20（独立 Reviewer 复核）是整体交付要求，不拆成单独卡。
 >
-> **覆盖核对（2026-11-05，PM）**：AC-01～AC-19 均已有卡承接；AC-20 为整体验收要求。**但发现两处缺口，交回 Planner 处理，PM 不自行补卡：**
+> **覆盖核对（2026-11-05，PM）→ 已由 Planner 补齐（2026-11-06）**：PM 交回的两处 AC 覆盖缺口已闭合，见下：
 >
-> | 缺口 | 涉及 AC | 事实 | 影响 |
+> | 缺口 | 涉及 AC | 原问题 | 处置（2026-11-06 Planner） |
 > |---|---|---|---|
-> | G-1 | **AC-14**（`git status cron-worker` 空输出） | 五张卡的 Scope 都写了「不涉及 `cron-worker`」，但**没有任何一张卡把它列为验收断言**。仅 TASK-065-plan / TASK-066-plan / TASK-067-plan 的「禁改」清单里出现过 `cron-worker` 字样，TASK-068 / TASK-069 卡与计划均无。 | 该 AC 无明确归属，整体验收时可能无人提交证据 |
-> | G-2 | **AC-05**（1440×900 不滚动可见：总资产金额、分币种小计一行、健康表 3 行） | TASK-066 的 AC-01 只断言了「区块位置与零新增请求」，AC-07 只断言了分币种小计的**数据与顺序**；**没有任何 AC 断言视口不滚动可见**（全部 5 卡与 5 份计划中 `1440` 零命中）。 | AC-05 的视口条件实质未覆盖；TASK-066 可能通过验收但仍不满足 Story AC-05 |
+> | G-1 | **AC-14**（`git status cron-worker` 空输出） | 无卡列为验收断言 | 已补：TASK-065 新增 AC-06、TASK-068 新增 AC-07，两卡「覆盖的验收条件」字段均加 `AC-14` |
+> | G-2 | **AC-05**（1440×900 不滚动可见） | 视口条件实质未覆盖 | 已补：TASK-066 新增 AC-10（1440×900 不滚动可见：总资产金额、分币种小计、健康表 3 行），计划 §7 加验证行 |
 >
-> 另核实无缺口项：AC-06（分币种小计与 `/portfolios` 同源一致）由 TASK-066 AC-07 与 TASK-067 AC-04 共同覆盖；AC-15（`npm test` 全绿）由 TASK-065 AC-05 与 TASK-068 AC-06 覆盖；AC-16（文档同步）由 TASK-069 覆盖。**本 PM 只记录缺口，不补卡、不改 AC、不登记 Task 状态。**
+> 至此 AC-01～AC-19 均有卡承接，AC-20 为整体验收要求。
 
 ## 7. 需求变更记录
 

@@ -89,6 +89,7 @@ $or: [{ portfolioId: { $in: <现存组合 ids> } }, { portfolioId: null }]
 | AC-04（负向对照） | 未删除时三处计数 | 三处一致 |
 | AC-05（查询层 + 资产级） | 代码审查 + 用例 | 过滤在服务端三处，`portfolioId=null` 始终保留 |
 | AC-06（回归） | `npm run test:server` | 全绿 |
+| AC-07（cron-worker 零改动） | `git status cron-worker` 空输出（对应 Story AC-14，G-1 补） | 空输出，改动范围不触达 `cron-worker/` |
 
 命令入口见 [DEPLOYMENT.md §7](../../../handbook/ops/DEPLOYMENT.md)。**不写测试数量**。
 
