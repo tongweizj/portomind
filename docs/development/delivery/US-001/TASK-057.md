@@ -9,19 +9,19 @@
 **规划核对：** [Planner 回交说明](./US-001-02-planner-return.md)；新增关联不改变本卡 AC、原状态、既有批准或结案结论。
 
 **Status:**  
-`Implementing`（2026-11-05，计划已批准、D-01～D-03 契约冻结，启动核对完成；待 Implementer 在独立 worktree 中实施）。
+`Reviewing`（2026-11-05，实现与自测完成于 worktree `D:/projects/portomind-057` @ `5bb47ea`，等待独立 Reviewer 复核）。
 
 **Priority:**  
 `High`（P0 Must Have。它是 `TASK-054`（C-02）数据态、`C-07`（详情页）三列能否成立的**前提**；也是「全绿误导」这条已知缺陷的总闸）
 
 **Owner:**  
-`Implementer`（待指派；独立 Reviewer 另行安排）。
+`Reviewer`（待指派独立会话复核；Reviewer ≠ Implementer）。
 
 **Created:**  
 `2026-10-26`
 
 **Updated:**  
-`2026-11-05`（计划登记 Approved、启动核对完成、Task → Implementing；原创建日期保留）。
+`2026-11-05`（登记实现交付与 Task → Reviewing；原创建日期保留）。
 
 **Type:**  
 `Feature`（共享内核数据契约 + worker 写库逻辑；属 FS `NG2` 的**例外**，已由 OQ3 裁定放行）
@@ -273,3 +273,31 @@ FS 建议"2 × 周期"，但 5 个任务周期不同、再平衡按组合计划�
 **两条实施约束**：① 这 276 条历史数据是 AC8「历史无 result 兼容」的被测对象，**不得清库**；② 在该库上的写入验证应使用独立 `runKey`/测试组合，避免污染既有业务记录。
 
 **未做的事**：未建分支或 worktree；未改任何代码；未运行测试；未写入数据库（仅只读查询）。
+
+## Orchestrator 交付接收记录（2026-11-05）
+
+依据 [STATES.md §4](../../../os/process/STATES.md#4-谁可以改变状态)：「Task → Reviewing：Implementer 提供改动清单、自测证据、可审对象和已知妥协」。四项齐备，故登记 `Implementing` → **`Reviewing`**。
+
+| 项 | 事实 |
+|---|---|
+| Worktree | `D:/projects/portomind-057`（主工作区未被本卡改动） |
+| 分支 / 提交 | `feature/TASK-057` @ **`5bb47ea`**（父 `aa2c877` = `main`） |
+| 改动规模 | **14 文件**，+961/−84：`shared/`（模型 2 + service 1 + task 1）、`cron-worker/`（scheduler 3 + task 1 + test 1）、`server/test/` 1、`scripts/verify-task-057.cjs`、docs 3 |
+| 范围核对 | 未改 `client/`；未改读侧 `cronStatus.service.js`（归 064）；未改 status 枚举与唯一索引 |
+| 自测证据 | 计划 §11；脚本 **29/29 PASS**（真实 dev Mongo） |
+| 已知妥协 | AC12 独立审查未做（Implementer 不自判，符合约定） |
+
+**Orchestrator 独立复验（不采信自述，本轮全部亲跑）**
+
+| 项 | 结果 |
+|---|---|
+| 验收脚本独立重跑 | `node scripts/verify-task-057.cjs` → **29/29 PASS**，`cleanup: taskruns=14, taskskips=2`，`before=276 after=276` ✓ |
+| `test:server` | **214 pass / 0 fail** ✓ |
+| `test:worker` | **78 pass / 0 fail** ✓ |
+| 库未被污染 | 复跑后 `taskruns` 仍 276 条、含 `result` 仍 0 条、`rebalance-check` 父任务 0 条（测试记录已自清） ✓ |
+| `taskskips` 集合 | 已创建，索引 `{taskName:1, skippedAt:-1}` 在位 ✓ |
+| AC2 白名单形态 | `normalizeCounts` 仅在有 `hasOwnProperty('result')` 时透传，顶层裸字段仍丢弃 ✓ |
+
+**⚠️ 一处需 Reviewer 重点核对的取证特征**：验收脚本自带 `cleanup()`，跑完即删本脚本创建的 14 条 taskruns 与 2 条 taskskips。故**验收痕迹不会留在库里**——复核时须自行重跑脚本，不能以「库里查不到 057 数据」判为未实施。
+
+**未做的事**：未改 AC / Scope / 代码；未提交、未合入、未填 `Merged`、未关闭。
