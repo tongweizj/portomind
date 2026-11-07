@@ -6,7 +6,7 @@
 |---|---|
 | Story ID | US-004 |
 | Status | Planning |
-| 准备情况 | 5 卡已拆（TASK-065～069）；OQ-01/02/04/05 已裁决、G-1/G-2 覆盖缺口已闭合。当前 065/066/067/068 `Completed` 且**均已合入 `main`**、069 `Planning`（计划 `Draft` 待批准）；Story 状态仍 `Planning`（推进归 PM） |
+| 准备情况 | 5 卡已拆（TASK-065～069）；OQ-01/02/04/05 已裁决、G-1/G-2 覆盖缺口已闭合。当前 5 卡全部 `Completed`（065/066/067/068 已合入 `main`，069 待合入）；Story 状态仍 `Planning`（推进归 PM） |
 | 产品负责人 | PM；方向、优先级、范围变更与关闭由 Human 决定 |
 | 优先级 | High（Roadmap 第 6 条「dashboard 增加组合健康表」的实体；`FS-portfolio-ia-cleanup` 交付单元 B） |
 | 创建日期 | 2026-11-05 |
@@ -118,7 +118,7 @@
 | [TASK-066](../../../delivery/US-004/TASK-066.md) | Dashboard 健康表与分币种小计（B6～B13） | AC-05～AC-13 | **✅ 已结案并合入（2026-11-06，Human 确认检验通过）**；独立 Reviewer `Pass with issues`，无 BLOCKER/未决 MAJOR；F-01 MAJOR 由 `353d583` 整改（唯一 UTC `lastRebalanceDateStr`，066/067 共用）；`Merged`=`af1f4d2`（PR #42）；纯客户端，排序按 OQ-01 口径 |
 | [TASK-067](../../../delivery/US-004/TASK-067.md) | 组合卡四格（B15） | AC-17、AC-18 | **✅ 已结案并合入（2026-11-06，Human 确认检验通过）**；Reviewer `Pass with issues`，无 BLOCKER/MAJOR；`Merged`=`d95be45`（已合入 `main`）；基线陈旧问题已由 `434a323`/`6f5add2` 刷新闭环 |
 | [TASK-068](../../../delivery/US-004/TASK-068.md) | 删组合后事件查询层过滤（B16） | AC-19、AC-14 | **✅ 已结案并合入（2026-11-06）**：首轮 Reviewer `Fail`（F-01 BLOCKER / F-02 MAJOR）→ `3226dd4` 返工（240/240）→ 二审复检 `Pass with issues`（plan §12.11）→ Human 确认完成并合入；`Merged`=`6f0b4df`；三处同源 |
-| [TASK-069](../../../delivery/US-004/TASK-069.md) | 契约文档同步（B5） | AC-16 | **🟡 `Reviewing`（2026-11-06）**：`ba5e5e1` 已交付（`API_CONTRACT.md` 补 `stats.unreadAlertCount` + 语义校正、Spec `HD-15` 落地记录），纯文档零代码，`docs:check` 0 ERROR；待独立复核 |
+| [TASK-069](../../../delivery/US-004/TASK-069.md) | 契约文档同步（B5） | AC-16 | **✅ 已结案（2026-11-06，Human 确认检验通过）**：独立 Reviewer `Pass with issues`，无 BLOCKER/MAJOR；`API_CONTRACT.md:87` 补 `stats.unreadAlertCount`（B16 口径）+ 语义校正，Spec 补 `HD-15`；`Merged`=`Pending`（待合入）；剩 MINOR F-01～F-03 记录在案 |
 
 > AC-20（独立 Reviewer 复核）是整体交付要求，不拆成单独卡。
 >
@@ -145,7 +145,7 @@
 | AC-17、AC-18（TASK-067 覆盖） | **已验证（2026-11-06）** | [TASK-067 §12/§13](../../../delivery/US-004/TASK-067.md)；Reviewer `Pass with issues`，无 BLOCKER/MAJOR，Human 确认结案 | `Merged`=`d95be45`（已合入 main） |
 | AC-05～AC-13（TASK-066 覆盖） | **已验证（2026-11-06）** | [TASK-066 §12 审查结论](../../../delivery/US-004/TASK-066.md)；Reviewer `Pass with issues`，AC-05～AC-13 逐条满足，`verify066.cjs` 34/34（mock 取证），F-01 MAJOR 已整改复审收敛 | 剩余 MINOR F-02～F-05（mock 取证局限等）记录在案；`Merged`=`af1f4d2`（PR #42） |
 | AC-19（TASK-068 覆盖） | **已验证（2026-11-06）** | [TASK-068 §12.11 二审复检](../../../delivery/US-004/TASK-068.md) 与 plan §12.11：`Pass with issues`，F-01/F-02 已整改并经负向对照确认，AC-01～AC-07 全满足；`Merged`=`6f0b4df` | 残余 MINOR F-03/F-05 记录在案，不阻塞 |
-| AC-16（TASK-069 覆盖） | 待验证 | 069 `Reviewing`（`ba5e5e1` 已交付，`API_CONTRACT.md` 补 `unreadAlertCount` + 语义校正，`docs:check` 0 ERROR） | 待独立复核；无豁免 |
+| AC-16（TASK-069 覆盖） | **已验证（2026-11-06）** | [TASK-069 §12 审查结论](../../../delivery/US-004/TASK-069.md)；Reviewer `Pass with issues`，契约字段集与代码逐字一致、零代码改动 | MINOR F-02（AC-16 字面「响应示例」口径待 PM 收窄）、F-03（Spec 落地记录范围待 Planner 澄清）；`Merged`=`Pending` |
 | AC-20（独立 Reviewer 复核） | 部分（065、066、067、068 已独立复核；069 待派发） | 整体交付时再汇总 | 无豁免 |
 | 团队完成标准 | 未验证 | [DEFINITION_OF_DONE.md](../../../../os/process/DEFINITION_OF_DONE.md) | 无豁免 |
 
