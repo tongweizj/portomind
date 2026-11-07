@@ -375,7 +375,7 @@ FIELDSET MATCH        : FAIL   (exit 1)   ← 断言能失败，非恒真
 | 残余 MINOR | **F-01** 交付证据不足（`docs:check` 只校验链接与 Status，无法发现字段缺失/量纲错误；Reviewer 已用 `fieldset.cjs` 独立补验）→ 建议后续补「从代码派生期望字段集 → 与契约行机读比对」断言；**F-02** AC-16/AC35 字面写「响应示例」但全文无该端点示例（既有措辞问题，归 PM 改口径）；**F-03** FS 状态行「交付单元 B 落地记录」未列 066/B6~B14、且 B5 是否含 `SERVER.md` 存疑（归 PM/Planner 收窄措辞或另立范围） |
 | 验证 | `npm run docs:check` = **134 文档 / 1364 链接 / ERROR 0 / WARN 0**（Implementer 与 Reviewer 各自亲跑一致）；`git diff --stat -- shared/ server/ client/ cron-worker/` **空**（零代码改动） |
 | 关闭依据 | Human 2026-11-06 确认检验通过；按 [STATES.md §4](../../../os/process/STATES.md#4-谁可以改变状态) 登记 `Reviewing → Completed` |
-| 合入 | **未合入**：`feature/TASK-069` @ `39dde2e`（含 `2ceeb88` 审查记录与基线刷新），`Merged` = `Pending`，合入与登记归 Human |
+| 合入 | **已合入（2026-11-06）**：**PR #43** → `d42a1bb` `Merge pull request #43 from tongweizj/feature/TASK-069`（分支 tip `a93c90b` 已是 `main` 祖先）；`Merged` = `d42a1bb` |
 
 ## 自检
 

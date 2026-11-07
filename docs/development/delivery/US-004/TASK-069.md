@@ -4,7 +4,7 @@
 
 | 字段 | 内容 |
 |---|---|
-| Status | **Completed（2026-11-06，Human 确认检验通过）**：独立 Reviewer 判定 **`Pass with issues`**，无 BLOCKER、无 MAJOR；3 项 MINOR（F-01 证据不足 / F-02 AC-16「响应示例」字面口径 / F-03 落地记录范围）已记录、不阻塞。可审对象 `feature/TASK-069` @ `ba5e5e1`（复核记录 `2ceeb88`，基线刷新 `39dde2e`）。**`Merged` = `Pending`**（尚未合入 `main`） |
+| Status | **Completed（2026-11-06，Human 确认检验通过）**：独立 Reviewer 判定 **`Pass with issues`**，无 BLOCKER、无 MAJOR；3 项 MINOR（F-01 证据不足 / F-02 AC-16「响应示例」字面口径 / F-03 落地记录范围）已记录、不阻塞。**`Merged` = `d42a1bb`**（2026-11-06 **PR #43**：`Merge pull request #43 from tongweizj/feature/TASK-069`；`git merge-base --is-ancestor a93c90b main` = 是） |
 | Priority / Owner / Type | `High` / Implementer（待指派） / `Docs` |
 | Created / Updated | 2026-11-05 / 2026-11-06 |
 | 所属 Story | [US-004](../../requirements/stories/active/US-004-dashboard-portfolio-health.md) |

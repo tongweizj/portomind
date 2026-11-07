@@ -6,7 +6,7 @@
 |---|---|
 | Story ID | US-004 |
 | Status | Planning |
-| 准备情况 | 5 卡已拆（TASK-065～069）；OQ-01/02/04/05 已裁决、G-1/G-2 覆盖缺口已闭合。当前 5 卡全部 `Completed`（065/066/067/068 已合入 `main`，069 待合入）；Story 状态仍 `Planning`（推进归 PM） |
+| 准备情况 | 5 卡已拆（TASK-065～069）；OQ-01/02/04/05 已裁决、G-1/G-2 覆盖缺口已闭合。**五卡全部 `Completed` 且全部合入 `main`**（065 `6f556aa`、066 `af1f4d2`、067 `d95be45`、068 `6f0b4df`、069 `d42a1bb`），任务层 AC 证据齐备；Story 状态仍 `Planning`——`Story → Reviewing`（整体验收）归 PM、`Story → Completed` 与归档只有 Human（[STATES.md §2.2/§4](../../../../os/process/STATES.md#22-story-状态)） |
 | 产品负责人 | PM；方向、优先级、范围变更与关闭由 Human 决定 |
 | 优先级 | High（Roadmap 第 6 条「dashboard 增加组合健康表」的实体；`FS-portfolio-ia-cleanup` 交付单元 B） |
 | 创建日期 | 2026-11-05 |
@@ -106,7 +106,7 @@
 | OQ-04 | 已裁决 | AC-18「偏离文案逐字一致」口径（D-01）：卡片 `DriftBadge` 两态 vs 健康表四态 | Human | 定「逐字一致」边界 | ✅ 已裁决（2026-11-06 Human，**解 B**）：逐字一致只约束「待办/上次再平衡」；卡片偏离徽标维持两态（P1-1），偏离数据同源取 `stats.drift` |
 | OQ-05 | 已裁决 | 共享文案常量 `driftLabels.js` 归属（D-02） | Human | 定拥有方 | ✅ 已裁决（2026-11-06 Human）：由 TASK-066（Implementer B）拥有，TASK-067 消费 |
 
-**当前下一步：** 拆分已完成（TASK-065～TASK-069，见 §6）。OQ-01 / OQ-02 均已裁决，**无待决 OQ 阻塞实施**；DEP-04 仍要求 TASK-065 / TASK-068 实施前先出 `Approved` ExecPlan。Task 状态登记与派发归 Orchestrator（[STATES.md §4](../../../../os/process/STATES.md#4-谁可以改变状态)），PM 不代登记；本 Story 保持 `Planning`（预研），进入实施需 Human 决定。
+**当前下一步：** 五卡（TASK-065～069）已全部 `Completed` 并全部合入 `main`，OQ 无待决、DEP-04 已满足。按 [STATES.md §2.2](../../../../os/process/STATES.md#22-story-状态)，全部 Task 完成只触发整体验收：**由 PM 汇总 §8 整体验收并登记 `Story → Reviewing`**；`Story → Completed` 与过程目录归档只有 Human 可执行。Story 当前仍 `Planning`，不因任务完成自动推进或关闭。
 
 ## 6. 关联 Task 与验收覆盖
 
@@ -118,7 +118,7 @@
 | [TASK-066](../../../delivery/US-004/TASK-066.md) | Dashboard 健康表与分币种小计（B6～B13） | AC-05～AC-13 | **✅ 已结案并合入（2026-11-06，Human 确认检验通过）**；独立 Reviewer `Pass with issues`，无 BLOCKER/未决 MAJOR；F-01 MAJOR 由 `353d583` 整改（唯一 UTC `lastRebalanceDateStr`，066/067 共用）；`Merged`=`af1f4d2`（PR #42）；纯客户端，排序按 OQ-01 口径 |
 | [TASK-067](../../../delivery/US-004/TASK-067.md) | 组合卡四格（B15） | AC-17、AC-18 | **✅ 已结案并合入（2026-11-06，Human 确认检验通过）**；Reviewer `Pass with issues`，无 BLOCKER/MAJOR；`Merged`=`d95be45`（已合入 `main`）；基线陈旧问题已由 `434a323`/`6f5add2` 刷新闭环 |
 | [TASK-068](../../../delivery/US-004/TASK-068.md) | 删组合后事件查询层过滤（B16） | AC-19、AC-14 | **✅ 已结案并合入（2026-11-06）**：首轮 Reviewer `Fail`（F-01 BLOCKER / F-02 MAJOR）→ `3226dd4` 返工（240/240）→ 二审复检 `Pass with issues`（plan §12.11）→ Human 确认完成并合入；`Merged`=`6f0b4df`；三处同源 |
-| [TASK-069](../../../delivery/US-004/TASK-069.md) | 契约文档同步（B5） | AC-16 | **✅ 已结案（2026-11-06，Human 确认检验通过）**：独立 Reviewer `Pass with issues`，无 BLOCKER/MAJOR；`API_CONTRACT.md:87` 补 `stats.unreadAlertCount`（B16 口径）+ 语义校正，Spec 补 `HD-15`；`Merged`=`Pending`（待合入）；剩 MINOR F-01～F-03 记录在案 |
+| [TASK-069](../../../delivery/US-004/TASK-069.md) | 契约文档同步（B5） | AC-16 | **✅ 已结案并合入（2026-11-06，Human 确认检验通过）**：独立 Reviewer `Pass with issues`，无 BLOCKER/MAJOR；`API_CONTRACT.md:87` 补 `stats.unreadAlertCount`（B16 口径）+ 语义校正，Spec 补 `HD-15`；`Merged`=`d42a1bb`（PR #43）；剩 MINOR F-01～F-03 记录在案 |
 
 > AC-20（独立 Reviewer 复核）是整体交付要求，不拆成单独卡。
 >
@@ -145,15 +145,15 @@
 | AC-17、AC-18（TASK-067 覆盖） | **已验证（2026-11-06）** | [TASK-067 §12/§13](../../../delivery/US-004/TASK-067.md)；Reviewer `Pass with issues`，无 BLOCKER/MAJOR，Human 确认结案 | `Merged`=`d95be45`（已合入 main） |
 | AC-05～AC-13（TASK-066 覆盖） | **已验证（2026-11-06）** | [TASK-066 §12 审查结论](../../../delivery/US-004/TASK-066.md)；Reviewer `Pass with issues`，AC-05～AC-13 逐条满足，`verify066.cjs` 34/34（mock 取证），F-01 MAJOR 已整改复审收敛 | 剩余 MINOR F-02～F-05（mock 取证局限等）记录在案；`Merged`=`af1f4d2`（PR #42） |
 | AC-19（TASK-068 覆盖） | **已验证（2026-11-06）** | [TASK-068 §12.11 二审复检](../../../delivery/US-004/TASK-068.md) 与 plan §12.11：`Pass with issues`，F-01/F-02 已整改并经负向对照确认，AC-01～AC-07 全满足；`Merged`=`6f0b4df` | 残余 MINOR F-03/F-05 记录在案，不阻塞 |
-| AC-16（TASK-069 覆盖） | **已验证（2026-11-06）** | [TASK-069 §12 审查结论](../../../delivery/US-004/TASK-069.md)；Reviewer `Pass with issues`，契约字段集与代码逐字一致、零代码改动 | MINOR F-02（AC-16 字面「响应示例」口径待 PM 收窄）、F-03（Spec 落地记录范围待 Planner 澄清）；`Merged`=`Pending` |
-| AC-20（独立 Reviewer 复核） | 部分（065、066、067、068 已独立复核；069 待派发） | 整体交付时再汇总 | 无豁免 |
-| 团队完成标准 | 未验证 | [DEFINITION_OF_DONE.md](../../../../os/process/DEFINITION_OF_DONE.md) | 无豁免 |
+| AC-16（TASK-069 覆盖） | **已验证（2026-11-06）** | [TASK-069 §12 审查结论](../../../delivery/US-004/TASK-069.md)；Reviewer `Pass with issues`，契约字段集与代码逐字一致、零代码改动 | MINOR F-02（AC-16 字面「响应示例」口径待 PM 收窄）、F-03（Spec 落地记录范围待 Planner 澄清）；`Merged`=`d42a1bb`（PR #43） |
+| AC-20（独立 Reviewer 复核） | **满足（2026-11-06）** | 五卡均由独立 Reviewer 复核：065 / 066 / 067 / 068 / 069 均 `Pass with issues`，无未决 BLOCKER/MAJOR（068 首轮 `Fail` 已返工二审复检收敛；066 F-01 MAJOR 已整改复审收敛） | 无豁免；整体验收结论由 PM 汇总 |
+| 团队完成标准 | 待 PM 汇总 | [DEFINITION_OF_DONE.md](../../../../os/process/DEFINITION_OF_DONE.md)；各卡 §12/§13 的 T-1～T-6 逐条记录 | 五卡实现、验证、审查、文档、状态更新均已齐备 |
 
-**验收日期：** 待验收
+**验收日期：** 待 PM / Human 确认（任务层证据已齐：五卡全部 `Completed` 且全部合入 `main`，见各卡 §13 与上表）
 
-**验收版本：** 待确认
+**验收版本：** 五卡合入后的 `main`（065 `6f556aa`、066 `af1f4d2`、067 `d95be45`、068 `6f0b4df`、069 `d42a1bb`）
 
-**验收结论：** 未实施整体验收，未关闭。
+**验收结论：** 任务层证据齐备（AC-01～AC-20 逐项有独立复核证据，见上表与各卡 §12/§13）；**整体验收结论待 PM 登记，Story 关闭待 Human**。未关闭。
 
 **验收责任人：** PM（汇总）→ Human（关闭）
 
