@@ -5,17 +5,17 @@
 
 ## 当前 Story
 
-> **当前格局（2026-11-06）**：US-001 已 `Completed` 并归档（过程目录在 `delivery/completed/US-001/`）；[US-004](./development/requirements/stories/active/US-004-dashboard-portfolio-health.md) 为**当前推进的 Story**——Story 状态仍为 `Planning`（Story → `Implementing` 归 PM，[STATES.md §4](./os/process/STATES.md#4-谁可以改变状态)）；下挂 5 卡：065/066/067/068 `Completed` 且均已合入 `main`，069 `Implementing`（计划已获 Human 批准，实施中）。US-002 / US-003 / US-005 仍为 `Backlog`，需求留在 `requirements/stories/`，不预建交付目录。
+> **当前格局（2026-11-06）**：US-001 已 `Completed` 并归档（过程目录在 `delivery/completed/US-001/`）；[US-004](./development/requirements/stories/active/US-004-dashboard-portfolio-health.md) 为**当前推进的 Story**——Story 状态仍为 `Planning`（Story → `Implementing` 归 PM，[STATES.md §4](./os/process/STATES.md#4-谁可以改变状态)）；下挂 5 卡：065/066/067/068 `Completed` 且均已合入 `main`，069 `Reviewing`（已交付 `ba5e5e1`，待独立复核）。US-002 / US-003 / US-005 仍为 `Backlog`，需求留在 `requirements/stories/`，不预建交付目录。
 
 ### US-004（当前推进）
 
 | 项目 | 当前情况 |
 |---|---|
 | Story / 用户价值 | [US-004](./development/requirements/stories/active/US-004-dashboard-portfolio-health.md)：Dashboard 组合健康表 + 分币种小计 + 组合卡四格（Spec 交付单元 B） |
-| Status | `Planning`（**PM 未推进到 `Implementing`**；Task 层 065/066/067/068 `Completed`、069 `Implementing`） |
+| Status | `Planning`（**PM 未推进到 `Implementing`**；Task 层 065/066/067/068 `Completed`、069 `Reviewing`） |
 | 交付目录 | [US-004 过程资料](./development/delivery/US-004)（TASK-065～069 卡与计划、并行方案、派发记录、提示词存档） |
-| 并行实施 | 065 已合入 `main`（`6f556aa`）并结案；066 已合入 `main`（`af1f4d2`，**PR #42**）并结案；067 已合入 `main`（`d95be45`）并结案；068 已合入 `main`（`6f0b4df`）并结案；**069 已登记 `Implementing`（计划 2026-11-06 获 Human 批准），待 Implementer 交付** |
-| 下一步 | 069 契约文档同步（AC-16）：计划已批准，交 Implementer 实施 → 复核 → 合入；之后由 PM 汇总 Story 整体验收 |
+| 并行实施 | 065 已合入 `main`（`6f556aa`）并结案；066 已合入 `main`（`af1f4d2`，**PR #42**）并结案；067 已合入 `main`（`d95be45`）并结案；068 已合入 `main`（`6f0b4df`）并结案；**069 已交付转 `Reviewing`（`ba5e5e1`，待独立复核）** |
+| 下一步 | 069 交独立 Reviewer 复核（可审对象 `ba5e5e1`）；复核收敛后由 Human 合入并登记 `Merged`，随后 PM 汇总 Story 整体验收 |
 | 阻塞 / 待决策 | **无阻塞、无待决。** 068 BLOCKER/MAJOR 已复检关闭并合入；066 F-01 MAJOR 已整改复检并合入；069 计划已获 Human 批准 |
 
 ### US-004 下挂 Task
@@ -26,7 +26,7 @@
 | [TASK-066](./development/delivery/US-004/TASK-066.md) | Dashboard 健康表 + 分币种小计 | AC-05～13 | **Completed** | — | **已结案并合入（2026-11-06）**：独立 Reviewer **`Pass with issues`**，无 BLOCKER、无未决 MAJOR；F-01（MAJOR：本地时区格式化致 066/067 日期差一天 + 「N 天前」后缀）已由 **`353d583`** 整改（唯一 UTC `lastRebalanceDateStr`，两卡共用）并复审收敛；`verify066.cjs` **34/34**、build 0、eslint 0/0、5 条负向对照；剩 4 项 MINOR 记录在案。经 **PR #42** 合入 `main`（**`af1f4d2`**），合入前分支已 `f8903c3` 刷新 `main`；**`Merged` = `af1f4d2`** | [Completed](./development/delivery/US-004/TASK-066-plan.md)（§11 实施、§12 审查、§13 结案） |
 | [TASK-067](./development/delivery/US-004/TASK-067.md) | `PortfolioCard` 四格 | AC-17、AC-18 | **Completed** | — | **已结案并合入（2026-11-06）**：Human 确认检验通过；Reviewer `Pass with issues`，无 BLOCKER/MAJOR，AC-01～AC-04 全满足 + 3 条负向对照。分支 tip `6f5add2` 经 merge commit **`d95be45`** 合入 `main`；`git merge-base --is-ancestor 6f5add2 main` = 是，且合入未改动 `shared/`、`server/`、`cron-worker/`。**`Merged` = `d95be45`** | [Completed](./development/delivery/US-004/TASK-067-plan.md)（§12 审查、§13 结案） |
 | [TASK-068](./development/delivery/US-004/TASK-068.md) | 删除组合后事件查询层过滤 | AC-19、AC-14 | **Completed** | — | **已结案并合入（2026-11-06）**：首轮独立复核 `Fail`（F-01 BLOCKER：`null.toString()` 致 summary 500；F-02 MAJOR：AC-03 断言无法证伪物理删除）→ `3226dd4` 返工（`_id!=null` 守卫、stub 补 null 样本、`deletePortfolioCascade` 契约测试，`test:server` **240/240**）→ 二审复检 **`Pass with issues`**（plan §12.11：F-01/F-02 已解决，AC-01～AC-07 全满足）。合入 **`6f0b4df`** `Merge branch 'feature/TASK-068' into main`（`merge-base --is-ancestor 84a50d4 main` = 是），合入仅 7 文件、未触 `client/`/`cron-worker/`；残余 MINOR F-03/F-05 记录在案 | [Completed](./development/delivery/US-004/TASK-068-plan.md)（§11 实施、§12 审查、§13 结案） |
-| [TASK-069](./development/delivery/US-004/TASK-069.md) | 契约文档同步 | AC-16 | **Implementing** | Implementer（待指派） | **已启动（2026-11-06）**：计划获 Human 批准（`Draft → Approved`），登记 `Planning → Implementing`；硬前置 065+068 已合入。**逐字段比对结论（Orchestrator 亲读）**：契约行已含 `positionCount`/`marketValueByCurrency`/`lastExecutedAt`/`pendingRebalanceCount`/`drift{needsRebalance,triggeredThresholds,dueByTime,overThresholdCount}`；**缺 `stats.unreadAlertCount`**（`summary.js:151` 实际返回、066/067 前端在用）→ 按「最小补齐 + 语义校正」执行，纯文档、零代码，验证 `docs:check` 0 ERROR | [Approved](./development/delivery/US-004/TASK-069-plan.md) |
+| [TASK-069](./development/delivery/US-004/TASK-069.md) | 契约文档同步 | AC-16 | **Reviewing** | Reviewer（待指派） | **已交付转 `Reviewing`（2026-11-06）**：分支 `feature/TASK-069` @ **`ba5e5e1`**，单提交 3 文件 +150/−3，纯文档零代码。`API_CONTRACT.md:87` 补 `stats.unreadAlertCount`（B16 口径）+ 校正 4 处措辞 + 显式声明语义不变/不可读；Spec 状态行补交付单元 B 落地记录、§11 补 `HD-15`。计划 §11.2 有逐字段比对三清单（A 保持 7 项 / B 补齐 1 项 / C 校正 4 项）。`docs:check` **0 ERROR / 0 WARN**（134 文档 / 1364 链接，Orchestrator 已独立复跑）；代码面 diff 为空 | [Approved](./development/delivery/US-004/TASK-069-plan.md)（§11 实施记录） |
 
 > 派发依据：[US-004-04 派发记录](./development/delivery/US-004/US-004-04-dispatch-record-2026-11-06.md)；并行编排见 [US-004-02](./development/delivery/US-004/US-004-02-3card-parallel-plan.md)；三份 Implementer 提示词见 [US-004-prompts.md P-05/06/07](./development/delivery/US-004/US-004-prompts.md)。068 不得与 065 同时派发。
 
@@ -105,10 +105,10 @@
 |---|---:|---:|---:|---:|---:|---:|---:|
 | 全部已登记 Story（排除取消） | 2 | 0 | 1 | 0 | 0 | 0 | 1 |
 | US-001 已关联 Task（已归档，全 Completed） | 7 | 0 | 0 | 0 | 0 | 0 | 7 |
-| US-004 已关联 Task | 5 | 0 | 0 | 1 | 0 | 0 | 4 |
+| US-004 已关联 Task | 5 | 0 | 0 | 0 | 1 | 0 | 4 |
 | 尚未关联 Story 的未完成 Task | 5 | 1 | 4 | 0 | 0 | 0 | 0 |
 
-> 统计来自卡片；旧词按 STATES.md §7.1 映射，不证明当前实施授权。已关联任务不重复计入未关联任务。US-001 七张卡全部 `Completed` 并已合入 `main`、过程目录已归档；TASK-054 的既有 Completed 计为 1 个支撑任务完成，不表示 US-001 已验收（Story 另由 Human 关闭）。US-004 的 1 张 `Implementing` 为 069（收尾卡，计划已获 Human 批准，硬前置 065+068 已满足）；4 张 `Completed` 为 065（`Merged`=`6f556aa`）、066（`Merged`=`af1f4d2`，PR #42）、067（`Merged`=`d95be45`）与 068（`Merged`=`6f0b4df`）。共 13 条历史完成记录保留作证据索引，与本 Story 进度不可相加。
+> 统计来自卡片；旧词按 STATES.md §7.1 映射，不证明当前实施授权。已关联任务不重复计入未关联任务。US-001 七张卡全部 `Completed` 并已合入 `main`、过程目录已归档；TASK-054 的既有 Completed 计为 1 个支撑任务完成，不表示 US-001 已验收（Story 另由 Human 关闭）。US-004 的 1 张 `Reviewing` 为 069（收尾卡，`ba5e5e1` 已交付待复核）；4 张 `Completed` 为 065（`Merged`=`6f556aa`）、066（`Merged`=`af1f4d2`，PR #42）、067（`Merged`=`d95be45`）与 068（`Merged`=`6f0b4df`）。共 13 条历史完成记录保留作证据索引，与本 Story 进度不可相加。
 
 ## Story Backlog
 
