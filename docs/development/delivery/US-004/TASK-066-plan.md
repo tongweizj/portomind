@@ -374,7 +374,7 @@ Approval：**未批准**。本计划覆盖 §1～§9 当前设计；`Draft → A
 | 残余 | MINOR F-02（`?? 0` 展示兜底）、F-03（`verify066` mock 取证局限，非真实后端）、F-04（币种顺序常量双源）、F-05（验证依赖本机 Chrome/vite）——均不阻塞，记录在案 |
 | 验证 | `npm run build --workspace client` exit 0（2440 modules）；`eslint` 0 error / 0 warning；`verify066.cjs` **34/34 PASS**；自建独立探针 19/19、点击级探针补 AC-08、双时区探针 4/4；5 条负向对照均 FAIL 后还原 |
 | 关闭依据 | Human 2026-11-06 确认检验通过；按 [STATES.md §4](../../../os/process/STATES.md#4-谁可以改变状态) 登记 `Completed` |
-| 合入 | **未合入**（`feature/TASK-066` 领先 `main` 4 提交）；`Merged` = `Pending`，合入归 Human |
+| 合入 | **已合入（2026-11-06）**：**PR #42** → `af1f4d2` `Merge pull request #42 from tongweizj/feature/TASK-066`（分支合入前以 `f8903c3` merge 最新 `main`）；`Merged` = `af1f4d2` |
 
 ## 自检
 

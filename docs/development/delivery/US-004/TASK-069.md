@@ -4,14 +4,15 @@
 
 | 字段 | 内容 |
 |---|---|
+| Status | Planning（2026-11-06，Human 指令启动；硬前置 065+068 已合入。计划 `Draft`，待 Human 批准后方可 `Implementing` 与派发） |
 | Priority / Owner / Type | `High` / 待指派 / `Docs` |
-| Created / Updated | 2026-11-05 / 2026-11-05 |
+| Created / Updated | 2026-11-05 / 2026-11-06 |
 | 所属 Story | [US-004](../../requirements/stories/active/US-004-dashboard-portfolio-health.md) |
 | 覆盖的验收条件 | US-004/AC-16 |
 | Related Product Spec / ADR | [FS-portfolio-ia-cleanup](../../requirements/specs/FS-portfolio-ia-cleanup.md) §6.2（B5）、§7（AC35） |
-| Execution Plan | [Draft：TASK-069-plan](./TASK-069-plan.md)（原免计划，按 Human 要求补计划） |
+| Execution Plan | [Draft：TASK-069-plan](./TASK-069-plan.md)（原免计划，按 Human 要求补计划；`Draft → Approved` 归 Human） |
 
-> 待 Orchestrator 正式登记的任务内容，当前不含 Status，不属于已登记任务或实施队列。
+> 已登记（2026-11-06，Orchestrator）。**当前不可开工**：计划仍 `Draft`，按 [STATES.md §4](../../../os/process/STATES.md#4-谁可以改变状态) `Draft → Approved` 仅 Human；批准后由 Orchestrator 登记 `Implementing` 并派发。
 
 ## 1. 问题
 
@@ -50,7 +51,7 @@
 
 | 编号 | 依赖 | 状态 |
 |---|---|---|
-| B1 | 前置 TASK-065（字段契约落定）与 TASK-068（若改 summary 查询层契约） | 待办理（可在 065/068 合入后完成） |
+| B1 | 前置 TASK-065（字段契约落定）与 TASK-068（若改 summary 查询层契约） | **已解除（2026-11-06）**：065 合入 `6f556aa`、068 合入 `6f0b4df`，二者均在 `main` |
 
 ## 7. Coordination Notes
 
