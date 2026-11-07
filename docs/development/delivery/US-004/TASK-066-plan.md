@@ -2,7 +2,7 @@
 
 ## Status
 
-Status：Approved（2026-11-06，Human 确认已批准当前设计）
+Status：Completed（2026-11-06，Task 已 `Completed`；审查 `Pass with issues`、F-01 整改复检通过。计划由 `Approved` 同步为 `Completed`）
 
 Owner：Planner（规划）→ Implementer B（2026-11-06 指派）
 
@@ -231,11 +231,150 @@ Approval：**未批准**。本计划覆盖 §1～§9 当前设计；`Draft → A
 
 ## 12. Review Record
 
-（按 [REVIEWER.md](../../../os/roles/REVIEWER.md) §7 记录。）
+### 12.1 独立性声明与审查对象
+
+- 依据 [REVIEWER.md §5/§7](../../../os/roles/REVIEWER.md)。**首次独立审查**；独立 Reviewer，未参与本卡实现或 `verify066.cjs` 编写。Implementer 自述、Orchestrator 亲跑结果均不作为结论，全部独立复跑取证。判定词不是状态，不构成合入许可。
+- **首轮基线**：`feature/TASK-066` @ `7cdefa0`（另 `4e26dca` 建立 `driftLabels.js`），worktree `D:/projects/portomind-066`；当时 `main` = `ca351b4`（065 合入 `6f556aa` 已在 main 与 HEAD，merge-base = `6f556aa`，无 stale-base 假象）；`git status --porcelain` 空。
+- **复审基线（F-01 整改后）**：HEAD `353d583`（`fix(TASK-066): unify last-rebalance date on shared UTC formatter`），其父 `67298c4`（`git merge main` @ `8b863f0`，带入 067 卡/068 修复/最新文档）；`main` = `8b863f0` 已是 HEAD 祖先；正确范围 `main..HEAD` = 8 文件（`verify066.cjs`、`PortfolioHealthTable.jsx`、`TotalAssetsCard.jsx`、`PortfolioCard/index.jsx`、`driftLabels.js`、`Dashboard.jsx`、`priceDisplay.js`、plan），**无 shared/server/cron-worker**。
+- 正确范围（`6f556aa..HEAD`）：6 文件 —— `verify066.cjs`、`PortfolioHealthTable.jsx`、`TotalAssetsCard.jsx`、`driftLabels.js`、`Dashboard.jsx`、`TASK-066-plan.md`；**无** `shared/`、`server/`、`cron-worker/`（AC-14 ✓）。
+- 被审文件 SHA256（**复审基线 `353d583`**）：`PortfolioHealthTable.jsx` `5fb93338…d896`；`priceDisplay.js` `c6ac66bc…9968`；`PortfolioCard/index.jsx` `6390ff9e…f0ac`；`driftLabels.js` `0bb77916…c45e`（未变）；`TotalAssetsCard.jsx` `4c151bb5…15d3`（未变）；`Dashboard.jsx` `ad2e573f…0271`（未变）；`verify066.cjs` `e04f3b0d…8ae8`。（首轮基线 `7cdefa0` 的旧哈希见 git 历史。）
+
+### 12.2 实跑证据（本人复跑，非引用自述）
+
+| 命令 | 实际输出 |
+|---|---|
+| `npm run build --workspace client` | `✓ built in 2.94s / 2.77s`，exit 0（仅既有 chunk >500 kB 警告） |
+| `eslint "src/**/*.{js,jsx}"` | exit 0，0 error / 0 warning |
+| `node client/scripts/verify066.cjs`（vite 6601 + 本机 Chrome + `page.route` mock）——**首轮** | **29/29 PASS**，EXIT=0（与 Orchestrator 亲跑一致；本人另起 6601 独立复跑） |
+| 自建独立浏览器探针（我的数据集，`/tmp/review066-indep.cjs`，已删） | **19/19 PASS** —— 覆盖 AC-09 排序（A 待办→B 超阈→C 正常）、四态、同源逐字、分币种顺序/null 桶、1440×900 三行不滚动、abort 隔离、空态、提醒区 |
+| 自建点击级探针（AC-08，补计划 §11.5 未验证项） | **6/7 PASS**：「2 条待确认」→ `/portfolios/view/pA/rebalance?sub=suggestions` ✓；「1 条未读」→ 组合筛选 `pA` ✓；两徽标均不触发整行跳转 ✓；整行点击落 `/portfolios/view/pA/positions`（`overview` 路由重定向，OQ-02 已裁「US-003 前落默认子 Tab，行为等价」，非缺陷） |
+| 自建日期格式探针（纯逻辑） | 见 F-01：066/067 同一 UTC 时间戳在 `America/Toronto` 下渲染**不同日期** |
+| 3 条自建负向对照 | 见 §12.5，均 FAIL→还原→全绿 |
+| **F-01 整改提交** | `353d583 fix(TASK-066): unify last-rebalance date on shared UTC formatter`（5 文件：`priceDisplay.js` +22、`PortfolioHealthTable.jsx` +11/-?、`PortfolioCard/index.jsx` 改用共享 helper/常量、`verify066.cjs` +37、plan） |
+| **F-01 复审实跑（2026-11-06 第二遍）** | `npm run build --workspace client` **exit 0**（`built in 3.00s`）；`eslint` **0/0**；`verify066.cjs` **34/34 PASS**（含新增 5 条 F-01 单元格级/跨视图断言）；**自建双时区探针 4/4 PASS**（Toronto / Asia-Shanghai / UTC 三时区，同一 `2026-09-07T00:00:00Z` → 健康表与组合卡均 `2026-09-07`，null 均「从未」，**跨时区文本完全一致**） |
+| **F-01 复审负向对照** | 见 §12.5 NEG-A/NEG-B，均 FAIL→还原→复绿 |
+
+### 12.3 AC-05～AC-13（Story US-004）逐条判定
+
+> 任务卡 §3 用 AC-01～AC-10（卡内编号），Story §4 用 AC-05～AC-13；下表按 **Story 编号** 逐条判定，括号内为卡内编号。
+
+| Story AC | 判定 | 独立证据 |
+|---|---|---|
+| **AC-05**（1440×900 不滚动可见，G-2；卡 AC-10） | **满足** | 真实浏览器：总资产卡 bottom=306、前 3 行 bottom=474/515/556，均 ≤900；我的探针独立复现（3 行 top433/474/515）。分币种小计与总资产同块，亦在视口内 |
+| **AC-06**（分币种小计同源 family-summary、null 桶「—」、不跨币种合计；卡 AC-07） | **满足** | 我的探针把 FAMILY.buckets 键故意乱序（HKD,CAD,USD,CNY）→ 渲染 `¥862,300 · US$18,400 · CA$52,100 · —`，顺序固定 CNY→USD→CAD→HKD；小计行无跨币种合计（家庭总换算 `¥1,234,567.89` 是独立 `totalCny` 字段）；负向对照：无 buckets 时该行整体不渲染（verify066 + 我的探针） |
+| **AC-07**（偏离四态 + N=overThresholdCount 负向对照；卡 AC-02） | **满足** | 首轮 29/29、复审 34/34 与我的 19/19 三证据：① `triggeredThresholds.length=2` 但 `overThresholdCount=1` → 「1 项超阈」（非 2）；`overThresholdCount=3` → 「3 项超阈」；② 「已到期（61 天）」；③ 「正常」；④ 「未设目标」。四态文案来自 `driftLabels.js` 常量（NEG-2 篡改即 FAIL） |
+| **AC-08**（待办跳转 + stopPropagation；卡 AC-03） | **满足** | 本人点击级探针实测：点「2 条待确认」→ `/portfolios/view/pA/rebalance?sub=suggestions`；点「1 条未读」→ `select=pA`（组合筛选设置），均不触发整行跳转。**补上了计划 §11.5 声明的未验证项** |
+| **AC-09**（排序「有事的在上」全序稳定；卡 AC-04） | **满足** | 我的数据集（输入顺序 C,B,A 打乱）→ 输出 `A-待办 → B-超阈 → C-正常`；verify066 六组合全序 + 独立重载顺序不变；负向对照：去掉待办优先级 → 我的排序断言 FAIL（NEG-1） |
+| **AC-10**（已归档不出现；卡 AC-05） | **满足** | verify066 AC-05 PASS；`usePortfolios()` 默认 `includeArchived=false`（既有 hook，diff 未改）——`git diff 6f556aa..HEAD -- client/src/hooks/` 空 |
+| **AC-11**（summary 失败局部错误隔离；卡 AC-06） | **满足** | `route.abort()` → 健康表「数据加载失败，请稍后重试」；总资产卡（含小计 `US$18,400`）与「待处理提醒」仍渲染；整页含「家庭总览」、非登录页、非白屏（首轮 29/29、复审 34/34 + 我的探针） |
+| **AC-12**（0 组合空态 + 新建按钮 + 无空表；卡 AC-05） | **满足** | 空态「暂无组合，先创建一个」+「新建组合」按钮 + `table` count=0 |
+| **AC-13**（提醒区逻辑零改动；卡 AC-08） | **满足** | `git diff 6f556aa..HEAD -- Dashboard.jsx` 仅 3 处加法（import、usePortfolios 解构出 isLoading/isError、插入 `<PortfolioHealthTable>`）；提醒区筛选/标记已读/忽略/立即评估/规则管理 DOM 齐全且逻辑未动 |
+| AC-14（cron-worker 零改动） | **满足** | 正确范围 diff 无 `shared/`/`server/`/`cron-worker/` |
+| 卡 AC-09（build/eslint） | **满足** | build exit 0 / eslint 0-0 |
+
+### 12.4 重点风险核对
+
+- **零新增请求**：verify066 实测 `/api/portfolios/summary` = 1、全部 API = 5（session/family/summary/alerts/unread-count）；我的探针独立复现 count=1。组件 `PortfolioHealthTable.jsx` 无 `useQuery/useMutation/fetch/axios/api.*`，`Dashboard.jsx` 复用既有 `usePortfolios()`（同一 `queryKey`）✓
+- **数据源只读 stats、不计算 drift 阈值、不跨币种合计**：`grep` 新增组件 0 命中 `evaluateThresholds/DRIFT_THRESHOLDS/absoluteDeviation`；市值列 `formatMarketValue` 分币种并列（产品不变量 ✓）；分币种小计用 `formatMoney` 不自建符号 ✓
+- **排序口径**（OQ-01 已裁「有事的在上」）：`comparePortfolios` 待办>0 → needsRebalance → dueByTime → createdAt 倒序，全序 ✓
+- **同源/逐字一致（D-01 解 B、D-02）**：`PENDING_LABELS.pendingRebalance/unreadAlert/none`、`LAST_REBALANCE_LABELS.never` 由 `driftLabels.js` 单一拥有，**067 已改为 `import` 消费（内联副本与 TODO 一并消除）**；「上次再平衡」经共享 `lastRebalanceDateStr` 统一为 UTC `YYYY-MM-DD`，**两视图逐字一致已实测**（三时区相同）。健康表四态文案来自 `driftLabels.js` ✓
+- **065 已合入、降级前提解除**：`summary.js` 四字段在 main；组件直接读 `pendingRebalanceCount/lastExecutedAt/dueByTime/overThresholdCount` 真值（`:66/:69/:91/:101/:162`），无「字段缺失降级掩盖」；仅 `?? 0` 为展示兜底（065 保证字段存在，见 F-03 MINOR）
+- **禁改范围**：✓（AC-14）
+
+### 12.5 负向对照（本人自建，篡改→断言 FAIL→还原→`git status` 空）
+
+| # | 临时缺陷 | 断言表现 | 还原 |
+|---|---|---|---|
+| NEG-1（AC-09 排序） | 删除 `if (hasTodoA !== hasTodoB) return hasTodoB - hasTodoA;` | `AC-09 排序` FAIL（输出 `["B-超阈","C-正常","A-待办"]`）；18/19 | 备份还原 |
+| NEG-2（同源文案） | `driftLabels.js` `normal: '无异常'` | `同源：健康表「正常」` FAIL（`["无异常",…]`）；18/19 | 备份还原 |
+| NEG-3（分币种不合计） | `SUBTOTAL_ORDER = []`（纯字母序） | `AC-06 分币种顺序` FAIL（CNY@42 USD@57 CAD@30）及 null 桶断言 FAIL；17/19 | 备份还原 |
+
+**F-01 复审追加（针对整改提交 `353d583`）**：
+
+| # | 临时缺陷 | 断言表现 | 还原 |
+|---|---|---|---|
+| NEG-A（R1 日期基准） | `priceDisplay.lastRebalanceDateStr` 改回本地时区 `getFullYear/getMonth/getDate` | Toronto：健康表/卡片均 `2026-09-06`（错，应为 `2026-09-07`）→ 2 条「按 UTC 日期显示」FAIL + 「跨时区文本完全一致」FAIL；**2/4 PASS** | 备份还原（`git diff` 空） |
+| NEG-B（R2 后缀） | 健康表 `formatLastRebalance` 回加 `` `${d}（${daysSince()} 天前）` `` | 「不带后缀」FAIL + 「两视图逐字一致」FAIL（`health="2026-09-07（60 天前）"` vs `card="2026-09-07"`）；**1/4 PASS** | 备份还原（`git diff` 空） |
+
+另复核 Implementer `verify066.cjs` 声称的 4 处负向对照（脚本内 4 条 `负向对照` 断言 + AC-02① 内嵌 1 条 = 5 处）：AC-02①「1 项超阈 vs 2 项超阈」、AC-04「顺序 ≠ 输入顺序」、AC-06「abort 非白屏」、AC-07「无 buckets 不渲染」——本人 29/29（复审 34/34）复跑确认均生效；其中 AC-04/AC-07 已由我的 NEG-1/NEG-3 以不同篡改再次证明非恒真。**结论：5 处负向对照确能证明断言非恒真** ✓
+
+### 12.6 Findings
+
+| # | 严重度 | 位置 | 现象 | 修法方向 |
+|---|---|---|---|---|
+| **F-01** | ~~MAJOR~~ → **已整改复检通过（2026-11-06）** | `client/src/components/Dashboard/PortfolioHealthTable.jsx:80-81`（现 `formatLastRebalance`）+ `client/src/utils/priceDisplay.js:71`（`lastRebalanceDateStr`） | ① 用 `new Date(lastExec)` + **本地时区** `getFullYear/getMonth/getDate` 格式化，而 067 `PortfolioCard/index.jsx:23-27` 用 UTC `String(v).slice(0,10)`：同一 `2026-08-27T03:00:00Z` 在 `America/Toronto` 下健康表渲染 `2026-08-26（71 天前）`、卡片渲染 `2026-08-27` —— **同一 stats 两处显示不同日期**（实测，Implementer 自己的 29/29 输出亦可见 `2026-09-06T00:00:00Z → 2026-09-05（61 天前）`）。② 单元格追加 `（N 天前）` 后缀，与**批准计划 §4:53**（`lastExecutedAt → YYYY-MM-DD，null → 「从未」`）不符；**FS Spec §7:216** 允许「`YYYY-MM-DD` + 距今天数」——Spec/Plan 冲突，已交 Human 裁决（见下）。③ D-01 解 B 要求「上次再平衡」逐字一致：完整单元格文本不一致 | **已按 §12.6.1 整改并复检通过**：`353d583` 新增唯一实现 `lastRebalanceDateStr`（UTC，`priceDisplay.js:71`），066 `:81` 与 067 `:54` 共用；去掉 `（N 天前）` 后缀，`null → 从未`。复审：三时区（Toronto/Asia-Shanghai/UTC）同一 `2026-09-07T00:00:00Z` 两视图均显示 `2026-09-07` 且**逐字一致**、null 均「从未」；负向对照 NEG-A/NEG-B 均 FAIL 后还原。**F-01 已收敛** |
+| **F-02** | **MINOR** | `client/src/components/Dashboard/PortfolioHealthTable.jsx:66`、`:72` | `drift.overThresholdCount ?? 0`、`days ?? 0` 展示兜底：065 已合入保证 `overThresholdCount` 存在，理论上不会触发；若上游异常返回 null，会显示「0 项超阈」（掩盖未知，触碰「不猜缺失数字」不变量） | 改为 `?? null` 时显示 `DRIFT_STATE_LABELS.unknown`（`—`），与 `driftLabels.js:32` 的 unknown 口径一致；非当前路径，不阻塞 |
+| **F-03** | **MINOR** | `client/scripts/verify066.cjs` / 计划 §11.5 | **mock 取证局限（F-03 类残留）**：全部 29 条断言用 `page.route` 注入构造的 `stats` 快照，**非真实后端/DB 端到端**；验证的是渲染逻辑、请求数、分页/错误隔离，不证明真实 `computeSummary` 产出的 `lastExecutedAt/pendingRebalanceCount/overThresholdCount` 与构造值一致（该部分归 065 已验收）。视口 AC-05 亦为构造 6 组合数据，真实数据下 3 行是否仍不滚动未复核 | 上线前用真实 dev 库（或 065 真值夹具）跑一遍 Dashboard，核对字段值与视口；计划 §11.5 已如实声明 |
+| **F-04** | **MINOR** | `client/src/components/Dashboard/PortfolioHealthTable.jsx:33-44` vs `TotalAssetsCard.jsx:15-26` | 币种排序常量 `CURRENCY_ORDER` / `SUBTOTAL_ORDER` 两处各写一份（值相同 `CNY,USD,CAD,HKD`），有双源漂移风险 | 抽到共享常量（可放 `driftLabels.js` 或新 `currencyOrder.js`）；不阻塞 |
+| **F-05** | **MINOR** | `client/scripts/verify066.cjs:11-12` | 依赖本机 Chrome 绝对路径与 `VERIFY_BASE=6601` vite，未纳入 `npm test`（client 无 test 脚本）；本人复跑时 `edit` 工具在 `client/scripts/` 产生 `.tmpdir` 触发 vite watcher `EBUSY` 崩溃一次（工具/环境artifact，非产品缺陷，已把探针移出监视树解决） | 记录为交付方式限制；CI 化另行决定 |
+
+#### 12.6.1 F-01 处置（Human 裁决 + 整改口径）
+
+**2026-11-06 Human 裁决：R2 采用 Option A —— 去掉 `（N 天前）` 后缀，只显示 `YYYY-MM-DD` / 「从未」。** 该裁决解决了 Spec（§7:216 允许 +距今天数）与批准 Plan（§4:53 纯日期）的口径冲突，**以批准 Plan §4:53 为准**；FS Spec §7:216 的「+距今天数」不在本期健康表落点（如需该信息，后续单独立项并两卡同步）。
+
+整改范围（交 Implementer，Reviewer 不代改）：
+
+| 子项 | 要求 | 落点 |
+|---|---|---|
+| **R1（必修）** | 统一日期基准为「后端 ISO 字符串的 UTC 日期」，消除跨视图漂移；**唯一实现**，066/067 共用 | 建议在 `client/src/utils/priceDisplay.js`（已是日期/金额格式唯一实现，`daysSince` 在 `:51`）新增 `lastRebalanceDateStr(value)`：`value == null → null`；`Date → toISOString()`；字符串取前 10 位且校验 `^\d{4}-\d{2}-\d{2}`；非法 → `null`。**不要**放 `driftLabels.js`（该文件契约「不做计算、不 import」），**不要**复用 `localDateStr`（按本地时区取「今天」，口径不同） |
+| **R2（已裁 Option A）** | 去掉 `（N 天前）` 后缀；`null` → 「从未」 | `PortfolioHealthTable.jsx:79-87` 的 `formatLastRebalance` 改为 `lastRebalanceDateStr(stats?.lastExecutedAt) ?? LAST_REBALANCE_LABELS.never`；`daysSince` 不再用于该列 |
+| 连带 | 067 `PortfolioCard/index.jsx:21-27` 的 `formatDate` 改为同一 helper（行为不变，保证逐字一致） | 067 侧（其自身 D-02 TODO 一并处理） |
+| 复检（Reviewer） | ① Playwright `timezoneId: 'America/Toronto'` 与 `'Asia/Shanghai'` 各跑一次，同一 `lastExecutedAt` 在两视图文本必须逐字相同；② 负向对照：formatter 改回本地 getters → 断言必须 FAIL；③ `verify066.cjs` 增加**单元格级**「与 067 常量逐字一致」断言（现仅断言偏离四态文案，正是漏掉 F-01 的原因） | — |
+
+#### 12.6.2 F-01 复审结果（2026-11-06，对整改提交 `353d583`）
+
+| 复检项 | 结果 |
+|---|---|
+| R1 唯一实现 | `priceDisplay.js:71 lastRebalanceDateStr`（`Date` 走 `toISOString().slice(0,10)`；字符串取前 10 位并 `^\d{4}-\d{2}-\d{2}$` 校验；非法/空 → `null`）；`grep` 全仓仅此一处定义；引用方仅 066 `:81` 与 067 `:54` ✓ |
+| R2 去后缀 | `PortfolioHealthTable.jsx:80-81` → `lastRebalanceDateStr(...) ?? LAST_REBALANCE_LABELS.never`；`daysSince` 仅保留用于「已到期（N 天）」（`:71`，语义未变）✓ |
+| 067 连带 | `PortfolioCard/index.jsx` 改用同一 helper，并 **import** `PENDING_LABELS`/`LAST_REBALANCE_LABELS`（内联副本与 D-02 TODO 一并消除）✓ |
+| 双时区逐字一致 | **Toronto / Asia-Shanghai / UTC 三时区**：同一 `2026-09-07T00:00:00Z` → 健康表与卡片均 `2026-09-07`；`null` → 两处均「从未」；**跨时区文本完全相同** ✓ |
+| 负向对照 | NEG-A（改回本地 getters）→ Toronto 显示 `2026-09-06`、跨时区不一致 → **FAIL**；NEG-B（回加后缀）→ 「无后缀」「逐字一致」**FAIL**；均还原后复绿 ✓ |
+| 回归 | build exit 0；eslint 0/0；`verify066.cjs` **34/34**（含 5 条新增 F-01 断言）；禁改范围（无 shared/server/cron-worker）✓ |
+
+**结论：F-01（MAJOR）已整改并复检通过，收敛。** 剩余 4 项 MINOR（F-02/F-03/F-04/F-05）不阻塞。
+
+### 12.7 DoD（[DEFINITION_OF_DONE §3](../../../os/process/DEFINITION_OF_DONE.md) T-1～T-6）
+
+| # | 要求 | 满足 | 证据 |
+|---|---|---|---|
+| T-1 实现完成 | 改动清单与 Implementing 退出物证一致 | ✅ | 首轮 6 文件 + F-01 整改新增 `priceDisplay.js` 与 067 卡片回改（`main..HEAD` 8 文件）；均在 §10 范围（纯 client）；工作区干净 |
+| T-2 验证完成 | 运行类记录实际结果、静态记录对象方法 | ✅ | build 0 / lint 0 / verify066 **34/34**（本人复跑，含 5 条 F-01 断言）/ 自建探针 19/19 + 点击探针 6/7（失败项为 OQ-02 预期重定向）/ 双时区探针 4/4 / 负向对照 5 条（3 首轮 + NEG-A/NEG-B 复审）；mock 局限已记 F-03 |
+| T-3 AC 逐条满足 | 对照 Story AC-05～AC-13 | ✅ | §12.3 九条 Story AC + 卡内 AC-09/10 全部满足；F-01 已整改复检（§12.6.2），D-01 逐字一致实测成立 |
+| T-4 审查结论收敛 | 无未决 BLOCKER；MAJOR 已整改或 Human 明示接受 | ✅ **已收敛** | 无 BLOCKER；**F-01（MAJOR）已按 Human 裁决 R2=Option A 整改（`353d583`）并经本人复检通过**（§12.6.2）；剩余 MINOR 已记录 |
+| T-5 文档同步 | 记录节已填、任务卡仅引用 | ✅ | 计划 §11 实施记录已填；本 §12 回填；任务卡加一行结论 + 链接 |
+| T-6 已知妥协已记录 | 改动清单含「已知妥协」 | ✅ | 计划 §11.5 列 5 项（mock 快照、视口构造数据、AC-03 点击未验证[本人已补]、Chrome 路径、范围）；本 §12 F-03/F-05 复核 |
+
+### 12.8 残余风险与未验证项
+
+- ~~F-01 待整改~~ → **已整改复检通过**（§12.6.2），不在残余风险内。
+- **mock 取证局限（F-03）**：未连真实后端/DB；AC-05 视口为构造 6 组合数据；真实 065 字段值未端到端复核。
+- 未跑 `npm test` 全 workspace（客户端无 test 脚本）；未做真实 UI 走查之外的其他视口/暗色主题。
+- 067 的 `driftLabels.js` 消费切换（D-02 TODO）**已随本次整改完成**（067 现 import 共享常量），不再遗留。
+
+### 12.9 判定
+
+**Pass with issues** —— Story US-004 AC-05～AC-13（含 G-2 补齐的 AC-05 视口）与卡内 AC-01～AC-10 **逐条满足**，本人独立复跑：build 0 / eslint 0 / `verify066.cjs` **34/34**（6601 vite + 本机 Chrome + page.route mock）、自建独立探针 **19/19**（不同数据集）、点击级探针补上计划 §11.5 未验证的 AC-08 跳转、双时区探针 **4/4**、5 条负向对照（3 首轮 + NEG-A/NEG-B）证明排序/文案同源/分币种不合计/日期基准/去后缀断言非恒真；零新增请求（`/portfolios/summary`=1）、四态偏离 N 取 `overThresholdCount`、全序排序、局部错误隔离、禁改范围（shared/server/cron-worker 零改动）、065 真值字段无降级掩盖均实证成立。**无 BLOCKER**。
+
+**F-01（MAJOR）已整改复检通过、收敛**：`353d583` 按 Human 裁决（R2=Option A）新增唯一 UTC 实现 `lastRebalanceDateStr`（`priceDisplay.js:71`），066 `:81` 与 067 `:54` 共用；去掉 `（N 天前）` 后缀。复审：Toronto / Asia-Shanghai / UTC 三时区同一 `2026-09-07T00:00:00Z` → 两视图均 `2026-09-07`、`null` 均「从未」、**跨时区文本完全一致**；NEG-A/NEG-B 均 FAIL 后还原（§12.6.2）。剩余 4 项 MINOR（F-02 展示兜底、F-03 mock 取证局限、F-04 币种顺序双源、F-05 验证方式限制）均不阻塞。
+
+依 [REVIEWER.md §5.1](../../../os/roles/REVIEWER.md)：AC 满足、无未决 BLOCKER/MAJOR、剩余 MINOR 已记录 → **`Pass with issues`**。判定不是合入许可；`Merged` 与关闭归 Human（DoD §4）。
+
+判定词不是状态，不构成合入许可。本 Reviewer 未改 Task Status、未标 Completed、未 `git add/commit/push`、未合入 main、未填 Merged；关闭与合入登记归 Human / Orchestrator（STATES.md §4）。
 
 ## 13. Completion Record
 
-（AC 与验证证据引用、关闭依据、归档与移交。）
+**结案（2026-11-06）**
+
+| 项 | 事实 |
+|---|---|
+| 覆盖 AC | US-004 / AC-05～AC-13（含 G-2 补齐的 AC-05 视口）逐条满足，见 §12.3 |
+| 实现 | `4e26dca`（`driftLabels.js` 共享常量）→ `7cdefa0`（健康表 + 分币种小计）→ `67298c4`（merge `main` @ `8b863f0`）→ `353d583`（F-01 整改：唯一 UTC `lastRebalanceDateStr`，066/067 共用） |
+| 审查 | 首轮 `Pass with issues` + F-01（MAJOR：本地时区格式化与 067 卡差一天、带「N 天前」后缀）→ `353d583` 整改 → 复审 **`Pass with issues`**（F-01 收敛，无 BLOCKER/未决 MAJOR） |
+| 残余 | MINOR F-02（`?? 0` 展示兜底）、F-03（`verify066` mock 取证局限，非真实后端）、F-04（币种顺序常量双源）、F-05（验证依赖本机 Chrome/vite）——均不阻塞，记录在案 |
+| 验证 | `npm run build --workspace client` exit 0（2440 modules）；`eslint` 0 error / 0 warning；`verify066.cjs` **34/34 PASS**；自建独立探针 19/19、点击级探针补 AC-08、双时区探针 4/4；5 条负向对照均 FAIL 后还原 |
+| 关闭依据 | Human 2026-11-06 确认检验通过；按 [STATES.md §4](../../../os/process/STATES.md#4-谁可以改变状态) 登记 `Completed` |
+| 合入 | **未合入**（`feature/TASK-066` 领先 `main` 4 提交）；`Merged` = `Pending`，合入归 Human |
 
 ## 自检
 

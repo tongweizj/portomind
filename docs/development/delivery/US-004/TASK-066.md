@@ -4,7 +4,7 @@
 
 | 字段 | 内容 |
 |---|---|
-| Status | Reviewing（2026-11-06，实现与自测完成于 worktree `portomind-066` @ `7cdefa0`，等待独立 Reviewer 复核） |
+| Status | **Completed（2026-11-06，Human 确认检验通过）**：独立 Reviewer 判定 **`Pass with issues`**，无 BLOCKER、无未决 MAJOR（F-01 MAJOR 已由 `353d583` 整改并复审收敛），4 项 MINOR 记录在案；分支 `feature/TASK-066` @ **`353d583`**（含 `4e26dca` / `7cdefa0`，基线已 merge `main` @ `8b863f0`）。**`Merged` = `Pending`**（尚未合入 `main`） |
 | Priority / Owner / Type | `High` / Reviewer（待指派） / `Feature`（纯客户端） |
 | Created / Updated | 2026-11-05 / 2026-11-06 |
 | 所属 Story | [US-004](../../requirements/stories/active/US-004-dashboard-portfolio-health.md) |
@@ -86,10 +86,10 @@
 | 项 | 事实 |
 |---|---|
 | Worktree | `D:/projects/portomind-066` |
-| 分支 / 提交 | `feature/TASK-066` @ **`7cdefa0`**（另有 `4e26dca` 建 `driftLabels.js`） |
-| 改动规模 | 两提交合计：新增 `PortfolioHealthTable.jsx`（217 行）、`verify066.cjs`（201 行）、`driftLabels.js`；改 `TotalAssetsCard.jsx` / `Dashboard.jsx` / 计划 §11 |
+| 分支 / 提交 | `feature/TASK-066` @ **`353d583`**（F-01 整改）；此前 `7cdefa0`（健康表）、`4e26dca`（`driftLabels.js`）、`67298c4`（merge `main` @ `8b863f0`） |
+| 改动规模 | 新增 `PortfolioHealthTable.jsx`（217 行）、`verify066.cjs`、`driftLabels.js`、`priceDisplay.js` 的 `lastRebalanceDateStr`（唯一 UTC 实现，066/067 共用）；改 `TotalAssetsCard.jsx` / `Dashboard.jsx` / `PortfolioCard/index.jsx`（同源日期与文案）/ 计划 §11 |
 | 范围核对 | `server/` `shared/` `cron-worker/` **零改动** ✓ |
-| 自测证据 | 计划 §11；`verify066.cjs` **29/29 PASS** |
+| 自测证据 | 计划 §11；整改后 `verify066.cjs` **34/34 PASS**（首轮 29/29 + 5 条 F-01 单元格级断言），build exit 0、eslint 0/0 |
 
 **Orchestrator 独立复验（本轮全部亲跑）**
 
@@ -106,4 +106,15 @@
 
 **⚠️ 065 已合入，降级态前提解除**：本卡计划 §4 原要求「065 未合入用字段缺失降级」。065 现已合入 `main`（`6f556aa`），四字段在位，故 AC-02/AC-04 的**真实字段验收已可完成**（脚本用的 mock 也含四字段）。Reviewer 需确认实现没有残留不必要的降级掩盖。
 
-**未做的事**：未改 AC / Scope / 代码；未提交合入、未填 `Merged`、未关闭。
+**未做的事**：未改 AC / Scope / 代码；未替 Reviewer 出具判定；未提交合入、未填 `Merged`、未关闭。本节与 §12 按 Human 2026-11-06「066 已检验通过」指令与 Reviewer §12 记录登记。
+
+**结案登记（2026-11-06，Orchestrator）**：独立 Reviewer 判定 **`Pass with issues`**（无 BLOCKER、无未决 MAJOR），按 [STATES.md §4](../../../os/process/STATES.md#4-谁可以改变状态) 登记 `Reviewing → Completed`。计划同步 `Approved → Completed`，§13 Completion Record 已补。**`Merged` 仍为 `Pending`**：`git merge-base --is-ancestor feature/TASK-066 main` = 否（分支领先 `main` 4 个提交），合入与 `Merged` 登记归 Human。
+
+## 12. Review Record
+
+**独立审查结论：`Pass with issues`**（2026-11-06，独立 Reviewer；**无 BLOCKER / 无未决 MAJOR**；4 项 MINOR 不阻塞）。
+
+- **首轮**（`7cdefa0`）：AC-05～AC-13 逐条满足（`verify066` 29/29 + 自建探针 19/19 + 点击探针补 AC-08 + 3 负向对照），但发现 **F-01（MAJOR）**：健康表用本地时区格式化 `lastExecutedAt` 且带 `（N 天前）` 后缀，与 067 卡片 UTC 日期可能相差一天。**Human 裁决 R2 = Option A（去后缀）、R1 = 唯一 UTC formatter 两卡共用**。
+- **复审**（`353d583`，整改后）：F-01 **已整改复检通过、收敛** —— `priceDisplay.js:71 lastRebalanceDateStr` 为唯一 UTC 实现，066 `:81` 与 067 `:54` 共用；去后缀、`null → 从未`。复审实跑：build exit 0、eslint 0/0、`verify066.cjs` **34/34**（含 5 条新增 F-01 断言）、**自建双时区探针 4/4**（Toronto / Asia-Shanghai / UTC 同一 `2026-09-07T00:00:00Z` → 两视图均 `2026-09-07`、`null` 均「从未」、跨时区文本完全一致）；负向对照 NEG-A（改回本地 getters）/ NEG-B（回加后缀）均 FAIL 后还原。067 的 `driftLabels` 内联副本与 D-02 TODO 亦随之消除。
+- **mock 取证局限（F-03，MINOR）**：`verify066` 全部断言用 `page.route` 注入构造快照，非真实后端/DB 端到端；上线前建议用真实 dev 库复核字段值与视口。
+- 完整证据、逐条 AC、Findings、负向对照、DoD T-1～T-6 见 [TASK-066-plan.md §12 Review Record](./TASK-066-plan.md#12-review-record)。未改 Task Status、未标 Completed、未合入或填 Merged；关闭与合入登记归 Human。
