@@ -2,15 +2,15 @@
 
 ## Status
 
-Status：Draft
+Status：Approved（2026-11-06，Human 批准当前设计：`Draft → Approved`）
 
 Owner：Planner（规划）→ 待 Orchestrator 登记并指派 Implementer
 
 Related Task：[TASK-069](./TASK-069.md)；所属 [US-004](../../requirements/stories/active/US-004-dashboard-portfolio-health.md)。
 
-Branch / Base：文档同步，建议在 TASK-065 / TASK-068 合入 `main` 后，于其分支或收尾提交中完成；也可独立小提交。规划期基线为 2026-11-05 的 `main`。
+Branch / Base：`feature/TASK-069`，从 up-to-date `main` 新建（实施期基线 `main` @ `281b425`；065/066/067/068 均已合入）。纯文档同步，单提交即可，无需独立 worktree。
 
-Approval：**未批准**。本计划覆盖 §1～§9 当前设计；`Draft → Approved` 归 Human（[STATES.md](../../../os/process/STATES.md) §4）。注意：本卡 Task 卡原标注「免计划」，因 Human 明确要求「逐一为每个 task 编写 execplan」，本计划据此编制。
+Approval：**已批准（2026-11-06，Human）**。覆盖 §1～§9 当前设计；批准记录为 Human 2026-11-06「批准 069 计划」原话，按 [STATES.md](../../../os/process/STATES.md) §4 `Draft → Approved` 归 Human。注意：本卡 Task 卡原标注「免计划」，因 Human 明确要求「逐一为每个 task 编写 execplan」，本计划据此编制。
 
 ## 1. Intent
 

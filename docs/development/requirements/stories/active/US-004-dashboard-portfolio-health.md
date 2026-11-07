@@ -118,7 +118,7 @@
 | [TASK-066](../../../delivery/US-004/TASK-066.md) | Dashboard 健康表与分币种小计（B6～B13） | AC-05～AC-13 | **✅ 已结案并合入（2026-11-06，Human 确认检验通过）**；独立 Reviewer `Pass with issues`，无 BLOCKER/未决 MAJOR；F-01 MAJOR 由 `353d583` 整改（唯一 UTC `lastRebalanceDateStr`，066/067 共用）；`Merged`=`af1f4d2`（PR #42）；纯客户端，排序按 OQ-01 口径 |
 | [TASK-067](../../../delivery/US-004/TASK-067.md) | 组合卡四格（B15） | AC-17、AC-18 | **✅ 已结案并合入（2026-11-06，Human 确认检验通过）**；Reviewer `Pass with issues`，无 BLOCKER/MAJOR；`Merged`=`d95be45`（已合入 `main`）；基线陈旧问题已由 `434a323`/`6f5add2` 刷新闭环 |
 | [TASK-068](../../../delivery/US-004/TASK-068.md) | 删组合后事件查询层过滤（B16） | AC-19、AC-14 | **✅ 已结案并合入（2026-11-06）**：首轮 Reviewer `Fail`（F-01 BLOCKER / F-02 MAJOR）→ `3226dd4` 返工（240/240）→ 二审复检 `Pass with issues`（plan §12.11）→ Human 确认完成并合入；`Merged`=`6f0b4df`；三处同源 |
-| [TASK-069](../../../delivery/US-004/TASK-069.md) | 契约文档同步（B5） | AC-16 | **🟡 `Planning`（2026-11-06，Human 指令启动）**；硬前置 065+068 合入**已满足**；纯文档、零代码；计划 `Draft` 待 Human 批准后派发 |
+| [TASK-069](../../../delivery/US-004/TASK-069.md) | 契约文档同步（B5） | AC-16 | **🟡 `Implementing`（2026-11-06）**：计划已获 Human 批准（`Draft → Approved`）；硬前置 065+068 已合入；纯文档、零代码，唯一缺口为契约行补 `stats.unreadAlertCount` + 语义校正 |
 
 > AC-20（独立 Reviewer 复核）是整体交付要求，不拆成单独卡。
 >
@@ -145,7 +145,7 @@
 | AC-17、AC-18（TASK-067 覆盖） | **已验证（2026-11-06）** | [TASK-067 §12/§13](../../../delivery/US-004/TASK-067.md)；Reviewer `Pass with issues`，无 BLOCKER/MAJOR，Human 确认结案 | `Merged`=`d95be45`（已合入 main） |
 | AC-05～AC-13（TASK-066 覆盖） | **已验证（2026-11-06）** | [TASK-066 §12 审查结论](../../../delivery/US-004/TASK-066.md)；Reviewer `Pass with issues`，AC-05～AC-13 逐条满足，`verify066.cjs` 34/34（mock 取证），F-01 MAJOR 已整改复审收敛 | 剩余 MINOR F-02～F-05（mock 取证局限等）记录在案；`Merged`=`af1f4d2`（PR #42） |
 | AC-19（TASK-068 覆盖） | **已验证（2026-11-06）** | [TASK-068 §12.11 二审复检](../../../delivery/US-004/TASK-068.md) 与 plan §12.11：`Pass with issues`，F-01/F-02 已整改并经负向对照确认，AC-01～AC-07 全满足；`Merged`=`6f0b4df` | 残余 MINOR F-03/F-05 记录在案，不阻塞 |
-| AC-16（TASK-069 覆盖） | 未验证 | 069 `Planning`（硬前置 065+068 合入已满足；计划 `Draft` 待批准） | 无豁免 |
+| AC-16（TASK-069 覆盖） | 未验证 | 069 `Implementing`（计划已批准，2026-11-06）；硬前置 065+068 已合入 | 无豁免 |
 | AC-20（独立 Reviewer 复核） | 部分（065、066、067、068 已独立复核；069 待派发） | 整体交付时再汇总 | 无豁免 |
 | 团队完成标准 | 未验证 | [DEFINITION_OF_DONE.md](../../../../os/process/DEFINITION_OF_DONE.md) | 无豁免 |
 

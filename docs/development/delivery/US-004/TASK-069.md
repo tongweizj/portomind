@@ -4,15 +4,15 @@
 
 | 字段 | 内容 |
 |---|---|
-| Status | Planning（2026-11-06，Human 指令启动；硬前置 065+068 已合入。计划 `Draft`，待 Human 批准后方可 `Implementing` 与派发） |
-| Priority / Owner / Type | `High` / 待指派 / `Docs` |
+| Status | **Implementing（2026-11-06）**：计划已由 Human 批准（`Draft → Approved`，2026-11-06），按 [STATES.md §4](../../../os/process/STATES.md#4-谁可以改变状态) 登记 `Planning → Implementing` 并派发；硬前置 065+068 已合入。**`Merged` = `Pending`** |
+| Priority / Owner / Type | `High` / Implementer（待指派） / `Docs` |
 | Created / Updated | 2026-11-05 / 2026-11-06 |
 | 所属 Story | [US-004](../../requirements/stories/active/US-004-dashboard-portfolio-health.md) |
 | 覆盖的验收条件 | US-004/AC-16 |
 | Related Product Spec / ADR | [FS-portfolio-ia-cleanup](../../requirements/specs/FS-portfolio-ia-cleanup.md) §6.2（B5）、§7（AC35） |
-| Execution Plan | [Draft：TASK-069-plan](./TASK-069-plan.md)（原免计划，按 Human 要求补计划；`Draft → Approved` 归 Human） |
+| Execution Plan | [Approved：TASK-069-plan](./TASK-069-plan.md)（2026-11-06 Human 批准） |
 
-> 已登记（2026-11-06，Orchestrator）。**当前不可开工**：计划仍 `Draft`，按 [STATES.md §4](../../../os/process/STATES.md#4-谁可以改变状态) `Draft → Approved` 仅 Human；批准后由 Orchestrator 登记 `Implementing` 并派发。
+> 2026-11-06 启动登记（Orchestrator）：Human 批准计划（原话「批准 069 计划」）后，登记 `Planning → Implementing` 并派发 Implementer。**范围仅文档**：`API_CONTRACT.md` 的 `GET /api/portfolios/summary` 行与 Spec 状态行/§11；不动任何代码。
 
 ## 1. 问题
 
