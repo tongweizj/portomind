@@ -56,6 +56,28 @@ export function daysSince(timestamp) {
 }
 
 /**
+ * 上次再平衡日期 → `YYYY-MM-DD`（**UTC 日期**，不按浏览器时区重推）。
+ *
+ * 后端 `lastExecutedAt` 序列化为 ISO 字符串（UTC），取前 10 位即是后端日期。
+ * 若改用本地 getters（`getFullYear/getMonth/getDate`），同一时间戳在
+ * `America/Toronto` 等负偏移时区会显示成前一天，健康表与组合卡因此对不上
+ * （TASK-066 复审 F-01）。本函数是唯一实现，066/067 共用。
+ *
+ * 无值 / 非法值返回 `null`，由调用方决定显示「从未」还是「—」。
+ *
+ * @param {string|Date|null|undefined} value ISO 字符串或 Date
+ * @returns {string|null}
+ */
+export function lastRebalanceDateStr(value) {
+  if (value == null) return null;
+  if (value instanceof Date) {
+    return Number.isNaN(value.getTime()) ? null : value.toISOString().slice(0, 10);
+  }
+  const head = String(value).slice(0, 10);
+  return /^\d{4}-\d{2}-\d{2}$/.test(head) ? head : null;
+}
+
+/**
  * 统计 (from, to] 区间内的周一~周五天数。
  *
  * 只排除周末、不排除法定假日，是**刻意**的：相对基准法下同一市场的标的一起休市，
