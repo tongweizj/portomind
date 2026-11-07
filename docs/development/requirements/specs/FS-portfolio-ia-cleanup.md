@@ -2,7 +2,7 @@
 
 | 项 | 内容 |
 |---|---|
-| 状态 | **`Approved`**（2026-10-26 Human 批准；§8 六项 OQ 全部采纳推荐）。**同日 22:40 追加 5 项原型期裁决**（`HD-10`~`HD-14`，见 §11）：`B8a` **作废**、新增 `A17` / `B15` / `B16`、`R-7` 关闭。代码实施仍须各自独立的 `Approved` ExecPlan |
+| 状态 | **`Approved`**（2026-10-26 Human 批准；§8 六项 OQ 全部采纳推荐）。**同日 22:40 追加 5 项原型期裁决**（`HD-10`~`HD-14`，见 §11）：`B8a` **作废**、新增 `A17` / `B15` / `B16`、`R-7` 关闭。代码实施仍须各自独立的 `Approved` ExecPlan。**2026-11-06 交付单元 B 落地记录**：`B1~B4/B15/B16` 由 `TASK-065`（`6f556aa`）、`TASK-067`（`d95be45`）、`TASK-068`（`6f0b4df`）实施并合入 `main`；`B5` 契约文档同步由 `TASK-069` 完成（见 §11 `HD-15`）；交付单元 A、Story 关闭与 `Merged` 登记归 Story 卡 §8 与 Human，不在本 Spec 判定 |
 | 作者 | Orchestrator（按 Human 2026-10-26 裁决起草） |
 | 日期 | `2026-10-26`（同日追加 `A16`：再平衡提醒的精确落点，源自日志频道边界裁决 —— 提醒详情归组合域，见 [FS-cron-worker-status-board](./FS-cron-worker-status-board.md) `OQ7`；同日晚按 `TASK-059` 原型审查结果补齐 5 项裁决） |
 | 交付单元 | **A · 组合详情 IA 收尾**（纯客户端） · **B · Dashboard 组合健康表**（`shared` + `server` + 客户端） |
@@ -432,6 +432,7 @@
 | **HD-12** | 2026-10-26 | **原型与需求的所有偏差一次性全改，不分批**（`OQ-C`）。清单见 [TASK-059](../../tasks/completed/TASK-059-prototype-alignment-portfolio-ia.md)（29 项 U + 9 项 D；其中 D 组已于同日回写完毕） |
 | **HD-13** | 2026-10-26 | **组合列表卡新增四格（总市值 / 持仓资产 / 待办 / 上次再平衡）纳入本期**（`OQ-D` → `B15`）。理由：数据已在 `usePortfolios()` 的 `stats` 上（零新增请求），且卡片与健康表若口径分裂，正是本线要消灭的形态 |
 | **HD-14** | 2026-10-26 | **删除组合后，其全部提醒事件「全部隐藏」**（`OQ-E` → `B16`）：查询层过滤、三处出口同源、**库里保留不物理删除**；资产级（`portfolioId=null`）事件必须保留。同时确定「Ardot 管视觉 / Web 原型管行为」的双标尺（见 §9） |
+| **HD-15** | 2026-11-06 | **本 FS 自身落地记录（非新裁决、非 AC 验收表）**：交付单元 B 的 `B1~B4/B15/B16` 由 `TASK-065`（`6f556aa`）、`TASK-067`（`d95be45`）、`TASK-068`（`6f0b4df`）实施并合入 `main`；`B5`（`AC35`）契约文档同步由 `TASK-069` 完成——[API_CONTRACT.md](../../../handbook/technical/API_CONTRACT.md) 的 `GET /api/portfolios/summary` 行补齐 `stats.unreadAlertCount`（B16 口径：按现存组合分组、删除组合后其事件不计入、资产级 `portfolioId:null` 事件归列表但不归入任何组合计数），并校正 `lastExecutedAt`/`pendingRebalanceCount`/`drift.dueByTime`/`drift.overThresholdCount` 语义。实施证据、逐字段比对清单与验证输出按 [DOCS.md §1.1](../../../os/standards/DOCS.md#11-story-交付目录与文档生命周期) 唯一记在 [TASK-069-plan §11](../../../development/delivery/US-004/TASK-069-plan.md)，Story 整体验收归 Story 卡 §8、关闭与 `Merged` 登记归 Human，本 Spec 不复制验收表、不判定状态推进 |
 
 ---
 

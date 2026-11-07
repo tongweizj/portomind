@@ -4,7 +4,7 @@
 
 | 字段 | 内容 |
 |---|---|
-| Status | **Completed（2026-11-06，Human 确认检验通过）**：独立 Reviewer 判定 **`Pass with issues`**，无 BLOCKER、无未决 MAJOR（F-01 MAJOR 已由 `353d583` 整改并复审收敛），4 项 MINOR 记录在案；分支 `feature/TASK-066` @ **`353d583`**（含 `4e26dca` / `7cdefa0`，基线已 merge `main` @ `8b863f0`）。**`Merged` = `Pending`**（尚未合入 `main`） |
+| Status | **Completed（2026-11-06，Human 确认检验通过）**：独立 Reviewer 判定 **`Pass with issues`**，无 BLOCKER、无未决 MAJOR（F-01 MAJOR 已由 `353d583` 整改并复审收敛），4 项 MINOR 记录在案。**`Merged` = `af1f4d2`**（2026-11-06 **PR #42**：`Merge pull request #42 from tongweizj/feature/TASK-066`；`git merge-base --is-ancestor f8903c3 main` = 是，合入前分支已以 `f8903c3` merge 最新 `main`） |
 | Priority / Owner / Type | `High` / Reviewer（待指派） / `Feature`（纯客户端） |
 | Created / Updated | 2026-11-05 / 2026-11-06 |
 | 所属 Story | [US-004](../../requirements/stories/active/US-004-dashboard-portfolio-health.md) |
@@ -108,7 +108,7 @@
 
 **未做的事**：未改 AC / Scope / 代码；未替 Reviewer 出具判定；未提交合入、未填 `Merged`、未关闭。本节与 §12 按 Human 2026-11-06「066 已检验通过」指令与 Reviewer §12 记录登记。
 
-**结案登记（2026-11-06，Orchestrator）**：独立 Reviewer 判定 **`Pass with issues`**（无 BLOCKER、无未决 MAJOR），按 [STATES.md §4](../../../os/process/STATES.md#4-谁可以改变状态) 登记 `Reviewing → Completed`。计划同步 `Approved → Completed`，§13 Completion Record 已补。**`Merged` 仍为 `Pending`**：`git merge-base --is-ancestor feature/TASK-066 main` = 否（分支领先 `main` 4 个提交），合入与 `Merged` 登记归 Human。
+**结案登记（2026-11-06，Orchestrator）**：独立 Reviewer 判定 **`Pass with issues`**（无 BLOCKER、无未决 MAJOR），按 [STATES.md §4](../../../os/process/STATES.md#4-谁可以改变状态) 登记 `Reviewing → Completed`。计划同步 `Approved → Completed`，§13 Completion Record 已补。**合入登记（2026-11-06，Human）**：经 **PR #42** 合入 `main`，合并提交 **`af1f4d2`**（`Merge pull request #42 from tongweizj/feature/TASK-066`）；`git merge-base --is-ancestor f8903c3 main` = 是。**`Merged` = `af1f4d2`**。
 
 ## 12. Review Record
 
