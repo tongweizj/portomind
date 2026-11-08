@@ -5,12 +5,12 @@
 | 字段 | 内容 |
 |---|---|
 | Story ID | US-004 |
-| Status | Planning |
-| 准备情况 | 5 卡已拆（TASK-065～069）；OQ-01/02/04/05 已裁决、G-1/G-2 覆盖缺口已闭合。**五卡全部 `Completed` 且全部合入 `main`**（065 `6f556aa`、066 `af1f4d2`、067 `d95be45`、068 `6f0b4df`、069 `d42a1bb`），任务层 AC 证据齐备；Story 状态仍 `Planning`——`Story → Reviewing`（整体验收）归 PM、`Story → Completed` 与归档只有 Human（[STATES.md §2.2/§4](../../../../os/process/STATES.md#22-story-状态)） |
+| Status | **Reviewing**（2026-11-08，PM 登记：五卡全部 `Completed` 且全部合入 `main`，必要 Task 完成、AC 证据齐备 → 整体验收中；`Story → Completed` 与归档由 Human 执行） |
+| 准备情况 | 5 卡已拆（TASK-065～069）；OQ-01/02/04/05 已裁决、G-1/G-2 覆盖缺口已闭合。**五卡全部 `Completed` 且全部合入 `main`**（065 `6f556aa`、066 `af1f4d2`、067 `d95be45`、068 `6f0b4df`、069 `d42a1bb`），AC-01～AC-20 逐项有独立复核证据。**Story 已进入 `Reviewing`（整体验收）**；`Story → Completed` 与过程目录归档只有 Human 可执行（[STATES.md §2.2/§4](../../../../os/process/STATES.md#22-story-状态)） |
 | 产品负责人 | PM；方向、优先级、范围变更与关闭由 Human 决定 |
 | 优先级 | High（Roadmap 第 6 条「dashboard 增加组合健康表」的实体；`FS-portfolio-ia-cleanup` 交付单元 B） |
 | 创建日期 | 2026-11-05 |
-| 最近更新 | 2026-11-06 |
+| 最近更新 | 2026-11-08 |
 | 交付目录 | docs/development/delivery/US-004/（启动时建立） |
 | 需求来源 | Human 2026-11-05 指示整理 `specs/` 遗留需求；本 Story 承接 [FS-portfolio-ia-cleanup](../../specs/FS-portfolio-ia-cleanup.md) **交付单元 B**（B1～B16） |
 
@@ -106,7 +106,7 @@
 | OQ-04 | 已裁决 | AC-18「偏离文案逐字一致」口径（D-01）：卡片 `DriftBadge` 两态 vs 健康表四态 | Human | 定「逐字一致」边界 | ✅ 已裁决（2026-11-06 Human，**解 B**）：逐字一致只约束「待办/上次再平衡」；卡片偏离徽标维持两态（P1-1），偏离数据同源取 `stats.drift` |
 | OQ-05 | 已裁决 | 共享文案常量 `driftLabels.js` 归属（D-02） | Human | 定拥有方 | ✅ 已裁决（2026-11-06 Human）：由 TASK-066（Implementer B）拥有，TASK-067 消费 |
 
-**当前下一步：** 五卡（TASK-065～069）已全部 `Completed` 并全部合入 `main`，OQ 无待决、DEP-04 已满足。按 [STATES.md §2.2](../../../../os/process/STATES.md#22-story-状态)，全部 Task 完成只触发整体验收：**由 PM 汇总 §8 整体验收并登记 `Story → Reviewing`**；`Story → Completed` 与过程目录归档只有 Human 可执行。Story 当前仍 `Planning`，不因任务完成自动推进或关闭。
+**当前下一步：** 五卡（TASK-065～069）已全部 `Completed` 并全部合入 `main`，OQ 无待决、DEP-04 已满足；**PM 已登记 `Story → Reviewing`（2026-11-08）并汇总 §8 整体验收结论（通过）**。剩余动作：由 **Human** 确认整体验收、登记 `Story → Completed`、补齐 §9 交付摘要与关闭记录，并按 [DOCS.md §1.1](../../../../os/standards/DOCS.md#11-story-交付目录与文档生命周期) 将 `docs/development/delivery/US-004/` 归档到 `delivery/completed/US-004/`。Story 不因任务完成自动关闭。
 
 ## 6. 关联 Task 与验收覆盖
 
@@ -147,13 +147,13 @@
 | AC-19（TASK-068 覆盖） | **已验证（2026-11-06）** | [TASK-068 §12.11 二审复检](../../../delivery/US-004/TASK-068.md) 与 plan §12.11：`Pass with issues`，F-01/F-02 已整改并经负向对照确认，AC-01～AC-07 全满足；`Merged`=`6f0b4df` | 残余 MINOR F-03/F-05 记录在案，不阻塞 |
 | AC-16（TASK-069 覆盖） | **已验证（2026-11-06）** | [TASK-069 §12 审查结论](../../../delivery/US-004/TASK-069.md)；Reviewer `Pass with issues`，契约字段集与代码逐字一致、零代码改动 | MINOR F-02（AC-16 字面「响应示例」口径待 PM 收窄）、F-03（Spec 落地记录范围待 Planner 澄清）；`Merged`=`d42a1bb`（PR #43） |
 | AC-20（独立 Reviewer 复核） | **满足（2026-11-06）** | 五卡均由独立 Reviewer 复核：065 / 066 / 067 / 068 / 069 均 `Pass with issues`，无未决 BLOCKER/MAJOR（068 首轮 `Fail` 已返工二审复检收敛；066 F-01 MAJOR 已整改复审收敛） | 无豁免；整体验收结论由 PM 汇总 |
-| 团队完成标准 | 待 PM 汇总 | [DEFINITION_OF_DONE.md](../../../../os/process/DEFINITION_OF_DONE.md)；各卡 §12/§13 的 T-1～T-6 逐条记录 | 五卡实现、验证、审查、文档、状态更新均已齐备 |
+| 团队完成标准 | **满足（2026-11-08，PM 汇总）** | [DEFINITION_OF_DONE.md](../../../../os/process/DEFINITION_OF_DONE.md)；各卡 §12/§13 的 T-1～T-6 逐条记录 | 五卡实现、验证、审查、文档、状态更新均已齐备；残余 MINOR 均已记录且不阻塞 |
 
-**验收日期：** 待 PM / Human 确认（任务层证据已齐：五卡全部 `Completed` 且全部合入 `main`，见各卡 §13 与上表）
+**验收日期：** 2026-11-08（PM 汇总任务层证据；Story 关闭日期待 Human 确认）
 
 **验收版本：** 五卡合入后的 `main`（065 `6f556aa`、066 `af1f4d2`、067 `d95be45`、068 `6f0b4df`、069 `d42a1bb`）
 
-**验收结论：** 任务层证据齐备（AC-01～AC-20 逐项有独立复核证据，见上表与各卡 §12/§13）；**整体验收结论待 PM 登记，Story 关闭待 Human**。未关闭。
+**验收结论：** **任务层整体验收通过（PM 汇总，2026-11-08）**——AC-01～AC-20 逐项满足且均有独立 Reviewer 证据；五卡全部 `Completed` 并全部合入 `main`，无未决 BLOCKER/MAJOR，残余 MINOR 已记录（066 F-02~F-05、068 F-03/F-05、069 F-01~F-03）。按 [STATES.md §2.2](../../../../os/process/STATES.md#22-story-状态) 登记 `Story → Reviewing`；**`Story → Completed`、交付摘要与过程目录归档待 Human 执行**。
 
 **验收责任人：** PM（汇总）→ Human（关闭）
 
@@ -161,12 +161,12 @@
 
 | 项目 | 记录 |
 |---|---|
-| 交付摘要 | 尚未交付 |
-| 关闭日期 | 未关闭 |
-| 关闭责任人及授权依据 | 待 Human 实际验收与关闭 |
-| 相关产品文档同步 | 实施后须更新 `API_CONTRACT.md`、`handbook/ops/SERVER.md` 相关行、PL-3 §6.3 字段表 |
-| 过程资料归档 | 待 Story 关闭后按 [DOCS.md §1.1](../../../../os/standards/DOCS.md#11-story-交付目录与文档生命周期) 归档 |
-| 遗留事项及去向 | P1-1 徽标改文案、家庭资产趋势（`FAM-01`）、汇率面板归位：均未建 Story |
+| 交付摘要 | 交付单元 B 五项已全部交付并合入 `main`：`summary` 四字段（065）、Dashboard 组合健康表 + 分币种小计（066）、组合卡四格（067）、删除组合后事件查询层过滤（068）、契约文档同步（069）。任务层整体验收通过（2026-11-08，PM 汇总）；Story 待 Human 关闭 |
+| 关闭日期 | 未关闭（Story 现为 `Reviewing`） |
+| 关闭责任人及授权依据 | 待 Human 实际验收与关闭（[STATES.md §4](../../../../os/process/STATES.md#4-谁可以改变状态)） |
+| 相关产品文档同步 | `API_CONTRACT.md` 的 summary 契约行已由 TASK-069 同步（含 `stats.unreadAlertCount`）；`handbook/ops/SERVER.md`、PL-3 §6.3 字段表是否需同步待 PM 核对后处理 |
+| 过程资料归档 | 待 Story 关闭后按 [DOCS.md §1.1](../../../../os/standards/DOCS.md#11-story-交付目录与文档生命周期) 归档到 `delivery/completed/US-004/` |
+| 遗留事项及去向 | 记录层 MINOR：066 F-02~F-05、068 F-03/F-05、069 F-01~F-03（其中 069 F-02/F-03 属 AC 口径与 Spec 落地记录范围，建议 PM/Planner 收窄）；产品向：P1-1 徽标改文案、家庭资产趋势（`FAM-01`）、汇率面板归位，均未建 Story |
 
 ### 退出 / 恢复记录
 

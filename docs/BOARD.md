@@ -5,18 +5,18 @@
 
 ## 当前 Story
 
-> **当前格局（2026-11-06）**：US-001 已 `Completed` 并归档（过程目录在 `delivery/completed/US-001/`）；[US-004](./development/requirements/stories/active/US-004-dashboard-portfolio-health.md) 为**当前推进的 Story**——Story 状态仍为 `Planning`（Story → `Implementing` 归 PM，[STATES.md §4](./os/process/STATES.md#4-谁可以改变状态)）；下挂 5 卡：065/066/067/068/069 全部 `Completed` 且**均已合入 `main`**（069 经 PR #43 → `d42a1bb`）。US-002 / US-003 / US-005 仍为 `Backlog`，需求留在 `requirements/stories/`，不预建交付目录。
+> **当前格局（2026-11-08）**：US-001 已 `Completed` 并归档（过程目录在 `delivery/completed/US-001/`）；[US-004](./development/requirements/stories/active/US-004-dashboard-portfolio-health.md) 为**当前推进的 Story**——**Story 状态已由 PM 登记为 `Reviewing`（2026-11-08，整体验收中）**（`Story → Completed` 与归档归 Human，[STATES.md §4](./os/process/STATES.md#4-谁可以改变状态)）；下挂 5 卡：065/066/067/068/069 全部 `Completed` 且**均已合入 `main`**（069 经 PR #43 → `d42a1bb`）。US-002 / US-003 / US-005 仍为 `Backlog`，需求留在 `requirements/stories/`，不预建交付目录。
 
 ### US-004（当前推进）
 
 | 项目 | 当前情况 |
 |---|---|
 | Story / 用户价值 | [US-004](./development/requirements/stories/active/US-004-dashboard-portfolio-health.md)：Dashboard 组合健康表 + 分币种小计 + 组合卡四格（Spec 交付单元 B） |
-| Status | `Planning`（**PM 未推进到 `Implementing`**；Task 层 065/066/067/068/069 全部 `Completed`） |
+| Status | **`Reviewing`**（PM 2026-11-08 登记：五卡全部 `Completed` 且全部合入 `main`，整体验收中；`Story → Completed` 与归档归 Human） |
 | 交付目录 | [US-004 过程资料](./development/delivery/US-004)（TASK-065～069 卡与计划、并行方案、派发记录、提示词存档） |
 | 并行实施 | 065 已合入 `main`（`6f556aa`）并结案；066 已合入 `main`（`af1f4d2`，**PR #42**）并结案；067 已合入 `main`（`d95be45`）并结案；068 已合入 `main`（`6f0b4df`）并结案；**069 已合入 `main`（`d42a1bb`，PR #43）并结案** |
-| 下一步 | **US-004 五卡已全部 `Completed` 且全部合入 `main`**：由 PM 汇总 Story 整体验收（§8）并推进 Story 状态（`Planning → Reviewing` 归 PM），最终由 Human 关闭 Story、归档过程目录；可另处理 069 的 MINOR F-02/F-03（AC-16 口径与 Spec 落地记录范围，属 PM/Planner 文档收窄） |
-| 阻塞 / 待决策 | **无阻塞、无待决。** 五卡全部结案并合入；遗留均为记录层 MINOR（066 F-02~F-05、068 F-03/F-05、069 F-01~F-03），不阻塞 Story 验收 |
+| 下一步 | **Story 已进入整体验收（`Reviewing`）**：PM 已于 2026-11-08 汇总 §8（AC-01～AC-20 逐项满足，团队完成标准满足）；剩余由 **Human** 确认验收、登记 `Story → Completed`、补 §9 关闭记录，并按 [DOCS.md §1.1](./os/standards/DOCS.md#11-story-交付目录与文档生命周期) 归档 `delivery/US-004/` → `delivery/completed/US-004/`。可另处理 069 的 MINOR F-02/F-03（AC 口径与 Spec 落地记录范围） |
+| 阻塞 / 待决策 | **无阻塞、无待决。** 五卡全部结案并合入；整体验收结论已由 PM 汇总（通过），仅剩 Human 关闭与归档。遗留均为记录层 MINOR（066 F-02~F-05、068 F-03/F-05、069 F-01~F-03），不阻塞 |
 
 ### US-004 下挂 Task
 
@@ -49,6 +49,8 @@
 > 2026-11-06（Orchestrator 登记 TASK-069 复核 → Completed）：分支 plan §12 记录独立 Reviewer 判定 **`Pass with issues`**——US-004/AC-16 与卡内 AC-01～AC-03 逐条满足，`stats` 字段集与代码**逐字一致**（Reviewer 以 `fieldset.cjs` 从代码派生期望集机读比对），零代码改动、范围与单一归属守住、AC 未被改写；**BLOCKER 0 / MAJOR 0 / MINOR 3**：F-01（交付证据不足——`docs:check` 只校验链接与 Status 枚举，删字段或写错量纲仍 0 ERROR，Reviewer 已独立补验，建议后续补机读断言）、F-02（AC-16/AC35 字面「响应示例」与文档结构不符，归 PM 改口径）、F-03（Spec 落地记录未列 066/B6~B14、B5 是否含 `SERVER.md` 存疑，归 PM/Planner 收窄）。按 Human 2026-11-06「069 检验通过」指令登记 `Reviewing → Completed`，计划同步 `Approved → Completed` 并补 §13。核验：`docs:check` **134 文档 / 1364 链接 / ERROR 0 / WARN 0**（Implementer 与 Reviewer 各自亲跑一致）；`git diff --stat -- shared/ server/ client/ cron-worker/` 空。**合入登记（2026-11-06，Human）**：经 **PR #43** 合入 `main`，合并提交 **`d42a1bb`**（`Merge pull request #43 from tongweizj/feature/TASK-069`；分支 tip `a93c90b` 为 `main` 祖先）。**`Merged` 由 `Pending` 据实更新为 `d42a1bb`**，计划 §13 同步。
 
 > 2026-11-06（US-004 交付完成登记）：五卡 **065/066/067/068/069 全部 `Completed` 且全部合入 `main`**（`6f556aa` / `af1f4d2` / `d95be45` / `6f0b4df` / `d42a1bb`），全部经独立 Reviewer 复核（065/067/068/069 `Pass with issues`，066 `Pass with issues` 且 F-01 MAJOR 已整改收敛；无未决 BLOCKER/MAJOR）。按 [STATES.md §2.2](./os/process/STATES.md#22-story-状态)「全部 Task 完成只触发整体验收，不自动关闭 Story」：**Story 状态仍 `Planning`**，`Story → Reviewing`（整体验收）归 PM、`Story → Completed` 与归档只有 Human。遗留均为记录层 MINOR，不阻塞验收。
+
+> 2026-11-08（PM 登记 US-004 → `Reviewing`）：五卡全部 `Completed` 且全部合入 `main`（065 `6f556aa`、066 `af1f4d2`、067 `d95be45`、068 `6f0b4df`、069 `d42a1bb`），**必要 Task 完成、AC 证据齐备**，按 [STATES.md §2.2/§4](./os/process/STATES.md#22-story-状态) 由 PM 登记 `Story → Reviewing`（整体验收）。PM 已在 Story §8 汇总整体验收结论：**AC-01～AC-20 逐项满足**（每项均有独立 Reviewer 复核；068 首轮 `Fail` 已返工二审复检收敛、066 F-01 MAJOR 已整改复审收敛），团队完成标准满足；残余 MINOR（066 F-02~F-05、068 F-03/F-05、069 F-01~F-03）均记录在案、不阻塞。**`Story → Completed`、§9 交付摘要与关闭记录、过程目录归档（`delivery/US-004/` → `delivery/completed/US-004/`）归 Human**。
 
 ### US-001（已归档）
 
@@ -107,12 +109,12 @@
 
 | 统计范围 | 总数 | Backlog | Planning | Implementing | Reviewing | Blocked | Completed |
 |---|---:|---:|---:|---:|---:|---:|---:|
-| 全部已登记 Story（排除取消） | 2 | 0 | 1 | 0 | 0 | 0 | 1 |
+| 全部已登记 Story（排除取消） | 2 | 0 | 0 | 0 | 1 | 0 | 1 |
 | US-001 已关联 Task（已归档，全 Completed） | 7 | 0 | 0 | 0 | 0 | 0 | 7 |
 | US-004 已关联 Task | 5 | 0 | 0 | 0 | 0 | 0 | 5 |
 | 尚未关联 Story 的未完成 Task | 5 | 1 | 4 | 0 | 0 | 0 | 0 |
 
-> 统计来自卡片；旧词按 STATES.md §7.1 映射，不证明当前实施授权。已关联任务不重复计入未关联任务。US-001 七张卡全部 `Completed` 并已合入 `main`、过程目录已归档；TASK-054 的既有 Completed 计为 1 个支撑任务完成，不表示 US-001 已验收（Story 另由 Human 关闭）。US-004 的 5 张卡全部 `Completed` 且全部合入 `main`：065（`6f556aa`）、066（`af1f4d2`，PR #42）、067（`d95be45`）、068（`6f0b4df`）、069（`d42a1bb`，PR #43）；Story 状态推进与关闭归 PM/Human。共 13 条历史完成记录保留作证据索引，与本 Story 进度不可相加。
+> 统计来自卡片；旧词按 STATES.md §7.1 映射，不证明当前实施授权。已关联任务不重复计入未关联任务。US-001 七张卡全部 `Completed` 并已合入 `main`、过程目录已归档；TASK-054 的既有 Completed 计为 1 个支撑任务完成，不表示 US-001 已验收（Story 另由 Human 关闭）。US-004 的 5 张卡全部 `Completed` 且全部合入 `main`：065（`6f556aa`）、066（`af1f4d2`，PR #42）、067（`d95be45`）、068（`6f0b4df`）、069（`d42a1bb`，PR #43）；**US-004 已由 PM 登记 `Reviewing`（2026-11-08，整体验收中），`Completed` 与归档归 Human**。共 13 条历史完成记录保留作证据索引，与本 Story 进度不可相加。
 
 ## Story Backlog
 
