@@ -6,13 +6,13 @@ Status：Completed（2026-11-06，Task 已 `Completed`；Human 确认验收通�
 
 Owner：Planner（规划）→ Implementer C（2026-11-06 指派）
 
-Related Task：[TASK-067](./TASK-067.md)；所属 [US-004](../../requirements/stories/active/US-004-dashboard-portfolio-health.md)。
+Related Task：[TASK-067](./TASK-067.md)；所属 [US-004](../../../requirements/stories/active/US-004-dashboard-portfolio-health.md)。
 
 Approval：**2026-11-06，Human 明确确认「我已经批准了」**（Orchestrator 会话核对时本文件仍为 `Draft`、无 Approval 段；经 Human 当面确认后由 Orchestrator 据其决定登记，**不是自行批准**）。批准覆盖本文件 §1～§9 当前设计，不含其他任务。此登记不改变设计内容。
 
 Branch / Base：实施时从 up-to-date `main` 新建 `feature/TASK-067` 独立 worktree。规划期基线为 2026-11-05 的 `main`；目标文件 `client/src/components/PortfolioCard/index.jsx`、`client/src/hooks/usePortfolios.js` 已亲读核实（见 §3）。
 
-Approval：**未批准**。本计划覆盖 §1～§9 当前设计；`Draft → Approved` 归 Human（[STATES.md](../../../os/process/STATES.md) §4）。注意：本卡 Task 卡原标注「免计划」，因 Human 明确要求「逐一为每个 task 编写 execplan」，本计划据此编制。
+Approval：**未批准**。本计划覆盖 §1～§9 当前设计；`Draft → Approved` 归 Human（[STATES.md](../../../../os/process/STATES.md) §4）。注意：本卡 Task 卡原标注「免计划」，因 Human 明确要求「逐一为每个 task 编写 execplan」，本计划据此编制。
 
 ## 1. Intent
 
@@ -20,7 +20,7 @@ Approval：**未批准**。本计划覆盖 §1～§9 当前设计；`Draft → A
 
 ## 2. Context
 
-需求、任务见 [Story US-004 §3](../../requirements/stories/active/US-004-dashboard-portfolio-health.md) 与 [FS §6.2 B15、§10 R-10、§11 HD-13](../../requirements/specs/FS-portfolio-ia-cleanup.md)。
+需求、任务见 [Story US-004 §3](../../../requirements/stories/active/US-004-dashboard-portfolio-health.md) 与 [FS §6.2 B15、§10 R-10、§11 HD-13](../../../requirements/specs/FS-portfolio-ia-cleanup.md)。
 
 关键约束：
 - **零请求零服务端**：四格数据全部取自 `usePortfolios()` 返回的 `stats`（TASK-065 落地后含 `lastExecutedAt`/`pendingRebalanceCount`）。
@@ -76,7 +76,7 @@ Approval：**未批准**。本计划覆盖 §1～§9 当前设计；`Draft → A
 | AC-03（同源逐字一致，解 B） | 构造同一组合，比对卡片与健康表「待办」「上次再平衡」文本；确认偏离徽标仍两态 | 「待办/上次再平衡」文案逐字一致；偏离徽标维持「偏离阈值/配置正常」两态，数据同源 |
 | AC-04（零请求） | Network 面板对比改动前基线 | portfolios 相关请求数不变 |
 
-命令入口见 [DEPLOYMENT.md §7](../../../handbook/ops/DEPLOYMENT.md)。
+命令入口见 [DEPLOYMENT.md §7](../../../../handbook/ops/DEPLOYMENT.md)。
 
 ## 8. Risks
 
@@ -90,7 +90,7 @@ Approval：**未批准**。本计划覆盖 §1～§9 当前设计；`Draft → A
 
 ## 10. Implementer Handoff
 
-- **输入**：本计划 §4 + [TASK-067](./TASK-067.md) §3 AC + [FS §6.2 B15](../../requirements/specs/FS-portfolio-ia-cleanup.md)。
+- **输入**：本计划 §4 + [TASK-067](./TASK-067.md) §3 AC + [FS §6.2 B15](../../../requirements/specs/FS-portfolio-ia-cleanup.md)。
 - **范围与禁改**：只改 `client/src/components/PortfolioCard/index.jsx`（+ 按需共享常量）；**禁改** `shared`/`server`/`cron-worker`、`drift.needsRebalance` 语义。
 - **授权**：须 Human 批准本计划后实施。
 - **依赖**：前置 TASK-065（字段）；与 TASK-066 同源对齐。
@@ -151,7 +151,7 @@ Approval：**未批准**。本计划覆盖 §1～§9 当前设计；`Draft → A
 
 ### 12.1 独立性声明与审查对象
 
-- 依据 [REVIEWER.md §5/§7](../../../os/roles/REVIEWER.md)。**独立 Reviewer，未参与本卡实现或验收脚本编写**；Implementer C 自述（§11）不作结论，全部实跑复核。判定词不是状态，不构成合入许可。
+- 依据 [REVIEWER.md §5/§7](../../../../os/roles/REVIEWER.md)。**独立 Reviewer，未参与本卡实现或验收脚本编写**；Implementer C 自述（§11）不作结论，全部实跑复核。判定词不是状态，不构成合入许可。
 - **评审前置已执行（用户明确要求）**：`feature/TASK-067` 原 HEAD `8141275`（父 `0189c04` = 旧 main）**不含** 065 合入 `6f556aa`。复核前先在分支上 `git merge main -m "review(TASK-067): merge main to refresh stale base before independent review"`（ort 策略、**无冲突**），得到干净基线 HEAD **`434a323`**；`git merge-base --is-ancestor main HEAD` = 是，065 合入 `6f556aa` 已在 HEAD 中。
   - rebase 前 `git diff main..feature/TASK-067 --stat` 把 065 四字段（`summary.js -34`）、156 行测试、065/068/070 文档显示为「删除」——确认为**假象**（main 在 `0189c04` 之后新增的内容，旧分支基点上没有），**未据此判 Fail**。
   - rebase 后复核：`summary.js` 仍含 `pendingRebalanceCount`/`dueByTime`/`overThresholdCount`（grep 5 处命中）；`server/test/integration/portfolio.summary.test.js` 仍 **345 行**（065 的 +156 行增量未丢，AC-01/04 用例在 `:146/:174/:250`）。
@@ -228,7 +228,7 @@ Approval：**未批准**。本计划覆盖 §1～§9 当前设计；`Draft → A
 
 **无 BLOCKER、无 MAJOR**。`git diff <rebase-base>..feature/TASK-067` 只含 `client/src/components/PortfolioCard/index.jsx` 纯展示改动 + 文档；无 `summary.js` 字段删除、无测试删除；既有 `drift.needsRebalance` 徽标语义未改。
 
-### 12.7 DoD（[DEFINITION_OF_DONE.md §3](../../../os/process/DEFINITION_OF_DONE.md) T-1～T-6）
+### 12.7 DoD（[DEFINITION_OF_DONE.md §3](../../../../os/process/DEFINITION_OF_DONE.md) T-1～T-6）
 
 | # | 要求 | 满足 | 证据 |
 |---|---|---|---|

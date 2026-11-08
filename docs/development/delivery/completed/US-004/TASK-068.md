@@ -7,14 +7,14 @@
 | Status | **Completed（2026-11-06，Human 确认完成并合入）**：首轮独立复核 `Fail`（F-01 BLOCKER / F-02 MAJOR）→ `3226dd4` 返工（`test:server` **240/240**）→ **二审复检 `Pass with issues`**（plan §12.11：F-01/F-02 已整改并经负向对照确认解决，AC-01～AC-07 全满足）；**`Merged` = `6f0b4df`**（2026-11-06 `Merge branch 'feature/TASK-068' into main`；`git merge-base --is-ancestor 84a50d4 main` = 是）。残余 MINOR F-03/F-05 记录在案；MAJOR F-04 已由 Reviewer 恢复原值并留痕 |
 | Priority / Owner / Type | `High` / Reviewer（待指派） / `Feature`（shared + server 查询层） |
 | Created / Updated | 2026-11-05 / 2026-11-06 |
-| 所属 Story | [US-004](../../requirements/stories/active/US-004-dashboard-portfolio-health.md) |
+| 所属 Story | [US-004](../../../requirements/stories/active/US-004-dashboard-portfolio-health.md) |
 | 覆盖的验收条件 | US-004/AC-19、AC-14（AC-14 的 cron-worker 零改动断言落在本卡） |
-| Related Product Spec / ADR | [FS-portfolio-ia-cleanup](../../requirements/specs/FS-portfolio-ia-cleanup.md) §6.2（B16）、§7（AC42）、§10（R-9）、§11（HD-14） |
+| Related Product Spec / ADR | [FS-portfolio-ia-cleanup](../../../requirements/specs/FS-portfolio-ia-cleanup.md) §6.2（B16）、§7（AC42）、§10（R-9）、§11（HD-14） |
 | Execution Plan | [Approved：TASK-068-plan](./TASK-068-plan.md)（2026-11-06 Human 批准） |
 
 ## 启动核对与实施交接（2026-11-06，Orchestrator）
 
-按 [STATES.md §4](../../../os/process/STATES.md#4-谁可以改变状态) 登记 `Planning` → **`Implementing`**，依据「当前设计的有效计划批准记录」。
+按 [STATES.md §4](../../../../os/process/STATES.md#4-谁可以改变状态) 登记 `Planning` → **`Implementing`**，依据「当前设计的有效计划批准记录」。
 
 | 启动项 | 核对事实 |
 |---|---|
@@ -94,7 +94,7 @@
 
 ## Orchestrator 交付接收记录（2026-11-06）
 
-依据 [STATES.md §4](../../../os/process/STATES.md#4-谁可以改变状态)：「Task → Reviewing：Implementer 提供改动清单、自测证据、可审对象和已知妥协」。四项齐备，故登记 `Implementing` → **`Reviewing`**。
+依据 [STATES.md §4](../../../../os/process/STATES.md#4-谁可以改变状态)：「Task → Reviewing：Implementer 提供改动清单、自测证据、可审对象和已知妥协」。四项齐备，故登记 `Implementing` → **`Reviewing`**。
 
 | 项 | 事实 |
 |---|---|

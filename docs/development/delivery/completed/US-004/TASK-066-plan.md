@@ -6,13 +6,13 @@ Status：Completed（2026-11-06，Task 已 `Completed`；审查 `Pass with issue
 
 Owner：Planner（规划）→ Implementer B（2026-11-06 指派）
 
-Related Task：[TASK-066](./TASK-066.md)；所属 [US-004](../../requirements/stories/active/US-004-dashboard-portfolio-health.md)。
+Related Task：[TASK-066](./TASK-066.md)；所属 [US-004](../../../requirements/stories/active/US-004-dashboard-portfolio-health.md)。
 
 Approval：**2026-11-06，Human 明确确认「我已经批准了」**（Orchestrator 会话核对时本文件仍为 `Draft`、无 Approval 段；经 Human 当面确认后由 Orchestrator 据其决定登记，**不是自行批准**）。批准覆盖本文件 §1～§9 当前设计，不含其他任务。此登记不改变设计内容。
 
 Branch / Base：实施时从 up-to-date `main` 新建 `feature/TASK-066` 独立 worktree。规划期基线为 2026-11-05 的 `main`；目标文件 `client/src/pages/Dashboard.jsx`、`client/src/components/Household/TotalAssetsCard.jsx`、`client/src/hooks/usePortfolios.js` 已亲读核实（见 §3）。
 
-Approval：**未批准**。本计划覆盖 §1～§9 当前设计；`Draft → Approved` 归 Human（[STATES.md](../../../os/process/STATES.md) §4）。注意：本卡 Task 卡原标注「免计划」，因 Human 明确要求「逐一为每个 task 编写 execplan」，本计划据此编制（Human 直接指令优先，见 Task §7 免计划依据的历史标注仍保留于卡，此处以计划为实施依据）。
+Approval：**未批准**。本计划覆盖 §1～§9 当前设计；`Draft → Approved` 归 Human（[STATES.md](../../../../os/process/STATES.md) §4）。注意：本卡 Task 卡原标注「免计划」，因 Human 明确要求「逐一为每个 task 编写 execplan」，本计划据此编制（Human 直接指令优先，见 Task §7 免计划依据的历史标注仍保留于卡，此处以计划为实施依据）。
 
 ## 1. Intent
 
@@ -20,7 +20,7 @@ Approval：**未批准**。本计划覆盖 §1～§9 当前设计；`Draft → A
 
 ## 2. Context
 
-需求、任务见 [Story US-004 §3](../../requirements/stories/active/US-004-dashboard-portfolio-health.md) 与 [FS §4.3、§6.2 B6～B13、§10 R-5](../../requirements/specs/FS-portfolio-ia-cleanup.md)。
+需求、任务见 [Story US-004 §3](../../../requirements/stories/active/US-004-dashboard-portfolio-health.md) 与 [FS §4.3、§6.2 B6～B13、§10 R-5](../../../requirements/specs/FS-portfolio-ia-cleanup.md)。
 
 关键约束：
 - **零新增请求**：复用 `usePortfolios()`（`queryKey: ['portfolios-summary']`，与列表页同缓存）。
@@ -99,7 +99,7 @@ Approval：**未批准**。本计划覆盖 §1～§9 当前设计；`Draft → A
 | AC-09（构建） | `npm run build --workspace client` + eslint | exit 0 / 0 error |
 | AC-10（视口不滚动） | 1440×900 视口打开 Dashboard（浏览器实测，不留像素锁死） | 总资产金额、分币种小计一行、健康表 3 行**不滚动可见**（对应 Story AC-05，G-2 缺口补） |
 
-命令入口见 [DEPLOYMENT.md §7](../../../handbook/ops/DEPLOYMENT.md)。**不写测试数量**。
+命令入口见 [DEPLOYMENT.md §7](../../../../handbook/ops/DEPLOYMENT.md)。**不写测试数量**。
 
 ## 8. Risks
 
@@ -115,7 +115,7 @@ Approval：**未批准**。本计划覆盖 §1～§9 当前设计；`Draft → A
 
 ## 10. Implementer Handoff
 
-- **输入**：本计划 §4 + [TASK-066](./TASK-066.md) §3 AC + [FS §4.3](../../requirements/specs/FS-portfolio-ia-cleanup.md)。
+- **输入**：本计划 §4 + [TASK-066](./TASK-066.md) §3 AC + [FS §4.3](../../../requirements/specs/FS-portfolio-ia-cleanup.md)。
 - **范围与禁改**：只改 `client/`（`Dashboard.jsx`、`TotalAssetsCard.jsx`、新增 `PortfolioHealthTable.jsx`）；**禁改** `shared`/`server`/`cron-worker`、提醒区逻辑。
 - **授权**：须 Human 批准本计划后实施。
 - **依赖**：前置 TASK-065（四字段）——可用「字段缺失降级」先做骨架，验收需真实字段。
@@ -233,7 +233,7 @@ Approval：**未批准**。本计划覆盖 §1～§9 当前设计；`Draft → A
 
 ### 12.1 独立性声明与审查对象
 
-- 依据 [REVIEWER.md §5/§7](../../../os/roles/REVIEWER.md)。**首次独立审查**；独立 Reviewer，未参与本卡实现或 `verify066.cjs` 编写。Implementer 自述、Orchestrator 亲跑结果均不作为结论，全部独立复跑取证。判定词不是状态，不构成合入许可。
+- 依据 [REVIEWER.md §5/§7](../../../../os/roles/REVIEWER.md)。**首次独立审查**；独立 Reviewer，未参与本卡实现或 `verify066.cjs` 编写。Implementer 自述、Orchestrator 亲跑结果均不作为结论，全部独立复跑取证。判定词不是状态，不构成合入许可。
 - **首轮基线**：`feature/TASK-066` @ `7cdefa0`（另 `4e26dca` 建立 `driftLabels.js`），worktree `D:/projects/portomind-066`；当时 `main` = `ca351b4`（065 合入 `6f556aa` 已在 main 与 HEAD，merge-base = `6f556aa`，无 stale-base 假象）；`git status --porcelain` 空。
 - **复审基线（F-01 整改后）**：HEAD `353d583`（`fix(TASK-066): unify last-rebalance date on shared UTC formatter`），其父 `67298c4`（`git merge main` @ `8b863f0`，带入 067 卡/068 修复/最新文档）；`main` = `8b863f0` 已是 HEAD 祖先；正确范围 `main..HEAD` = 8 文件（`verify066.cjs`、`PortfolioHealthTable.jsx`、`TotalAssetsCard.jsx`、`PortfolioCard/index.jsx`、`driftLabels.js`、`Dashboard.jsx`、`priceDisplay.js`、plan），**无 shared/server/cron-worker**。
 - 正确范围（`6f556aa..HEAD`）：6 文件 —— `verify066.cjs`、`PortfolioHealthTable.jsx`、`TotalAssetsCard.jsx`、`driftLabels.js`、`Dashboard.jsx`、`TASK-066-plan.md`；**无** `shared/`、`server/`、`cron-worker/`（AC-14 ✓）。
@@ -334,7 +334,7 @@ Approval：**未批准**。本计划覆盖 §1～§9 当前设计；`Draft → A
 
 **结论：F-01（MAJOR）已整改并复检通过，收敛。** 剩余 4 项 MINOR（F-02/F-03/F-04/F-05）不阻塞。
 
-### 12.7 DoD（[DEFINITION_OF_DONE §3](../../../os/process/DEFINITION_OF_DONE.md) T-1～T-6）
+### 12.7 DoD（[DEFINITION_OF_DONE §3](../../../../os/process/DEFINITION_OF_DONE.md) T-1～T-6）
 
 | # | 要求 | 满足 | 证据 |
 |---|---|---|---|
@@ -358,7 +358,7 @@ Approval：**未批准**。本计划覆盖 §1～§9 当前设计；`Draft → A
 
 **F-01（MAJOR）已整改复检通过、收敛**：`353d583` 按 Human 裁决（R2=Option A）新增唯一 UTC 实现 `lastRebalanceDateStr`（`priceDisplay.js:71`），066 `:81` 与 067 `:54` 共用；去掉 `（N 天前）` 后缀。复审：Toronto / Asia-Shanghai / UTC 三时区同一 `2026-09-07T00:00:00Z` → 两视图均 `2026-09-07`、`null` 均「从未」、**跨时区文本完全一致**；NEG-A/NEG-B 均 FAIL 后还原（§12.6.2）。剩余 4 项 MINOR（F-02 展示兜底、F-03 mock 取证局限、F-04 币种顺序双源、F-05 验证方式限制）均不阻塞。
 
-依 [REVIEWER.md §5.1](../../../os/roles/REVIEWER.md)：AC 满足、无未决 BLOCKER/MAJOR、剩余 MINOR 已记录 → **`Pass with issues`**。判定不是合入许可；`Merged` 与关闭归 Human（DoD §4）。
+依 [REVIEWER.md §5.1](../../../../os/roles/REVIEWER.md)：AC 满足、无未决 BLOCKER/MAJOR、剩余 MINOR 已记录 → **`Pass with issues`**。判定不是合入许可；`Merged` 与关闭归 Human（DoD §4）。
 
 判定词不是状态，不构成合入许可。本 Reviewer 未改 Task Status、未标 Completed、未 `git add/commit/push`、未合入 main、未填 Merged；关闭与合入登记归 Human / Orchestrator（STATES.md §4）。
 
@@ -373,7 +373,7 @@ Approval：**未批准**。本计划覆盖 §1～§9 当前设计；`Draft → A
 | 审查 | 首轮 `Pass with issues` + F-01（MAJOR：本地时区格式化与 067 卡差一天、带「N 天前」后缀）→ `353d583` 整改 → 复审 **`Pass with issues`**（F-01 收敛，无 BLOCKER/未决 MAJOR） |
 | 残余 | MINOR F-02（`?? 0` 展示兜底）、F-03（`verify066` mock 取证局限，非真实后端）、F-04（币种顺序常量双源）、F-05（验证依赖本机 Chrome/vite）——均不阻塞，记录在案 |
 | 验证 | `npm run build --workspace client` exit 0（2440 modules）；`eslint` 0 error / 0 warning；`verify066.cjs` **34/34 PASS**；自建独立探针 19/19、点击级探针补 AC-08、双时区探针 4/4；5 条负向对照均 FAIL 后还原 |
-| 关闭依据 | Human 2026-11-06 确认检验通过；按 [STATES.md §4](../../../os/process/STATES.md#4-谁可以改变状态) 登记 `Completed` |
+| 关闭依据 | Human 2026-11-06 确认检验通过；按 [STATES.md §4](../../../../os/process/STATES.md#4-谁可以改变状态) 登记 `Completed` |
 | 合入 | **已合入（2026-11-06）**：**PR #42** → `af1f4d2` `Merge pull request #42 from tongweizj/feature/TASK-066`（分支合入前以 `f8903c3` merge 最新 `main`）；`Merged` = `af1f4d2` |
 
 ## 自检

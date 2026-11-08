@@ -7,9 +7,9 @@
 | Status | **Completed（2026-11-06，Human 确认验收通过并关闭）**；**`Merged` = `6f556aa`**（2026-11-06 经 `Merge branch 'feature/TASK-065' into main` 合入 `main`；`git merge-base --is-ancestor 5f807a3 main` = 是，Orchestrator 核验） |
 | Priority / Owner / Type | `High` / Implementer A / `Feature`（shared 内核 + server 契约） |
 | Created / Updated | 2026-11-05 / 2026-11-06 |
-| 所属 Story | [US-004](../../requirements/stories/active/US-004-dashboard-portfolio-health.md) |
+| 所属 Story | [US-004](../../../requirements/stories/active/US-004-dashboard-portfolio-health.md) |
 | 覆盖的验收条件 | US-004/AC-01～AC-04、AC-14（AC-14 的 cron-worker 零改动断言落在本卡） |
-| Related Product Spec / ADR | [FS-portfolio-ia-cleanup](../../requirements/specs/FS-portfolio-ia-cleanup.md) §6.2（B1～B4）、§7（AC20～AC23）、§10（R-1、R-7）；[API_CONTRACT.md](../../../handbook/technical/API_CONTRACT.md) `GET /api/portfolios/summary` |
+| Related Product Spec / ADR | [FS-portfolio-ia-cleanup](../../../requirements/specs/FS-portfolio-ia-cleanup.md) §6.2（B1～B4）、§7（AC20～AC23）、§10（R-1、R-7）；[API_CONTRACT.md](../../../../handbook/technical/API_CONTRACT.md) `GET /api/portfolios/summary` |
 | Execution Plan | [Approved：TASK-065-plan](./TASK-065-plan.md)（2026-11-06 Human 确认批准） |
 
 ## 1. 问题
@@ -111,8 +111,8 @@
 
 ## 13. Completion Record
 
-- **关闭依据**：Human 2026-11-06 明确确认「065 已经验收通过」，按 [STATES.md §4](../../../os/process/STATES.md#4-谁可以改变状态) 登记 `Reviewing → Completed`（Task → Completed 与关闭归 Human）。
+- **关闭依据**：Human 2026-11-06 明确确认「065 已经验收通过」，按 [STATES.md §4](../../../../os/process/STATES.md#4-谁可以改变状态) 登记 `Reviewing → Completed`（Task → Completed 与关闭归 Human）。
 - **AC 证据**：US-004/AC-01~AC-04、AC-14 由独立 Reviewer 复核满足（§12）；测试随 `feature/TASK-065` @ `5f807a3`（原 `8fde289`，后 rebase 至 `5f807a3`）提交，建议合入前在分支重跑 `npm run test:server` 取真实输出。
 - **Merged**：**`6f556aa`** —— 2026-11-06 经 `Merge branch 'feature/TASK-065' into main` 合入 `main`；`git merge-base --is-ancestor 5f807a3 main` = 是，已由 Orchestrator 据实核验登记（合入动作由 Human 执行）。
 - **下游影响**：066/067 依赖本卡 B1~B4 字段，现已可取真实值（解除降级态）；**068 硬串行前置已随本卡合入 `main` 解除，可派发**（仍建议 068 在 067 合入后再派，避免同改 `summary.js` 冲突）。
-- **归档与移交**：Story 整体验收与归档待 065/066/067 全部完成后由 PM 汇总、Human 关闭 Story；本卡过程资料留 `delivery/US-004/`，不单独搬迁。
+- **归档与移交**：Story 整体验收与归档待 065/066/067 全部完成后由 PM 汇总、Human 关闭 Story；本卡过程资料留 `delivery/completed/US-004/`，不单独搬迁。

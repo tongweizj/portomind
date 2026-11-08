@@ -6,11 +6,11 @@ Status：Completed（2026-11-06，Task 已 `Completed`；审查 `Pass with issue
 
 Owner：Planner（规划）→ 待 Orchestrator 登记并指派 Implementer
 
-Related Task：[TASK-069](./TASK-069.md)；所属 [US-004](../../requirements/stories/active/US-004-dashboard-portfolio-health.md)。
+Related Task：[TASK-069](./TASK-069.md)；所属 [US-004](../../../requirements/stories/active/US-004-dashboard-portfolio-health.md)。
 
 Branch / Base：`feature/TASK-069`，从 up-to-date `main` 新建（实施期基线 `main` @ `281b425`；065/066/067/068 均已合入）。纯文档同步，单提交即可，无需独立 worktree。
 
-Approval：**已批准（2026-11-06，Human）**。覆盖 §1～§9 当前设计；批准记录为 Human 2026-11-06「批准 069 计划」原话，按 [STATES.md](../../../os/process/STATES.md) §4 `Draft → Approved` 归 Human。注意：本卡 Task 卡原标注「免计划」，因 Human 明确要求「逐一为每个 task 编写 execplan」，本计划据此编制。
+Approval：**已批准（2026-11-06，Human）**。覆盖 §1～§9 当前设计；批准记录为 Human 2026-11-06「批准 069 计划」原话，按 [STATES.md](../../../../os/process/STATES.md) §4 `Draft → Approved` 归 Human。注意：本卡 Task 卡原标注「免计划」，因 Human 明确要求「逐一为每个 task 编写 execplan」，本计划据此编制。
 
 ## 1. Intent
 
@@ -18,7 +18,7 @@ Approval：**已批准（2026-11-06，Human）**。覆盖 §1～§9 当前设计
 
 ## 2. Context
 
-需求、任务见 [Story US-004 §3](../../requirements/stories/active/US-004-dashboard-portfolio-health.md) 与 [FS §6.2 B5、§7 AC35](../../requirements/specs/FS-portfolio-ia-cleanup.md)。纯文档同步，无代码变更。
+需求、任务见 [Story US-004 §3](../../../requirements/stories/active/US-004-dashboard-portfolio-health.md) 与 [FS §6.2 B5、§7 AC35](../../../requirements/specs/FS-portfolio-ia-cleanup.md)。纯文档同步，无代码变更。
 
 ## 3. Repository Findings（2026-11-05 亲读）
 
@@ -36,7 +36,7 @@ Approval：**已批准（2026-11-06，Human）**。覆盖 §1～§9 当前设计
    - `drift.dueByTime`：布尔（timeInterval 是否触发）；`drift.overThresholdCount`：整数（超阈标的数）；`drift === null` 时后两者不可读；
    - `needsRebalance`/`triggeredThresholds` 语义不变（仍仅绝对/相对偏离）。
    - 响应示例（若有）同步补字段。
-2. **`FS-portfolio-ia-cleanup.md`**：状态行与 §11 记录同步（记 TASK-065～TASK-069 落地情况；§11 为裁决记录，实施状态一般记在 Story 卡而非 Spec 裁决表，按 [DOCS.md](../../../os/standards/DOCS.md) 单一归属原则，仅当 Spec 明确要求「状态行与 §11 一致」时补记，避免重复）。
+2. **`FS-portfolio-ia-cleanup.md`**：状态行与 §11 记录同步（记 TASK-065～TASK-069 落地情况；§11 为裁决记录，实施状态一般记在 Story 卡而非 Spec 裁决表，按 [DOCS.md](../../../../os/standards/DOCS.md) 单一归属原则，仅当 Spec 明确要求「状态行与 §11 一致」时补记，避免重复）。
 
 ## 5. Work Breakdown
 
@@ -56,7 +56,7 @@ Approval：**已批准（2026-11-06，Human）**。覆盖 §1～§9 当前设计
 | AC-02（Spec 状态一致） | 检查 Spec 状态行/§11 | 与实施结果一致（避免与 Story 卡重复） |
 | AC-03（docs:check） | `npm run docs:check` | 0 ERROR |
 
-命令入口见 [DEPLOYMENT.md §7](../../../handbook/ops/DEPLOYMENT.md) 与 [DOCS.md §5](../../../os/standards/DOCS.md)。
+命令入口见 [DEPLOYMENT.md §7](../../../../handbook/ops/DEPLOYMENT.md) 与 [DOCS.md §5](../../../../os/standards/DOCS.md)。
 
 ## 8. Risks
 
@@ -85,7 +85,7 @@ Approval：**已批准（2026-11-06，Human）**。覆盖 §1～§9 当前设计
 |---|---|
 | Worktree | `D:\projects\portomind`（主工作区） |
 | Branch / Base | `feature/TASK-069` / `main @ 3867298`（授权基线；`origin/main = af1f4d2`，本地 `main` 领先 2 个 069 规划/批准文档提交） |
-| 验证命令入口 | [DEPLOYMENT.md §7](../../../handbook/ops/DEPLOYMENT.md)（不在本卡复制命令） |
+| 验证命令入口 | [DEPLOYMENT.md §7](../../../../handbook/ops/DEPLOYMENT.md)（不在本卡复制命令） |
 | 目标文件 | `docs/handbook/technical/API_CONTRACT.md`、`docs/development/requirements/specs/FS-portfolio-ia-cleanup.md`、本计划 §11 |
 | 禁用面 | 未改 `shared/`、`server/`、`client/`、`cron-worker/`、`STATES.md`、Story 卡 §8、AC / Scope、Task Status、Reviewer 结论、BOARDB/`Merged` |
 
@@ -131,7 +131,7 @@ Approval：**已批准（2026-11-06，Human）**。覆盖 §1～§9 当前设计
 |---|---|
 | `docs/handbook/technical/API_CONTRACT.md` | `GET /api/portfolios/summary` 行：`stats` 字段集补 `unreadAlertCount`；按清单 C 校正 4 处措辞；补充 `needsRebalance`/`triggeredThresholds` 语义不变与 `drift===null` 时两字段不可读的显式声明 |
 | `docs/development/requirements/specs/FS-portfolio-ia-cleanup.md` | 状态行补「2026-11-06 交付单元 B 落地记录」（`TASK-065/067/068` 合入 + `B5` 由 069 完成）；§11 补 `HD-15`（本 FS 自身落地记录，链接到本计划 §11，不复制 Story 卡 §8 验收表） |
-| `docs/development/delivery/US-004/TASK-069-plan.md` | 本 §11 实施记录（唯一存放处） |
+| `docs/development/delivery/completed/US-004/TASK-069-plan.md` | 本 §11 实施记录（唯一存放处） |
 
 ### 11.4 验证实际输出
 
@@ -149,7 +149,7 @@ $ git diff --stat -- shared/ server/ client/ cron-worker/
 
 ```text
 $ git diff --stat
- docs/development/delivery/US-004/TASK-069-plan.md             | 94 +++++++++++++++++++++-
+ docs/development/delivery/completed/US-004/TASK-069-plan.md             | 94 +++++++++++++++++++++-
  docs/development/requirements/specs/FS-portfolio-ia-cleanup.md |  3 ++-
  docs/handbook/technical/API_CONTRACT.md                        |  2 +-
  3 files changed, 96 insertions(+), 3 deletions(-)
@@ -209,7 +209,7 @@ $ git diff --stat
 > （空输出 —— 零代码改动）
 >
 > $ git diff --stat
->  docs/development/delivery/US-004/TASK-069-plan.md             | 98 +++++++++++++++++++++-
+>  docs/development/delivery/completed/US-004/TASK-069-plan.md             | 98 +++++++++++++++++++++-
 >  docs/development/requirements/specs/FS-portfolio-ia-cleanup.md |  3 ++-
 >  docs/handbook/technical/API_CONTRACT.md                        |  2 +-
 >  3 files changed, 100 insertions(+), 3 deletions(-)
@@ -227,7 +227,7 @@ $ git diff --stat
 
 ## 12. Review Record
 
-**Verdict：`Pass with issues`**（2026-11-06，独立 Reviewer；**无 BLOCKER / 无 MAJOR**；3 项 MINOR 已记录、不阻塞）。AC-16（US-004）与卡内 AC-01～AC-03 逐条**满足**（判定见 §12.5）；判定不是状态、不是合入许可。本节按 [REVIEWER.md §7](../../../os/roles/REVIEWER.md) 记录；任务卡 [§12](./TASK-069.md#12-review-record) 只引用本节。
+**Verdict：`Pass with issues`**（2026-11-06，独立 Reviewer；**无 BLOCKER / 无 MAJOR**；3 项 MINOR 已记录、不阻塞）。AC-16（US-004）与卡内 AC-01～AC-03 逐条**满足**（判定见 §12.5）；判定不是状态、不是合入许可。本节按 [REVIEWER.md §7](../../../../os/roles/REVIEWER.md) 记录；任务卡 [§12](./TASK-069.md#12-review-record) 只引用本节。
 
 ### 12.1 审查对象、基线与独立性
 
@@ -260,7 +260,7 @@ $ git diff --stat main...ba5e5e1 -- shared/ server/ client/ cron-worker/
 （空输出 —— 零代码改动，硬性要求满足）
 
 $ git diff --stat main...ba5e5e1
- docs/development/delivery/US-004/TASK-069-plan.md  | 148 ++++++++++++++++++++-
+ docs/development/delivery/completed/US-004/TASK-069-plan.md  | 148 ++++++++++++++++++++-
  .../requirements/specs/FS-portfolio-ia-cleanup.md  |   3 +-
  docs/handbook/technical/API_CONTRACT.md            |   2 +-
  3 files changed, 150 insertions(+), 3 deletions(-)
@@ -282,14 +282,14 @@ $ git show --stat 822ab67                    → 3 文件：BOARD / TASK-069.md 
 
 | 证据 | 位置 / 内容 |
 |---|---|
-| 代码事实 | [summary.js](../../../../shared/services/portfolio/summary.js)：`buildPortfolioSummary` 返回 `:78-84` = `positionCount, marketValueByCurrency, lastExecutedAt, pendingRebalanceCount, drift`；`computeSummary :100-110` = `$match {status:'unread', …visibleFilter}` + `$group by portfolioId` + `.filter(_id != null)`；`:151` = `unreadAlertCount: unreadByPortfolio.get(…) \|\| 0` |
+| 代码事实 | [summary.js](../../../../../shared/services/portfolio/summary.js)：`buildPortfolioSummary` 返回 `:78-84` = `positionCount, marketValueByCurrency, lastExecutedAt, pendingRebalanceCount, drift`；`computeSummary :100-110` = `$match {status:'unread', …visibleFilter}` + `$group by portfolioId` + `.filter(_id != null)`；`:151` = `unreadAlertCount: unreadByPortfolio.get(…) \|\| 0` |
 | 既有查询 | `summary.js:126-132` 每组合一次 `RebalanceRecord.findOne({status:'EXECUTED'})`；`pendingRebalanceCount` 来自 `:115-123` 的 `RebalanceRecord` `$match {status:'PENDING'}` + `$group` |
 | drift | `summary.js:19` `DRIFT_THRESHOLDS=['absoluteDeviation','relativeDeviation']`；`:63-75` `needsRebalance`/`triggeredThresholds` 仅绝对/相对、`dueByTime`=含 `timeInterval`、`overThresholdCount`=`details.filter(triggeredThresholds.length>0).length`；`:55` `drift===null` 条件（无目标/无持仓/缺价） |
-| B16 三出口 | [alertVisibility.js](../../../../shared/services/alertVisibility.js):29-37 `visibleAlertFilter` = `$or:[{portfolioId:{$in:ids}},{portfolioId:null}]`；`summary.js:99` 与 `server/controllers/alert.controller.js:230,244` 同源 |
-| 契约行 | [API_CONTRACT.md:87](../../../handbook/technical/API_CONTRACT.md)（`ba5e5e1`）与 `git show 3867298:…:87`（基线）逐字比对 |
-| 需求/范围 | [TASK-069.md](./TASK-069.md) §3 AC / §4 Scope；本计划 §4 / §10 / §11；[FS §6.2 B5](../../requirements/specs/FS-portfolio-ia-cleanup.md) `:268`、§7 AC35 `:350`、状态行 `:5`、§11 `HD-15` `:435`；[US-004 §4 AC-16](../../requirements/stories/active/US-004-dashboard-portfolio-health.md) `:89`、§6 `:121`、§8 `:148` |
-| 规则 | [REVIEWER.md](../../../os/roles/REVIEWER.md) §2.3 / §3 / §5 / §7；[DOCS.md](../../../os/standards/DOCS.md) 单一归属（经 AGENTS.md §3 索引） |
-| 检查器局限 | [check-docs.cjs](../../../../scripts/check-docs.cjs) `:97-121` 仅校验链接目标/锚点，`:123-148` 仅校验卡片 Status 枚举与模板占位符 —— **不解析表格字段集** |
+| B16 三出口 | [alertVisibility.js](../../../../../shared/services/alertVisibility.js):29-37 `visibleAlertFilter` = `$or:[{portfolioId:{$in:ids}},{portfolioId:null}]`；`summary.js:99` 与 `server/controllers/alert.controller.js:230,244` 同源 |
+| 契约行 | [API_CONTRACT.md:87](../../../../handbook/technical/API_CONTRACT.md)（`ba5e5e1`）与 `git show 3867298:…:87`（基线）逐字比对 |
+| 需求/范围 | [TASK-069.md](./TASK-069.md) §3 AC / §4 Scope；本计划 §4 / §10 / §11；[FS §6.2 B5](../../../requirements/specs/FS-portfolio-ia-cleanup.md) `:268`、§7 AC35 `:350`、状态行 `:5`、§11 `HD-15` `:435`；[US-004 §4 AC-16](../../../requirements/stories/active/US-004-dashboard-portfolio-health.md) `:89`、§6 `:121`、§8 `:148` |
+| 规则 | [REVIEWER.md](../../../../os/roles/REVIEWER.md) §2.3 / §3 / §5 / §7；[DOCS.md](../../../../os/standards/DOCS.md) 单一归属（经 AGENTS.md §3 索引） |
+| 检查器局限 | [check-docs.cjs](../../../../../scripts/check-docs.cjs) `:97-121` 仅校验链接目标/锚点，`:123-148` 仅校验卡片 Status 枚举与模板占位符 —— **不解析表格字段集** |
 
 ### 12.4 重点核对项逐项结论
 
@@ -316,15 +316,15 @@ $ git show --stat 822ab67                    → 3 文件：BOARD / TASK-069.md 
 
 | # | 严重度 | 文件:行 | 现象 | 修法方向 |
 |---|---|---|---|---|
-| **F-01** | **MINOR** | [TASK-069-plan.md](./TASK-069-plan.md) §11.2 / §11.4；[check-docs.cjs](../../../../scripts/check-docs.cjs):97-148 | **证据不足（负向对照）**：卡内唯一可执行验证 `npm run docs:check` 只校验链接与 Status 枚举，`git diff --stat` 只看文件名/行数，二者都**不检查契约行内容**。独立负向对照（§12.7 NC1/NC2）证明：删掉 `stats.unreadAlertCount`、把 `overThresholdCount` 写成「阈值类型数」，`docs:check` 仍 `ERROR 0 / WARN 0 / exit 0`。故「字段集完整、语义正确」在交付证据包里仅由 Implementer 自撰的 §11.2 静态清单支撑，缺可证伪断言；该缺陷**不能被本卡证据发现**（[REVIEWER.md §2.3](../../../os/roles/REVIEWER.md)）。本次复核已由本 Reviewer 以 `fieldset.cjs` 独立补验（PASS/FAIL），故不阻塞判定，但证据包本身应补强 | 在 §11 补一条**从代码派生期望字段集 → 与契约行机读比对**的断言，并留一条「删字段即 FAIL」的负向对照记录；或由 Orchestrator/PM 约定此类纯文档任务由复核方独立机读对账并留痕。不要求改业务文档 |
-| **F-02** | **MINOR** | [US-004 §4 AC-16](../../requirements/stories/active/US-004-dashboard-portfolio-health.md):89；[FS §7 AC35](../../requirements/specs/FS-portfolio-ia-cleanup.md):350；[TASK-069.md](./TASK-069.md):30 | **AC 字面口径不可满足**：Story AC-16 / FS AC35 均写「`API_CONTRACT.md` 的 summary **响应示例**已更新」，但全文仅 `:9-15` 通用成功响应、`:48-54` 错误响应两个 JSON 块，无 `GET /api/portfolios/summary` 专属响应示例；全 `docs/` 检索亦无。交付把字段集落在端点表 `:87` 行，任务卡 AC-01 以「若有」对冲。属 Story/FS 既有措辞与文档结构不符，**非本卡引入**（本卡未改 AC） | 归 PM：把 AC-16/AC35 的「响应示例」改为「契约行 / 字段集」，或另立范围补端点响应示例。本卡不据此判不满足（任务卡 AC 已含「若有」，端点行已实质同步） |
-| **F-03** | **MINOR** | [FS 状态行](../../requirements/specs/FS-portfolio-ia-cleanup.md):5、§11 `HD-15`:435；[TASK-069.md](./TASK-069.md):31（AC-02） | **落地记录不完整 / 范围措辞落差**：(a) AC-02 要求「记录 `TASK-065～069` 落地情况」，状态行与 `HD-15` 仅列 065/067/068/069 与 `B1~B4/B15/B16/B5`，未记已合入的 066（`af1f4d2`，B6~B13）与 B6~B14，却冠名「交付单元 B **落地记录**」，名实不符；(b) FS §6.2 B5(`:268`) 把 `handbook/ops/SERVER.md` 相关一行列入 B5，但 SERVER.md 无 `/portfolios/summary` 专属行（仅 `:48`、`/api/portfolios` 与 `:101` execute），任务卡 §4 / 计划 §4、§10 亦未纳入，交付未动它 —— FS 与任务卡之间的既有范围措辞落差 | 归 PM/Planner：把状态行措辞收窄为「与 B5 契约字段相关的落地记录」，或补记 066 并注明详情归 Story §8（勿复制验收表）；澄清 B5 是否仍含 SERVER.md（若无对应行则改 FS 措辞或补该行，须另立范围）。本卡按任务卡 §4 执行、未越界，不据此判 AC-02 不满足 |
+| **F-01** | **MINOR** | [TASK-069-plan.md](./TASK-069-plan.md) §11.2 / §11.4；[check-docs.cjs](../../../../../scripts/check-docs.cjs):97-148 | **证据不足（负向对照）**：卡内唯一可执行验证 `npm run docs:check` 只校验链接与 Status 枚举，`git diff --stat` 只看文件名/行数，二者都**不检查契约行内容**。独立负向对照（§12.7 NC1/NC2）证明：删掉 `stats.unreadAlertCount`、把 `overThresholdCount` 写成「阈值类型数」，`docs:check` 仍 `ERROR 0 / WARN 0 / exit 0`。故「字段集完整、语义正确」在交付证据包里仅由 Implementer 自撰的 §11.2 静态清单支撑，缺可证伪断言；该缺陷**不能被本卡证据发现**（[REVIEWER.md §2.3](../../../../os/roles/REVIEWER.md)）。本次复核已由本 Reviewer 以 `fieldset.cjs` 独立补验（PASS/FAIL），故不阻塞判定，但证据包本身应补强 | 在 §11 补一条**从代码派生期望字段集 → 与契约行机读比对**的断言，并留一条「删字段即 FAIL」的负向对照记录；或由 Orchestrator/PM 约定此类纯文档任务由复核方独立机读对账并留痕。不要求改业务文档 |
+| **F-02** | **MINOR** | [US-004 §4 AC-16](../../../requirements/stories/active/US-004-dashboard-portfolio-health.md):89；[FS §7 AC35](../../../requirements/specs/FS-portfolio-ia-cleanup.md):350；[TASK-069.md](./TASK-069.md):30 | **AC 字面口径不可满足**：Story AC-16 / FS AC35 均写「`API_CONTRACT.md` 的 summary **响应示例**已更新」，但全文仅 `:9-15` 通用成功响应、`:48-54` 错误响应两个 JSON 块，无 `GET /api/portfolios/summary` 专属响应示例；全 `docs/` 检索亦无。交付把字段集落在端点表 `:87` 行，任务卡 AC-01 以「若有」对冲。属 Story/FS 既有措辞与文档结构不符，**非本卡引入**（本卡未改 AC） | 归 PM：把 AC-16/AC35 的「响应示例」改为「契约行 / 字段集」，或另立范围补端点响应示例。本卡不据此判不满足（任务卡 AC 已含「若有」，端点行已实质同步） |
+| **F-03** | **MINOR** | [FS 状态行](../../../requirements/specs/FS-portfolio-ia-cleanup.md):5、§11 `HD-15`:435；[TASK-069.md](./TASK-069.md):31（AC-02） | **落地记录不完整 / 范围措辞落差**：(a) AC-02 要求「记录 `TASK-065～069` 落地情况」，状态行与 `HD-15` 仅列 065/067/068/069 与 `B1~B4/B15/B16/B5`，未记已合入的 066（`af1f4d2`，B6~B13）与 B6~B14，却冠名「交付单元 B **落地记录**」，名实不符；(b) FS §6.2 B5(`:268`) 把 `handbook/ops/SERVER.md` 相关一行列入 B5，但 SERVER.md 无 `/portfolios/summary` 专属行（仅 `:48`、`/api/portfolios` 与 `:101` execute），任务卡 §4 / 计划 §4、§10 亦未纳入，交付未动它 —— FS 与任务卡之间的既有范围措辞落差 | 归 PM/Planner：把状态行措辞收窄为「与 B5 契约字段相关的落地记录」，或补记 066 并注明详情归 Story §8（勿复制验收表）；澄清 B5 是否仍含 SERVER.md（若无对应行则改 FS 措辞或补该行，须另立范围）。本卡按任务卡 §4 执行、未越界，不据此判 AC-02 不满足 |
 
-> 无 BLOCKER / MAJOR：契约与代码逐字段一致、零代码改动、范围与单一归属均守住、AC 无被改写、无 Status/Completed/Merged 越权。三项均为记录层 MINOR，`Pass with issues` 成立（[REVIEWER.md §5.1](../../../os/roles/REVIEWER.md)）。
+> 无 BLOCKER / MAJOR：契约与代码逐字段一致、零代码改动、范围与单一归属均守住、AC 无被改写、无 Status/Completed/Merged 越权。三项均为记录层 MINOR，`Pass with issues` 成立（[REVIEWER.md §5.1](../../../../os/roles/REVIEWER.md)）。
 
 ### 12.7 负向对照记录（临时副本，不改被审文件）
 
-按 [REVIEWER.md §2.3](../../../os/roles/REVIEWER.md)：在 `os.tmpdir()` 的 `docs/` 副本上突变 → 跑 `check-docs.cjs --root <tmp> --source-root .` → 清理；仓库业务文件零改动。
+按 [REVIEWER.md §2.3](../../../../os/roles/REVIEWER.md)：在 `os.tmpdir()` 的 `docs/` 副本上突变 → 跑 `check-docs.cjs --root <tmp> --source-root .` → 清理；仓库业务文件零改动。
 
 ```text
 NC0 unmodified copy        exit=0  扫描 134 份文档；链接 1364 条；ERROR 0；WARN 0
@@ -352,7 +352,7 @@ FIELDSET MATCH        : FAIL   (exit 1)   ← 断言能失败，非恒真
 
 ### 12.8 残余风险 / 未验证项
 
-- **未做运行时验证**：纯文档任务，未连真实后端/DB 调用 `GET /api/portfolios/summary`；字段事实来自亲读 `summary.js` 及依赖（静态对账），与 §11.8 声明一致，不冒充运行证据。065/068 的既有运行时/测试证据按 [REVIEWER.md §4](../../../os/roles/REVIEWER.md) 复用，未重复跑。
+- **未做运行时验证**：纯文档任务，未连真实后端/DB 调用 `GET /api/portfolios/summary`；字段事实来自亲读 `summary.js` 及依赖（静态对账），与 §11.8 声明一致，不冒充运行证据。065/068 的既有运行时/测试证据按 [REVIEWER.md §4](../../../../os/roles/REVIEWER.md) 复用，未重复跑。
 - **响应示例**：全文无该端点专属示例（§12.6 F-02），`API_CONTRACT.md` 的字段集与语义全部落在 `:87` 单行；若将来新增响应示例，需与契约行同步维护。
 - **审查记录写入后的工作区**：本记录与任务卡 §12 写入后 `git status --porcelain` 会出现 2 个未提交改动（计划 §12 / 任务卡 §12）。**Reviewer 不 `git add` / `commit` / `push`**；是否随分支保留、由谁提交，归 Orchestrator / Human。
 - **Story 整体验收**：US-004 §8 的 AC-16 行仍标「未验证」，整体验收结论、Story 状态推进、`Merged` 登记与关闭归 PM / Human；本判定不替代、不预填。
@@ -361,7 +361,7 @@ FIELDSET MATCH        : FAIL   (exit 1)   ← 断言能失败，非恒真
 
 - **Verdict：`Pass with issues`**；US-004/AC-16 与 AC-01～AC-03 逐条满足；BLOCKER 0 / MAJOR 0 / MINOR 3（F-01～F-03，均已记录，不阻塞）。
 - 判定词**不是状态**：未改 Task Status、未标 `Completed`、未改 AC / Scope / 已批准设计、未写 `Merged`、未合入 `main`、未 `git add` / `commit` / `push`；MINOR 的整改与关闭归 Orchestrator / PM / Human。
-- 本记录按 [REVIEWER.md §3](../../../os/roles/REVIEWER.md) 写入计划 §12（唯一存放处），任务卡 [§12](./TASK-069.md#12-review-record) 仅一行结论与链接。
+- 本记录按 [REVIEWER.md §3](../../../../os/roles/REVIEWER.md) 写入计划 §12（唯一存放处），任务卡 [§12](./TASK-069.md#12-review-record) 仅一行结论与链接。
 
 ## 13. Completion Record
 
@@ -374,7 +374,7 @@ FIELDSET MATCH        : FAIL   (exit 1)   ← 断言能失败，非恒真
 | 审查 | 独立 Reviewer **`Pass with issues`**（§12，`2ceeb88`）：BLOCKER 0 / MAJOR 0 / MINOR 3 |
 | 残余 MINOR | **F-01** 交付证据不足（`docs:check` 只校验链接与 Status，无法发现字段缺失/量纲错误；Reviewer 已用 `fieldset.cjs` 独立补验）→ 建议后续补「从代码派生期望字段集 → 与契约行机读比对」断言；**F-02** AC-16/AC35 字面写「响应示例」但全文无该端点示例（既有措辞问题，归 PM 改口径）；**F-03** FS 状态行「交付单元 B 落地记录」未列 066/B6~B14、且 B5 是否含 `SERVER.md` 存疑（归 PM/Planner 收窄措辞或另立范围） |
 | 验证 | `npm run docs:check` = **134 文档 / 1364 链接 / ERROR 0 / WARN 0**（Implementer 与 Reviewer 各自亲跑一致）；`git diff --stat -- shared/ server/ client/ cron-worker/` **空**（零代码改动） |
-| 关闭依据 | Human 2026-11-06 确认检验通过；按 [STATES.md §4](../../../os/process/STATES.md#4-谁可以改变状态) 登记 `Reviewing → Completed` |
+| 关闭依据 | Human 2026-11-06 确认检验通过；按 [STATES.md §4](../../../../os/process/STATES.md#4-谁可以改变状态) 登记 `Reviewing → Completed` |
 | 合入 | **已合入（2026-11-06）**：**PR #43** → `d42a1bb` `Merge pull request #43 from tongweizj/feature/TASK-069`（分支 tip `a93c90b` 已是 `main` 祖先）；`Merged` = `d42a1bb` |
 
 ## 自检

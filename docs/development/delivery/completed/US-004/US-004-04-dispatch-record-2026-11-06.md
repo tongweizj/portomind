@@ -7,7 +7,7 @@
 
 ## 1. 登记依据
 
-按 [STATES.md §4](../../../os/process/STATES.md#4-谁可以改变状态)「Task → Implementing：**当前设计的有效计划批准记录**」。
+按 [STATES.md §4](../../../../os/process/STATES.md#4-谁可以改变状态)「Task → Implementing：**当前设计的有效计划批准记录**」。
 
 **计划批准**：2026-11-06，Human 明确确认「我已经批准了」三份 ExecPlan。
 
@@ -81,7 +81,7 @@ B 先把 `client/src/constants/driftLabels.js` 作为**纯常量文件**建出�
 
 ## 7. 未做的事（边界）
 
-- **未**修改 Story 状态：US-004 仍为 `Planning`。Story → `Implementing` 归 **PM**（[STATES.md §4](../../../os/process/STATES.md#4-谁可以改变状态)），Orchestrator 不代填。
+- **未**修改 Story 状态：US-004 仍为 `Planning`。Story → `Implementing` 归 **PM**（[STATES.md §4](../../../../os/process/STATES.md#4-谁可以改变状态)），Orchestrator 不代填。
 - **未**写技术方案、未改业务代码。
 - **未**替 Reviewer 审查、**未** merge `main`、**未**填 `Merged`（合入与 `Merged` 归 Human）。
 - **未**派发 068（硬串行）。

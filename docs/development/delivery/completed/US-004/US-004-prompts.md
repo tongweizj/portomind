@@ -1,7 +1,7 @@
 # US-004 · 提示词存档（Prompts）
 
 > **用途**：集中保存 US-004 交付全程使用 / 产出的 Agent 提示词，供回溯、复用与研究。
-> **位置**：本文件平铺在 US-004 交付目录内，随 Story 整体归档（见 [DOCS.md §1.1](../../../os/standards/DOCS.md#11-story-交付目录与文档生命周期)）。
+> **位置**：本文件平铺在 US-004 交付目录内，随 Story 整体归档（见 [DOCS.md §1.1](../../../../os/standards/DOCS.md#11-story-交付目录与文档生命周期)）。
 > **维护**：新增提示词 = 追加一节（P-编号）+ 更新顶部索引 + 在文末「变更记录」登记一行。不要删改已发布条目，只追加版本说明。
 
 ## 索引
@@ -61,8 +61,8 @@
 
 ## 拆分必须遵守的硬规则
 
-1. 编号：Task 编号全局递增、不复用。按 docs/BOARD.md 当前最大号顺延确定；当前最大已登记号是 TASK-064，US-004 的 Task 预计从 TASK-065 起连续编号。立项才占号——把新卡写进 docs/development/delivery/US-004/ 才算数。
-2. 目录：Task 卡直接放 docs/development/delivery/US-004/，命名 TASK-<编号>.md，平铺、不建子目录；对应计划将来命名 TASK-<编号>-plan.md（本轮只建卡，不建计划）。
+1. 编号：Task 编号全局递增、不复用。按 docs/BOARD.md 当前最大号顺延确定；当前最大已登记号是 TASK-064，US-004 的 Task 预计从 TASK-065 起连续编号。立项才占号——把新卡写进 docs/development/delivery/completed/US-004/ 才算数。
+2. 目录：Task 卡直接放 docs/development/delivery/completed/US-004/，命名 TASK-<编号>.md，平铺、不建子目录；对应计划将来命名 TASK-<编号>-plan.md（本轮只建卡，不建计划）。
 3. Story AC 归 Story，Task AC 归 Task：每张 Task 卡在「覆盖的验收条件」里写 US-004/AC-xx，并另写任务自身的 AC（可观察、可验证，不要照抄 Story AC、不要写「功能正常」这类空话）。一个 Task 可覆盖多个 Story AC，一个 Story AC 可被多个 Task 支撑。
 4. ExecPlan 判断：US-004 改 shared/services/portfolio/summary.js + 服务端契约 + alertEvent 查询层，属多模块 + 契约变更——涉及服务端 / 共享内核的 Task 必须标记「需 Approved ExecPlan」（对应 DEP-04）。纯客户端、零服务端改动的 Task 按 EXECUTION_PLANS §2 写明免计划依据，不要无脑全挂计划。
 5. 依赖如实写：把 Story §5 的 DEP-01～DEP-04 与 OQ-01～OQ-03 落到对应 Task 的依赖 / 待决项里，不要自行「解决」OQ。
@@ -88,7 +88,7 @@ Story 卡 §6 已列出 5 个工作单元，请据此拆卡，并为每张卡补
 
 ## 完成后交付物
 
-1. docs/development/delivery/US-004/ 下若干张 TASK-<编号>.md（编号连续、内容完整、链接相对路径正确）
+1. docs/development/delivery/completed/US-004/ 下若干张 TASK-<编号>.md（编号连续、内容完整、链接相对路径正确）
 2. 更新 Story 卡 US-004-...md 的 §6 表，把「待确认」行替换为实际 Task 编号与链接
 3. 一条简短回交说明：列出每张卡的编号、覆盖的 AC、是否需要 ExecPlan、以及仍需 Human 决策的 OQ 清单（尤其 OQ-01 排序档位、OQ-02 与 US-003 顺序）——这些不要在拆卡时替他拍板
 
@@ -136,7 +136,7 @@ Story 卡 §6 已列出 5 个工作单元，请据此拆卡，并为每张卡补
 3. docs/os/roles/PRODUCT_MANAGER.md —— 你的职责与写入范围
 4. US-004 Story 卡：docs/development/requirements/stories/active/US-004-dashboard-portfolio-health.md
 5. docs/BOARD.md —— Story Backlog 表（需同步）
-6. Planner 已拆的卡：docs/development/delivery/US-004/ 下 TASK-065～TASK-069
+6. Planner 已拆的卡：docs/development/delivery/completed/US-004/ 下 TASK-065～TASK-069
 
 ## 背景（现状）
 
@@ -190,7 +190,7 @@ US-004 原 Status 为 Backlog（排队中），但 Planner 已提前拆出 TASK-
 1. docs/os/roles/IMPLEMENTER.md —— 你的职责、写入范围、停止条件
 2. docs/os/standards/GIT.md —— 分支命名、提交信息、review 前要求（重点 §3 / §4 / §6 / §7 / §8）
 3. docs/os/process/STATES.md §4 —— 状态权限（Task 状态由 Orchestrator 登记；合入 main 与 Merged 登记归 Human）
-4. 目标 Task 卡：docs/development/delivery/US-004/TASK-<编号>.md
+4. 目标 Task 卡：docs/development/delivery/completed/US-004/TASK-<编号>.md
 5. 若有 ExecPlan：TASK-<编号>-plan.md（Approved 后方可实施）
 
 ## git 提交规范（重点，逐条遵守）
@@ -247,7 +247,7 @@ US-004 原 Status 为 Backlog（排队中），但 Planner 已提前拆出 TASK-
 1. docs/os/roles/ORCHESTRATOR.md —— 你的职责与权限
 2. docs/os/process/STATES.md §2 / §4 —— Task 状态枚举与「谁可以改变状态」（Task → Implementing 归你，但须有有效计划批准）
 3. docs/os/process/EXECUTION_PLANS.md §2 / §5 —— 计划批准要求
-4. docs/development/delivery/US-004/US-004-02-3card-parallel-plan.md —— 3 卡并行的编排方案（分工、分支、协作点、时间线）
+4. docs/development/delivery/completed/US-004/US-004-02-3card-parallel-plan.md —— 3 卡并行的编排方案（分工、分支、协作点、时间线）
 5. 三张 Task 卡与计划：TASK-065 / TASK-066 / TASK-067 的 .md 与 -plan.md
 6. US-004 Story 卡 §5 / §6 —— 已裁决 OQ 与 AC 覆盖关系
 
@@ -328,9 +328,9 @@ US-004 原 Status 为 Backlog（排队中），但 Planner 已提前拆出 TASK-
 
 ## 必读
 
-1. docs/development/delivery/US-004/TASK-065.md §3 —— AC-01~AC-06，验收唯一依据
-2. docs/development/delivery/US-004/TASK-065-plan.md —— §3 事实、§4 设计、§7 验证
-3. docs/development/delivery/US-004/US-004-04-dispatch-record-2026-11-06.md —— 派发记录
+1. docs/development/delivery/completed/US-004/TASK-065.md §3 —— AC-01~AC-06，验收唯一依据
+2. docs/development/delivery/completed/US-004/TASK-065-plan.md —— §3 事实、§4 设计、§7 验证
+3. docs/development/delivery/completed/US-004/US-004-04-dispatch-record-2026-11-06.md —— 派发记录
 4. shared/services/portfolio/summary.js —— 主要改动对象
 5. server/test/integration/portfolio.summary.test.js —— 既有测试
 6. docs/handbook/technical/API_CONTRACT.md 的 GET /api/portfolios/summary
@@ -451,9 +451,9 @@ US-004-02 / D-02 已裁决：`client/src/constants/driftLabels.js`
 
 ## 必读
 
-1. docs/development/delivery/US-004/TASK-066.md §3 —— AC-01~AC-10
-2. docs/development/delivery/US-004/TASK-066-plan.md —— §3 事实、§4 设计、§7 验证
-3. docs/development/delivery/US-004/US-004-04-dispatch-record-2026-11-06.md
+1. docs/development/delivery/completed/US-004/TASK-066.md §3 —— AC-01~AC-10
+2. docs/development/delivery/completed/US-004/TASK-066-plan.md —— §3 事实、§4 设计、§7 验证
+3. docs/development/delivery/completed/US-004/US-004-04-dispatch-record-2026-11-06.md
 4. client/src/pages/Dashboard.jsx、client/src/components/Household/TotalAssetsCard.jsx
 5. client/src/hooks/usePortfolios.js
 6. client/src/constants/design-tokens.js（配色复用，不自建）
@@ -560,9 +560,9 @@ US-004-02 / D-02 已裁决：`client/src/constants/driftLabels.js`
 
 ## 必读
 
-1. docs/development/delivery/US-004/TASK-067.md §3 —— AC-01~AC-04
-2. docs/development/delivery/US-004/TASK-067-plan.md
-3. docs/development/delivery/US-004/US-004-04-dispatch-record-2026-11-06.md
+1. docs/development/delivery/completed/US-004/TASK-067.md §3 —— AC-01~AC-04
+2. docs/development/delivery/completed/US-004/TASK-067-plan.md
+3. docs/development/delivery/completed/US-004/US-004-04-dispatch-record-2026-11-06.md
 4. client/src/components/PortfolioCard/index.jsx —— 唯一改动文件
 5. client/src/hooks/usePortfolios.js
 
@@ -686,8 +686,8 @@ D-02 已裁决：该文件归 B 建，你**不新建**。
 ## 开工前必读（按顺序）
 
 1. docs/os/roles/IMPLEMENTER.md —— 你的职责、写入范围、停止条件
-2. docs/development/delivery/US-004/TASK-068.md —— 任务卡（AC-01～AC-07）
-3. docs/development/delivery/US-004/TASK-068-plan.md —— 实施计划（§4 设计、§5 步骤、§7 验证）
+2. docs/development/delivery/completed/US-004/TASK-068.md —— 任务卡（AC-01～AC-07）
+3. docs/development/delivery/completed/US-004/TASK-068-plan.md —— 实施计划（§4 设计、§5 步骤、§7 验证）
 4. docs/development/requirements/specs/FS-portfolio-ia-cleanup.md §6.2 B16、§10 R-9、§11 HD-14 —— 产品规则源头
 5. docs/os/standards/GIT.md —— 分支与提交规范
 

@@ -22,7 +22,7 @@
 
 ## 1. 问题
 
-项目已有一套成熟但**手工**的 Agent OS：五个角色（Human / PM / Orchestrator / Planner / Implementer / Reviewer）、[WORKFLOW.md](../../../os/process/WORKFLOW.md) 的交接顺序、[STATES.md](../../../os/process/STATES.md) 的六态状态机与权限表、以及 [US-004 三卡并行实录](../../delivery/US-004/US-004-02-3card-parallel-plan.md)（3 个独立 worktree + 文件零重叠 + 硬串行门）。
+项目已有一套成熟但**手工**的 Agent OS：五个角色（Human / PM / Orchestrator / Planner / Implementer / Reviewer）、[WORKFLOW.md](../../../os/process/WORKFLOW.md) 的交接顺序、[STATES.md](../../../os/process/STATES.md) 的六态状态机与权限表、以及 [US-004 三卡并行实录](../../delivery/completed/US-004/US-004-02-3card-parallel-plan.md)（3 个独立 worktree + 文件零重叠 + 硬串行门）。
 
 DSH 自带 `dsh-experimental-agent-team` 实验插件族提供了**运行时并行编排**（具名 teammate、直接消息、持久共享任务板）。但二者机制并不一致，直接套用会破坏现有治理：
 
@@ -63,8 +63,8 @@ DSH 自带 `dsh-experimental-agent-team` 实验插件族提供了**运行时并�
 | G-3 | 卡片 Status 是状态唯一来源，看板只作投影；目录不表示状态 | [STATES.md §6](../../../os/process/STATES.md#6-看板与归档)、[DOCS.md §1.1](../../../os/standards/DOCS.md#11-story-交付目录与文档生命周期) |
 | G-4 | 交接顺序：Human → PM → Orchestrator → Planner → Implementer → Reviewer → Human；Orchestrator 不改业务代码、不替 Reviewer 审查 | [WORKFLOW.md §1](../../../os/process/WORKFLOW.md)、[ORCHESTRATOR.md §3](../../../os/roles/ORCHESTRATOR.md) |
 | G-5 | 并行任务「按依赖及文件写入冲突协调」；跨模块/复杂依赖需 ExecPlan | [WORKFLOW.md §1](../../../os/process/WORKFLOW.md)、[EXECUTION_PLANS.md §2](../../../os/process/EXECUTION_PLANS.md) |
-| G-6 | US-004 已实测并行：3 个独立 worktree（`portomind-065/066/067`）、`driftLabels.js` 单点归属、065 作验收前置门、068 硬串行 | [US-004-02](../../delivery/US-004/US-004-02-3card-parallel-plan.md)、[派发记录](../../delivery/US-004/US-004-04-dispatch-record-2026-11-06.md) |
-| G-7 | [US-004-prompts.md](../../delivery/US-004/US-004-prompts.md) 的 P-01～P-07 已是各角色的「启动必读 + 禁止事项」提示词存档 | 同上 |
+| G-6 | US-004 已实测并行：3 个独立 worktree（`portomind-065/066/067`）、`driftLabels.js` 单点归属、065 作验收前置门、068 硬串行 | [US-004-02](../../delivery/completed/US-004/US-004-02-3card-parallel-plan.md)、[派发记录](../../delivery/completed/US-004/US-004-04-dispatch-record-2026-11-06.md) |
+| G-7 | [US-004-prompts.md](../../delivery/completed/US-004/US-004-prompts.md) 的 P-01～P-07 已是各角色的「启动必读 + 禁止事项」提示词存档 | 同上 |
 | G-8 | [TASK-062](./TASK-062-agent-role-boundary-and-overhead.md) 仍为 `Planning`（BOARD 投影），其 §6 草案明确「未生效、不得引用」；OQ-5「工具权限限制是否启用」与本议题相关但本卡不代裁 | [BOARD.md](../../../BOARD.md) 未关联任务表 |
 | G-9 | 根 [AGENTS.md](../../../../AGENTS.md) §10 要求共享项目记忆可脱离私有聊天恢复；§8 要求新架构决策停手上报 | 根 AGENTS.md |
 
@@ -99,7 +99,7 @@ DSH 自带 `dsh-experimental-agent-team` 实验插件族提供了**运行时并�
 | teammate（fresh / fork） | Planner / Implementer A·B·C / Reviewer 的独立会话 | 用 `fresh` 保证角色上下文干净；`fork` 仅用于需要继承 Lead 已完成轮次的场景 |
 | 九个工具 | 现有人工转交 + 过程文档 | ⚠️ 启用组合包会禁用 `subagent` / `subagent_fork`，改变本会话委派方式 ⇒ 列为启用前置决策（OQ-1） |
 | 共享任务板（4 态 + CAS + DAG） | **不是**项目状态机；仅作「本次并行窗口的运行时工作清单」 | ❌ 禁止把 `team_task_update(complete)` 当作 Task `Completed`。`Reviewing` / `Blocked` / `Merged` / AC 证据 / Human 批准一律回写 [BOARD.md](../../../BOARD.md) 与任务卡/计划记录节，按 [STATES.md §6](../../../os/process/STATES.md#6-看板与归档) |
-| `blockedBy` 依赖 | [US-004-02](../../delivery/US-004/US-004-02-3card-parallel-plan.md) 的验收前置门 / 硬串行 | 可用：065 合入前 066/067 不得 claim「完整验收」类任务；068 硬串行等 065 合入 |
+| `blockedBy` 依赖 | [US-004-02](../../delivery/completed/US-004/US-004-02-3card-parallel-plan.md) 的验收前置门 / 硬串行 | 可用：065 合入前 066/067 不得 claim「完整验收」类任务；068 硬串行等 065 合入 |
 | `writeScopes` 重叠警告 | 「文件零重叠」判据 | ⚠️ 仅提示，**不能当权限**（F-8）。必须继续靠 Human 批准的 ExecPlan 中的改动边界 + 人工核对最终 diff |
 | 共享 checkout（F-9） | US-004 的独立 worktree（G-6） | ❌ **最大冲突**。草案：并行**写**业务代码时仍用独立 worktree，插件只用于协调与通信；或把插件限定在**只读**任务（并行 review / 调研），不用于并行写 |
 | `send_message` inbox | 人工转交 + 落盘交接记录 | ⚠️ 可用于「共享常量已合入 main」这类**事实通知**；**决策 / 批准 / 裁决 / 证据必须落盘**，否则违反 G-9 |
@@ -136,7 +136,7 @@ DSH 自带 `dsh-experimental-agent-team` 实验插件族提供了**运行时并�
 
 - **可并行**：改动文件零重叠；共享常量单点归属（参考 `driftLabels.js` 归 066）；未就绪字段用「缺失降级」开发。
 - **硬串行**：同改一个文件（参考 068 等 065 合入）；或某卡是其他卡完整验收的前置门。
-- **先裁后做**：OQ / D-xx 未裁决不派发（参考 [US-004-03 一页清单](../../delivery/US-004/US-004-03-dispatch-checklist.md)）。
+- **先裁后做**：OQ / D-xx 未裁决不派发（参考 [US-004-03 一页清单](../../delivery/completed/US-004/US-004-03-dispatch-checklist.md)）。
 - **规模**：`maxMembers: 8` 是插件上限，不是建议值；草案建议一次并行 ≤ 3 个写任务，且优先用**只读并行**（多 lens review / 调研）试水。
 - **不用于**：顺序任务、同文件编辑、依赖密集的卡——退回单会话。
 

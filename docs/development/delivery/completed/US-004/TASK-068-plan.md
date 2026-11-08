@@ -6,7 +6,7 @@ Status：Completed（2026-11-06，Task 已 `Completed` 并合入 `main`；计划
 
 Owner：Planner（规划）→ Implementer（2026-11-06 指派）
 
-Related Task：[TASK-068](./TASK-068.md)；所属 [US-004](../../requirements/stories/active/US-004-dashboard-portfolio-health.md)。
+Related Task：[TASK-068](./TASK-068.md)；所属 [US-004](../../../requirements/stories/active/US-004-dashboard-portfolio-health.md)。
 
 Branch / Base：实施时从 up-to-date `main` 新建 `feature/TASK-068` 独立 worktree（沿 053/056 惯例）。规划期基线为 2026-11-05 的 `main`；**2026-11-06 复核**：TASK-065 已合入 `main`（merge `6f556aa`），`summary.js` 行号已变——`unreadAgg` 现为 `:96-99`、`pendingAgg` 为 `:105-108`、`unreadByPortfolio` 透传为 `:141`（以符号名 `unreadAgg` / `AlertEvent.aggregate` 为准，行号仅参考）。`alert.controller.js` 的 `getEvents`/`getUnreadCount` 行号未变（`:209` / `:239`）。
 
@@ -18,7 +18,7 @@ Approval：**2026-11-06，Human 明确「批准」当前设计**（Orchestrator 
 
 ## 2. Context
 
-需求、任务见 [Story US-004 §3](../../requirements/stories/active/US-004-dashboard-portfolio-health.md) 与 [FS §6.2 B16、§10 R-9、§11 HD-14](../../requirements/specs/FS-portfolio-ia-cleanup.md)。本任务需 ExecPlan：改 shared + server 查询层，三处同源（DEP-04）。
+需求、任务见 [Story US-004 §3](../../../requirements/stories/active/US-004-dashboard-portfolio-health.md) 与 [FS §6.2 B16、§10 R-9、§11 HD-14](../../../requirements/specs/FS-portfolio-ia-cleanup.md)。本任务需 ExecPlan：改 shared + server 查询层，三处同源（DEP-04）。
 
 HD-14 已裁「全部隐藏」：事件保留在库（审计价值），仅查询不可见。过滤口径（Spec B16）：
 ```
@@ -91,7 +91,7 @@ $or: [{ portfolioId: { $in: <现存组合 ids> } }, { portfolioId: null }]
 | AC-06（回归） | `npm run test:server` | 全绿 |
 | AC-07（cron-worker 零改动） | `git status cron-worker` 空输出（对应 Story AC-14，G-1 补） | 空输出，改动范围不触达 `cron-worker/` |
 
-命令入口见 [DEPLOYMENT.md §7](../../../handbook/ops/DEPLOYMENT.md)。**不写测试数量**。
+命令入口见 [DEPLOYMENT.md §7](../../../../handbook/ops/DEPLOYMENT.md)。**不写测试数量**。
 
 ## 8. Risks
 
@@ -107,7 +107,7 @@ $or: [{ portfolioId: { $in: <现存组合 ids> } }, { portfolioId: null }]
 
 ## 10. Implementer Handoff
 
-- **输入**：本计划 §4 设计 + [TASK-068](./TASK-068.md) §3 AC + [FS §6.2 B16、§10 R-9、§11 HD-14](../../requirements/specs/FS-portfolio-ia-cleanup.md)。
+- **输入**：本计划 §4 设计 + [TASK-068](./TASK-068.md) §3 AC + [FS §6.2 B16、§10 R-9、§11 HD-14](../../../requirements/specs/FS-portfolio-ia-cleanup.md)。
 - **范围与禁改**：只改 `shared/services/portfolio/summary.js`、`server/controllers/alert.controller.js`、新增 `shared/services/alertVisibility.js`（或等价）+ 测试；**禁改**模型/迁移/客户端。
 - **授权**：须 Human 批准本计划后实施。
 - **依赖**：与 TASK-065 同改 `summary.js`，需协调合并顺序（见 §6）。
@@ -239,7 +239,7 @@ node --test test/integration/portfolio.summary.test.js test/integration/portfoli
 
 ## 12. Review Record
 
-（2026-11-06，按 [REVIEWER.md](../../../os/roles/REVIEWER.md) §7 记录。以下为独立 Reviewer 复核记录。）
+（2026-11-06，按 [REVIEWER.md](../../../../os/roles/REVIEWER.md) §7 记录。以下为独立 Reviewer 复核记录。）
 
 ### 12.1 审查对象与基线
 
@@ -341,7 +341,7 @@ node --test test/integration/portfolio.summary.test.js test/integration/portfoli
 
 ### 12.10 最终判定
 
-**Fail** —— 存在 BLOCKER（F-01：存在未读资产级事件时 summary 出口崩溃，AC-02 运行时不满足）；另有 MAJOR F-02（AC-03 测试无法证伪物理删除，现靠静态证据支撑）与 MINOR F-03。按 [REVIEWER.md](../../../os/roles/REVIEWER.md) §5.1/§5.2：BLOCKER 必须解决后复检，不得据此通过或合入；MAJOR 须整改或由 Human 明确接受。判定词不是 Status，Task 状态未改。
+**Fail** —— 存在 BLOCKER（F-01：存在未读资产级事件时 summary 出口崩溃，AC-02 运行时不满足）；另有 MAJOR F-02（AC-03 测试无法证伪物理删除，现靠静态证据支撑）与 MINOR F-03。按 [REVIEWER.md](../../../../os/roles/REVIEWER.md) §5.1/§5.2：BLOCKER 必须解决后复检，不得据此通过或合入；MAJOR 须整改或由 Human 明确接受。判定词不是 Status，Task 状态未改。
 
 ### 12.11 复检记录（2026-11-06，Reviewer 二轮，针对返工提交 `3226dd4`）
 
@@ -402,7 +402,7 @@ node --test test/integration/portfolio.summary.test.js test/integration/portfoli
 
 **二轮独立性声明**：本复检由独立 Reviewer 执行，未参与返工实现与验收脚本编写；P1/NC-F01/NC-F02 均本轮亲跑，突变经 `git checkout --` 还原并以 `git status --porcelain` 证净；未改业务代码与测试（仅更新本审查记录 §12）；未 git add/commit/push；未改 Task Status。
 
-**二轮判定：Pass with issues** —— F-01（BLOCKER）与 F-02（MAJOR）均已整改并经负向对照复检确认解决；AC-01～AC-07 全部满足。剩余：MINOR F-03、F-05 记录在案；MAJOR F-04（审查记录被实现方改写）已由 Reviewer 恢复原值并留痕，其流程事件的接受与否交 Orchestrator/Human 记录。按 [REVIEWER.md](../../../os/roles/REVIEWER.md) §5.1：本判定不是合入许可、不是 Status；Task 状态未改，关闭与合入由 Human 决定。
+**二轮判定：Pass with issues** —— F-01（BLOCKER）与 F-02（MAJOR）均已整改并经负向对照复检确认解决；AC-01～AC-07 全部满足。剩余：MINOR F-03、F-05 记录在案；MAJOR F-04（审查记录被实现方改写）已由 Reviewer 恢复原值并留痕，其流程事件的接受与否交 Orchestrator/Human 记录。按 [REVIEWER.md](../../../../os/roles/REVIEWER.md) §5.1：本判定不是合入许可、不是 Status；Task 状态未改，关闭与合入由 Human 决定。
 
 ## 13. Completion Record
 
@@ -415,7 +415,7 @@ node --test test/integration/portfolio.summary.test.js test/integration/portfoli
 | 审查 | 首轮 `Fail`（§12.10：F-01 BLOCKER、F-02 MAJOR、F-03 MINOR）→ 二审复检 **`Pass with issues`**（§12.11：F-01/F-02 已解决、AC-01～AC-07 全满足） |
 | 残余 | MINOR F-03（mock 求值器、未连真实库）、F-05（哈希口径）；MAJOR F-04（返工提交改写 §12.2 哈希表）已由 Reviewer 恢复原值并留痕，流程事件接受按 Human 关闭指令登记 |
 | 验证 | `npm run test:server` **240/240**、`alert.api.test.js` 12/12、summary+archived 23/23、`docs:check` 0 ERROR；`cron-worker`/`client`/模型/迁移零改动 |
-| 关闭依据 | Human 2026-11-06 确认完成并合入；按 [STATES.md §4](../../../os/process/STATES.md#4-谁可以改变状态) 登记 `Completed` |
+| 关闭依据 | Human 2026-11-06 确认完成并合入；按 [STATES.md §4](../../../../os/process/STATES.md#4-谁可以改变状态) 登记 `Completed` |
 | 合入 | **`6f0b4df`** `Merge branch 'feature/TASK-068' into main`（`git merge-base --is-ancestor 84a50d4 main` = 是） |
 
 ## 自检

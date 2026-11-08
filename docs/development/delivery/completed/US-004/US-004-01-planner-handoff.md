@@ -1,6 +1,6 @@
 # US-004-01 · Planner 交接：并行开发方案
 
-> **用途**：为 Orchestrator 排期与 Implementer 派发提供并行方案依据。**位置**：平铺在 [US-004 交付目录](./)，随 Story 整体归档（见 [DOCS.md §1.1](../../../os/standards/DOCS.md#11-story-交付目录与文档生命周期)）。
+> **用途**：为 Orchestrator 排期与 Implementer 派发提供并行方案依据。**位置**：平铺在 [US-004 交付目录](./)，随 Story 整体归档（见 [DOCS.md §1.1](../../../../os/standards/DOCS.md#11-story-交付目录与文档生命周期)）。
 > **创建**：2026-11-05（Planner）。**状态权威**：各 Task 卡 / ExecPlan 的 Status 字段为准，本文件不登记状态。
 
 ---
@@ -68,7 +68,7 @@
 3. 若人力允许，**065 + 066 + 067 三张并发**（066/067 用降级态开发，先定 D-01 归属）。
 4. **068 等 065 合入 `main` 后启动**（同文件叠加）。
 5. **069 收尾**（065 + 068 合入后）。
-6. US-004 作为「预研 Story」可与 US-001（开发中）并存（[DOCS.md §1.1](../../../os/standards/DOCS.md#11-story-交付目录与文档生命周期) + AGENTS.md §7「一个开发中 + 一个预研」）；当 US-004 需进入 Implementing（成为「当前 Story」）时，须先等 US-001 关闭并归档。`docs:check` 现已放宽为「delivery 根目录最多保留两个 Story 目录」，当前 0 ERROR。
+6. US-004 作为「预研 Story」可与 US-001（开发中）并存（[DOCS.md §1.1](../../../../os/standards/DOCS.md#11-story-交付目录与文档生命周期) + AGENTS.md §7「一个开发中 + 一个预研」）；当 US-004 需进入 Implementing（成为「当前 Story」）时，须先等 US-001 关闭并归档。`docs:check` 现已放宽为「delivery 根目录最多保留两个 Story 目录」，当前 0 ERROR。
 
 ## 7. 变更记录
 

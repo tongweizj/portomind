@@ -6,13 +6,13 @@ Status：Completed（2026-11-06，Task 已 `Completed`，Human 确认验收通�
 
 Owner：Planner（规划）→ Implementer A（2026-11-06 指派）
 
-Related Task：[TASK-065](./TASK-065.md)；所属 [US-004](../../requirements/stories/active/US-004-dashboard-portfolio-health.md)。
+Related Task：[TASK-065](./TASK-065.md)；所属 [US-004](../../../requirements/stories/active/US-004-dashboard-portfolio-health.md)。
 
 Approval：**2026-11-06，Human 明确确认「我已经批准了」**（Orchestrator 会话核对时，本文件仍为 `Draft`、无 Approval 段；经 Human 当面确认后由 Orchestrator 据其决定登记，**不是自行批准**）。批准覆盖本文件 §1～§9 当前设计，不含其他任务。此登记不改变设计内容。
 
 Branch / Base：实施时从 up-to-date `main` 新建 `feature/TASK-065` 独立 worktree（沿 053/056 惯例）。规划期基线为 2026-11-05 的 `main`；目标文件 `shared/services/portfolio/summary.js` 与 `server/test/integration/portfolio.summary.test.js` 已亲读核实（见 §3）。
 
-Approval：**未批准**。本计划覆盖 §1～§9 当前设计；`Draft → Approved` 归 Human（[STATES.md](../../../os/process/STATES.md) §4），批准后 Task 的 `Planning → Implementing` 登记与派发由 Orchestrator 落实，Planner 不代填状态。
+Approval：**未批准**。本计划覆盖 §1～§9 当前设计；`Draft → Approved` 归 Human（[STATES.md](../../../../os/process/STATES.md) §4），批准后 Task 的 `Planning → Implementing` 登记与派发由 Orchestrator 落实，Planner 不代填状态。
 
 ## 1. Intent
 
@@ -20,7 +20,7 @@ Approval：**未批准**。本计划覆盖 §1～§9 当前设计；`Draft → A
 
 ## 2. Context
 
-需求、任务和待决项见 [Story US-004 §3/§5](../../requirements/stories/active/US-004-dashboard-portfolio-health.md) 与 [FS §6.2 B1～B4、§10 R-1/R-7](../../requirements/specs/FS-portfolio-ia-cleanup.md)。本任务需 ExecPlan：改 `shared/services/portfolio/summary.js` + 服务端契约，属多模块 + 契约变更（DEP-04）。
+需求、任务和待决项见 [Story US-004 §3/§5](../../../requirements/stories/active/US-004-dashboard-portfolio-health.md) 与 [FS §6.2 B1～B4、§10 R-1/R-7](../../../requirements/specs/FS-portfolio-ia-cleanup.md)。本任务需 ExecPlan：改 `shared/services/portfolio/summary.js` + 服务端契约，属多模块 + 契约变更（DEP-04）。
 
 关键约束（Spec 硬规则）：
 - **禁止 N+1**：`pendingRebalanceCount` 用一次 `$match + $group by portfolioId` 聚合，禁止逐组合 `countDocuments`；`overThresholdCount` 从 `evaluateThresholds` 已返回的 `details` 派生，禁止逐组合复算。
@@ -92,7 +92,7 @@ Approval：**未批准**。本计划覆盖 §1～§9 当前设计；`Draft → A
 | AC-02（语义不扩义） | 构造「仅 timeInterval 触发」用例，三项同断言 | `needsRebalance===false`、`triggeredThresholds===[]`、`dueByTime===true` |
 | AC-03（pending 口径） | 构造 2 条 PENDING + 1 条 EXECUTED + 1 条 REVOKED | `pendingRebalanceCount===2` |
 | AC-04（N+1） | 构造 10 个组合，断言 `RebalanceRecord` 查询次数 ≤ 11 且 `countDocuments===0` | 1 聚合 + 10 次 findOne = 11；无逐组合 countDocuments |
-| AC-05（回归） | `npm run test:server`（命令入口见 [DEPLOYMENT.md §7](../../../handbook/ops/DEPLOYMENT.md)） | 全绿；既有 `portfolio.summary.test.js` F-06 用例不破 |
+| AC-05（回归） | `npm run test:server`（命令入口见 [DEPLOYMENT.md §7](../../../../handbook/ops/DEPLOYMENT.md)） | 全绿；既有 `portfolio.summary.test.js` F-06 用例不破 |
 | AC-06（cron-worker 零改动） | `git status cron-worker` 空输出（对应 Story AC-14，G-1 补） | 空输出，改动范围不触达 `cron-worker/` |
 
 命令入口：`npm run test:server`（server 单测）；`npm test`（全部 workspace，按需）。**不写测试数量**（以实际输出为准）。
@@ -112,7 +112,7 @@ Approval：**未批准**。本计划覆盖 §1～§9 当前设计；`Draft → A
 
 ## 10. Implementer Handoff
 
-- **输入**：本计划 §4 设计 + [TASK-065](./TASK-065.md) §3 AC + [FS §6.2 B1～B4、§10 R-1/R-7](../../requirements/specs/FS-portfolio-ia-cleanup.md)。
+- **输入**：本计划 §4 设计 + [TASK-065](./TASK-065.md) §3 AC + [FS §6.2 B1～B4、§10 R-1/R-7](../../../requirements/specs/FS-portfolio-ia-cleanup.md)。
 - **范围与禁改**：只改 `shared/services/portfolio/summary.js` 与 `server/test/integration/portfolio.summary.test.js`（+ 按需 `API_CONTRACT.md`）；**禁改** `client/`、`cron-worker/`、`server/routes/`、既有 `needsRebalance` 语义。
 - **授权**：须 Human 批准本计划（`Draft → Approved`）后方可实施。
 - **依赖**：无硬前置（独立）。
@@ -210,7 +210,7 @@ node --test test/integration/portfolio.summary.test.js test/integration/portfoli
 
 ### 12.1 独立性声明与审查对象
 
-- 依据 [REVIEWER.md §5/§7](../../../os/roles/REVIEWER.md)。**独立 Reviewer，未参与本卡实现或验收脚本编写**；Implementer 自述不作结论，全部实跑复核。
+- 依据 [REVIEWER.md §5/§7](../../../../os/roles/REVIEWER.md)。**独立 Reviewer，未参与本卡实现或验收脚本编写**；Implementer 自述不作结论，全部实跑复核。
 - **基线澄清（重要）**：任务指定审查对象 `8fde289`（父 `0189c04`），但复核期间 `feature/TASK-065` 已 rebase 到新 `main`（`3b74dcb`）之上，当前 HEAD = **`5f807a3`**，原 `8fde289` 成为悬空提交（`git branch --contains 8fde289` 无输出）。经比对 `git diff 8fde289 5f807a3 -- shared/ server/ docs/handbook/technical/API_CONTRACT.md` **为空**，两提交的审查相关代码/测试/契约内容**完全一致**；两提交各自相对其父的 diff 均为同 4 文件 +270/-6。故**以当前可审分支 HEAD `5f807a3` 为审查对象**，结论同样适用于 `8fde289` 的代码内容。
 - 工作区 `D:/projects/portomind-065`，`git status --porcelain` 空（审查后临时探针全部删除）。
 - **范围口径**：`main` 在复核期间持续前进（由 `3b74dcb` → `4d3e247`，Orchestrator 在 main 登记 065 `Reviewing` 等状态），故 `git diff --stat main..feature/TASK-065` 会随 main 漂移而多出 `docs/BOARD.md` 等**假改动**（非 Implementer 所为）。以 **merge-base `3b74dcb`..HEAD**（= Implementer 自身提交 `5f807a3`）为正确范围判定：恰好 4 文件 —— `TASK-065-plan.md`、`API_CONTRACT.md`、`portfolio.summary.test.js`、`shared/services/portfolio/summary.js`。
@@ -268,7 +268,7 @@ node --test test/integration/portfolio.summary.test.js test/integration/portfoli
 
 **无 BLOCKER、无 MAJOR**。`git diff --stat main..feature/TASK-065` 中一度出现的 `docs/BOARD.md` / `US-004-prompts.md` / `US-004-04-dispatch-record` 差异均为 main 前进造成的基点漂移假改动；正确范围（merge-base..HEAD）**不含** `client/`、`cron-worker/`、`server/routes/`，禁改范围满足；`thresholdChecker.js` 零改动，`DRIFT_THRESHOLDS` 未变，既有 `needsRebalance` 语义（AC-02 锁定）未改变。
 
-### 12.7 DoD（[DEFINITION_OF_DONE.md §3](../../../os/process/DEFINITION_OF_DONE.md) T-1～T-6）
+### 12.7 DoD（[DEFINITION_OF_DONE.md §3](../../../../os/process/DEFINITION_OF_DONE.md) T-1～T-6）
 
 | # | 要求 | 满足 | 证据 |
 |---|---|---|---|

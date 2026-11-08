@@ -63,7 +63,7 @@ T5  窗口关闭 → 068（等 A 完成，接在 065 上）→ 069 收尾
 
 ## 7. 状态登记与前置
 
-- 3 份 ExecPlan（065/066/067）均 `Draft`，须 Human 批准（`Draft → Approved` 归 Human，[STATES.md §4](../../../os/process/STATES.md#4-谁可以改变状态)）。
+- 3 份 ExecPlan（065/066/067）均 `Draft`，须 Human 批准（`Draft → Approved` 归 Human，[STATES.md §4](../../../../os/process/STATES.md#4-谁可以改变状态)）。
 - 批准后 Orchestrator 登记 `Planning → Implementing` 并派发，建 3 个 worktree。
 - 065 是 066/067 完整验收的前置门（T3），但 066/067 可先用「字段缺失降级」开发（见各自计划 §4）。
 

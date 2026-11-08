@@ -7,9 +7,9 @@
 | Status | **Completed（2026-11-06，独立 Reviewer 判定 `Pass with issues`、无 BLOCKER/MAJOR；Human 确认「检验通过」）**；`Merged` = `d95be45`（2026-11-06，`Merge branch 'feature/TASK-067' into main`） |
 | Priority / Owner / Type | `High` / — / `Feature`（纯客户端，零请求零服务端） |
 | Created / Updated | 2026-11-05 / 2026-11-06 |
-| 所属 Story | [US-004](../../requirements/stories/active/US-004-dashboard-portfolio-health.md) |
+| 所属 Story | [US-004](../../../requirements/stories/active/US-004-dashboard-portfolio-health.md) |
 | 覆盖的验收条件 | US-004/AC-17、AC-18 |
-| Related Product Spec / ADR | [FS-portfolio-ia-cleanup](../../requirements/specs/FS-portfolio-ia-cleanup.md) §6.2（B15）、§7（AC41）、§10（R-10）、§11（HD-13） |
+| Related Product Spec / ADR | [FS-portfolio-ia-cleanup](../../../requirements/specs/FS-portfolio-ia-cleanup.md) §6.2（B15）、§7（AC41）、§10（R-10）、§11（HD-13） |
 | Execution Plan | [Approved：TASK-067-plan](./TASK-067-plan.md)（2026-11-06 Human 确认批准） |
 
 ## 1. 问题
@@ -115,7 +115,7 @@
 - `git diff --stat main...feature/TASK-067 -- shared/ server/` = **空**（不回退 065 字段与测试）
 - merge-base = `96ff382`
 
-### 13.3 DoD 逐条（[DEFINITION_OF_DONE](../../../os/process/DEFINITION_OF_DONE.md) §3）
+### 13.3 DoD 逐条（[DEFINITION_OF_DONE](../../../../os/process/DEFINITION_OF_DONE.md) §3）
 
 | # | 要求 | 结论 |
 |---|---|---|
@@ -138,5 +138,5 @@ Human 于 2026-11-06 指示完成合并；`feature/TASK-067` @ `6f5add2` 经 mer
 
 ### 13.6 过程目录处置
 
-按 [DOCS.md §1.1](../../../os/standards/DOCS.md#11-story-交付目录与文档生命周期)，
-本卡与计划留在 `development/delivery/US-004/`，待 US-004 关闭后整体归档。
+按 [DOCS.md §1.1](../../../../os/standards/DOCS.md#11-story-交付目录与文档生命周期)，
+本卡与计划留在 `development/delivery/completed/US-004/`，待 US-004 关闭后整体归档。
