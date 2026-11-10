@@ -150,14 +150,20 @@
 
 ## 未关联 Story 的任务
 
-> 兼容既有任务与独立维护工作。US-001 已关联 TASK-053～057及063/064（其中054保持既有完成记录）；反向关联已核对，登记结果见上表。其余未确认关联的任务仍在下表；本轮未改变这些独立任务的状态、优先级或安排。
+> 兼容既有任务与独立维护工作。US-001 已关联 TASK-053～057及063/064（其中054保持既有完成记录）；反向关联已核对，登记结果见上表。其余未确认关联的任务仍在下表。
+>
+> **2026-11-09 增补跟踪**：新增 TASK-071（结构清理）与 TASK-072（API 契约残差），并把 046/047/051 的**代码实况**写进「待处理」列，避免只看卡片状态误判。下表 Status 仍以各卡片字段为准；本表不改变任何卡的状态。
+>
+> **议定推进顺序（2026-11-09）**：`TASK-051` → `TASK-047` → `TASK-046`（仅收口）→ `TASK-072` → `TASK-071`；`TASK-062` / `TASK-070` 等 Human 审阅；`TASK-045` 保持 Backlog。**完成一张即归档一张**（`tasks/active` → `tasks/completed`，计划 `exec-plans/active` → `exec-plans/completed`），**不迁入 `delivery/`**（该目录只属于 Story 过程资料）。
 
 | Task | 工作 | Story | Status | Priority | 待处理 / 下一步 |
 |---|---|---|---|---|---|
-| [TASK-045](./development/tasks/active/TASK-045-transaction-query-filters.md) | 交易流水查询与筛选 | 未关联 | Backlog | Medium | 待排期 |
-| [TASK-046](./development/tasks/active/TASK-046-csv-import-dedup.md) | CSV 二次导入未去重（幂等失效） | 未关联 | Planning | High | 待确认优先级与排期 |
-| [TASK-047](./development/tasks/active/TASK-047-review-followups.md) | TASK-044 审查遗留整改（M-1/M-2/M-5/M-6） | 未关联 | Planning | High | 待 Planner 产出计划 |
-| [TASK-051](./development/tasks/active/TASK-051-fx-rate-direction.md) | 家庭折算汇率方向反了（`rateToCny` 存成 `1 CNY = X 外币`） | 未关联 | Planning | High | 待 Human 裁决汇率方案及历史数据处置 |
+| [TASK-045](./development/tasks/active/TASK-045-transaction-query-filters.md) | 交易流水查询与筛选 | 未关联 | Backlog | Medium | 待排期。前置未决：跨组合+时间范围查询无索引前缀（`transaction.js` 复合索引均以 `portfolioId` 开头），需先定索引方案 |
+| [TASK-046](./development/tasks/active/TASK-046-csv-import-dedup.md) | CSV 二次导入未去重（幂等失效） | 未关联 | Planning（卡片待收口） | High | **代码已实现**：`transaction.service.js` 有批次内去重 + 与库比对、返回 `skipped`；测试「importTransactions：幂等去重 + 成功导入计数」通过。→ 只需验证并置 `Completed` + 归档 |
+| [TASK-047](./development/tasks/active/TASK-047-review-followups.md) | TASK-044 审查遗留整改（M-1/M-2/M-5/M-6） | 未关联 | Planning | High | **仍未修**：M-2 `WRITABLE_FIELDS` 仍含 `portfolioId`（可静默把交易迁到别的组合）；M-1 `Sidebar.isPortfolioListPath` 未覆盖 `/portfolios/:id/transactions`。Human 已裁定 M-2 = 后端拒绝改写 |
+| [TASK-051](./development/tasks/active/TASK-051-fx-rate-direction.md) | 家庭折算汇率方向反了（`rateToCny` 存成 `1 CNY = X 外币`） | 未关联 | Planning（卡为 `Draft` 旧词） | High | **仍未修**：`fxRate.service.js:78-96` 采集结果未取倒数直接入库，`familySummary` 按乘法折算 → 家庭总资产被算成约 1/24；真实库已有反向数据；当前无该模块测试。**最高优先** |
+| [TASK-071](./development/tasks/active/TASK-071-codebase-structure-cleanup.md) | 代码结构清理（新旧边界/死代码/命名/路由/目录，零行为变更） | 未关联 | Planning | High | 计划 `Draft` 待批准。**按模块分批**（M1 旧布局组件 → M2 死工具/模型 → M3 旧 Tab → M4 services 改名 → M5 service 收敛 → M6 路由 → M7 目录归位 → M8 服务端命名 → M9 shared 命名 → M10 收尾），每轮独立验收 |
+| [TASK-072](./development/tasks/active/TASK-072-api-contract-residuals.md) | API 契约残差（client lint 3 error / 8 条契约测试 / 形状例外文档） | 未关联 | Planning | Medium | 计划 `Draft` 待批准。P1 lint 归零 → P2 补组合/交易/提醒规则 CRUD 测试 → P3 文档标注「`/api/users` 为唯一 `{items}` 包装」等 5 处例外 |
 | [TASK-062](./development/tasks/active/TASK-062-agent-role-boundary-and-overhead.md) | Agent 角色权限边界与执行开销整改 | 未关联 | Planning | High | 待审阅范围及裁决；提案未批准，不作为现行规则 |
 | [TASK-070](./development/tasks/active/TASK-070-dsh-agent-teams-workflow-proposal.md) | 基于 DSH Agent Teams 插件的工作流适配（提案） | 未关联 | Planning | High（建议，待 Human 定） | 待 Human 审阅范围与 AC；仅机制核对 + 工作流草案，未启用插件、未改规则，不作为现行规则；与 TASK-062 另起新卡不合并 |
 
@@ -194,7 +200,7 @@
 1. 将资产管理和价格，合并。—— ✅ TASK-043
 2. 将交易记录，收拢进组合管理 —— ✅ TASK-044
 3. 家庭视图，融入进 dashboard —— ✅ **已完成（2026-10-26 收官）**：`TASK-049` 总资产卡 → `/`（2026-10-19 结案）；`TASK-050` 其余五块 → `/portfolios` 且 `/family` 下线（2026-10-21 实施 → R-1 返修 → 复验通过 → **2026-10-26 合入 `main` `cafcc5d`，PR #35**）。需求：[`specs/completed/FS-household-view-split.md`](./development/requirements/specs/completed/FS-household-view-split.md)
-4. 交易线遗留修复（建议顺序）：`TASK-046`（CSV 幂等失效，P0 数据风险，修 1 行 + 修 mock）→ `TASK-047`（M-2 归属守卫等）→ ~~`TASK-048`（分红标签）~~ ✅ **已完成 2026-10-20**
+4. 交易线遗留修复（**2026-11-09 复核后的顺序**）：`TASK-051`（汇率方向，P0 数据错误）→ `TASK-047`（M-2 归属守卫 + M-1 侧栏高亮）→ `TASK-046`（CSV 幂等**已实现，仅需收口归档**）→ `TASK-072`（API 契约残差：lint + 契约测试）→ `TASK-071`（结构清理，按模块分批）；~~`TASK-048`（分红标签）~~ ✅ **已完成 2026-10-20**
 5. 家庭线遗留（本 FS 明确不做，需独立立项）：家庭总资产趋势（`FAM-01` P1，无快照模型）· 家庭视图按账户类型/大类分组（PRD `CM-05`/`AS-09` 声称已就绪，实现中 `familySummary` 既无 `accountType` 也无大类聚合）
 6. dashboard，增加组合健康表，内容是最新的3个提示。一个url ，跳转全部
 
