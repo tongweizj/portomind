@@ -124,7 +124,96 @@ const existing = await Transaction.find({ portfolioId }).select(
 
 ## 11. Implementation Record
 
-（实施时填写。）
+### 11.1 基线（2026-11-11）
+
+- `git rev-parse main` = `e1730a00f1ae3925d42474a022921c42c9505c77`；分支 `feature/TASK-046-csv-import-dedup`。
+- 四项基线：`test:server` 248 pass；`build` ✓；`lint` 0 error / 5 warning；`docs:check` 141 文档 / ERROR 0。
+- 环境：默认沙箱禁用 `child_process.spawn`，上述输出为放开该限制后的真实结果。
+
+### 11.2 W2 · 测试重写（先做，确保能红）
+
+`server/test/integration/transaction.enhanced.test.js`：
+
+- 引入 `createProjectedStore(t, initial, store)`：内存版存储，`find()` 返回带 `select()` 的链式对象，
+  **按 `select` 参数裁剪字段**（未请求字段一律不出现，与真实 Mongo 一致）。
+  这是本任务最关键的一处——原 mock 无视投影直接返回 `portfolioId`，正是它掩盖了缺陷。
+- 新增用例：
+  - `importTransactions：连续导入两次 → 第二次全部跳过（AC1）`
+  - `importTransactions：同批次内重复行去重（AC2）`
+- 保留原有「回滚 / 超卖」用例不变。
+
+**先验红（未修投影的实现）**：
+
+```
+✖ importTransactions：幂等去重 + 成功导入计数
+✖ importTransactions：连续导入两次 → 第二次全部跳过（AC1）
+✔ importTransactions：同批次内重复行去重（AC2）
+✔ importTransactions：非法行整批回滚（imported=0 且返回错误）
+✔ importTransactions：超卖导致整批回滚
+ℹ tests 14  ℹ pass 12  ℹ fail 2
+```
+
+关键点：**改用尊重投影的 mock 后，原本「绿」的旧用例立刻变红**——直接证明原测试是假阳性。
+
+### 11.3 W1 · 修复（单点）
+
+`shared/services/transaction.service.js:233-235`：
+
+```js
+// 投影必须包含 portfolioId：下方拼键读取 tx.portfolioId，缺该字段会得到 "undefined"，
+// 使库侧键与导入侧键永不相等、幂等失效（TASK-046）。
+const existing = await Transaction.find({ portfolioId }).select(
+  'portfolioId symbol action quantity price date fee'
+).lean();
+```
+
+- 未改 `dedupKey`、未改批次内去重、未改返回体、未改浮点比较（`Number` 全等）。
+- **绿**：`ℹ tests 14  ℹ pass 14  ℹ fail 0`。
+
+### 11.4 真实 Mongo 端到端实测（满足 AC7「不接受仅 mock」）
+
+`portomind_dev`，临时组合 + 临时资产，用后即删：
+
+```
+IMPORT #1 => {"imported":2,"skipped":0,"errors":[]} (期望 imported=2 skipped=0)
+rows after #1 = 2 (期望 2)
+IMPORT #2 => {"imported":0,"skipped":2,"errors":[]} (期望 imported=0 skipped=2)
+rows after #2 = 2 (期望 2)
+IMPORT #3 (date 差一天) => {"imported":1,"skipped":0,"errors":[]} (期望 imported=1，不判重)
+cleanup done
+```
+
+对比 2026-11-11 修复前同一实测：`IMPORT #2 => imported:1, skipped:0`、`rows after #2 = 2 → 3`。
+即：**修复前第二次导入新增记录，修复后全部跳过**。
+
+### 11.5 AC 逐条对照
+
+| # | 标准 | 结论 | 证据 |
+|---|---|---|---|
+| AC1 | 连续导入两次：第二次 `imported=0 / skipped=N`，库内只增 N | ✅ | 单测「连续导入两次」；真实库 §11.4 |
+| AC2 | 同批次内重复行仍去重 | ✅ | 单测「同批次内重复行去重（AC2）」 |
+| AC3 | 导入两个不同组合各自成功（键含 portfolioId，不跨组合误判） | ✅ | 键首段为 `portfolioId`；真实库 §11.4 第 3 条证明「同组合内 date 差异不判重」，跨组合隔离由 `find({portfolioId})` 查询范围保证 |
+| AC4 | 字段有差异不判重 | ✅ | 真实库 §11.4 第 3 条（date 差一天 → imported=1） |
+| AC5 | 用例模拟真实投影，且在旧实现上必须失败 | ✅ | §11.2 先验红 2 fail |
+| AC6 | 非法行整批回滚不变 | ✅ | 既有用例通过（`imported=0` + 错误返回） |
+| AC7 | Reviewer 在真实 Mongo 语义下确认 `skipped` 可达 | ⏳ | 已由 §11.4 实测证明可达；正式复核归 Reviewer |
+
+### 11.6 W3 · 验证输出
+
+| 命令 | 结果 |
+|---|---|
+| `npm run test:server` | ✅ `tests 250 / pass 250 / fail 0`（248 + 新增 2） |
+| `npm run build --workspace client` | ✅ `✓ built in 3.59s` |
+| `npm run lint --workspace client` | ✅ `0 errors, 5 warnings` |
+| `npm run docs:check` | ✅ `141 文档 / 1438 链接 / ERROR 0 / WARN 0` |
+
+### 11.7 偏差与未做项
+
+- **无偏差**。
+- **未清理历史重复数据**（D-2）：本次实测 `portomind_dev` 50 条交易去重键无重复；生产库未查，属卡 §7 Out of Scope。
+- 未改 `PL-1-ledger.md` 的 TR-09 描述（归 PM）。
+- 未改前端结果页文案、CSV 解析、列映射、API 契约。
+- 说明：任务卡 §11 上一轮（2026-11-11）记录的「收口不通过」结论已被本轮修复取代，卡内已追加复核记录。
 
 ## 12. Review Record
 
