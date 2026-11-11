@@ -144,7 +144,94 @@ for (const currency of SUPPORTED_CURRENCIES) {
 
 ## 11. Implementation Record
 
-（实施时填写。）
+### 11.1 基线（2026-11-11）
+
+- `git rev-parse main` = `e1730a00f1ae3925d42474a022921c42c9505c77`；工作区干净；分支 `feature/TASK-051-fx-rate-direction`。
+- 四项命令基线：`test:server` 248 pass / 0 fail；`build` ✓ built；`lint` 0 errors / 5 warnings（既存 fixture）；`docs:check` 141 文档 / 1438 链接 / ERROR 0。
+- 环境：默认沙箱禁用 `child_process.spawn`，`node --test` 与 esbuild 会报 `spawn EPERM`；本记录的输出是在放开该限制后取得的真实结果（非代码缺陷）。
+
+### 11.2 W1 · 采集方向修复
+
+`shared/services/fxRate.service.js` `fetchFromProvider`：
+
+```js
+const perCny = Number(rates[currency]);
+if (!Number.isFinite(perCny) || perCny <= 0) {
+  throw new Error(`FxRate provider returned invalid rate for ${currency}: ${rates[currency]}`);
+}
+result[currency] = 1 / perCny;
+```
+
+- 错误信息含币种（满足 W2 的「非法值抛错且错误信息含币种」）。
+- `upsertRate` / `syncLatestRates` / `getLatestRates` / `getLatestRateDocs` **未改动**。
+- JSDoc 补写「provider 以 CNY 为 base、必须取倒数」的方向说明。
+
+### 11.3 W2 · 单元测试（新增 `server/test/integration/fxRate.service.test.js`，10 条）
+
+覆盖 AC1（方向 + 量级）、AC2（`upsertRate` 拒绝 0/负数/NaN/非数/非法币种 + 同日幂等）、AC3（端到端折算）、AC4（采集与手动同语义）。
+
+**先验红（未修复实现，`totalCny` 实际 149.45 = 1000×0.149448，方向确实是反的）**：
+
+```
+✖ fetchFromProvider：CNY base 的 provider 值必须取倒数（1 外币 = X CNY）
+✖ fetchFromProvider：量级断言——USD/CAD > 1，HKD < 1
+✖ fetchFromProvider：非法值抛错且错误信息含币种
+✖ syncLatestRates：入库的 rateToCny 是「1 外币 = X CNY」
+✔ upsertRate：拒绝 0 / 负数 / NaN / 非数
+✔ upsertRate：非法币种拒绝
+✔ upsertRate：同 (currency, date) 幂等，不新增文档
+✖ 端到端：固定 provider → 入库 → getLatestRates → buildFamilySummary 与人算一致
+✖ 端到端：computeFamilySummary 全链路（不 mock getLatestRates）
+✖ 采集与手动录入同语义：同一量级
+ℹ tests 10  ℹ pass 3  ℹ fail 7
+```
+
+其中端到端用例报错原文：`全链路 totalCny 期望约 6691.29，实际 149.45`。
+
+**修复后转绿**：
+
+```
+✔ ×10
+ℹ tests 10  ℹ pass 10  ℹ fail 0
+```
+
+### 11.4 W3 · 反向验证（证明测的是方向，不是常量）
+
+把 `result[currency] = 1 / perCny` 临时改回 `= perCny`（旧实现），重跑同一用例：
+
+```
+ℹ tests 10  ℹ pass 4  ℹ fail 6
+```
+
+恢复修复后重跑 10/10 通过。即：**仅当方向正确时端到端断言才成立**，不是常量断言。
+
+### 11.5 W4 · 文档一致性
+
+| 落点 | 处理 |
+|---|---|
+| `shared/models/fxRate.js:2` | 原注释「1 外币 = rateToCny 人民币」本就正确；补一行说明采集源为 CNY base、入库前取倒数（TASK-051） |
+| `docs/handbook/ops/SERVER.md:98` | `/api/family/fx/sync` 行补「采集源以 CNY 为 base，入库前取倒数」 |
+| `docs/handbook/product/lines/PL-6-household.md:79` | 汇率采集行补方向说明与 TASK-051 标注 |
+| `TASK-051` 卡新增 §9 | 记录 D-2「历史数据不迁移」及其后果（混排 / 自愈路径 / 运维手动同步建议） |
+
+其余文档（`API_CONTRACT.md`、`PRD.md`）的语义表述经核对与实现一致，未改。
+
+### 11.6 W5 · 验证输出
+
+| 命令 | 结果 |
+|---|---|
+| `npm run test:server` | ✅ `tests 258 / pass 258 / fail 0`（248 + 新增 10） |
+| `npm run build --workspace client` | ✅ `✓ built in 3.52s`（仅既存 500 kB chunk 提示） |
+| `npm run lint --workspace client` | ✅ `0 errors, 5 warnings`（既存 fixture 警告） |
+| `npm run docs:check` | ✅ `141 文档 / 1438 链接 / ERROR 0 / WARN 0` |
+| `grep -rn "1 / rate\|/ rateToCny" client/src` | ✅ 0 命中（AC7 前端零补偿） |
+
+### 11.7 偏差与未做项
+
+- **无偏差**。
+- **未迁移历史数据**（D-2）：未写迁移脚本、未改库、未加 `invalidated`。历史行仍为反向，后果见 §4.2 与卡内 §9。
+- 未改折算公式、未改手动录入、未改 schema、未改 UI、未改 API 契约与 HTTP 路径。
+- AC8（独立 Reviewer）待 Reviewer 执行，Implementer 不自判。
 
 ## 12. Review Record
 
