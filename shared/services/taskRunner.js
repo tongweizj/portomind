@@ -1,3 +1,10 @@
+// shared/services/taskRunner.js
+//
+// 内部工具，不加 service 后缀（TASK-071 M9，命名约定说明，无行为变更）。
+// 本文件提供任务执行的外壳（TaskRun 生命周期、并发互斥、计数归一），
+// 不是业务域服务，故不遵循 `<domain>.service.js` 命名；调用方为 cron-worker 的各任务入口。
+//
+// 注：同目录的 alertVisibility.js 不加后缀一事按 D-3 **待定**，本任务未改动（见计划 §6 D-3）。
 const TaskRun = require('../models/taskRun');
 const TaskSkip = require('../models/taskSkip');
 const { taskLogger } = require('../config/logger');
