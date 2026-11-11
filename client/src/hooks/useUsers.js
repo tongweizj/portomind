@@ -9,7 +9,7 @@ import {
   createUser,
   updateUser,
   resetUserPassword
-} from '../services/auth.service';
+} from '../services/user.service';
 
 const USERS_KEY = ['users'];
 

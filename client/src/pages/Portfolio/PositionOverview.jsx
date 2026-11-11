@@ -6,7 +6,7 @@
 import { useCallback, useState, useEffect } from 'react';
 import { useParams } from 'react-router';
 import { Search, ChevronDown, RefreshCw } from 'lucide-react';
-import { getPositions } from '../../services/position.service';
+import { getPositions } from '../../services/portfolio.service';
 import { EmptyState, ErrorState, LoadingState } from '../../components/DataState';
 import { colors, radii, fontStack } from '../../constants/design-tokens';
 import KpiCards from './KpiCards';

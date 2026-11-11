@@ -5,7 +5,7 @@
 // 说明：后端暂无「前收价」字段，故「今日盈亏」无法精确计算，展示为「—」。
 import { useEffect, useState } from 'react';
 import { useParams } from 'react-router';
-import { getPositions } from '../../services/position.service';
+import { getPositions } from '../../services/portfolio.service';
 import { colors, radii, fontStack } from '../../constants/design-tokens';
 
 const MONEY_FORMATTER = new Intl.NumberFormat('en-US', {
