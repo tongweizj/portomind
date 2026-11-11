@@ -177,3 +177,84 @@ mock **无视了 `select()` 的投影参数**，把真实查询拿不到的 `por
 - 缺陷**非 TASK-044 引入**：TASK-044 为纯前端收拢，`shared/`、`server/` 零改动（ExecPlan §10.3 AC12 已验证）。本缺陷为 TR-09 历史实现遗留。
 - 定性修正记录：原记录为「后端未跳过重复」（现象描述）。本次核实后应更准确地表述为「**去重逻辑存在，但库内比对键因投影缺字段而永不命中**」。两者对用户等价，但对修复方案与测试策略差异很大。
 - 未改动 `PL-1-ledger.md`：其 TR-09 条目（`:72`）仍写「幂等去重」，与实测不符。**建议在本任务修复后由 PM 一并修订**，Orchestrator 不单方面改产品文档。
+
+---
+
+## 11. 实现位置与验证证据（2026-11-11，Implementer 收口核实）
+
+> 本轮定位为「仅验证与收口，不新增业务代码」。**核实结论：收口未通过——AC1 / AC5 / AC7 不成立，本任务不可置 `Completed`。** 详见 §11.4。
+
+### 11.1 实现位置
+
+| 项 | 落点 |
+|---|---|
+| 入口函数 | `shared/services/transaction.service.js:184`（`importTransactions`） |
+| 批次内去重（`seen` Set） | `shared/services/transaction.service.js:216-229` |
+| 与库中记录比对（`existingKeys`） | `shared/services/transaction.service.js:231-242` |
+| **缺陷仍在的投影** | `shared/services/transaction.service.js:233-235` —— `select('symbol action quantity price date fee')`，**未含 `portfolioId`** |
+| 消费投影的键拼接 | `shared/services/transaction.service.js:237-240` —— `String(tx.portfolioId)` 取到 `undefined` |
+| 返回体 | `shared/services/transaction.service.js:279-283`（`{imported, skipped, errors}`） |
+
+### 11.2 测试执行输出（实跑）
+
+**单文件** `node --test test/integration/transaction.enhanced.test.js`：
+
+```
+✔ importTransactions：幂等去重 + 成功导入计数 (1.2791ms)
+✔ importTransactions：非法行整批回滚（imported=0 且返回错误） (0.7511ms)
+✔ importTransactions：超卖导致整批回滚 (0.4979ms)
+ℹ tests 12   ℹ pass 12   ℹ fail 0
+```
+
+**全量** `npm run test:server`：
+
+```
+ℹ tests 248   ℹ pass 248   ℹ fail 0   ℹ duration_ms 1832.408
+```
+
+其余三项：`client build` ✅（2440 modules，built in 3.49s）、`client lint` ✅（0 errors / 5 warnings）、`docs:check` ✅（138 文档 / 1423 链接 / ERROR 0 / WARN 0）。
+
+### 11.3 真实 Mongo 语义实测（关键）
+
+基线：`main` @ `22f5f6e`；库 `portomind_dev`（`mongodb://192.168.2.140:27017`）。
+
+先证投影语义：
+
+```
+mongoose projection _fields = {"symbol":1,"action":1,"quantity":1,"price":1,"date":1,"fee":1}
+portfolioId in projection? false
+真实查询 select('symbol action quantity price date fee').lean() → portfolioId present? false => undefined
+```
+
+再跑端到端（临时组合 + 临时资产，用后即删，实测后已清理）：
+
+```
+asset found: true CN-FUND
+IMPORT #1 => {"imported":1,"skipped":0,"errors":[]}
+IMPORT #2 => {"imported":1,"skipped":0,"errors":[]}   ← AC1 期望 imported=0 skipped=1
+rows in db for temp portfolio = 2                      ← AC1 期望 1
+```
+
+即：**同一 CSV 连续导入两次，库内仍新增记录，`skipped` 恒为 0**。与缺陷描述完全一致。
+
+### 11.4 AC 逐条对照
+
+| # | 标准 | 结论 | 依据 |
+|---|---|---|---|
+| AC1 | 两次导入 → 第二次 `imported=0 / skipped=N`，库内只增 N | ❌ **不成立** | §11.3 实测：第二次仍 `imported=1`，库内 2 条 |
+| AC2 | 批次内重复行仍去重 | ⚠️ 代码层面成立、**无用例覆盖** | `:222-229` 两侧均取自 `normalized`，`portfolioId` 完整；现有用例 `:128-129` 的第三行即为批次内重复，但被同一测试的 `imported=1` 混合断言，未独立断言 |
+| AC3 | 导入到两个不同组合各自成功 | ❌ **无用例** | — |
+| AC4 | 字段有差异时不判重 | ❌ **无用例** | — |
+| AC5 | 用例须模拟真实投影，且旧实现上必须失败 | ❌ **不成立** | `server/test/integration/transaction.enhanced.test.js:111-118` 的 mock 仍返回 `portfolioId`（投影外字段），恰是 §3.1 所述假阳性 |
+| AC6 | 非法行整批回滚、≤500 行上限不变 | ✅ 成立 | 用例 `:137-153`、`:155+` 通过；输出见 §11.2 |
+| AC7 | Reviewer 在真实 Mongo 语义下确认 `skipped` 路径可达 | ❌ **不成立** | §11.3 在真实 Mongo 下 `skipped` 恒为 0，路径不可达 |
+
+### 11.5 缺口结论与处置建议（不擅自扩大改动）
+
+- **根因仍在**：`select()` 投影缺 `portfolioId`（`:233-235`），而键拼接读取 `tx.portfolioId`（`:237-240`）。本任务 §3 已定位该根因，但代码**从未修复**（`git log -- shared/services/transaction.service.js` 仅 3 次提交，去重块自 `006b88e` 引入后未再改动）。
+- **测试绿 ≠ 功能好**：现有 3 条用例之所以全绿，是因为 mock 无视投影返回了 `portfolioId`（§3.1 预先警告的假阳性模式），故 `node --test` 通过**不能**作为 AC1 的证据。
+- **修复方向**（需 Human/Planner 确认后再动，本轮无授权改业务代码）：
+  1. `:234` 投影补 `portfolioId`；**或**（更稳）按卡片 §5 方向 2，键拼接的 `portfolioId` 段直接改用入参 `portfolioId`，使实现不再受投影遗漏影响；
+  2. 按 AC5 重写用例：mock 严格模拟投影（返回值不得含投影外字段），并补「连续导入两次」「跨组合」「字段差异」用例；新用例须在旧实现上先验红。
+- **未验证项**：AC3 / AC4 无对应用例，未做人工验证；未处置库内历史重复数据（本次实测 `portomind_dev` 共 50 条交易、去重键无重复，无需清洗；生产库未查，属 §7 明确 Out of Scope）。
+- **状态**：本轮**未**修改 `Status`、未置 `Completed`、未归档。建议 Orchestrator 将本任务退回 `Planning`，并按 §9 B2 补 Approved ExecPlan（符合 EXECUTION_PLANS.md §2「根因明确的简单 Bug 可免计划」的例外判断由 Orchestrator 定；但当前已证实「测试假阳性 + 根因未修」，实际修复面大于原判断）。
