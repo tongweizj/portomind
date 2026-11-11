@@ -93,8 +93,8 @@ US-004 交付完成后（`v1.0.0`，`release/v1.0` @ `d87f81d`），仓库里积
 ## 6. 依赖与顺序
 
 1. 基线已封板：`v1.0.0` / `release/v1.0`；
-2. 本任务需 Human 批准 ExecPlan 后才能进入 `Implementing`；
-3. 分批实施：P1 死代码 → P2 命名 → P3 service 收敛 → P4 路由 → P5 目录归位（详见计划 §5）。
+2. 计划已由 Human 批准（`Draft → Approved`，2026-11-11），任务已登记 `Implementing`；
+3. **按模块分批，一次只清一个模块**（详见计划 §5）：`M1` 旧布局组件 → `M2` 死工具/模型/hook → `M3` 旧 Tab → `M4` services 改名 → `M5` service 收敛 → `M6` 路由 → `M7` 目录归位 → `M8` 服务端命名 → `M9` shared 命名（`alertVisibility` 按 D-3 待定、跳过）→ `M10` 收尾。每轮一个提交、一轮一验收。
 
 ## 7. Coordination Notes
 

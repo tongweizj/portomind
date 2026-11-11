@@ -141,56 +141,100 @@ client/src/
 
 结果：**11 个业务 service + 2 个基础设施模块**，每个业务域恰一个。
 
-## 5. Work Breakdown
+## 5. Work Breakdown（按模块分批：一次只清一个模块）
 
-> 每阶段的「验收」都必须实跑：`npm run build --workspace client`、`npm run lint --workspace client`、`npm run test:server`、`npm run docs:check`。
+### 5.0 执行规则
 
-### P0 · 基线固化（0.5h）
+- **一轮 = 一个模块 = 一个提交**；不得把两个模块混在同一提交里。
+- 每轮结束都必须实跑：`npm run build --workspace client`、`npm run lint --workspace client`、`npm run test:server`、`npm run docs:check`，全绿才算该轮完成。
+- 每轮开始前先 `git merge main`；失败只回滚该轮，不连带后续。
+- 每轮提交信息格式：`refactor(TASK-071): M<编号> <模块名>`。
+- 删除类模块必须附「全仓 grep 0 命中」证据；重命名类模块必须 `git diff -M` 显示 rename。
 
-- [ ] 记录基线：`git rev-parse main`、`git rev-parse v1.0.0`；记录 `client` build 与 `test:server` 的**当前**输出（基线日志）。
-- [ ] 产出「死代码证据表」：对 16 个文件逐一执行 `grep -rn "<basename>" client/src client/scripts server shared cron-worker docs --include=*` 存档（0 命中才算通过）。
+| 轮次 | 模块 | 范围 | 风险 | 主要 AC |
+|---|---|---|---|---|
+| M0 | 基线取证（不改代码） | 16 个待删文件的 grep 证据 + 四项基线输出 | 无 | AC-07 |
+| M1 | 旧布局与通用组件 | `components/common/{ErrorAlert,Header,Loading}.jsx`、`components/layout/{Header,MainLayout}.jsx`、`components/AddTransactionForm.jsx` | 低 | AC-01 |
+| M2 | 死工具 / 模型 / hook | `utils/{chartConfig,formatters,helpers,marketUtils,symbolUtils}.js`、`models/{portfolio,transaction}.js`、`hooks/useTransactions.js`、`shared/fetchers/IFetcher.js` | 低 | AC-01 |
+| M3 | 旧 Tab 页面 | `pages/Portfolio/{Basic,TargetAllocation}.jsx` | 低 | AC-01 |
+| M4 | 前端 services 改名 | `api.js→api.client.js`、`authSession.js→auth-session.bus.js`、`cronStatus.service.js→cron-status.service.js` | 中 | AC-04 |
+| M5 | 前端 service 收敛 | 拆出 `user.service.js`；`position.service.js` 并入 `portfolio.service.js` | 中 | AC-02 |
+| M6 | 前端路由 | 兼容层结构化；`/assets*` 按 D-2 保留 | 低 | AC-03 |
+| M7 | 目录归位 | 10 个 Tab 组件 + `rebalanceTabContext.js` → `components/portfolio/` | 中高 | AC-04 |
+| M8 | 服务端命名 | `logs.routes→log.routes`、`rebalanceRecord.routes→rebalance.routes`、`cronStatus.*→cron-status.*` | 中 | AC-04 |
+| M9 | shared 命名（**受限**） | 仅给 `taskRunner.js` 加文件头说明；`alertVisibility.js` 按 D-3 **待定、跳过** | 中 | AC-04 |
+| M10 | 收尾 | `CLIENT_DEV.md` 目录说明、计划 §11、独立审查 | 低 | AC-05 / AC-07 |
+
+**依赖顺序**：M1→M2→M3 互不重叠、可任意先后；M4 必须早于 M5；M3 必须早于 M7（先删死文件再移动目录）；M6 独立；M8/M9 与前端解耦，可插在任意轮之后。
+
+### M0 · 基线取证（0.5h）
+
+- [ ] 记录 `git rev-parse main`、四项命令的当前输出。
+- [ ] 对 M1/M2/M3 将删的每个文件执行 `grep -rn "<basename>" client/src client/scripts server shared cron-worker`，0 命中才允许删除；输出存档。
 - **产出**：基线日志 + 证据表；不改代码。
 
-### P1 · 删除零引用代码（1h，风险最低）
+### M1 · 旧布局与通用组件（低风险）
 
-- [ ] 删除任务卡 §4 表中 16 个文件 + `shared/fetchers/IFetcher.js`。
-- [ ] 复核 3 个空文件确认为 0 字节后再删。
-- [ ] **验收**：build/lint 通过；`test:server` 全绿（预期无变化）；`docs:check` 0 ERROR。
-- **回滚**：`git revert` 单提交。
+- [ ] 删除 `components/common/{ErrorAlert,Header,Loading}.jsx`（其中 2 个为 0 字节空文件，删前确认）。
+- [ ] 删除 `components/layout/{Header,MainLayout}.jsx`（`MainLayout` 为空文件；现行顶栏在 `AppLayout`）。
+- [ ] 删除 `components/AddTransactionForm.jsx`（已被 `pages/Transaction/AddTransaction.jsx` 取代）。
+- **验收**：build / lint / test / docs:check 全绿；`git diff -M --stat` 只有删除。
 
-### P2 · 命名统一（2h，纯改名）
+### M2 · 死工具 / 模型 / hook（低风险）
 
-- [ ] 服务端：`logs.routes.js` → `log.routes.js`；`rebalanceRecord.routes.js` → `rebalance.routes.js`；`cronStatus.controller.js`/`cronStatus.routes.js` → `cron-status.*`。更新 `server/app.js` 与相关 `require`。
-- [ ] 客户端：`api.js` → `api.client.js`；`authSession.js` → `auth-session.bus.js`；`cronStatus.service.js` → `cron-status.service.js`。更新全部 import。
-- [ ] shared：`alertVisibility.js` → `alert/visibility.js`（并入 `shared/services/alert/` 或改名 `.service.js`，二选一在实施时定稿）；`taskRunner.js` 保留并加文件头说明「内部工具，不加 service 后缀」。
-- [ ] **Windows 注意**：用 `git mv a tmp && git mv tmp b` 两段式改名，避免大小写不生效。
-- [ ] **验收**：build/lint/test 通过；`git diff --stat -M` 显示为 rename（相似度 100%），无内容改动。
+- [ ] 删除 `client/src/utils/{chartConfig,formatters,helpers,marketUtils,symbolUtils}.js`。
+- [ ] 删除 `client/src/models/{portfolio,transaction}.js`。
+- [ ] 删除 `client/src/hooks/useTransactions.js`。
+- [ ] 删除 `shared/fetchers/IFetcher.js`（仅注释式 `@interface`，文件头仍写旧路径）。
+- **验收**：同 M1；另外 `grep -rn "IFetcher" shared server` 应为 0。
 
-### P3 · service 收敛（1.5h）
+### M3 · 旧 Tab 页面（低风险）
 
-- [ ] 新建 `user.service.js`，从 `auth.service.js` 迁出 4 个用户函数；更新 `useUsers`/`AccountUsers` 等引用。
-- [ ] `position.service.js` 的 2 个函数并入 `portfolio.service.js`，删除原文件；更新 `PositionOverview`/`PositionHistory` 引用。
-- [ ] 复核：全仓 `grep -rn "import { api }" client/src/pages client/src/components` 必须为 0（保持现状）。
-- [ ] **验收**：build/lint；手点 `/portfolios`、组合详情 4 个 Tab、`/account/users` 无回归。
+- [ ] 删除 `pages/Portfolio/Basic.jsx`、`pages/Portfolio/TargetAllocation.jsx`（`Detail.jsx` 的 `TABS` 已不含它们）。
+- **验收**：build；手点组合详情 4 个 Tab（positions / position-history / rebalance / transactions）。
 
-### P4 · 路由清理与结构化（1h）
+### M4 · 前端 services 改名（中风险，Windows 两段式）
+
+- [ ] `api.js` → `api.client.js`；`authSession.js` → `auth-session.bus.js`；`cronStatus.service.js` → `cron-status.service.js`。
+- [ ] 用 `git mv a tmp && git mv tmp b` 两段式改名，避免大小写/缓存问题；更新全部 import。
+- **验收**：`git diff -M --stat` 全部显示 rename（相似度 100%）；build / lint 全绿。
+
+### M5 · 前端 service 收敛（中风险）
+
+- [ ] 新建 `user.service.js`：把 `listUsers / createUser / updateUser / resetUserPassword` 从 `auth.service.js` **原样搬移**（函数体与 URL 不变），更新 `useUsers`、`AccountUsers` 引用。
+- [ ] 把 `position.service.js` 的 2 个函数并入 `portfolio.service.js`，删除原文件，更新 `PositionOverview` / `PositionHistory` 引用。
+- [ ] 复核：`grep -rn "import { api }" client/src/pages client/src/components` 必须为 0。
+- **验收**：build / lint；手点 `/portfolios`、组合详情 4 Tab、`/account/users`。
+
+### M6 · 前端路由整理（低风险）
 
 - [ ] `router.jsx`：把 3 条 `/assets*` 兼容重定向与 `*` 兜底集中到文件末尾「兼容层」注释块；实际路由与兼容路由分组清晰。
-- [ ] 按 §6 决策处理 `/assets*`：保留（推荐，一个版本周期）或删除。
-- [ ] `constants/routes.js`：`ROUTE_PATTERNS` 与 `ROUTES` 保持一一对应，删除无消费者的键（若 P4 决定删重定向，则同步删）。
-- [ ] **验收**：`grep -n "^\\s*//.*<Route" client/src/router.jsx` 为 0（无注释路由）；build；手测 `/assets/*` 三条跳转行为符合决策。
+- [ ] 按 D-2 保留 `/assets*`（一个版本周期）；`constants/routes.js` 保持 `ROUTE_PATTERNS` 与 `ROUTES` 一一对应。
+- **验收**：`router.jsx` 中不存在被注释掉的 `<Route>`；手测 `/assets`、`/assets/new`、`/assets/edit/:id` 三条跳转。
 
-### P5 · 目录归位（2h，改动面最大，最后做）
+### M7 · 目录归位（中高风险，改动面最大）
 
-- [ ] `git mv` 10 个 Tab 子组件 + `rebalanceTabContext.js` 从 `pages/Portfolio/` 到 `components/portfolio/`，更新 `Detail.jsx` 等 import。
+- [ ] `git mv` 这 10 个文件到 `client/src/components/portfolio/`：`PositionOverview`、`PositionHistory`、`Rebalance`、`RebalanceHistory`、`RebalanceSuggester`、`Transactions`、`KpiCards`、`PortfolioHeader`、`PortfolioRebalanceSettings`、`rebalanceTabContext.js`。
 - [ ] `pages/Portfolio/` 最终只留 `List.jsx`、`Detail.jsx`、`PortfolioForm.jsx`。
-- [ ] **验收**：build/lint；手点组合详情全部 Tab；`router.jsx` 的 20 条路由逐条可达。
+- **验收**：build；手点组合详情全部 Tab；`router.jsx` 每条路由可达。
 
-### P6 · 收尾（0.5h）
+### M8 · 服务端命名（中风险，只改文件名与 require）
 
-- [ ] 更新 `docs/handbook/technical/CLIENT_DEV.md` 的目录说明（若其中列了旧路径）。
-- [ ] 计划 §11 写实施记录：每阶段提交 SHA、删除清单、rename 映射、验证输出。
-- [ ] 交独立 Reviewer：重点核对「行为零变更」——`git diff -M --stat` 应只见 rename/delete，`shared/**` 与 `server/routes/**` 函数体零变更。
+- [ ] `logs.routes.js` → `log.routes.js`；`rebalanceRecord.routes.js` → `rebalance.routes.js`；`cronStatus.controller.js` / `cronStatus.routes.js` → `cron-status.*`。
+- [ ] 更新 `server/app.js` 与相关 `require`；**挂载路径不变**（`/api/logs`、`/api/rebalance`、`/api/cron`）。
+- **验收**：`test:server` 全绿（数量不变，不含 TASK-072 新增用例）。
+
+### M9 · shared 命名（受限）
+
+- [ ] 仅给 `shared/services/taskRunner.js` 加文件头注释：「内部工具，不加 service 后缀」。
+- [ ] `shared/services/alertVisibility.js` 按 **D-3 待定**，本轮**跳过**并在交付报告中点名。
+- **验收**：build / test 全绿；报告明确写出「D-3 未执行」。
+
+### M10 · 收尾
+
+- [ ] 若 `docs/handbook/technical/CLIENT_DEV.md` 列了旧路径，同步更新。
+- [ ] 计划 §11 写每轮提交 SHA、删除清单、rename 映射、验证输出。
+- [ ] 交独立 Reviewer：`git diff -M --stat` 应只见 rename / delete；`shared/**` 与 `server/routes/**` 函数体零变更。
 
 ## 6. Decisions（需 Human 决定）
 
