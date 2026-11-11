@@ -108,7 +108,14 @@ async function main() {
   await page.locator('table.transaction-table').first().waitFor();
   const afterRows = await page.locator('table.transaction-table tbody tr').count();
   check('AC2 新增后回到组合 Tab 且列表刷新', page.url().endsWith(`/portfolios/view/${PID}/transactions`) && afterRows >= beforeRows, `${beforeRows}→${afterRows}`);
-  check('AC2 新增全程未跳离 /portfolios', !page.url().includes('/transactions/') || page.url().includes('/portfolios/'));
+  // M-5（TASK-047）：原断言 `!url.includes('/transactions/') || url.includes('/portfolios/')` 恒真
+  // （组合内 URL 必然含 `/portfolios/`）。改为可证伪：URL 必须落在 `/portfolios/view/<id>/transactions`，
+  // 且不得停留在写路由（`.../transactions/new`）。
+  check(
+    'AC2 提交后离开写路由、落在组合交易 Tab',
+    /^\/portfolios\/view\/[a-f0-9]+\/transactions$/.test(new URL(page.url()).pathname),
+    new URL(page.url()).pathname
+  );
 
   const firstRow = page.locator('table.transaction-table tbody tr').first();
   check('AC2 新增记录出现在首行', (await firstRow.innerText()).includes(SYMBOL) && (await firstRow.innerText()).includes('7'));
@@ -122,8 +129,11 @@ async function main() {
   await page.getByRole('button', { name: '更新交易' }).click();
   await page.waitForURL(new RegExp(`/portfolios/view/${PID}/transactions$`));
   await page.locator('table.transaction-table').first().waitFor();
-  const editedRow = await page.locator('table.transaction-table tbody tr').first().innerText();
-  check('AC2 编辑落库（份额 7→9）', editedRow.includes('9') && !editedRow.includes('\t7\t'), editedRow.replace(/\n/g, ' '));
+  // M-5（TASK-047）：原负向半边 `!editedRow.includes('\t7\t')` 恒真——innerText 用 `\n` 分隔而非 `\t`。
+  // 改为直接断言首行的「份额」单元格 === '9'（DEFAULT_COLUMNS 第 5 列，0-based index 4），可证伪。
+  const editedQtyCell = (await page.locator('table.transaction-table tbody tr').first()
+    .locator('td').nth(4).innerText()).trim();
+  check('AC2 编辑落库（份额 7→9）', editedQtyCell === '9', `份额列=${editedQtyCell}`);
 
   // 删除
   const beforeDelete = await page.locator('table.transaction-table tbody tr').count();

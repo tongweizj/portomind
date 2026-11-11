@@ -33,16 +33,22 @@ export default function EditTransaction() {
 
   const [assets, setAssets] = useState([]);
   const [error, setError] = useState('');
+  // TASK-047 M-2：URL 组合 id 与交易真实归属不符时，中止渲染表单（不静默改写）
+  const [mismatch, setMismatch] = useState(false);
 
   useEffect(() => {
     getAssets({ pageSize: 100, active: true }).then(data => {
       setAssets(data.data);
     });
     getTransaction(txId).then(tx => {
+      // 归属以服务端返回为准，不再用路由参数覆盖（TASK-047 M-2）。
+      // 若与 URL 不一致：明确报错并中止渲染，避免把交易静默迁到别的组合。
+      if (String(tx.portfolioId) !== String(portfolioId)) {
+        setMismatch(true);
+        return;
+      }
       setForm({
         ...tx,
-        // 组合以路由为准锁定，避免历史数据或被篡改的响应把交易挪到别的组合
-        portfolioId,
         date: String(tx.date).slice(0, 10),
       });
     }).catch(err => {
@@ -78,13 +84,43 @@ export default function EditTransaction() {
       if (!ok) return;
     }
     try {
-      // 写路径经服务端校验（AC10）
-      await updateTransaction(txId, { ...form, portfolioId });
+      // 写路径经服务端校验（AC10）。
+      // TASK-047 M-2：不再把 URL 的 portfolioId 写回提交体；归属由服务端持有且不可变。
+      // 显式列出可写字段，避免把 portfolioId（及其它非表单字段）带进请求。
+      const payload = {
+        symbol: form.symbol,
+        action: form.action,
+        quantity: form.quantity,
+        price: form.price,
+        fee: form.fee,
+        date: form.date,
+        notes: form.notes
+      };
+      await updateTransaction(txId, payload);
       navigate(ROUTES.PORTFOLIO_TX_TAB(portfolioId));
     } catch (err) {
       setError(getApiErrorMessage(err, '更新交易失败'));
     }
   };
+
+  if (mismatch) {
+    return (
+      <div className="max-w-xl mx-auto space-y-6">
+        <Link
+          to={ROUTES.PORTFOLIO_TX_TAB(portfolioId)}
+          className="flex items-center gap-1 text-sm"
+          style={{ color: colors.brand, textDecoration: 'none' }}
+        >
+          <ChevronLeft size={14} color={colors.brand} /> 返回交易记录
+        </Link>
+        <h1 className="text-2xl font-bold" style={{ color: colors.textPrimary }}>无法编辑该交易</h1>
+        <div className="rounded bg-red-50 p-4 text-red-700 space-y-2">
+          <p>该交易不属于当前组合，已中止编辑。</p>
+          <p className="text-sm">交易归属不可修改；如需迁移，请在目标组合中重新创建该交易。</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="max-w-xl mx-auto space-y-6">

@@ -21,12 +21,17 @@ import { ROUTES } from '../../constants/routes';
 import { colors, layout, fontStack, radii } from '../../constants/design-tokens';
 
 // 「组合列表」族：组合增删改查与详情 Tab 都算它的落点。
-// 注意排除 `/portfolios/transactions`（那属于「全部交易」子项）。
+// 注意排除 `/portfolios/transactions`（那属于「全部交易」子项）：
+// 该路径第二段是字面量 `transactions`，而下面的正则要求第二段是非空且不含 `/` 的 id，
+// 因此 `/portfolios/transactions` 天然不被命中。
+// TASK-047 M-1：补上 TASK-044 引入的交易写路由族
+//   `/portfolios/:id/transactions/{new,edit/:txId,import}`，否则这些路由侧栏无任何高亮。
 const isPortfolioListPath = (pathname) =>
   pathname === ROUTES.PORTFOLIO_LIST
   || pathname.startsWith('/portfolios/new')
   || pathname.startsWith('/portfolios/edit')
-  || pathname.startsWith('/portfolios/view');
+  || pathname.startsWith('/portfolios/view')
+  || /^\/portfolios\/[^/]+\/transactions/.test(pathname);
 
 // 顶层 4 项（TASK-058 U2）：「提醒规则」已移入顶栏头像下拉，侧栏不再有账户入口。
 // `active` 为显式判定函数，不用 NavLink 的前缀匹配 ——

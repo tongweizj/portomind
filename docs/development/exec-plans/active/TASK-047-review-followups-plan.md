@@ -161,7 +161,154 @@ const isPortfolioListPath = (pathname) =>
 
 ## 11. Implementation Record
 
-（实施时填写。）
+### 11.1 基线（2026-11-11）
+
+- `git rev-parse main` = `e1730a00f1ae3925d42474a022921c42c9505c77`；分支 `feature/TASK-047-review-followups`（自 `origin/main` `22f5f6e` 起）。
+- 四项基线：`test:server` 248 pass；`build` ✓；`lint` 0 error / 5 warning；`docs:check` 141 文档 / 1438 链接 / ERROR 0。
+- 环境：默认沙箱禁用 `child_process.spawn`（`node --test` / esbuild 报 `spawn EPERM`），下述输出为放开该限制后的真实结果。
+
+### 11.2 W1 · M-2 后端守卫（权威层）
+
+`shared/services/transaction.service.js` `updateTransaction`，**插在 `normalizeInput` 之前**：
+
+```js
+if (input && input.portfolioId !== undefined &&
+    String(input.portfolioId) !== String(existing.portfolioId)) {
+  throw businessError(400, 'PORTFOLIO_ID_IMMUTABLE', '...');
+}
+const data = normalizeInput(input, existing);
+```
+
+三条硬约束的落实：
+
+| 约束 | 落实 |
+|---|---|
+| ① 不能「出现就拒绝」 | 判 `String(input.portfolioId) !== String(existing.portfolioId)`；同值放行 |
+| ② 不能从 `WRITABLE_FIELDS` 删 `portfolioId` | `WRITABLE_FIELDS` **零改动**，创建路径照常 |
+| ③ 必须在合并入参之前 | 校验语句位于 `normalizeInput` 调用之前 |
+
+新增测试 `server/test/integration/transaction.portfolioImmutable.test.js`（4 条）。
+
+**先验红**（未加守卫的实现）：
+
+```
+✖ M-2 更新时改归属 → 400 PORTFOLIO_ID_IMMUTABLE，且不写库
+✔ M-2 不传 portfolioId → 200 且归属不变
+✔ M-2 传相同 portfolioId → 200 且归属不变（编辑页每次都带该字段）
+✔ M-2 创建路径仍可用：带 portfolioId 创建成功（不得从 WRITABLE_FIELDS 删除）
+ℹ tests 4  ℹ pass 3  ℹ fail 1
+```
+
+即：旧实现确实接受归属改写（该用例失败），而其余 3 条通过，说明用例定位准确、不是「全红凑数」。
+
+**加守卫后**：`ℹ tests 4  ℹ pass 4  ℹ fail 0`。
+
+**真实 Mongo 实测**（`portomind_dev`，临时组合 A/B + 临时资产，用后即删）——满足卡内 AC1「不接受仅 mock」：
+
+```
+created tx in portfolio A = 6f00000000000000000000a1 | id = 6af497d030b976fea68ab58b
+① 改归属结果 = {"status":400,"code":"PORTFOLIO_ID_IMMUTABLE"} (期望 400 PORTFOLIO_ID_IMMUTABLE)
+   库内归属 = 6f00000000000000000000a1 (期望 A = 6f00000000000000000000a1)
+   数量 = 10 (期望 10，未被写入)
+② 不传 portfolioId → quantity = 12 | 库内归属 = A (不变)
+③ 传相同 portfolioId → quantity = 13 | 库内归属 = A (不变)
+④ 创建带 portfolioId 成功 = true
+cleanup done
+```
+
+### 11.3 W2 · M-2 前端配合
+
+`client/src/pages/Transaction/EditTransaction.jsx`：
+
+- **不再用 URL 的 `portfolioId` 覆盖**表单：`setForm({ ...tx, date })`，归属以服务端返回为准。
+- **归属不符则中止渲染**：`String(tx.portfolioId) !== String(portfolioId)` → `setMismatch(true)`，渲染「无法编辑该交易」提示页（含「交易归属不可修改；如需迁移，请重新创建」），**不渲染表单**。
+- **提交体不再携带 `portfolioId`**：显式白名单 `{symbol, action, quantity, price, fee, date, notes}`。
+  这样后端守卫与前端提交**同时**满足「值不一致才拒」与「正常编辑不 400」。
+
+> 说明：因同一 PR 已让前端不再发送 `portfolioId`，后端守卫对**正常编辑**不再是必经路径；但守卫仍是权威防线（curl / 旧客户端 / 篡改请求都会被拒）。
+
+**手工验证范围说明**：本机未启动前后端 dev server，未做浏览器点击级走查（见 §11.7 未验证项）；
+逻辑正确性由真实库后端实测（§11.2）+ 前端分支判定代码审读覆盖。
+
+### 11.4 W3 · M-1 侧栏高亮
+
+`client/src/components/layout/Sidebar.jsx` `isPortfolioListPath` 增加：
+
+```js
+|| /^\/portfolios\/[^/]+\/transactions/.test(pathname)
+```
+
+谓词实测（9 条用例，含边界）：
+
+| 路径 | 期望 | 实际 |
+|---|---|---|
+| `/portfolios/64b1/transactions/new` | 高亮组合 | ✅ true |
+| `/portfolios/64b1/transactions/edit/abc` | 高亮组合 | ✅ true |
+| `/portfolios/64b1/transactions/import` | 高亮组合 | ✅ true |
+| `/portfolios/view/64b1/transactions` | 高亮组合 | ✅ true |
+| `/portfolios` | 高亮组合 | ✅ true |
+| `/portfolios/transactions` | **不**被组合项吞（归「全部交易」） | ✅ false |
+| `/portfolios/transactions/x` | 不吞 | ✅ false |
+| `/` | 不高亮 | ✅ false |
+| `/prices` | 不高亮 | ✅ false |
+
+另确认「全部交易」子项判定 `p === PORTFOLIO_TX_ALL`：`/portfolios/transactions` → true；
+`/portfolios/64b1/transactions/new` → false（互不抢占）。
+
+### 11.5 W4 · M-5 / M-6 验证资产
+
+**M-5** `client/scripts/e2e-task-044.mjs` 两处恒真断言已改为可证伪：
+
+| 原断言 | 问题 | 改为 |
+|---|---|---|
+| `!url.includes('/transactions/') \|\| url.includes('/portfolios/')` | 组合内 URL 必含 `/portfolios/`，恒真 | `/^\/portfolios\/view\/[a-f0-9]+\/transactions$/.test(pathname)` |
+| `editedRow.includes('9') && !editedRow.includes('\t7\t')` | `innerText` 分隔符是 `\n`，负向半边恒真 | 首行第 5 列（份额）单元格 `=== '9'` |
+
+负向对照（用旧断言 vs 新断言跑「停留在写路由」这一错误实现）：
+
+```
+old: true  (恒真，错误实现也通过)
+new: false (能捕获)
+NEW ASSERTION IS FALSIFIABLE
+```
+
+**M-6** `client/scripts/verify-transaction-routes.mjs` 已重写：不再手抄路由表，改为
+`readFileSync(client/src/router.jsx)` + 正则提取 `<Route path=...>`（支持字面量与 `ROUTE_PATTERNS.X` 两种写法），
+派生 `ROUTES_TABLE` 后再用 `matchRoutes` 实测；并新增 `expectDeclared()` 直接断言 4 条交易路由均已声明。
+`*` 兜底通配被显式排除（否则「旧 /transactions 未被声明」的断言永远失败）。
+
+**负向对照**（临时从 `router.jsx` 删除 `PORTFOLIO_TX_IMPORT` 一行）：
+
+```
+FAIL 2 / 16
+  ✗ router.jsx 未声明 PORTFOLIO_TX_IMPORT (/portfolios/:id/transactions/import)
+  ✗ /portfolios/6712ab34cd56ef7890123456/transactions/import → tx-import｜未匹配任何路由
+```
+
+还原后：`PASS 16 / 16`，且 `git diff client/src/router.jsx` 为空（已确认还原干净）。
+
+### 11.6 W5 · 验证输出
+
+| 命令 | 结果 |
+|---|---|
+| `npm run test:server` | ✅ `tests 252 / pass 252 / fail 0`（248 + 新增 4） |
+| `npm run build --workspace client` | ✅ `✓ built in 2.83s` |
+| `npm run lint --workspace client` | ✅ `0 errors, 5 warnings`（既存 fixture 警告） |
+| `npm run docs:check` | ✅ `141 文档 / 1438 链接 / ERROR 0 / WARN 0` |
+| `node client/scripts/verify-transaction-routes.mjs` | ✅ `PASS 16 / 16`（负向对照见 §11.5） |
+
+> 过程中曾出现一次 lint 失败（`'_omit' is assigned a value but never used`），已改为显式字段白名单后转绿，
+> 未以 eslint-disable 绕过。
+
+### 11.7 偏差与未验证项
+
+- **无方案偏差**。
+- **未验证（如实记录）**：未启动 dev server，未做浏览器点击级的 M-1 高亮与 M-2 归属不符页走查；
+  M-1 由谓词单测式实测覆盖，M-2 由真实 Mongo 服务层实测覆盖。E2E 脚本本身未运行（依赖运行中的前后端 + 测试库）。
+- 未改 `createTransaction` / `validateLedger` / 超卖 / fee / 分红 / 整手提示（NG4 边界）；
+  `server/`、`cron-worker/` 无 `.js` 变更。
+- 未改 API 契约、HTTP 路径与响应结构；未改 `Transaction` schema。
+- AC8（独立 Reviewer）待 Reviewer 执行。
 
 ## 12. Review Record
 
