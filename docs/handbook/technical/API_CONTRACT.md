@@ -55,6 +55,22 @@ Portfolio 枚举：`type`（风险定位）为 `活钱 | 稳健 | 长期`；`acc
 
 校验错误可能额外包含 `details`。认证/授权/CORS 类错误可能额外包含顶层 `code`（见「认证与错误码」）；状态码语义：`400` 请求参数或请求体无效，`401` 未登录/会话失效，`403` 已登录但无权限或需先改密（`PASSWORD_CHANGE_REQUIRED` / `FORBIDDEN` / CORS 拒绝），`404` 资源/路由不存在，`409` 唯一键/不变量冲突，`429` 登录限流锁定，`500` 未处理的服务器错误。创建返回 `201`，其余成功请求返回 `200`。
 
+## 响应形状例外
+
+通用形状是「列表端点返回 `data: []` + `pagination`，非列表端点只返回 `data`」。以下 5 处**有意偏离**，均属既定行为而非缺陷；改动前须新增任务并更新本节，勿悄悄「统一」。
+
+| 端点 | 形状 | 原因与约束 |
+| --- | --- | --- |
+| `GET /api/users` | `data: {items:[...]}`（**包装对象，不是数组**），且**不分页** | **全仓唯一**的包装式列表。保持现状，**不改为裸数组**（会破坏 `client/src/hooks/useUsers.js` 与 `pages/AccountUsers`）。响应不含 `passwordHash`。 |
+| `GET /api/valuations` | `data: [...]` 裸数组、**不分页** | 数据量有界（指数 × 指标的当前最新一条）。**当前无前端消费方（server-only）**，前端不建 service 属预期。 |
+| `GET /api/family/fx/rates` | `data: [...]` 裸数组、**不分页** | 同上：受支持币种数量有界。 |
+| `GET /api/cron/status` | `data: {…}` 对象快照、**非列表** | 只读聚合视图，返回单个看板对象；不带 `pagination` 键。 |
+| 其余非列表端点 | 只有 `data` | 如 `/api/portfolios/summary`（`data` 是聚合数组，但**不是分页列表**）；**不含 `pagination` 键**，前端不应探测该字段。 |
+
+除上表列出的端点外，列表端点统一为 `data: []` + `pagination: {page,pageSize,total}`；该对象**恰有这三个键**、取值均为数字，不附加其他分页字段。
+
+协约由 `server/test/integration/api-contract.crud.test.js` 的可执行断言锁定（`{items}` 包装、pagination 形状一致性、非列表端点无 `pagination`），修改形状会直接使测试失败。
+
 ## 接口清单
 
 下表中的“返回 data”均位于通用成功响应的 `data` 字段中；“分页”表示同时返回通用 `pagination`。
