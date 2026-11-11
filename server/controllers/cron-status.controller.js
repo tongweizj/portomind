@@ -1,4 +1,4 @@
-// server/controllers/cronStatus.controller.js
+// server/controllers/cron-status.controller.js
 //
 // TASK-054（FS C-02）：`GET /api/cron/status`。
 // 只做参数校验 + 响应封装；派生逻辑全部在 shared/services/cronStatus.service.js（ExecPlan D-9）。
