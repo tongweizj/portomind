@@ -19,12 +19,13 @@ client/src/
 │   ├── routes.js           # ROUTE_PATTERNS（path 模式）+ ROUTES（生成函数）
 │   ├── enums.js            # 枚举 ↔ 中文标签（口径单一来源）
 │   └── design-tokens.js    # 颜色 / 圆角 / 字体 / 布局尺寸
-├── hooks/                  # TanStack Query 封装（useAlerts / useFamily / usePortfolio / usePortfolios / useTransactions / useUsers；会话在 components/auth/AuthProvider 的 ['session']）
-├── services/               # axios 实例 + 各领域 service（auth / alert / asset / …）
+├── hooks/                  # TanStack Query 封装（useAlerts / useFamily / usePortfolio / usePortfolios / useUsers；会话在 components/auth/AuthProvider 的 ['session']）
+├── services/               # axios 实例 + 各领域 service（auth / user / alert / asset / …）
 ├── components/             # 跨页面复用组件
 │   ├── layout/             # AppLayout / Sidebar / UserMenu（顶栏头像下拉，账户与登出唯一入口）
 │   ├── auth/               # AuthProvider / authContext / RequireAuth / ForcedChangeScreen / ForbiddenUsersScreen
 │   ├── users/              # 用户管理弹窗（CreateUserModal / ResetPasswordModal）
+│   ├── portfolio/          # 组合详情 Tab 子组件（KpiCards / PositionOverview / Rebalance / …）
 │   ├── ButtonGroup/ DataState/ PortfolioCard/ TransactionTable/
 │   └── Household/          # 家庭区块 6 个（纯 props 组件）
 ├── pages/                  # 页面（按域分目录）
@@ -32,7 +33,7 @@ client/src/
     └── priceDisplay.js     # 价格展示口径（formatCny / formatMoney / 缺口判定）
 ```
 
-**依赖方向**：`pages` → `components` → `services` → `api.js`。`components` 不直接 import `pages`；`services` 不含 React 代码。
+**依赖方向**：`pages` → `components` → `services` → `api.client.js`。`components` 不直接 import `pages`；`services` 不含 React 代码。
 
 ---
 
@@ -87,7 +88,7 @@ client/src/
 
 `pages/Portfolio/Detail.jsx` 内定义，**4 个 Tab，默认 `positions`**：
 
-| key | 标签 | 组件 |
+| key | 标签 | 组件（均在 `components/portfolio/`） |
 |---|---|---|
 | `positions` | 持仓概览 | `PositionOverview` |
 | `position-history` | 持仓历史 | `PositionHistory` |
@@ -116,13 +117,12 @@ defaultOptions: { queries: { retry: 1, staleTime: 1000 * 60 } }
 
 ### 3.2 hooks 清单（`hooks/`）
 
-文件：`useAlerts.js` / `useFamily.js` / `usePortfolio.js` / `usePortfolios.js` / `useTransactions.js`。
+文件：`useAlerts.js` / `useFamily.js` / `usePortfolio.js` / `usePortfolios.js` / `useUsers.js`。
 
 | Hook | queryKey | staleTime / 轮询 | 参数 |
 |---|---|---|---|
 | `usePortfolio(id)` | `['portfolio', id]` | 60s | `enabled: Boolean(id)` |
 | `usePortfolios({includeArchived})` | `['portfolios-summary', {includeArchived}]` | 60s | 默认 `includeArchived: false` |
-| `useTransactions(portfolioId)` | `['transactions', portfolioId]` | **30s** | `enabled: Boolean(portfolioId)` |
 | `useFamilySummary()` | `['family-summary']` | 60s | — |
 | `useFxRates()` | `['fx-rates']` | 60s | — |
 | `useAlertRules(params)` | `['alert-rules', params]` | 60s | 参数对象进 key |
@@ -160,7 +160,7 @@ mutation hooks：`useUpsertFxRate` / `useSyncFxRates` / `useCreateAlertRule` / `
 | 默认头 | `Accept: application/json`；`withCredentials: true`（会话 cookie `pm_sid` 必须随请求发送：同源无副作用，绝对地址跨源模式必需） |
 | 响应拦截器 | **成功时直接返回 `response.data`**（业务层拿到的就是服务端响应体 `{success, data}`，各 service 再取 `.data`；不要写 `res.data.data`） |
 | 错误时挂载 | `error.apiMessage` / `error.traceId` / `error.status` / `error.code`（认证错误码，如 `INVALID_CREDENTIALS` / `PASSWORD_CHANGE_REQUIRED`） |
-| 401 处置 | 业务端点 401 → `authSession.notifyUnauthorized()` → `AuthProvider` 清业务缓存并跳 `/login?next=…`；**排除** `/auth/login`、`/auth/session`、`/auth/logout`（密码错误/未登录查询本身是 401，不能当会话失效） |
+| 401 处置 | 业务端点 401 → `auth-session.bus.notifyUnauthorized()` → `AuthProvider` 清业务缓存并跳 `/login?next=…`；**排除** `/auth/login`、`/auth/session`、`/auth/logout`（密码错误/未登录查询本身是 401，不能当会话失效） |
 | 403 强制改密 | `code === 'PASSWORD_CHANGE_REQUIRED'` → 让 `['session']` 失效重取，使前端闸门与服务端判定对齐 |
 
 `getApiErrorMessage(error, fallback)` 统一拼接 message 与 traceId。
@@ -169,7 +169,7 @@ mutation hooks：`useUpsertFxRate` / `useSyncFxRates` / `useCreateAlertRule` / `
 
 ### 4.2 领域 service
 
-`asset` / `portfolio` / `position` / `price` / `transaction` / `rebalance` / `alert` / `family` / `log` 各一个文件，每个只负责「拼 URL + 传参 + 返回 data」。
+`auth.service`（登录/登出/会话/改密/资料）/ `user.service`（管理员用户管理）/ `asset` / `portfolio`（含持仓概览与持仓历史）/ `price` / `transaction` / `rebalance` / `alert` / `family` / `log` / `cron-status` 各一个文件，每个只负责「拼 URL + 传参 + 返回 data」。基础设施两件不带 `.service` 后缀：`api.client.js`（axios 单实例）、`auth-session.bus.js`（拦截器 ↔ Provider 事件桥）。
 
 **service 层不做业务计算、不做字段改名**——口径在 `shared/` 服务端实现（前后端共用同一份业务内核），前端二次计算会造成两套口径。
 
@@ -194,11 +194,11 @@ mutation hooks：`useUpsertFxRate` / `useSyncFxRates` / `useCreateAlertRule` / `
 | `TransactionTable` | 交易表格**唯一实现**：中文表头 + `action`/`assetType` 中文映射 + 按币种格式化；可选组合列、操作列；日期自动截取 |
 | `PortfolioCard` | 组合卡片：市值分桶 / 持仓数 / `DriftBadge` / 未读提醒数 |
 
-### 5.3 业务（页面内组件）
+### 5.3 业务（组合详情 Tab 子组件）
 
-`pages/Portfolio/` 内含 `KpiCards` / `PortfolioHeader` / `PositionOverview` / `PositionHistory` / `Rebalance` / `RebalanceSuggester` / `RebalanceHistory` / `PortfolioRebalanceSettings` / `Transactions`。
+`components/portfolio/` 内含 `KpiCards` / `PortfolioHeader` / `PositionOverview` / `PositionHistory` / `Rebalance` / `RebalanceSuggester` / `RebalanceHistory` / `PortfolioRebalanceSettings` / `Transactions`（TASK-071 M7 从 `pages/Portfolio/` 迁入）。
 
-它们**不跨页面复用**，因此与页面同目录，不进 `components/`。判断标准：**被 2 个及以上页面使用的才提到 `components/`**。
+它们是**组合详情的 Tab 子组件而非路由页面**，因此不再放在 `pages/`；`pages/Portfolio/` 只保留三个真实路由页面：`List.jsx` / `Detail.jsx` / `PortfolioForm.jsx`。判断标准：**与 `router.jsx` 一一对应、直接由 `<Route>` 渲染的才进 `pages/`**。
 
 ### 5.4 `components/Household/`（家庭区块 6 个）
 
@@ -215,14 +215,15 @@ mutation hooks：`useUpsertFxRate` / `useSyncFxRates` / `useCreateAlertRule` / `
 
 `RECENT_LIMIT` 由后端 fixed 为 10（交易与再平衡都是），前端要 5 条请自己 `slice(0, 5)`。
 
-### 5.5 零引用文件（勿使用）
+### 5.5 零引用文件（已于 TASK-071 删除）
 
-以下文件**在全仓没有任何引用**，改动它们不会影响界面：
+原「零引用文件」清单中的 17 个文件已在 TASK-071（M1～M3）**全部删除**，仓库中不再存在，切勿按旧路径 import：
 
-`components/AddTransactionForm.jsx`、`components/layout/Header.jsx`、`components/common/Header.jsx`、`components/common/ErrorAlert.jsx`（0 字节）、`components/common/Loading.jsx`（0 字节）、`components/layout/MainLayout.jsx`（0 字节）、`pages/Portfolio/Basic.jsx`、`pages/Portfolio/TargetAllocation.jsx`、`utils/formatters.js`、`utils/helpers.js`（0 字节）、`utils/chartConfig.js`（0 字节）。
+`components/AddTransactionForm.jsx`、`components/layout/Header.jsx`、`components/common/Header.jsx`、`components/common/ErrorAlert.jsx`、`components/common/Loading.jsx`、`components/layout/MainLayout.jsx`、`pages/Portfolio/Basic.jsx`、`pages/Portfolio/TargetAllocation.jsx`、`utils/formatters.js`、`utils/helpers.js`、`utils/chartConfig.js`、`utils/marketUtils.js`、`utils/symbolUtils.js`、`models/portfolio.js`、`models/transaction.js`、`hooks/useTransactions.js`、`shared/fetchers/IFetcher.js`。
 
-> `utils/formatters.js` 里有一个 `processETFData`，其涨跌幅算法本身是错的——**不要为了「先跑起来」去 import 它**。
-> 清理动作待排期；**本清单即唯一归属**（原 PL-0 §8.2 已撤销）。
+替代物：错误/空/加载态用 `components/DataState`；组合基本视图用 `components/portfolio/PositionOverview`；目标配置用 `components/portfolio/Rebalance` + `PortfolioRebalanceSettings`；交易录入用 `pages/Transaction/AddTransaction`。
+
+> 原 `utils/formatters.js` 中的 `processETFData` 涨跌幅算法本身是错误的——该文件已删除，若日后需要类似逻辑请新写并附测试，不要从历史提交中恢复。
 
 ---
 
@@ -293,7 +294,7 @@ mutation hooks：`useUpsertFxRate` / `useSyncFxRates` / `useCreateAlertRule` / `
 
 ### 8.3 再平衡子 Tab 不读 URL
 
-`pages/Portfolio/Rebalance.jsx` 的子 Tab 用组件内 `useState`，**不读 URL 参数**。后果：从 Dashboard 的事件卡跳 `/portfolios/view/:id/rebalance` 时，永远落在「最新建议」子 Tab，无法直达某条历史记录。
+`components/portfolio/Rebalance.jsx` 的子 Tab 用组件内 `useState`，**不读 URL 参数**。后果：从 Dashboard 的事件卡跳 `/portfolios/view/:id/rebalance` 时，永远落在「最新建议」子 Tab，无法直达某条历史记录。
 
 事件侧已在 `snapshot` 里写了 `recordId`，前端零引用——**缺的不是页面，是 `?record=` 锚点**。
 
@@ -303,7 +304,7 @@ mutation hooks：`useUpsertFxRate` / `useSyncFxRates` / `useCreateAlertRule` / `
 
 ### 8.5 `KpiCards` 的「今日盈亏」恒为 `'—'`
 
-`KpiCards`（`pages/Portfolio/`）的今日盈亏恒显示 `'—'`，且其货币格式器**硬编码 `currency: 'USD'`**，对 CNY/CAD 组合显示错误符号。
+`KpiCards`（`components/portfolio/`）的今日盈亏恒显示 `'—'`，且其货币格式器**硬编码 `currency: 'USD'`**，对 CNY/CAD 组合显示错误符号。
 
 ### 8.6 组合详情无「概览」Tab
 
@@ -311,7 +312,7 @@ mutation hooks：`useUpsertFxRate` / `useSyncFxRates` / `useCreateAlertRule` / `
 
 ### 8.7 删除组合没有界面入口
 
-`deletePortfolio` 只在零引用的 `pages/Portfolio/Basic.jsx` 中被调用 → **界面上无法删除组合**（只能通过 API 或直接操作数据库）。
+`deletePortfolio`（`services/portfolio.service.js`）当前**没有任何页面调用**：唯一曾调用它的 `pages/Portfolio/Basic.jsx` 已于 TASK-071 M3 作为死代码删除 → **界面上仍无删除组合入口**（只能通过 API 或直接操作数据库）。这是遗留的功能缺口，与文件结构无关，需另立任务补 UI。
 
 ---
 
