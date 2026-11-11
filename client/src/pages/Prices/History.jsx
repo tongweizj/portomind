@@ -1,4 +1,4 @@
-// client/src/pages/Price/History.jsx
+// client/src/pages/Prices/History.jsx
 import { useEffect, useMemo, useState } from 'react';
 import { useParams } from 'react-router';
 import { getPriceHistory } from '../../services/price.service';

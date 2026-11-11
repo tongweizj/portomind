@@ -38,4 +38,13 @@ export default [
       ],
     },
   },
+  {
+    // Node 环境文件：Vite 配置与构建/校验脚本在浏览器之外运行，
+    // 需要 process、require、__dirname 等全局变量。
+    // 仅对本组文件生效，`src/**` 的 browser globals 约定保持不变。
+    files: ['vite.config.js', 'scripts/**/*.{cjs,js}'],
+    languageOptions: {
+      globals: globals.node,
+    },
+  },
 ]

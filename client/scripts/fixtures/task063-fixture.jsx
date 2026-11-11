@@ -447,7 +447,6 @@ setTimeout(async () => {
     failures.push(`body=${document.body ? document.body.innerText.slice(0, 800) : 'no body'}`);
     failures.push(`root=${document.getElementById('root') ? document.getElementById('root').innerHTML.slice(0, 800) : 'no root'}`);
   }
-  const failed = results.filter((item) => !item.ok);
   const payload = { results, failures };
   const json = JSON.stringify(payload);
   const bytes = new TextEncoder().encode(json);
