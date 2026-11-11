@@ -4,9 +4,9 @@
 
 | 字段 | 内容 |
 |---|---|
-| Status | Planning（2026-11-09，Human 要求先出计划；**本阶段不改代码**） |
-| Priority / Owner / Type | `Medium` / 待指派 / `Maintenance`（测试与文档，零 API 行为变更） |
-| Created / Updated | 2026-11-09 / 2026-11-09 |
+| Status | **Implementing（2026-11-11）**：计划已由 Human 批准（`Draft → Approved`），按 [STATES.md](../../../os/process/STATES.md#4-谁可以改变状态) 登记 `Planning → Implementing` |
+| Priority / Owner / Type | `Medium` / Implementer（待指派） / `Maintenance`（测试与文档，零 API 行为变更） |
+| Created / Updated | 2026-11-09 / 2026-11-11 |
 | 所属 Story | 无（独立维护任务） |
 | 覆盖的验收条件 | 见 §3（AC-01～AC-06） |
 | Related | [API_CONTRACT.md](../../../handbook/technical/API_CONTRACT.md)、[TASK-071](./TASK-071-codebase-structure-cleanup.md)（结构清理，与本卡无冲突） |

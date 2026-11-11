@@ -4,9 +4,9 @@
 
 | 字段 | 内容 |
 |---|---|
-| Status | Planning（2026-11-09，Human 要求先出计划；**本阶段不改代码**） |
-| Priority / Owner / Type | `Medium` / 待指派 / `Refactor`（结构清理，零行为变更） |
-| Created / Updated | 2026-11-09 / 2026-11-09 |
+| Status | **Implementing（2026-11-11）**：计划已由 Human 批准（`Draft → Approved`），按 [STATES.md](../../../os/process/STATES.md#4-谁可以改变状态) 登记 `Planning → Implementing`；**按模块分批实施**（一次只清一个模块） |
+| Priority / Owner / Type | `High` / Implementer（待指派） / `Refactor`（结构清理，零行为变更） |
+| Created / Updated | 2026-11-09 / 2026-11-11 |
 | 所属 Story | 无（独立维护任务；不新建 Story） |
 | 覆盖的验收条件 | 见 §3（AC-01～AC-07） |
 | Related | [ARCHITECTURE.md §7](../../../os/architecture/ARCHITECTURE.md)、[GIT.md](../../../os/standards/GIT.md)、[TESTING.md](../../../os/standards/TESTING.md) |

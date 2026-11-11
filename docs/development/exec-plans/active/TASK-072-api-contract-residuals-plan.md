@@ -2,13 +2,13 @@
 
 ## Status
 
-Status：Draft（2026-11-09，Planner 起草；**未批准、未实施**）
+Status：Approved（2026-11-11，Human 指令「一次性完成 071、072 两个任务」；`Draft → Approved` 归 Human）
 
 Related Task：[TASK-072](../../tasks/active/TASK-072-api-contract-residuals.md)（独立维护任务，无 Story）。
 
 Branch / Base：`main` @ `c7a2751`（含 `v1.0.0` 基线）。实施时从最新 `main` 开 `feature/TASK-072-api-contract-residuals`。
 
-Approval：**未批准**。`Draft → Approved` 归 Human（[STATES.md](../../../os/process/STATES.md) §4）。
+Approval：**已批准（2026-11-11，Human）**。依据 Human 指令「写一个提示词，让开发一次性完成 071，072 两个任务」；`Draft → Approved` 归 Human（[STATES.md](../../../os/process/STATES.md) §4）。
 
 ## 1. Intent
 
