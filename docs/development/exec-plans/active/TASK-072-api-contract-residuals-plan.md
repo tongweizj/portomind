@@ -155,7 +155,100 @@ $ npm run lint --workspace client
 
 ## 11. Implementation Record
 
-（实施时填写。）
+**实施日期**：2026-11-11 ｜ **分支**：`feature/TASK-072-api-contract-residuals` ｜ **基线**：`main` @ `83be5e6`
+
+### 11.1 开工前置核对
+
+| 项 | 期望 | 实测 |
+|---|---|---|
+| 当前分支 | `main` | `main` ✅ |
+| 工作区 | 仅 1 个外部未提交文件 `docs/handbook/ops/DEPLOYMENT.md` | 仅该文件（全程未提交/未修改/未回滚）✅ |
+| TASK-072 Status | `Implementing` | `Implementing（2026-11-11）` ✅ |
+| 计划 Status | `Approved`（`30f0dfa`） | `Approved（2026-11-11）`，`30f0dfa` 存在 ✅ |
+| `git rev-parse main` | — | `83be5e670fc8212137169bb2349c341095114bdb` ✅ |
+
+### 11.2 基线实跑（改前，`main` @ `83be5e6`）
+
+```
+$ npm run build --workspace client      → ✓ built in 3.76s（exit 0）
+$ npm run lint --workspace client       → ✖ 8 problems (3 errors, 5 warnings)
+$ npm run test:server                   → ℹ tests 240 / pass 240 / fail 0
+$ npm run docs:check                    → 扫描 138 份文档；链接 1421 条；ERROR 0；WARN 0
+```
+
+3 个 error 与计划 §3 完全一致：`vite.config.js:16`（`process` 未定义）、`verify-price-display.cjs:29`（未安装规则）、`task063-fixture.jsx:450`（`failed` 未使用）。
+
+> **环境备注（重要）**：首次执行 `build` 与 `test:server` 均失败于 `spawn EPERM`（esbuild 子进程 / `node --test` 子进程被沙箱拒绝），并非代码问题；放宽沙箱后同一命令在同一代码上通过。后续四项验证均在可 spawn 子进程的环境下执行。
+
+### 11.3 逐阶段实施与提交
+
+| 阶段 | 提交 | 内容 |
+|---|---|---|
+| P1 | `061f94b` | `eslint.config.js` 追加 `files: ['vite.config.js','scripts/**/*.{cjs,js}']` + `globals.node` 段（`src/**` 的 browser globals 不变）；删 `verify-price-display.cjs:29` 失效 disable 注释；删 `task063-fixture.jsx:450` 未使用的 `const failed` |
+| P2 | `80c42c0` | 新建 `server/test/integration/api-contract.crud.test.js`（8 条），复用 `helpers/auth.js` + `helpers/modelStubs.js`，stub service 不连 Mongo；未改既有 `api-contract.test.js` 任何断言 |
+| P3 | `3729551` | `API_CONTRACT.md` 新增「响应形状例外」小节（5 处）；`Prices/History.jsx:1` 注释 `Price/` → `Prices/` |
+
+### 11.4 新增 8 条用例（全部通过）
+
+```
+✔ 组合 CRUD 全链路：POST 201 → GET 200 → PUT 200 → DELETE 200 且返回级联删除计数
+✔ 组合 404 与非法 id 400 均返回 success:false 且带 traceId
+✔ 交易 CRUD：POST 201 含 warnings → 列表 data[]+pagination → :id 404 → DELETE 200
+✔ GET /api/portfolios/:pid/transactions 返回 data[] + pagination，默认 pageSize=50
+✔ 提醒规则 CRUD：POST 201 → 列表 → GET :id 200 → PUT 200 → DELETE 200 → 再 GET 404
+✔ GET /api/users 的 data 是 {items:[...]} 而非数组，且不含 passwordHash
+✔ 列表端点 pagination 形状一致：恰好 {page,pageSize,total}
+✔ 非列表端点不含 pagination 键：/summary、/cron/status、/users
+ℹ tests 8 / pass 8 / fail 0
+```
+
+### 11.5 收尾四项实跑（改后，`feature/TASK-072-api-contract-residuals` @ `3729551`）
+
+```
+$ npm run build --workspace client   → ✓ built in 2.74s（exit 0）
+$ npm run lint --workspace client    → ✖ 5 problems (0 errors, 5 warnings)（exit 0）
+$ npm run test:server                → ℹ tests 248 / pass 248 / fail 0
+$ npm run docs:check                 → 扫描 138 份文档；链接 1421 条；ERROR 0；WARN 0
+```
+
+- lint：3 error → **0 error**，exit 0；既有 5 条 `react-refresh/only-export-components` warning 保留（属既有，未在此卡处理）。
+- test:server：240 → **248**（正好 +8），fail 0。
+- 构建产物与改前同为 `index-DLXIi7Z5.js`（1,002.78 kB），证明前端产物零变化。
+
+### 11.6 范围与零行为变更证明
+
+```
+$ git diff --stat main...HEAD
+
+ client/eslint.config.js                           |   9 +
+ client/scripts/fixtures/task063-fixture.jsx       |   1 -
+ client/scripts/verify-price-display.cjs           |   1 -
+ client/src/pages/Prices/History.jsx               |   2 +-
+ docs/handbook/technical/API_CONTRACT.md           |  16 +
+ server/test/integration/api-contract.crud.test.js | 517 ++++++++++++++++++++++
+
+$ git diff --stat main...HEAD -- server/routes shared server/controllers
+（空）
+```
+
+改动面与计划 §5 P4 要求**逐项一致**（eslint 配置 + 2 个 scripts 文件 + 1 行注释 + 1 个新测试文件 + API_CONTRACT.md），`server/routes` / `shared` / `server/controllers` **零 diff** → 响应结构、状态码、HTTP 路径、计算口径均未变更。
+
+### 11.7 AC 对照
+
+| AC | 证据 | 状态 |
+|---|---|---|
+| AC-01 Lint 归零 | lint exit 0，0 error / 5 warning | ✅ |
+| AC-02 契约测试补齐 | 新增 8 条（≥7），test:server 248 pass / 0 fail | ✅ |
+| AC-03 文档标注 | `API_CONTRACT.md`「响应形状例外」覆盖 5 处 + server-only；docs:check 0 ERROR | ✅ |
+| AC-04 构建通过 | build exit 0 | ✅ |
+| AC-05 零行为变更 | `git diff --stat -- server/routes shared server/controllers` 为空 | ✅ |
+| AC-06 注释修正 | `Prices/History.jsx:1` 为 `src/pages/Prices/History.jsx` | ✅ |
+
+### 11.8 未决与移交
+
+- **PR 未创建**：本机无 `gh` CLI，环境亦无 GitHub API token（仅配置了 SSH 推送）。分支已推送，PR 正文已按计划拟好待人工/后续创建；**未合入 main**。
+- 未改动任何 Task Status / Reviewer 结论 / Merged 字段。
+
 
 ## 12. Review Record
 
