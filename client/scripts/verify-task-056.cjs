@@ -92,8 +92,8 @@ function staticChecks() {
     'src/pages/AccountUsers.jsx': 3,
     'src/pages/Asset/AssetDetail.jsx': 2,
     'src/pages/Asset/AssetList.jsx': 1,
-    'src/pages/Portfolio/KpiCards.jsx': 2,
-    'src/pages/Portfolio/PositionOverview.jsx': 1,
+    'src/components/portfolio/KpiCards.jsx': 2,
+    'src/components/portfolio/PositionOverview.jsx': 1,
     'src/utils/priceDisplay.js': 3
   };
   const srcFiles = walkFiles(path.join(CLIENT_DIR, 'src'), ['.js', '.jsx']);

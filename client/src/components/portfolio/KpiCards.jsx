@@ -1,4 +1,4 @@
-// src/pages/Portfolio/KpiCards.jsx
+// src/components/portfolio/KpiCards.jsx
 // 对齐 Ardot 设计稿 KpiRow：4 张 KPI 卡
 //   持仓总市值 / 今日盈亏 / 累计盈亏比 / 持有资产
 // 数据从 /positions 接口聚合（前端计算，不新增后端接口）。

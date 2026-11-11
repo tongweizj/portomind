@@ -1,4 +1,4 @@
-// src/pages/Portfolio/Rebalance.jsx
+// src/components/portfolio/Rebalance.jsx
 // 「再平衡」主 Tab：合并原「再平衡设置 / 再平衡建议 / 再平衡历史」三个子模块，
 // 用内部子导航切换，避免丢失现有功能。
 import { useState } from 'react';
