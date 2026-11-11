@@ -4,7 +4,7 @@
 // - 成功后服务端删除目标用户全部会话 + 置 mustChangePassword=true；
 // - 失败展示后端 message（如 SELF_RESET_FORBIDDEN）。
 import { useState } from 'react';
-import { getApiErrorMessage } from '../../services/api';
+import { getApiErrorMessage } from '../../services/api.client';
 import { colors, fontStack, radii } from '../../constants/design-tokens';
 
 // 与 FS §8 一致：8–72 个字符

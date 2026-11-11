@@ -1,4 +1,4 @@
-import { api } from './api';
+import { api } from './api.client';
 
 export const createPortfolio = async (data) => (await api.post('/portfolios', data)).data;
 export const getPortfolios = async ({ page = 1, pageSize = 100 } = {}) =>

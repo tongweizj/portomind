@@ -19,7 +19,7 @@ import {
   useUpdateUser,
   useUsers
 } from '../hooks/useUsers';
-import { getApiErrorMessage } from '../services/api';
+import { getApiErrorMessage } from '../services/api.client';
 import { USER_ROLE_LABELS, USER_ROLES } from '../constants/enums';
 import { colors, fontStack, radii } from '../constants/design-tokens';
 

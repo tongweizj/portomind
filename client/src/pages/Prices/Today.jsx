@@ -12,7 +12,7 @@ import { Link, useNavigate } from 'react-router';
 import { Search } from 'lucide-react';
 import { getPricesByDate } from '../../services/price.service';
 import { getAssets } from '../../services/asset.service';
-import { getApiErrorMessage } from '../../services/api';
+import { getApiErrorMessage } from '../../services/api.client';
 import { ASSET_CLASSES } from '../../constants/enums';
 import { colors, radii } from '../../constants/design-tokens';
 import {

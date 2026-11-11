@@ -7,7 +7,7 @@ import { useNavigate, useParams } from 'react-router';
 import { TransactionTable } from '../../components/TransactionTable';
 import { ROUTES } from '../../constants/routes';
 import { colors, radii } from '../../constants/design-tokens';
-import { getApiErrorMessage } from '../../services/api';
+import { getApiErrorMessage } from '../../services/api.client';
 import { deleteTransaction, getPortfolioTransactions } from '../../services/transaction.service';
 
 const PAGE_SIZE = 20;

@@ -1,5 +1,5 @@
 import axios from 'axios';
-import { notifyUnauthorized, notifyPasswordChangeRequired } from './authSession';
+import { notifyUnauthorized, notifyPasswordChangeRequired } from './auth-session.bus';
 
 const configuredBaseUrl = (import.meta.env.VITE_API_URL || '').trim();
 

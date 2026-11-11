@@ -8,7 +8,7 @@ import { useNavigate } from 'react-router';
 import { TransactionTable } from '../../components/TransactionTable';
 import { ROUTES } from '../../constants/routes';
 import { colors, radii } from '../../constants/design-tokens';
-import { getApiErrorMessage } from '../../services/api';
+import { getApiErrorMessage } from '../../services/api.client';
 import { getPortfolios } from '../../services/portfolio.service';
 import { getTransactions } from '../../services/transaction.service';
 

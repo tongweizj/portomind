@@ -10,7 +10,7 @@ import { ROUTES } from '../../constants/routes';
 import { colors, radii } from '../../constants/design-tokens';
 import { getTransaction, updateTransaction } from '../../services/transaction.service';
 import { getAssets } from '../../services/asset.service';
-import { getApiErrorMessage } from '../../services/api';
+import { getApiErrorMessage } from '../../services/api.client';
 
 export default function EditTransaction() {
   const { id: portfolioId, txId } = useParams();

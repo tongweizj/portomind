@@ -14,7 +14,7 @@ import {
 import {
   setUnauthorizedHandler,
   setPasswordChangeRequiredHandler
-} from '../../services/authSession';
+} from '../../services/auth-session.bus';
 import { buildLoginPath } from '../../utils/safeNext';
 import { AuthContext } from './authContext';
 

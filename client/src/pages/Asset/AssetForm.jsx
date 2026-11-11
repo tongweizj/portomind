@@ -2,7 +2,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router';
 import { createAsset, getAssetById, updateAsset } from '../../services/asset.service';
-import { getApiErrorMessage } from '../../services/api';
+import { getApiErrorMessage } from '../../services/api.client';
 import { ASSET_TYPES, ASSET_CLASSES, ASSET_MARKETS, ASSET_CURRENCIES } from '../../constants/enums';
 
 export default function AssetForm() {

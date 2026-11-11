@@ -33,7 +33,7 @@ function staticChecks() {
     .filter((name) => name.endsWith('.js') || name.endsWith('.jsx'))
     .map((name) => ({ name, content: fs.readFileSync(path.join(cronDir, name), 'utf8') }));
   const hook = read('src/hooks/useCronStatus.js');
-  const service = read('src/services/cronStatus.service.js');
+  const service = read('src/services/cron-status.service.js');
 
   const mutationHits = [...files, { name: 'hooks/useCronStatus.js', content: hook }]
     .filter((file) => /useMutation|api\.(post|put|patch|delete)\s*\(/.test(file.content));
@@ -57,7 +57,7 @@ function staticChecks() {
     'src/components/CronStatus/DataTaskCard.jsx',
     'src/components/CronStatus/taskDataViews.js',
     'src/hooks/useCronStatus.js',
-    'src/services/cronStatus.service.js'
+    'src/services/cron-status.service.js'
   ];
   const zeroFallbacks = newFiles.filter((file) => /\|\|\s*0\b/.test(read(file)));
   check('未知值不出现 || 0 兜底', zeroFallbacks.length === 0, zeroFallbacks.join(','));

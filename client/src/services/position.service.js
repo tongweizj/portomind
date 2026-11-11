@@ -1,4 +1,4 @@
-import { api } from './api';
+import { api } from './api.client';
 
 export async function getPositions(
   portfolioId,

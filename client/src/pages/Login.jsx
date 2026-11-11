@@ -5,7 +5,7 @@
 import { useRef, useState } from 'react';
 import { Navigate, useNavigate, useSearchParams } from 'react-router';
 import { useAuth } from '../components/auth/authContext';
-import { getApiErrorMessage } from '../services/api';
+import { getApiErrorMessage } from '../services/api.client';
 import { safeNext } from '../utils/safeNext';
 import { colors, radii, fontStack } from '../constants/design-tokens';
 

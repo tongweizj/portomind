@@ -3,7 +3,7 @@
 // 契约见 docs/dev/API_CONTRACT.md「认证与错误码」。
 // 约定与既有 service 一致：api.js 拦截器解包 axios response 后拿到的是服务端响应体
 // `{ success, data }`，故这里统一取内层 `.data`（返回业务数据本身）。
-import { api } from './api';
+import { api } from './api.client';
 
 export const login = async ({ username, password }) =>
   (await api.post('/auth/login', { username, password })).data;
