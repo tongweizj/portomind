@@ -3,7 +3,7 @@
 ## Metadata
 
 **Status:**  
-`Draft`（2026-10-21 立项）—— 由 `TASK-050` 实施期发现的 **F-1** 单独立项。**需求待 Human 批准；ExecPlan 未产出；不得动代码**。
+`Implementing`（2026-11-11）：计划已批准（`Draft → Approved`），按 [STATES.md](../../../os/process/STATES.md#4-谁可以改变状态) 登记 `Planning → Implementing`；历史数据按 Human 决定**不迁移**（只修采集）
 
 **Priority:**  
 `High`（已交付功能的核心数字错误：家庭总资产被算错一个数量级）

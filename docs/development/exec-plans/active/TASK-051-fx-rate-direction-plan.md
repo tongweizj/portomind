@@ -2,7 +2,7 @@
 
 ## Status
 
-Status：Draft（2026-11-11，Planner 起草；**未批准、未实施**）
+Status：Approved（2026-11-11，Human 批准「051、047、046 三份计划」；`Draft → Approved` 归 Human）
 
 Related Task：[TASK-051](../../tasks/active/TASK-051-fx-rate-direction.md)（独立维护任务，无 Story）。
 
