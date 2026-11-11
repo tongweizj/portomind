@@ -27,6 +27,7 @@
 `None`
 
 **Execution Plan:**  
+[Draft：TASK-047-plan](../../exec-plans/active/TASK-047-review-followups-plan.md)（2026-11-11 起草；`Draft → Approved` 归 Human）
 待创建
 
 **来源：**  

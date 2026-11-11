@@ -28,6 +28,7 @@
 `None`
 
 **Execution Plan:**  
+[Draft：TASK-046-plan](../../exec-plans/active/TASK-046-csv-import-dedup-plan.md)（2026-11-11 起草的小计划；`Draft → Approved` 归 Human）
 待创建（须在本任务卡经 Human 确认后由 Planner 产出）
 
 **来源：**  

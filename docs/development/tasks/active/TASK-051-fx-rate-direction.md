@@ -27,6 +27,7 @@
 `None`
 
 **Execution Plan:**  
+[Draft：TASK-051-plan](../../exec-plans/active/TASK-051-fx-rate-direction-plan.md)（2026-11-11 起草；`Draft → Approved` 归 Human）
 `None`（待 Human 批准本卡后由 Planner 产出）
 
 **来源：**  
