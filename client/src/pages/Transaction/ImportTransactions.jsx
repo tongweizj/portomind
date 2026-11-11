@@ -8,7 +8,7 @@ import { usePortfolio } from '../../hooks/usePortfolio';
 import { TRANSACTION_ACTION_LABELS } from '../../constants/enums';
 import { ROUTES } from '../../constants/routes';
 import { importTransactions } from '../../services/transaction.service';
-import { getApiErrorMessage } from '../../services/api';
+import { getApiErrorMessage } from '../../services/api.client';
 import { parseCsv, mapColumns, rowToTransaction } from '../../utils/csvImport';
 
 const FIELD_LABELS = {

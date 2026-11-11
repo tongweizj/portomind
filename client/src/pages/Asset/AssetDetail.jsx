@@ -6,7 +6,7 @@ import { Link, useParams } from 'react-router';
 import { ArrowLeft, Pencil } from 'lucide-react';
 import { getAssetById } from '../../services/asset.service';
 import { getPriceHistory } from '../../services/price.service';
-import { getApiErrorMessage } from '../../services/api';
+import { getApiErrorMessage } from '../../services/api.client';
 import { ASSET_TYPES } from '../../constants/enums';
 import { colors, radii } from '../../constants/design-tokens';
 import {

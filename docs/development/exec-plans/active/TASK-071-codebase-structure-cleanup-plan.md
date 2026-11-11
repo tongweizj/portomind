@@ -290,7 +290,143 @@ client/src/
 
 ## 11. Implementation Record
 
-（实施时填写。）
+**实施日期**：2026-11-11 ｜ **分支**：`feature/TASK-071-structure-cleanup` ｜ **改动范围**：`b90df89..d1e353d`（10 个模块提交）
+
+> **基线说明（重要）**：本分支**基于 `b90df89`（TASK-072 分支末端）而非 `main`**。原因：`main` 上 `npm run lint --workspace client` 仍有 TASK-072 负责的 3 个 error，若从 `main` 开工会让「每轮 lint 全绿」无法成立，验收失去可信基线。等到 TASK-072 的 PR 由 Human 合入后，本分支可直接快进/变基到新 `main`，其自身 diff 仍是下面这 10 个提交。
+
+### 11.1 M0 · 基线取证（不改代码）
+
+`git rev-parse main` = `83be5e670fc8212137169bb2349c341095114bdb`。
+
+**引用证据（两种方法交叉验证）**
+
+方法一：对每个 basename 执行 `grep -rn "<basename>" client/src client/scripts server shared cron-worker`（排除 `node_modules`，只统计 `*.js/*.jsx/*.cjs/*.mjs`）。
+方法二：对 `client/src` 全部模块建立相对 import 图，统计目标文件的入度。
+
+结论：**16 个目标文件入度全部为 0**（`files with indegree>0: 0 / 16`）。方法一的剩余命中均为「文件自身内部的注释」或与目标无关的同名子串（如 `Header` 命中 `setHeader`/`authHeaders`、`Loading` 命中 `LoadingState`/`isLoading`），逐条核对后确认不是对目标文件的引用：
+
+| # | 文件 | 字节 | 行 | basename 精确引用 | indegree |
+|---|---|---:|---:|---|---:|
+| 1 | `components/common/ErrorAlert.jsx` | 0 | 0 | 0 | 0 |
+| 2 | `components/common/Header.jsx` | 284 | 12 | 0 | 0 |
+| 3 | `components/common/Loading.jsx` | 0 | 0 | 0 | 0 |
+| 4 | `components/layout/Header.jsx` | 580 | 20 | 0 | 0 |
+| 5 | `components/layout/MainLayout.jsx` | 0 | 0 | 0 | 0 |
+| 6 | `components/AddTransactionForm.jsx` | 1185 | 31 | 仅文件自身第 1 行注释 | 0 |
+| 7 | `utils/chartConfig.js` | 0 | 0 | 0 | 0 |
+| 8 | `utils/formatters.js` | 693 | 21 | 0 | 0 |
+| 9 | `utils/helpers.js` | 0 | 0 | 0 | 0 |
+| 10 | `utils/marketUtils.js` | 693 | 11 | 0 | 0 |
+| 11 | `utils/symbolUtils.js` | 368 | 10 | 0 | 0 |
+| 12 | `models/portfolio.js` | 975 | 28 | 0 | 0 |
+| 13 | `models/transaction.js` | 822 | 28 | 0 | 0 |
+| 14 | `hooks/useTransactions.js` | 734 | 25 | 仅文件自身第 1 行注释 | 0 |
+| 15 | `pages/Portfolio/Basic.jsx` | 2547 | 54 | 0 | 0 |
+| 16 | `pages/Portfolio/TargetAllocation.jsx` | 3927 | 94 | 0 | 0 |
+| 17 | `shared/fetchers/IFetcher.js`（附加项） | 678 | 27 | 仅文件自身 | 0 |
+
+**5 个 0 字节空文件**已逐一 `stat` 确认：`common/ErrorAlert.jsx`、`common/Loading.jsx`、`layout/MainLayout.jsx`、`utils/chartConfig.js`、`utils/helpers.js`。
+
+`shared/index.js` 按任务卡 §4 说明**保留未删**（它是 `@portomind/shared` 的 `main` 入口）。
+
+### 11.2 逐模块提交清单
+
+| 模块 | 提交 | 内容 | 验证 |
+|---|---|---|---|
+| M1 | `675a03a` | 删 6 个旧布局/通用组件 | build/lint/test/docs 全绿 |
+| M2 | `2204119` | 删 9 个死工具/模型/hook + `IFetcher` | 同上；`IFetcher` 全仓 0 命中 |
+| M3 | `f89b533` | 删 2 个旧 Tab 页面 | 同上；`Detail.TABS` 已无二者 |
+| M4 | `bf26368` | services 改名 3 个（两段式 `git mv`） | 同上；`git diff -M` 均识别为 rename |
+| M5 | `c351c0b` | 拆 `user.service.js`、`position` 并入 `portfolio` | 同上；`import { api }` 在 pages/components 为 0 |
+| M6 | `41ae21b` | 路由兼容层结构化 | 同上；无注释掉的 `<Route>` |
+| M7 | `be0211b` | 11 个文件移入 `components/portfolio/` | 同上；18 页模块 + 5 个 Tab 组件全部解析成功 |
+| M8 | `f124e07` | 服务端 4 个文件改名 | 同上；`test:server` 248 不变 |
+| M9 | `6f9ebbd` | `taskRunner.js` 加文件头说明（受限） | 同上；`alertVisibility.js` 零改动 |
+| M10 | `d1e353d` | 同步 `CLIENT_DEV.md` | docs:check 0 ERROR |
+
+### 11.3 删除清单（17 个，合计 −361 行业务代码 + 附加项）
+
+M1（6）：`components/common/{ErrorAlert,Header,Loading}.jsx`、`components/layout/{Header,MainLayout}.jsx`、`components/AddTransactionForm.jsx`
+M2（9）：`utils/{chartConfig,formatters,helpers,marketUtils,symbolUtils}.js`、`models/{portfolio,transaction}.js`、`hooks/useTransactions.js`、`shared/fetchers/IFetcher.js`
+M3（2）：`pages/Portfolio/{Basic,TargetAllocation}.jsx`
+
+### 11.4 rename 映射
+
+**前端 services（M4，两段式 `git mv`）**
+
+| 原 | 新 | 相似度 |
+|---|---|---|
+| `services/api.js` | `services/api.client.js` | 98% |
+| `services/authSession.js` | `services/auth-session.bus.js` | 96% |
+| `services/cronStatus.service.js` | `services/cron-status.service.js` | 85% |
+
+> 未达 100% 的原因：三处文件头注释与内部 import 同步改了名（`from './api'` → `from './api.client'` 等），**函数体与导出语义零变更**。
+
+**其余文件移动/改名**
+
+| 原 | 新 | 相似度 |
+|---|---|---|
+| `pages/Portfolio/{KpiCards,PortfolioHeader,PositionHistory,PositionOverview,Rebalance,RebalanceHistory,RebalanceSuggester,Transactions}.jsx` | `components/portfolio/同名` | 96~99%（仅注释/import 行） |
+| `pages/Portfolio/{PortfolioRebalanceSettings.jsx,rebalanceTabContext.js}` | `components/portfolio/同名` | 100% |
+| `server/routes/logs.routes.js` | `server/routes/log.routes.js` | 100% |
+| `server/routes/rebalanceRecord.routes.js` | `server/routes/rebalance.routes.js` | 100% |
+| `server/routes/cronStatus.routes.js` | `server/routes/cron-status.routes.js` | 75% |
+| `server/controllers/cronStatus.controller.js` | `server/controllers/cron-status.controller.js` | 97% |
+
+**service 收敛（M5）**：`position.service.js` 的 `getPositions` / `getPositionHistory` 原样并入 `portfolio.service.js`，原文件删除；`auth.service.js` 的 `listUsers/createUser/updateUser/resetUserPassword` 原样迁至新建 `user.service.js`。
+
+### 11.5 收尾四项实跑（`d1e353d`）
+
+```
+$ npm run build --workspace client   → ✓ built in 2.70s（exit 0）
+$ npm run lint --workspace client    → ✖ 5 problems (0 errors, 5 warnings)（exit 0）
+$ npm run test:server                → ℹ tests 248 / pass 248 / fail 0
+$ npm run docs:check                 → 扫描 138 份文档；链接 1421 条；ERROR 0；WARN 0
+```
+
+`test:server` 保持 **248**（含 TASK-072 新增的 8 条），服务端命名调整未触碰任何断言。
+
+### 11.6 零行为变更证明
+
+```
+$ git diff --stat b90df89..HEAD -- server/controllers
+（仅 cronStatus.controller.js -> cron-status.controller.js 的文件头注释 1 行）
+
+$ git diff b90df89..HEAD -- server/app.js
+（仅 3 条 require 路径变化；app.use('/api/logs' | '/api/rebalance' | '/api/cron') 未变）
+
+$ git diff --stat b90df89..HEAD -- shared server/routes server/controllers
+（8 files：4 个 rename 的注释/require 行、IFetcher.js 删除、taskRunner.js +7 行注释）
+```
+
+- **HTTP 路径零变更**：`/api/logs`、`/api/rebalance`、`/api/cron` 挂载点字节级未动。
+- **`shared/` 业务实现零变更**：唯一改动是 `taskRunner.js` 的 7 行文件头注释；`IFetcher.js` 为死文件删除。
+- **`server/controllers/` 逻辑零变更**：diff 中除文件头注释外没有任何代码行。
+- **API 契约零变更**：本任务未修改 `API_CONTRACT.md`（符合 AC-05「无需修改」）。
+- **前端产物无行为变化**：`client/dist/assets/` 的单包体积由 `index-DLXIi7Z5.js`（1,002,780 B）变为 `index-Cczvr2Wb.js`（1,002,777 B），**差 −3 B**；hash 变化源于模块路径/注释变动，体积差异在噪声量级，无功能增删（删除的文件本就未被任何模块 import）。**注意：hash 与产物名确实变了，不能声称「产物字节完全一致」**。
+
+### 11.7 AC 对照
+
+| AC | 证据 | 状态 |
+|---|---|---|
+| AC-01 死代码清理 | 17 个文件删除，逐个 indegree=0 + basename grep 取证；build 通过 | ✅ |
+| AC-02 每业务一个 service | 11 业务 service + 2 基础设施；`import { api }` 在 pages/components 为 0 | ✅ |
+| AC-03 路由只含实际使用 | 无注释掉的 `<Route>`；`/assets*` 按 D-2 保留并集中为兼容层 | ✅ |
+| AC-04 命名统一 | 页面 PascalCase 保持；services 统一 `.service.js`（2 个基础设施例外已在文件头声明）；服务端 route/controller 同词根 | ✅ |
+| AC-05 行为零变更 | 见 §11.6 | ✅ |
+| AC-06 验证通过 | build / lint / test:server / docs:check 全绿 | ✅ |
+| AC-07 无被引用代码误删 | §11.1 双重取证 + 构建 + 静态可达性校验（18 页面模块、5 个 Tab 组件全部解析） | ✅ |
+
+### 11.8 未执行 / 需后续处理（如实报告）
+
+1. **D-3 未执行**：`shared/services/alertVisibility.js` 的归宿（改名 `alert/visibility.js` 或加 `.service` 后缀）Human 未决定，本轮**跳过未动**，`git status` 确认该文件零改动。
+2. **未做浏览器手点回归**：环境无可用浏览器，M3/M5/M7 的「手点 Tab / 页面」改为**静态可达性校验**（页面模块与 Tab 组件逐个解析存在性、导出形态），并配合 build 通过作为替代证据；**这不是真实点击**，Reviewer 若要求运行时证据需补做。
+3. **发现但未修的既有缺陷**（不属本任务「只删/改名/移动」范围，仅记录）：
+   - `ROUTES.PORTFOLIO_VIEW(id)` 生成 `/portfolios/view/:id/basic`，`basic` 已不在 `TABS` 内，靠 `Detail` 一次 redirect 兜底（`CLIENT_DEV.md` §8.2 已记录）；
+   - `ROUTES` 存在 `PORTFOLIO_TX_TAB` 别名而无对应 `ROUTE_PATTERNS` 键（生成器别名，非路由，本轮未动）；
+   - `deletePortfolio` 无任何页面调用 → 界面仍无删除组合入口（B2 级功能缺口）。
+4. **PR 未创建**：本机无 `gh` CLI，环境亦无 GitHub API token（仅配置 SSH 推送）。分支已推送，PR 正文已拟好，**未合入 main**。
+
 
 ## 12. Review Record
 

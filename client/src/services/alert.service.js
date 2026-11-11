@@ -1,4 +1,4 @@
-import { api } from './api';
+import { api } from './api.client';
 
 // ── 规则 CRUD ──
 export const getAlertRules = async (params = {}) =>

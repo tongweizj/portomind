@@ -1,4 +1,4 @@
-// src/services/authSession.js
+// src/services/auth-session.bus.js
 // TASK-058 U2：axios 拦截器（非 React）与会话 Provider（React）之间的最小事件桥。
 // 拦截器只负责「发生了什么」，跳转与清缓存由 Provider 决定，避免 service 依赖路由。
 let unauthorizedHandler = null;

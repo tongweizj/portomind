@@ -1,11 +1,11 @@
-// src/pages/Portfolio/KpiCards.jsx
+// src/components/portfolio/KpiCards.jsx
 // 对齐 Ardot 设计稿 KpiRow：4 张 KPI 卡
 //   持仓总市值 / 今日盈亏 / 累计盈亏比 / 持有资产
 // 数据从 /positions 接口聚合（前端计算，不新增后端接口）。
 // 说明：后端暂无「前收价」字段，故「今日盈亏」无法精确计算，展示为「—」。
 import { useEffect, useState } from 'react';
 import { useParams } from 'react-router';
-import { getPositions } from '../../services/position.service';
+import { getPositions } from '../../services/portfolio.service';
 import { colors, radii, fontStack } from '../../constants/design-tokens';
 
 const MONEY_FORMATTER = new Intl.NumberFormat('en-US', {

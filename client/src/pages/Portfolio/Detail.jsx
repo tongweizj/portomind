@@ -6,11 +6,11 @@
 import { Navigate, NavLink, useParams } from 'react-router';
 import { ROUTES } from '../../constants/routes';
 import { colors, fontStack } from '../../constants/design-tokens';
-import PortfolioHeader from './PortfolioHeader';
-import PositionOverview from './PositionOverview';
-import PositionHistory from './PositionHistory';
-import Rebalance from './Rebalance';
-import Transactions from './Transactions';
+import PortfolioHeader from '../../components/portfolio/PortfolioHeader';
+import PositionOverview from '../../components/portfolio/PositionOverview';
+import PositionHistory from '../../components/portfolio/PositionHistory';
+import Rebalance from '../../components/portfolio/Rebalance';
+import Transactions from '../../components/portfolio/Transactions';
 
 const TABS = [
   { key: 'positions', label: '持仓概览', component: PositionOverview },

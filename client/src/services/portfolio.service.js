@@ -1,4 +1,4 @@
-import { api } from './api';
+import { api } from './api.client';
 
 export const createPortfolio = async (data) => (await api.post('/portfolios', data)).data;
 export const getPortfolios = async ({ page = 1, pageSize = 100 } = {}) =>
@@ -16,3 +16,21 @@ export const getRebalanceSettings = async (id) =>
   (await api.get(`/portfolios/${id}/rebalance-settings`)).data;
 export const updateRebalanceSettings = async (id, settings) =>
   (await api.put(`/portfolios/${id}/rebalance-settings`, settings)).data;
+
+// ── 持仓子资源（TASK-071 M5：由 position.service.js 原样并入，函数体与 URL 未变）──
+export async function getPositions(
+  portfolioId,
+  { page = 1, pageSize = 20, symbol, sortBy, sortOrder } = {}
+) {
+  const response = await api.get(`/portfolios/${portfolioId}/stats/positions`, {
+    params: { page, pageSize, symbol, sortBy, sortOrder }
+  });
+  return { data: response.data, pagination: response.pagination };
+}
+
+export async function getPositionHistory(portfolioId, { symbol, interval = 'day' } = {}) {
+  const response = await api.get(`/portfolios/${portfolioId}/positions/history`, {
+    params: { symbol: symbol === 'all' ? undefined : symbol, interval }
+  });
+  return response.data;
+}

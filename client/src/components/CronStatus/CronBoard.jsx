@@ -10,7 +10,7 @@
 // - 只读：无任务触发/写操作。
 
 import { useCronStatus } from '../../hooks/useCronStatus';
-import { getApiErrorMessage } from '../../services/api';
+import { getApiErrorMessage } from '../../services/api.client';
 import { colors } from '../../constants/design-tokens';
 import BoardShell from './BoardShell';
 import DataTaskCard from './DataTaskCard';

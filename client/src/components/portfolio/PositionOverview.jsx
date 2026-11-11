@@ -1,4 +1,4 @@
-// src/pages/Portfolio/PositionOverview.jsx
+// src/components/portfolio/PositionOverview.jsx
 // 对齐 Ardot 设计稿 TableCard + Toolbar + Pagination：
 //   9 列：资产 / 代码 / 类型 / 数量 / 平均成本 / 现价 / 市值 / 日收益 / 持有收益
 //   Toolbar：搜索 + 排序下拉 + 刷新按钮
@@ -6,7 +6,7 @@
 import { useCallback, useState, useEffect } from 'react';
 import { useParams } from 'react-router';
 import { Search, ChevronDown, RefreshCw } from 'lucide-react';
-import { getPositions } from '../../services/position.service';
+import { getPositions } from '../../services/portfolio.service';
 import { EmptyState, ErrorState, LoadingState } from '../../components/DataState';
 import { colors, radii, fontStack } from '../../constants/design-tokens';
 import KpiCards from './KpiCards';

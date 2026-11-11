@@ -14,13 +14,13 @@ const userRoutes = require('./routes/user.routes');
 const transactionRoutes = require('./routes/transaction.routes');
 const portfolioRoutes = require('./routes/portfolio.routes');
 const assetRoutes = require('./routes/asset.routes');
-const logsRouter = require('./routes/logs.routes');
-const rebalanceRecordRoutes = require('./routes/rebalanceRecord.routes');
+const logsRouter = require('./routes/log.routes');
+const rebalanceRecordRoutes = require('./routes/rebalance.routes');
 const priceRoutes = require('./routes/price.routes');
 const alertRoutes = require('./routes/alert.routes');
 const familyRoutes = require('./routes/family.routes');
 const valuationRoutes = require('./routes/valuation.routes');
-const cronStatusRoutes = require('./routes/cronStatus.routes');
+const cronStatusRoutes = require('./routes/cron-status.routes');
 
 // ---------------------------------------------------------------------------
 // CORS 白名单（TASK-058 / FS §6 U1-R10）

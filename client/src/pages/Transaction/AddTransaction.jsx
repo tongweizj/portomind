@@ -9,7 +9,7 @@ import { ROUTES } from '../../constants/routes';
 import { colors, radii } from '../../constants/design-tokens';
 import { createTransaction } from '../../services/transaction.service';
 import { getAssets } from '../../services/asset.service';
-import { getApiErrorMessage } from '../../services/api';
+import { getApiErrorMessage } from '../../services/api.client';
 
 export default function AddTransaction() {
   const { id: portfolioId } = useParams();

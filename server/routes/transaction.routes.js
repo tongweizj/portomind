@@ -1,4 +1,4 @@
-// server/routes/transaction.js
+// server/routes/transaction.routes.js
 
 const express = require('express');
 const router = express.Router();

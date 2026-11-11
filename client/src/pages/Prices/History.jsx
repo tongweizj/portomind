@@ -2,7 +2,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useParams } from 'react-router';
 import { getPriceHistory } from '../../services/price.service';
-import { getApiErrorMessage } from '../../services/api';
+import { getApiErrorMessage } from '../../services/api.client';
 import {
   LineChart,
   Line,

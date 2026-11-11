@@ -1,4 +1,4 @@
-// client/src/pages/RebalanceHistory.jsx
+// client/src/components/portfolio/RebalanceHistory.jsx
 import { useCallback, useContext, useState, useEffect } from 'react';
 import { useParams } from 'react-router';
 import { getHistory, revoke, reexecute } from '../../services/rebalance.service';

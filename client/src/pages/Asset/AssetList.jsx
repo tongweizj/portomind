@@ -5,7 +5,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Plus, Trash2 } from 'lucide-react';
 import { Link, useNavigate } from 'react-router';
 import { deleteAsset, getAssets } from '../../services/asset.service';
-import { getApiErrorMessage } from '../../services/api';
+import { getApiErrorMessage } from '../../services/api.client';
 import { ASSET_TYPES, ASSET_CLASSES } from '../../constants/enums';
 import { colors } from '../../constants/design-tokens';
 

@@ -8,7 +8,7 @@ import {
   useDeleteAlertRule,
   useAlertEvents
 } from '../../hooks/useAlerts';
-import { getApiErrorMessage } from '../../services/api';
+import { getApiErrorMessage } from '../../services/api.client';
 
 const RULE_TYPE_OPTIONS = [
   { value: 'price_above', label: '价格高于' },

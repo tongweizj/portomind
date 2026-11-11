@@ -8,7 +8,7 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router';
 import { useAuth } from '../components/auth/authContext';
 import { changePassword, updateProfile } from '../services/auth.service';
-import { getApiErrorMessage } from '../services/api';
+import { getApiErrorMessage } from '../services/api.client';
 import { USER_ROLE_LABELS } from '../constants/enums';
 import { colors, radii, fontStack } from '../constants/design-tokens';
 

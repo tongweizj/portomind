@@ -4,7 +4,7 @@
 // - 初始密码由管理员设定 → 服务端置 mustChangePassword=true，对方首次登录强制改密；
 // - 失败一律展示后端 message（getApiErrorMessage）：如 USERNAME_TAKEN →「用户名已存在」。
 import { useState } from 'react';
-import { getApiErrorMessage } from '../../services/api';
+import { getApiErrorMessage } from '../../services/api.client';
 import { USER_ROLES } from '../../constants/enums';
 import { colors, fontStack, radii } from '../../constants/design-tokens';
 

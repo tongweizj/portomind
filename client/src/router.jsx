@@ -72,11 +72,6 @@ export default function AppRouter() {
               <Route path="/instruments/edit/:id" element={<AssetForm />} />
               <Route path="/instruments/:id" element={<AssetDetail />} />
 
-              {/* 旧 /assets 路由兼容重定向（避免书签/历史失效） */}
-              <Route path="/assets" element={<Navigate to="/instruments" replace />} />
-              <Route path="/assets/new" element={<Navigate to="/instruments/new" replace />} />
-              <Route path="/assets/edit/:id" element={<LegacyAssetEditRedirect />} />
-
               <Route path="/prices" element={<Today />} />
               <Route path="/prices/:symbol/history" element={<History />} />
 
@@ -87,12 +82,26 @@ export default function AppRouter() {
               <Route path={ROUTE_PATTERNS.PORTFOLIO_TAB} element={<Detail />} />
 
               <Route path="/logs" element={<LogViewer />} />
-              {/* TASK-050：原「家庭视图」页已下线（五区块并入 /portfolios），不设显式重定向，
-                  书签访问由下面的 `*` 通配承接落到组合列表页。 */}
+
+              {/*
+                ═══════════════ 兼容层（仅旧链接兜底，必须置于实际路由之后）═══════════════
+
+                D-2：`/assets*` 三条重定向**保留一个版本周期**，避免旧书签/历史链接 404。
+                它们指向的是现行 `/instruments*` 路由，本身不承载页面。
+
+                TASK-050：原「家庭视图」页已下线（五区块并入 /portfolios），不设显式重定向，
+                书签访问由下方 `*` 通配承接落到组合列表页。
+                TASK-044：旧 `/transactions` 路由族已删除，同样由 `*` 通配承接。
+              */}
+              <Route path="/assets" element={<Navigate to="/instruments" replace />} />
+              <Route path="/assets/new" element={<Navigate to="/instruments/new" replace />} />
+              <Route path="/assets/edit/:id" element={<LegacyAssetEditRedirect />} />
+
               <Route
                 path="*"
                 element={<Navigate to={ROUTE_PATTERNS.PORTFOLIO_LIST} replace />}
               />
+              {/* ═══════════════════════ 兼容层结束 ═══════════════════════ */}
             </Route>
           </Route>
         </Routes>

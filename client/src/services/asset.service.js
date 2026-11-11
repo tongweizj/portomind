@@ -1,4 +1,4 @@
-import { api } from './api';
+import { api } from './api.client';
 
 export async function getAssets({ page = 1, pageSize = 20, search, sortBy, sortOrder, active, watchlist, assetClass } = {}) {
   const params = { page, pageSize, search, sortBy, sortOrder, active, watchlist, assetClass };

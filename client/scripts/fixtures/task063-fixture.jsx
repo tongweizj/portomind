@@ -8,7 +8,7 @@ import { createRoot } from 'react-dom/client';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import CronBoard from '../../src/components/CronStatus/CronBoard';
 import BoardShell from '../../src/components/CronStatus/BoardShell';
-import { api } from '../../src/services/api';
+import { api } from '../../src/services/api.client';
 
 const results = [];
 const calls = [];

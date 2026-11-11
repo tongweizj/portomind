@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { ChevronDown, ChevronRight, RefreshCw, Scale } from 'lucide-react';
 import { ErrorState, LoadingState } from '../DataState';
 import { useFxRates, useSyncFxRates, useUpsertFxRate } from '../../hooks/useFamily';
-import { getApiErrorMessage } from '../../services/api';
+import { getApiErrorMessage } from '../../services/api.client';
 import { CURRENCY_LABELS } from '../../constants/enums';
 
 // 手动录入只开放外币（人民币是折算基准，不需要汇率）。

@@ -1,10 +1,10 @@
-// client/src/services/cronStatus.service.js
+// client/src/services/cron-status.service.js
 //
 // TASK-063：读取 GET /api/cron/status 的单次快照。
 // 统一走 api.js（会话 cookie、错误归一、401 处理都在那里），不新建 axios。
 // 只读：本文件只有 GET；不得出现 post/put/patch/delete。
 
-import { api } from './api';
+import { api } from './api.client';
 
 export const CRON_STATUS_ENDPOINT = '/cron/status';
 

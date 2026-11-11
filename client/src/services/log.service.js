@@ -1,4 +1,4 @@
-import { api } from './api';
+import { api } from './api.client';
 
 async function queryLogs(path, page, pageSize, level, date) {
   const params = { page, pageSize, date };

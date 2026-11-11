@@ -1,4 +1,4 @@
-// src/pages/Portfolio/PortfolioHeader.jsx
+// src/components/portfolio/PortfolioHeader.jsx
 // 对齐 Ardot 设计稿 PortfolioHeader：
 //   - 顶部 BackLink（返回组合列表）
 //   - HeaderRow：组合标题 + 操作按钮（编辑/删除占位 → 主要按钮）

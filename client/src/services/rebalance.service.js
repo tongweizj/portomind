@@ -1,4 +1,4 @@
-import { api } from './api';
+import { api } from './api.client';
 
 export const checkRebalance = async (portfolioId) =>
   (await api.post(`/portfolios/${portfolioId}/rebalance/check`)).data;

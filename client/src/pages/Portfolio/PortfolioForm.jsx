@@ -3,7 +3,7 @@ import { useNavigate, useParams } from 'react-router';
 import { ErrorState, LoadingState } from '../../components/DataState';
 import { PORTFOLIO_ACCOUNT_TYPES, ASSET_CLASSES } from '../../constants/enums';
 import { ROUTES } from '../../constants/routes';
-import { getApiErrorMessage } from '../../services/api';
+import { getApiErrorMessage } from '../../services/api.client';
 import { getAssets } from '../../services/asset.service';
 import { createPortfolio, getPortfolio, updatePortfolio } from '../../services/portfolio.service';
 import { validatePortfolioTargets } from '../../utils/portfolioValidation';

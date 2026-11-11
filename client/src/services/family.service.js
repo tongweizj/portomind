@@ -1,4 +1,4 @@
-import { api } from './api';
+import { api } from './api.client';
 
 // ── 家庭汇总（FAM-01/02/04） ──
 export const getFamilySummary = async () =>

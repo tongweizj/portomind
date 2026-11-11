@@ -1,4 +1,4 @@
-// src/pages/Portfolio/Transactions.jsx
+// src/components/portfolio/Transactions.jsx
 // TASK-044 R2：组合详情「交易记录」Tab —— 单个组合的流水维护主战场。
 // 在此就地完成 新增 / 编辑 / 删除 / 导入，portfolioId 由路由 :id 锁定，不存在手选组合。
 // 表格渲染收敛到唯一实现 TransactionTable（组合内不显示组合列）。
@@ -7,7 +7,7 @@ import { useNavigate, useParams } from 'react-router';
 import { TransactionTable } from '../../components/TransactionTable';
 import { ROUTES } from '../../constants/routes';
 import { colors, radii } from '../../constants/design-tokens';
-import { getApiErrorMessage } from '../../services/api';
+import { getApiErrorMessage } from '../../services/api.client';
 import { deleteTransaction, getPortfolioTransactions } from '../../services/transaction.service';
 
 const PAGE_SIZE = 20;
