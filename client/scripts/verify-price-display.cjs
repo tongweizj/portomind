@@ -26,7 +26,6 @@ esbuild.buildSync({
   outfile,
 });
 
-// eslint-disable-next-line import/no-dynamic-require
 const { describeGap, annotateGapFields, weekdaysBetween, fmtChange } = require(outfile);
 fs.rmSync(outfile, { force: true });
 
