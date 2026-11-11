@@ -2,9 +2,9 @@
 
 ## Status
 
-Status：Approved（2026-11-11，Human 指令「一次性完成 071、072 两个任务」；`Draft → Approved` 归 Human）
+Status：Completed（2026-11-11，Task 已 `Completed` 并合入 `main`；计划由 `Approved` 同步为 `Completed`）
 
-Related Task：[TASK-072](../../tasks/active/TASK-072-api-contract-residuals.md)（独立维护任务，无 Story）。
+Related Task：[TASK-072](../../tasks/completed/TASK-072-api-contract-residuals.md)（独立维护任务，无 Story）。
 
 Branch / Base：`main` @ `c7a2751`（含 `v1.0.0` 基线）。实施时从最新 `main` 开 `feature/TASK-072-api-contract-residuals`。
 
@@ -252,11 +252,22 @@ $ git diff --stat main...HEAD -- server/routes shared server/controllers
 
 ## 12. Review Record
 
-（按 [REVIEWER.md](../../../os/roles/REVIEWER.md) §7 记录。）
+**2026-11-11**：本任务**未执行独立 Reviewer 复核**——由 Human 直接确认完成并合入（PR #52）。按 [REVIEWER.md](../../../os/roles/REVIEWER.md) §5.3 的独立复核要求，这属于**流程缺口**，已如实记录，不以「已验证」表述掩盖。建议后续如需强化，可对 `git diff -M` 做一次只读复核（重点：`shared/**`、`server/routes/**` 函数体零变更）。
 
 ## 13. Completion Record
 
-（AC 与验证证据引用、关闭依据、归档与移交。）
+**结案（2026-11-11）**
+
+| 项 | 事实 |
+|---|---|
+| 覆盖 AC | AC-01～AC-06 全部满足 |
+| 实现 | `061f94b` P1 lint 归零 · `80c42c0` P2 补 8 条契约测试 · `3729551` P3 形状例外文档 + 注释修正 · `b90df89` §11 记录 |
+| 测试增量 | `server/test/integration/api-contract.crud.test.js`（517 行，8 条用例）：组合 CRUD/404/400、交易 CRUD、组合交易分页、提醒规则 CRUD、`/api/users` 的 `{items}` 形状锁定、列表分页形状一致、非列表端点无 `pagination` |
+| 验证（2026-11-11 在 `main` 复跑） | `test:server` **248 pass / 0 fail**（240 + 8）；lint **0 error**；build ✓；`docs:check` 0 ERROR |
+| 行为零变更 | 未改响应结构/状态码/路径；`server/controllers/**`、`server/routes/**`、`shared/**` 零改动 |
+| 关闭依据 | Human 2026-11-11 确认完成；按 [STATES.md §4](../../../os/process/STATES.md#4-谁可以改变状态) 登记 `Completed` |
+| 合入 | **PR #52** → **`6421d4f`**；`Merged` = `6421d4f` |
+| 残余 | `/api/users` 保持 `{items}`（按 Human 2026-11-09 决定），已在 `API_CONTRACT.md` 标注为全仓唯一包装式列表 |
 
 ## 自检
 

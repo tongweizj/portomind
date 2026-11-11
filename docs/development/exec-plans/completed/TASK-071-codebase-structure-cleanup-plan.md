@@ -2,9 +2,9 @@
 
 ## Status
 
-Status：Approved（2026-11-11，Human 指令「一次性完成 071、072 两个任务」；`Draft → Approved` 归 Human）
+Status：Completed（2026-11-11，Task 已 `Completed` 并合入 `main`；计划由 `Approved` 同步为 `Completed`）
 
-Related Task：[TASK-071](../../tasks/active/TASK-071-codebase-structure-cleanup.md)（独立维护任务，无 Story）。
+Related Task：[TASK-071](../../tasks/completed/TASK-071-codebase-structure-cleanup.md)（独立维护任务，无 Story）。
 
 Branch / Base：`main` @ `a7b2da8`（基线已封板 `v1.0.0` / `release/v1.0` @ `d87f81d`）。实施时从最新 `main` 开 `feature/TASK-071-structure-cleanup`。
 
@@ -430,11 +430,23 @@ $ git diff --stat b90df89..HEAD -- shared server/routes server/controllers
 
 ## 12. Review Record
 
-（按 [REVIEWER.md](../../../os/roles/REVIEWER.md) §7 记录。）
+**2026-11-11**：本任务**未执行独立 Reviewer 复核**——由 Human 直接确认完成并合入（PR #53）。按 [REVIEWER.md](../../../os/roles/REVIEWER.md) §5.3 的独立复核要求，这属于**流程缺口**，已如实记录，不以「已验证」表述掩盖。建议后续如需强化，可对 `git diff -M` 做一次只读复核（重点：`shared/**`、`server/routes/**` 函数体零变更）。
 
 ## 13. Completion Record
 
-（AC 与验证证据引用、关闭依据、归档与移交。）
+**结案（2026-11-11）**
+
+| 项 | 事实 |
+|---|---|
+| 覆盖 AC | AC-01～AC-07 全部满足（逐项证据见 §11 与任务卡） |
+| 实现（M1～M10） | `675a03a` M1 · `2204119` M2 · `f89b533` M3 · `bf26368` M4 · `c351c0b` M5 · `41ae21b` M6 · `be0211b` M7 · `f124e07` M8 · `6f9ebbd` M9 · `d1e353d` M10 · `97c4b2c` §11 记录 |
+| 删除量 | 16 个客户端零引用文件 + `shared/fetchers/IFetcher.js`（每个删除附全仓 grep 0 命中证据，见 §11） |
+| 重命名 | `api.js→api.client.js`、`authSession.js→auth-session.bus.js`、`cronStatus.service.js→cron-status.service.js`；`logs.routes→log.routes`、`rebalanceRecord.routes→rebalance.routes`、`cronStatus.*→cron-status.*`（`git diff -M` 均为 rename，挂载路径不变） |
+| 验证（2026-11-11 在 `main` 复跑） | build ✓；lint **0 error**（5 warning）；`test:server` **248 pass / 0 fail**；`docs:check` **0 ERROR / 0 WARN** |
+| 行为零变更 | `shared/**` 与 `server/routes/**` 仅因改名产生 import 变化；HTTP 路径、payload、计算口径、API 契约均未改 |
+| 关闭依据 | Human 2026-11-11 确认「071、072 已经完成」；按 [STATES.md §4](../../../os/process/STATES.md#4-谁可以改变状态) 登记 `Completed` |
+| 合入 | **PR #53** → **`ff118f4`**；`Merged` = `ff118f4` |
+| 残余 | ① **D-3 未执行**：`alertVisibility.js` 未改名（待单独立项）；② `deletePortfolio` 无界面入口（既有缺口，不属本任务）；③ `ROUTES.PORTFOLIO_TX_TAB` 为生成器别名、无对应 `ROUTE_PATTERNS` 键（未动） |
 
 ## 自检
 

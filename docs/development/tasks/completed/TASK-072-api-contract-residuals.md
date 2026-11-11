@@ -4,13 +4,13 @@
 
 | 字段 | 内容 |
 |---|---|
-| Status | **Implementing（2026-11-11）**：计划已由 Human 批准（`Draft → Approved`），按 [STATES.md](../../../os/process/STATES.md#4-谁可以改变状态) 登记 `Planning → Implementing` |
+| Status | **Completed（2026-11-11，Human 确认完成）**：lint 归零（0 error）、新增 8 条契约测试（`test:server` 240→**248**）、5 处响应形状例外写入 `API_CONTRACT.md`。**`Merged` = `6421d4f`**（**PR #52**） |
 | Priority / Owner / Type | `Medium` / Implementer（待指派） / `Maintenance`（测试与文档，零 API 行为变更） |
 | Created / Updated | 2026-11-09 / 2026-11-11 |
 | 所属 Story | 无（独立维护任务） |
 | 覆盖的验收条件 | 见 §3（AC-01～AC-06） |
 | Related | [API_CONTRACT.md](../../../handbook/technical/API_CONTRACT.md)、[TASK-071](./TASK-071-codebase-structure-cleanup.md)（结构清理，与本卡无冲突） |
-| Execution Plan | [Draft：TASK-072-plan](../../exec-plans/active/TASK-072-api-contract-residuals-plan.md) |
+| Execution Plan | [Completed：TASK-072-plan](../../exec-plans/completed/TASK-072-api-contract-residuals-plan.md) |
 
 ## 1. 背景
 

@@ -4,13 +4,13 @@
 
 | 字段 | 内容 |
 |---|---|
-| Status | **Implementing（2026-11-11）**：计划已由 Human 批准（`Draft → Approved`），按 [STATES.md](../../../os/process/STATES.md#4-谁可以改变状态) 登记 `Planning → Implementing`；**按模块分批实施**（一次只清一个模块） |
+| Status | **Completed（2026-11-11，Human 确认完成）**：M1～M10 全部落地，零行为变更；四项门禁复跑全绿（lint 0 error / build ✓ / `test:server` 248 pass / `docs:check` 0 ERROR）。**`Merged` = `ff118f4`**（**PR #53**）。残余：D-3（`alertVisibility.js` 改名）未执行 |
 | Priority / Owner / Type | `High` / Implementer（待指派） / `Refactor`（结构清理，零行为变更） |
 | Created / Updated | 2026-11-09 / 2026-11-11 |
 | 所属 Story | 无（独立维护任务；不新建 Story） |
 | 覆盖的验收条件 | 见 §3（AC-01～AC-07） |
 | Related | [ARCHITECTURE.md §7](../../../os/architecture/ARCHITECTURE.md)、[GIT.md](../../../os/standards/GIT.md)、[TESTING.md](../../../os/standards/TESTING.md) |
-| Execution Plan | [Draft：TASK-071-plan](../../exec-plans/active/TASK-071-codebase-structure-cleanup-plan.md) |
+| Execution Plan | [Completed：TASK-071-plan](../../exec-plans/completed/TASK-071-codebase-structure-cleanup-plan.md) |
 
 ## 1. 问题
 
