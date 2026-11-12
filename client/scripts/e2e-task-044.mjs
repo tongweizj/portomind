@@ -12,6 +12,9 @@
 //   node client/scripts/e2e-task-044.mjs
 //
 // 说明：脚本会**写入并删除**一笔测试交易，请在测试库上执行。
+//
+// 断言总数：38（TASK-047 返修 F-047-1 时核对；新增/删除断言须同步更新本数字）。
+// 运行结束时打印 `断言总数 38 / 通过 M / 失败 K`，任一失败则以退出码 1 结束。
 import { chromium } from 'playwright-core';
 import { mkdirSync } from 'node:fs';
 import path from 'node:path';
@@ -21,6 +24,11 @@ const BASE = process.env.E2E_BASE || 'http://localhost:5173';
 const CHROME = process.env.CHROME_PATH || 'C:/Program Files/Google/Chrome/Application/chrome.exe';
 const PID = process.env.E2E_PORTFOLIO_ID || '681524cc3fe4113c492df5b1';
 const SYMBOL = process.env.E2E_SYMBOL || 'VAB.TO';
+// TASK-047 返修（F-047-1）：TASK-058 U2 给所有业务页加了 RequireAuth 守卫，本脚本原写作时
+// 尚无认证，直接 goto 业务页会被重定向到 /login，导致侧栏断言拿到 navCount=0。
+// 故补一步可选登录：提供凭据时先登录再继续；不提供时保持旧行为（会在断言里直接暴露未登录）。
+const LOGIN_USER = process.env.E2E_USERNAME || '';
+const LOGIN_PASS = process.env.E2E_PASSWORD || '';
 const SHOT_DIR = path.join(os.tmpdir(), 'portomind-e2e-044');
 
 const ACTION_LABELS = ['买入', '卖出', '现金分红', '分红再投'];
@@ -48,11 +56,27 @@ async function main() {
   page.on('console', msg => { if (msg.type() === 'error') consoleErrors.push(msg.text()); });
   page.on('pageerror', err => consoleErrors.push(`pageerror: ${err.message}`));
 
-  // ───────── S1 侧边栏：顶层 6 项 + 二级导航 + 展开态不持久化（AC1 / AC11）─────────
+  // ───────── S0 登录（TASK-058 U2 起业务页受 RequireAuth 保护）─────────
+  // 只有提供 E2E_USERNAME / E2E_PASSWORD 时才执行；这一步不参与断言计数。
+  if (LOGIN_USER && LOGIN_PASS) {
+    await page.goto(`${BASE}/login`, { waitUntil: 'networkidle' });
+    await page.fill('input[name="username"]', LOGIN_USER);
+    await page.fill('input[name="password"]', LOGIN_PASS);
+    await page.getByRole('button', { name: '登录' }).click();
+    // 登录成功后会跳到 next 或首页；等离开 /login 即可
+    await page.waitForURL(url => !url.pathname.startsWith('/login'), { timeout: 15000 });
+    console.log(`已登录：${LOGIN_USER}（当前 ${new URL(page.url()).pathname}）`);
+  }
+
+  // ───────── S1 侧边栏：顶层 4 项 + 二级导航 + 展开态不持久化（AC1 / AC11）─────────
+  // TASK-047 返修（F-047-1）：原断言写死 6 项，但「家庭视图」「提醒规则」已在 TASK-058 U2
+  // 移出侧栏（提醒规则进顶栏头像下拉），当前 navItems 只有 4 个 depth-1 项
+  // （Dashboard / 组合管理 / 今日行情 / 日志），每项渲染 1 个 <nav> 直接子节点 → navCount 恒为 4。
+  // 原断言因此必然 FAIL，改为与当前侧栏一致。
   await page.goto(`${BASE}/portfolios`, { waitUntil: 'networkidle' });
   const nav = page.locator('aside nav');
   const navCount = await nav.locator('> *').count();
-  check('AC1 顶层导航项 = 6', navCount === 6, `实际 ${navCount}`);
+  check('AC1 顶层导航项 = 4', navCount === 4, `实际 ${navCount}`);
 
   const navTexts = await nav.locator('> *').allInnerTexts();
   check('AC1 顶层无「交易记录」', !navTexts.some(t => t.includes('交易记录')), navTexts.join(' | '));
@@ -125,6 +149,17 @@ async function main() {
   await page.waitForURL(new RegExp(`/portfolios/${PID}/transactions/edit/[a-f0-9]+$`));
   check('AC4 编辑路由带组合 id + txId', /\/portfolios\/[a-f0-9]+\/transactions\/edit\/[a-f0-9]+$/.test(page.url()), page.url());
   check('AC2 编辑页无「所属组合」下拉', (await page.locator('select[name="portfolioId"]').count()) === 0);
+  // TASK-047 返修（F-047-1）：编辑页表单由 getTransaction 异步填充，URL 变化会先于数据到达。
+  // 若在表单填充前就 fill，随后 setForm({...tx}) 会把刚填的值覆盖回原值（表现为「编辑保存无效」，
+  // 而后端实际未收到新值）。这里先等份额输入框出现原值，确认表单已填充，再改值。
+  await page.waitForFunction(
+    expected => {
+      const input = document.querySelector('input[name="quantity"]');
+      return input && String(input.value) === String(expected);
+    },
+    '7',
+    { timeout: 10000 }
+  );
   await page.fill('input[name="quantity"]', '9');
   await page.getByRole('button', { name: '更新交易' }).click();
   await page.waitForURL(new RegExp(`/portfolios/view/${PID}/transactions$`));
@@ -217,7 +252,9 @@ async function main() {
 
   await browser.close();
   const failed = results.filter(r => !r.ok);
-  console.log(`\n===== ${results.length - failed.length}/${results.length} PASS =====`);
+  // TASK-047 返修（F-047-1 第 2 项）：汇总必须含「总数 / 通过 / 失败」三个数，
+  // 不能只报 `M/N PASS`（那样失败数需要读者自己减）。
+  console.log(`\n断言总数 ${results.length} / 通过 ${results.length - failed.length} / 失败 ${failed.length}`);
   if (failed.length) {
     console.log('FAILED:');
     failed.forEach(f => console.log(` - ${f.name} ${f.detail}`));

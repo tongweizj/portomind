@@ -6,7 +6,7 @@ Status：Approved（2026-11-11，Human 批准「051、047、046 三份计划」�
 
 Related Task：[TASK-047](../../tasks/active/TASK-047-review-followups.md)（独立维护任务，无 Story）。
 
-Branch / Base：`main` @ `ee989c7`。实施时从最新 `main` 开 `feature/TASK-047-review-followups`。
+Branch / Base：自 `ee989c7` 起草计划（`git merge-base main HEAD` = `e1730a0`），实施基于 **本地 `main` @ `e1730a0`**，分支 `feature/TASK-047-review-followups`（未 rebase）。
 
 Approval：**未批准**。`Draft → Approved` 归 Human（[STATES.md](../../../os/process/STATES.md) §4）。
 
@@ -309,6 +309,183 @@ FAIL 2 / 16
   `server/`、`cron-worker/` 无 `.js` 变更。
 - 未改 API 契约、HTTP 路径与响应结构；未改 `Transaction` schema。
 - AC8（独立 Reviewer）待 Reviewer 执行。
+
+### 11.8 返修记录（2026-11-12，独立审查 findings 处置）
+
+审查结论见 §12（`Fail`，2 MAJOR）。本轮只处置 findings，不改 AC / Scope / Status，不写 Reviewer 结论。
+基线仍为 `main` @ `e1730a0`；审查记录提交 `a2a404b`；本条记录提交见 §11.9。
+
+#### F-047-1（MAJOR）E2E 断言过期 + 未实跑 —— 已修，已真实运行
+
+**改动**（`client/scripts/e2e-task-044.mjs`）：
+
+| 项 | 改前 | 改后 |
+|---|---|---|
+| 导航项断言 | `check('AC1 顶层导航项 = 6', navCount === 6)` | `check('AC1 顶层导航项 = 4', navCount === 4)`（与 `Sidebar.navItems` 的 4 个 depth-1 项一致） |
+| 汇总输出 | `===== ${x}/${n} PASS =====` | `断言总数 ${n} / 通过 ${x} / 失败 ${f}` |
+| 头部说明 | 无断言总数 | 注明「断言总数：38，新增/删除断言须同步更新」 |
+| 登录前置 | **无**（脚本写于 TASK-058 认证前） | 新增 S0 登录步骤（`E2E_USERNAME`/`E2E_PASSWORD` 提供时执行，不参与断言计数） |
+
+**额外发现（必须记录，非原审查项）**：脚本原名 `family 家庭视图`/`提醒规则` 的断言**已不存在**（TASK-058 时已清理），
+核对后无残留；但脚本**完全没有登录步骤**，而 TASK-058 U2 给所有业务页加了 `RequireAuth`。
+首次实跑实测：访问 `/portfolios` 被重定向到 `/login?next=%2Fportfolios`，`navCount = 0`、
+`AC1 顶层含「组合管理」` FAIL，随后在「展开组合管理」按钮处 `Timeout 30000ms` 崩溃。
+即：**该脚本自 TASK-058 起就无法运行**，仅把 6 改成 4 并不能让它跑通。故补 S0 登录步骤。
+
+**再次发现（属性：这是断言真实性的反向证据，必须记录）**：脚本的「编辑落库」断言原写法
+`await page.fill('input[name="quantity"]', '9')` 紧跟 `waitForURL` 执行，而编辑页表单由
+`getTransaction` **异步**填充（`EditTransaction.jsx:43-53`），`fill` 先于 `setForm` 发生时，
+随后 `setForm({...tx})` 会把刚填的 9 覆盖回原值 7 —— 表现为「编辑保存无效」。
+实测：后端 `PUT /api/transactions/:id`（不带 `portfolioId`）返回 200 且库内 `quantity` 由 7 变 9，
+即**后端与 TASK-047 守卫均正常**，是脚本的竞态。已改为先 `waitForFunction` 等输入框出现原值 7，
+再 `fill('9')`。
+
+**真实运行输出**（本机 `mongod` 8.2.6 独立实例，`portomind_dev`；API `:8080`；Vite `:6600`；Chrome 本机）：
+
+```
+已登录：admin（当前 /）
+PASS  AC1 顶层导航项 = 4 — 实际 4
+PASS  AC1 顶层无「交易记录」 — Dashboard | 组合管理 | 今日行情
+监控 | 日志
+PASS  AC1 顶层含「组合管理」
+PASS  AC11 默认收起（「全部交易」不可见）
+PASS  AC1 展开后含「组合列表」「全部交易」 — 组合管理/组合列表/全部交易
+PASS  AC11 刷新后回到默认收起态
+PASS  AC11 未写 localStorage
+PASS  AC6 组合内无「组合」列 — 日期 | 资产代码 | 类型 | 证券类型 | 份额 | 价格 | 操作
+PASS  Bug-3 表头全中文 — 日期 | 资产代码 | 类型 | 证券类型 | 份额 | 价格 | 操作
+PASS  AC8 类型列均为中文四值 — 买入,现金分红
+PASS  Bug-3 证券类型为中文 — ETF
+PASS  Bug-2 价格带币种符号 — C$91.20,C$0.50,C$25.10
+PASS  AC2 Tab 内存在「新建交易」「导入 CSV」
+PASS  AC4 新路由 = /portfolios/:id/transactions/new — http://localhost:6600/portfolios/<id>/transactions/new
+PASS  AC2 无「所属组合」下拉
+PASS  AC2 组合锁定为当前组合 — 所属组合/CA-家庭RESP组合/资产代码
+PASS  AC2 新增后回到组合 Tab 且列表刷新 — 20→20
+PASS  AC2 提交后离开写路由、落在组合交易 Tab — /portfolios/view/<id>/transactions
+PASS  AC2 新增记录出现在首行
+PASS  AC4 编辑路由带组合 id + txId — http://localhost:6600/portfolios/<id>/transactions/edit/<txid>
+PASS  AC2 编辑页无「所属组合」下拉
+PASS  AC2 编辑落库（份额 7→9） — 份额列=9
+PASS  AC2 删除后列表即时刷新 — 20→19
+PASS  AC3 页面标题 = 全部交易
+PASS  AC3 聚合页含「组合」列 — 日期 | 资产代码 | 类型 | 证券类型 | 份额 | 价格 | 组合
+PASS  AC7 聚合页无导入/新建入口
+PASS  AC3 分页可用（每页 20） — rows=20, 第 1 / 2 页
+PASS  AC3 按组合筛选生效 — 2 行
+PASS  AC3 无结果时给空态提示
+PASS  AC3 按标的筛选生效 — 20 行
+PASS  Bug-1 现金分红显示为「现金分红」
+PASS  AC3 组合名可跳回所属组合交易 Tab — http://localhost:6600/portfolios/view/<id>/transactions
+PASS  AC7 导入页无组合下拉 — select 数量 0
+PASS  AC7 目标组合已锁定展示
+PASS  R8 导入预览方向为中文 — 行 代码 方向 份额 价格 费用 日期 状态/2 VAB.TO 买入 ...
+PASS  AC7 导入成功（2 条） — 导入结果 成功导入：2 条 跳过重复：0 条
+PASS  AC5 旧 /transactions 落至 /portfolios — http://localhost:6600/portfolios
+PASS  无 JS 运行时错误
+
+断言总数 38 / 通过 38 / 失败 0
+```
+
+退出码 **0**。
+
+**前置条件（可复跑）**：
+
+```bash
+# 1) 一个本地 mongod（任意 8.x），库名须含 _dev
+#    MONGO_URI=mongodb://127.0.0.1:27017/portomind_dev
+# 2) 测试库需有：admin 账号（mustChangePassword=false）、CA-家庭RESP组合 / CA-RRSP组合 /
+#    空组合 A股-稳钱组合、VAB.TO 等资产、>=20 条交易（分页断言）
+# 3) API：MONGO_URI=... node server.js        （:8080）
+# 4) 前端：cd client && npm run dev            （vite :6600，见 vite.config.js）
+# 5) 运行：
+E2E_BASE=http://localhost:6600 E2E_PORTFOLIO_ID=<RESP组合id> \
+E2E_USERNAME=admin E2E_PASSWORD=<密码> \
+CHROME_PATH="C:/Program Files/Google/Chrome/Application/chrome.exe" \
+node client/scripts/e2e-task-044.mjs
+```
+
+**残余限制（如实记录）**：
+- 脚本断言依赖固定测试数据（组合名、`A股-稳钱组合` 空态、>=20 条交易），**未**做成自动播种；
+  换一个空库直接跑会 FAIL。这与原脚本的设计一致（原文件头即写「按需手工准备」），本轮未扩张范围。
+- **本 E2E 不覆盖 M-1**：我注入「`/portfolios/transactions` 被组合族误吞」的回归后重跑，
+  仍是 38/38 PASS —— 说明现有 38 条断言**没有一条**观察侧栏高亮态。
+  M-1 的验证仍只由 §11.4 的谓词实测承担。这是既存覆盖盲区，**不是本轮引入**，记录在此供后续任务处置。
+
+#### F-047-2（MAJOR）真实 DB 证据不可复跑 —— 已修
+
+新增 `server/scripts/verify-portfolio-immutable.cjs`（+ `server/package.json` 脚本 `verify:portfolio-immutable`）：
+
+- 读 `MONGO_URI`（默认 `mongodb://127.0.0.1:27017/portomind_dev`）；
+- **写保护**：库名必须匹配 `_dev|_test`，否则拒绝运行；
+- 流程：建临时 Portfolio A/B + Asset + 一条归属 A 的交易 → 改归属 → 断言 400 且**真实读回**归属仍为 A
+  → 不传 / 传同值均成功且归属不变 → 创建路径仍可写入归属；
+- 全部临时数据在 `finally` 中按 `_id` 精确删除，并按 `TAG` 前缀做兜底清扫 + 残留复查；
+- 输出 PASS/FAIL 与关键字段值，退出码 0/1。
+
+**真实运行输出**（`portomind_dev`，临时数据用后即删）：
+
+```
+db = portomind_dev
+tag = VERIFY47_1794495935785
+
+created: portfolio A = 6af5d5bf5c2f3ad7b2d1bb8a | B = 6af5d5bf5c2f3ad7b2d1bb90 | tx = 6af5d5bf5c2f3ad7b2d1bb97
+
+PASS  ① 改归属被拒（400 PORTFOLIO_ID_IMMUTABLE） — status=400 code=PORTFOLIO_ID_IMMUTABLE
+PASS  ① 库内归属未变（真实读回） — portfolioId=6af5d5bf5c2f3ad7b2d1bb8a（期望 A=6af5d5bf5c2f3ad7b2d1bb8a）
+PASS  ① 数量未被写入 — quantity=10（期望 10）
+PASS  ② 不传 portfolioId 更新成功 — quantity=12
+PASS  ② 归属仍为 A — portfolioId=6af5d5bf5c2f3ad7b2d1bb8a
+PASS  ③ 传相同 portfolioId 更新成功（不得写成「出现即拒」） — quantity=13
+PASS  ③ 归属仍为 A — portfolioId=6af5d5bf5c2f3ad7b2d1bb8a
+PASS  ④ 创建仍可带 portfolioId 写入 B — portfolioId=6af5d5bf5c2f3ad7b2d1bb90
+
+断言总数 8 / 通过 8 / 失败 0
+cleanup: transactions:1 portfolios:2 assets:1
+残留检查：transactions=0 assets=0 portfolios=0 => CLEAN
+```
+
+退出码 **0**。写保护负向对照（`MONGO_URI=.../portomind`）：
+
+```
+VERIFY_FATAL 拒绝在库 "portomind" 上运行：库名必须包含 _dev 或 _test（避免误写生产库）
+```
+退出码 **1**，符合预期。
+
+#### F-047-3（MINOR）Base SHA 漂移 —— 已修
+
+§Status 的 `Branch / Base` 改为事实描述：自 `ee989c7` 起草计划、基于 `e1730a0` 实施。
+
+#### F-047-4（MINOR）form 残留字段 —— 已按建议处置
+
+保留现状（提交体已白名单过滤，无缺陷），并在 `EditTransaction.jsx` 加注释说明
+「`form` 保留服务端字段仅供展示，提交走 `payload` 白名单；`form.market` 被 A 股整手提示使用，不可删」。
+未做无收益的重构。
+
+#### 本轮验证
+
+| 命令 | 结果 |
+|---|---|
+| `npm run test:server` | **252 pass / 0 fail**（未新增用例；本节不改变测试面） |
+| `npm run build --workspace client` | ✅ `✓ built` |
+| `npm run lint --workspace client` | ✅ `0 errors, 5 warnings`（既存 fixture 警告） |
+| `npm run docs:check` | ✅ `141 文档 / 1438 链接 / ERROR 0 / WARN 0` |
+| `node client/scripts/verify-transaction-routes.mjs` | ✅ `PASS 16 / 16` |
+| `node client/scripts/e2e-task-044.mjs`（真实环境） | ✅ **38/38 PASS，exit 0**（见上） |
+| `node server/scripts/verify-portfolio-immutable.cjs` | ✅ **8/8 PASS，DB CLEAN，exit 0**（见上） |
+
+#### 未做 / 边界
+
+- 未改 AC、Scope、Task Status；未写 Reviewer 结论；未合并 `main`。
+- 未改 `createTransaction` / `validateLedger` / 超卖 / fee / 分红 / 整手（NG4）。
+- 未新增测试用例（findings 未要求）；F-047-1 的覆盖盲区（M-1 无 E2E 断言）已记录，未擅自扩张测试面。
+
+### 11.9 提交
+
+| SHA | 内容 |
+|---|---|
+| `a2a404b` | `docs(TASK-047): record independent review verdict`（审查记录） |
+| 见 `git log -1` | `fix(TASK-047): 返修复审 MAJOR——E2E 断言与登录前置、真实库可复跑验证` |
 
 ## 12. Review Record
 

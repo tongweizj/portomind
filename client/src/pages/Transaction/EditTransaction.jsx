@@ -18,6 +18,9 @@ export default function EditTransaction() {
   const { data: portfolio } = usePortfolio(portfolioId);
 
   const [form, setForm] = useState({
+    // 注（TASK-047 F-047-4）：form 保留服务端返回的展示字段（含 portfolioId / market / currency /
+    // assetType），仅用于渲染与「A股整手提示」等只读判断；提交统一走 handleSubmit 里的 payload
+    // 白名单，不会把这些字段发给后端。form.market 被整手提示使用，不可删。
     portfolioId,
     assetType: 'stock',
     symbol: '',

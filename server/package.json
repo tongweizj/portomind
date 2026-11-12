@@ -12,6 +12,7 @@
     "validate": "node scripts/validate.js",
     "verify:baseline": "node scripts/verifyBaseline.js",
     "verify": "npm run validate && npm run verify:baseline",
+    "verify:portfolio-immutable": "node scripts/verify-portfolio-immutable.cjs",
     "e2e:auth": "node scripts/e2e-auth-058.cjs"
   },
   "keywords": [
