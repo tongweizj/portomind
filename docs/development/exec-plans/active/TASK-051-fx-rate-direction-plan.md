@@ -233,6 +233,69 @@ result[currency] = 1 / perCny;
 - 未改折算公式、未改手动录入、未改 schema、未改 UI、未改 API 契约与 HTTP 路径。
 - AC8（独立 Reviewer）待 Reviewer 执行，Implementer 不自判。
 
+### 11.8 返修记录（2026-11-12，审查 MINOR 处置）
+
+审查结论见 §12（`Pass with issues`，3 MINOR）。本轮只处置 findings，不改 AC / Scope / Status。
+基线仍为 `main` @ `e1730a0`；审查记录提交 `3539fb5`；本条记录提交见 §11.9。
+
+#### F-051-1（MINOR）容差口径 —— 已按指示处理（不改 AC）
+
+`server/test/integration/fxRate.service.test.js` 的 `TOLERANCE` 保持 `0.01`，并在常量上方加注释说明：
+
+- 卡内 AC1 写「±1e-4」，**批准的计划 §8 已放宽为「量级 + 容差断言（如 |x-6.691|<0.01）」**，实现与计划一致；
+- 放宽安全：方向错误的偏差是数量级（USD 6.691 vs 0.149 ≈ 45 倍，CAD ≈ 22.6 倍），0.01 仍能判错；
+- **是否收紧到 1e-4 属 AC 文本口径，归 PM**；实现侧不擅自改 AC。
+
+证据：注入反向缺陷后仍有 6 fail（见下），证明 0.01 的判定力足够。
+
+#### F-051-3（MINOR）AC4 未走 HTTP 端点 —— 已修
+
+原用例只走服务层（`upsertRate` + `buildFamilySummary`），绕过了 HTTP 层。本轮**新增 2 条用例**
+（复用 `family.summary.test.js` 的 `request()` / `installAdminSession()` 同一套夹具）：
+
+1. `AC4（端点级）：PUT 手动录入 USD 后 GET summary 折算方向正确`
+   真实 `PUT /api/family/fx/rates/USD`（期望 201）→ 真实 `GET /api/family/summary`
+   → 断言 `totalCny = 1000 × 7.2 = 7200`（±0.01）且 `> 7000`，并校验 `fxRates.USD === 7.2`。
+2. `AC4：手动录入 HKD 量级 < 1（与采集端同语义）`
+   补上原用例缺失的「HKD < 1」断言，并断言 `HKD 1000 × 0.85 ≈ 850`。
+
+**可证伪性验证（负向对照，临时注入后已还原）**：
+
+| 注入的缺陷 | 结果 |
+|---|---|
+| `fetchFromProvider` 改回不取倒数 | **6 fail**（方向/量级/入库/两条端到端/同语义） |
+| `familySummary` 的 `amount * rate` 改成 `amount / rate` | **5 fail**，其中包含新增的两条 AC4 用例 |
+
+即新增用例不是恒真断言，能捕捉「采集端被反向」与「折算端被反向」两类错误。
+
+#### F-051-2（MINOR）AC5 未回收 —— **未做，按指示留给 PM**
+
+AC5 要求「若 `getLatestRateDocs` 会新旧混排，须给出清理脚本或过滤方案，并实测跳变」。
+Human 2026-11-11 已裁定 D-2「历史数据不迁移」，交付只在卡内 §9 记录后果。
+**AC5 的文本回收需 PM 按 D-2 修订验收标准**；实现侧不改 AC、不写迁移脚本。
+**交付点名：AC5 仍未回收，需 PM 处置。**
+
+#### 本轮验证
+
+| 命令 | 结果 |
+|---|---|
+| `npm run test:server` | **260 pass / 0 fail**（258 + 新增 2） |
+| `npm run build --workspace client` | ✅ `✓ built` |
+| `npm run lint --workspace client` | ✅ `0 errors, 5 warnings`（既存 fixture 警告） |
+| `npm run docs:check` | ✅ `141 文档 / 1438 链接 / ERROR 0 / WARN 0` |
+
+#### 边界
+
+未改折算公式、手动录入语义、schema、UI、API 契约与 HTTP 路径；未迁移历史数据；
+未改 `fxRate.service.js` 实现（只改测试与文档）。
+
+### 11.9 提交
+
+| SHA | 内容 |
+|---|---|
+| `3539fb5` | `docs(TASK-051): record independent review verdict`（审查记录） |
+| 见 `git log -1` | `test(TASK-051): 返修 MINOR——AC4 端点级用例 + 容差口径说明` |
+
 ## 12. Review Record
 
 > 由独立 Reviewer 填写；Implementer 未自评（本卡无自审记录）。判定词不是状态：本章不改变 Task Status，不构成合入许可。
