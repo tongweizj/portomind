@@ -21,6 +21,34 @@ const fxRateService = require('@portomind/shared/services/fxRate.service');
 const familySummaryService = require('@portomind/shared/services/familySummary.service');
 const tracker = require('@portomind/shared/services/portfolio/positionTracker');
 
+// ── HTTP 端点级用例的夹具（复用 family.summary.test.js 的同一套会话 stub）──
+const app = require('../../app');
+const { installAdminSession, uninstallSessionStub, authHeaders } = require('../helpers/auth');
+let server;
+let baseUrl;
+
+test.before(async () => {
+  installAdminSession();
+  await new Promise((resolve) => {
+    server = app.listen(0, '127.0.0.1', resolve);
+  });
+  baseUrl = `http://127.0.0.1:${server.address().port}`;
+});
+
+test.after(async () => {
+  uninstallSessionStub();
+  if (server) await new Promise((resolve, reject) => server.close((error) => error ? reject(error) : resolve()));
+});
+
+async function request(path, options = {}) {
+  const response = await fetch(`${baseUrl}${path}`, {
+    method: options.method || 'GET',
+    headers: { 'Content-Type': 'application/json', cookie: authHeaders().cookie },
+    body: options.body ? JSON.stringify(options.body) : undefined
+  });
+  return { status: response.status, body: await response.json() };
+}
+
 // provider 固定响应：1 CNY = X 外币（与 er-api base=CNY 的真实量级一致）
 const PROVIDER_RATES = { USD: 0.149448, CAD: 0.210271, HKD: 1.172876 };
 
@@ -31,6 +59,11 @@ const EXPECTED = {
   HKD: 1 / PROVIDER_RATES.HKD // 0.852605...
 };
 
+// 容差口径说明（TASK-051 F-051-1 返修）：
+// 卡内 AC1 写「容差 ±1e-4」，批准的计划 §8 已把口径放宽为「量级 + 容差断言（如 |x-6.691|<0.01）」，
+// 本处 0.01 与计划一致。放宽是安全的：方向错误的偏差是数量级（USD 6.691 vs 0.149 ≈ 45 倍；
+// CAD ≈ 22.6 倍），0.01 仍足以把错误方向判为失败——先验红实测 7 fail 即证据。
+// 是否收紧到 1e-4 属 AC 文本口径，归 PM 决定；实现侧不擅自改 AC。
 const TOLERANCE = 0.01;
 
 /** 造一个只提供固定 rates 的 http 替身（模拟 axios）。 */
@@ -252,4 +285,58 @@ test('采集与手动录入同语义：同一量级', async (t) => {
     rates: manual
   });
   assert.ok(summary.totalCny > 6000, '手动录入后折算仍是乘法正向');
+});
+
+// ───────────────── AC4 后半句：HTTP 端点级验证（F-051-3 返修）─────────────────
+//
+// 原用例只走服务层（`upsertRate` + `buildFamilySummary`），绕过了 HTTP 层，无法证明
+// `PUT /api/family/fx/rates/:currency` → `GET /api/family/summary` 这条真实链路的折算方向。
+// 本用例复用 `family.summary.test.js` 同一套 `request()` / `installAdminSession()` 夹具，
+// 经真实 Express 应用与真实控制器/服务调用（只把「费率存储」替换为内存版，不 mock 折算逻辑）。
+test('AC4（端点级）：PUT 手动录入 USD 后 GET summary 折算方向正确', async (t) => {
+  const store = useInMemoryFxStore(t);
+
+  // 手动录入：用户按 UI placeholder「如 7.20」的语义填写 1 外币 = 7.2 CNY
+  const putResponse = await request('/api/family/fx/rates/USD', {
+    method: 'PUT',
+    body: { rateToCny: 7.2 }
+  });
+  assert.equal(putResponse.status, 201, `PUT 应返回 201，实际 ${putResponse.status}`);
+  assert.equal(putResponse.body.data.rateToCny, 7.2);
+  assert.equal(store.length, 1, '手动录入应写入一条汇率');
+
+  // 真实 computeFamilySummary：只替换持仓与关联查询，汇率仍走 getLatestRates 真实读取
+  t.mock.method(Portfolio, 'find', () => ({ sort: () => ({ lean: async () => [
+    { _id: '64b0000000000000000000c9', name: 'US-TFSA', currency: 'USD' }
+  ] }) }));
+  t.mock.method(tracker, 'aggregate', async () => [
+    { symbol: 'VOO', currency: 'USD', marketValue: 1000 }
+  ]);
+  t.mock.method(Transaction, 'find', () => ({ sort: () => ({ limit: () => ({ lean: async () => [] }) }) }));
+  t.mock.method(RebalanceRecord, 'find', () => ({ sort: () => ({ limit: () => ({ lean: async () => [] }) }) }));
+
+  const summaryResponse = await request('/api/family/summary');
+  assert.equal(summaryResponse.status, 200);
+
+  // 方向断言：USD 1000 × 7.2 = 7,200（若实现反向，会得到 1000 / 7.2 ≈ 139 或 1000 × 0.149 ≈ 149）
+  const total = summaryResponse.body.data.totalCny;
+  assert.ok(Math.abs(total - 7200) < 0.01, `端点链路 totalCny 期望 7200，实际 ${total}`);
+  assert.ok(total > 7000, `totalCny 应 > 7000（方向反了会是百量级），实际 ${total}`);
+  assert.equal(summaryResponse.body.data.fxRates.USD, 7.2, 'summary 回显的汇率应为手动录入值');
+});
+
+// F-051-3 附：`manual` 侧补齐「HKD < 1」——原用例只断言 USD>1，未覆盖反向量级的币种。
+test('AC4：手动录入 HKD 量级 < 1（与采集端同语义）', async (t) => {
+  const store = useInMemoryFxStore(t);
+  await fxRateService.upsertRate({
+    currency: 'HKD', rateToCny: 0.85, date: new Date('2026-11-10T00:00:00Z'), source: 'manual'
+  });
+  const manual = await fxRateService.getLatestRates(new Date('2026-11-10T23:00:00Z'));
+  assert.ok(manual.HKD > 0 && manual.HKD < 1, `手动录入 HKD 应 < 1（1 HKD = 0.85 CNY），实际 ${manual.HKD}`);
+  const summary = familySummaryService.buildFamilySummary({
+    portfolioValues: [{ portfolioId: 'p-hk', name: 'HK', currency: 'HKD', buckets: { HKD: 1000 } }],
+    rates: manual
+  });
+  assert.ok(Math.abs(summary.totalCny - 850) < 0.01, `HKD 1000 × 0.85 应约为 850，实际 ${summary.totalCny}`);
+  assert.equal(store.length, 1);
 });
