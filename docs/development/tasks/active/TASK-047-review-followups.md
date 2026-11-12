@@ -166,3 +166,10 @@ TASK-044 的独立审查提出 6 条改进建议（M-1~M-6），Implementer 因�
   1. **M-2 = 方案②**：后端拒绝改写 `portfolioId`，归属不可变。因此本任务**放开「零服务端改动」**，允许改 `shared/services/transaction.service.js`，但仅限归属守卫（AC7）。
   2. **M-3 拆出**为 `TASK-048`（Family 页分红标签），与本任务无文件交叠。
 - **本次核实到的实现约束（供 Planner，勿遗漏）**：`EditTransaction.jsx:82` 提交恒带 `portfolioId`（值来自路由参数），故后端守卫必须判「**值是否变化**」，不可判「**字段是否存在**」；亦不可简单从 `WRITABLE_FIELDS` 删除该字段（`createTransaction` 共用该表）。详见 §2 M-2 的「实现陷阱」。
+
+---
+
+## 9. Review Record（独立 Reviewer，2026-11-11）
+
+**结论：`Fail`**（2 条 MAJOR：AC5 的 E2E 未重跑且首条断言与当前侧栏不符必然失败、AC1 的真实 Mongo 证据不可复跑；2 条 MINOR）→ 详见 [ExecPlan §12](../../exec-plans/active/TASK-047-review-followups-plan.md#12-review-record)（@ `4940c39`，基线 `main` `e1730a0`）。
+> M-2 守卫本身经独立加固验证正确（R-1b / R-1c 双陷阱均可被用例捕获）；FAIL 仅因证据类 AC 未交付。
