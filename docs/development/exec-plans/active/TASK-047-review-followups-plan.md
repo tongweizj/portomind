@@ -312,7 +312,79 @@ FAIL 2 / 16
 
 ## 12. Review Record
 
-（按 [REVIEWER.md](../../../os/roles/REVIEWER.md) §7 记录。）
+> 由独立 Reviewer 填写；Implementer 未自评（本卡无自审记录）。判定词不是状态：本章不改变 Task Status，不构成合入许可。
+
+### 12.1 结论
+
+- **判定：FAIL**（AC5 部分不满足，2 条 MAJOR；2 条 MINOR）。
+- **重要限定**：P0 的 M-2（归属不可变）实现**正确且经我独立加固验证**，AC1–AC4、AC6–AC8 均满足。判 FAIL 的唯一实质原因是 **AC5 的「重跑通过 + 脚本顶部注明断言总数/通过数」未交付，且该 E2E 脚本在当前提交上必然 FAIL**。若 Human 接受「以静态证明替代重跑」并豁免 AC5 的该子句，本判定可降级为 Pass with issues。
+- 审查对象：`feature/TASK-047-review-followups` @ `4940c39`（`git status --porcelain` 为空）。
+- 基线：本地 `main` @ `e1730a0`（**不用** `origin/main` @ `22f5f6e`）。
+- 改动范围：`git diff --stat main...HEAD` = **7 文件 / +430 −28**，与卡内 Scope 一致；`server/`、`cron-worker/` 无 `.js` 变更（仅新增 `server/test/` 一个用例文件），符合 AC7。
+- 未审部分：浏览器点击级走查（本机无 Mongo、无 `playwright-core` 之外的前后端环境，E2E 未执行，见 F-047-1）；`AC1` 的真实 Mongo 读回（无 `mongod`，见 F-047-2）。
+
+### 12.2 AC 逐条判定
+
+| # | 标准 | 判定 | 证据 |
+|---|---|---|---|
+| AC1 | 改归属 → 4xx 业务错误，库内归属不变（真实 DB 读回，不接受仅 mock） | ⚠️ 代码满足，证据链不足（F-047-2） | `transaction.service.js:128-138`；提交的用例为 mock（`transaction.portfolioImmutable.test.js:67-81`）；真实库结论仅见计划 §11.2 文字，不可独立复跑 |
+| AC2 | 传**相同** `portfolioId` 正常提交（不得写成「出现即拒」） | ✅ 满足 | 用例 `:98-114`；我用 R-1b 陷阱（改成「出现即拒」）实测该用例**转红** |
+| AC3 | URL 归属不符时明确报错并中止渲染表单 | ✅ 满足（静态） | `EditTransaction.jsx:37,46-49,106-123`：`setMismatch(true)` 后 `return`，不 `setForm`，`mismatch` 分支只渲染错误页，不渲染 `<form>` |
+| AC4 | 三条写路由高亮「组合列表」；`/portfolios/transactions` 仍只高亮「全部交易」 | ✅ 满足 | `Sidebar.jsx:29-34`；我按同一谓词实测 11 条路径全对（见 §12.3） |
+| AC5 | 恒真断言改为可失败断言，**并重跑通过**；脚本顶部注明断言总数与实际通过数 | ❌ 不满足（F-047-1） | 断言可失败化 ✅（两处已改写）；「重跑通过」未见证据且**静态可证必然失败**；脚本顶部无断言总数/通过数 |
+| AC6 | 路由校验脚本能发现「`router.jsx` 少声明一条路由」 | ✅ 满足 | 我删 `PORTFOLIO_TX_IMPORT` → `FAIL 2 / 16` exit 1；还原 → `PASS 16 / 16` |
+| AC7 | 服务端改动仅限 `updateTransaction` 守卫；不改 `createTransaction`/`validateLedger`/超卖/fee/分红/整手 | ✅ 满足 | `git diff` 中 `WRITABLE_FIELDS`、`createTransaction`、`validateLedger` 零改动；`server/`、`cron-worker/` 无 `.js` 改动 |
+| AC8 | 独立 Reviewer 复核，不得自判 | ✅ 满足 | 本记录 |
+
+### 12.3 我独立实跑的证据（不采信 §11 自述）
+
+| 命令 | 结果 |
+|---|---|
+| `npm run test:server` | **252 pass / 0 fail**（23 文件；`main` 基线 248，新增 4）✅ 与声称一致 |
+| `npm run build --workspace client` | `✓ built in 2.76s`（exit 0） |
+| `npm run lint --workspace client` | `0 errors, 5 warnings`（既存 fixture 警告） |
+| `npm run docs:check` | `141 文档 / 1438 链接 / ERROR 0 / WARN 0` |
+| `node client/scripts/verify-transaction-routes.mjs` | `PASS 16 / 16`（exit 0） |
+| `git diff --stat main...HEAD` | 7 文件，与卡内 Scope 一致 |
+
+> 环境说明：沙箱默认禁 `child_process.spawn`（`node --test` 报 `spawn EPERM`）。取得真实输出的方法：22 个 `server/test/integration/*.test.js` **逐文件 `node <file>` 直接执行**并累加 `ℹ pass`/`ℹ fail`。
+
+**守卫位置（R-1c）静态核对**：`transaction.service.js:128-138` 的比较语句在 `:139 const data = normalizeInput(input, existing)` **之前**，比较对象是 `existing.portfolioId`（合并前）。符合卡内 R-1c。
+
+**R-1b / R-1c 双重陷阱实测**（我临时改造实现，不改测试）：
+
+| 陷阱 | 改造 | 结果 |
+|---|---|---|
+| R-1c：守卫挪到合并之后 | 比较 `data.portfolioId` 与自身（等价失效） | `✖ 改归属 → 400` **转红**（1 fail）✅ 能捕获 |
+| R-1b：改成「出现字段就拒」 | 删掉 `!==` 值比较 | `✖ 传相同 portfolioId → 200` **转红**（1 fail）✅ 能捕获 |
+
+→ 交付的 4 条用例**确实能区分**这两种最高概率的实现错误，不是凑数。
+
+**M-1 谓词实测**（按 `Sidebar.jsx:29-34` 同一逻辑复刻，11 条路径）：`/portfolios/:id/transactions/{new,edit/:txId,import}`、组合交易 Tab、`/portfolios`、`/portfolios/new|edit|view` 全部 `true`；**`/portfolios/transactions` = `false`**（聚合页不被误吞，仍由 `p === PORTFOLIO_TX_ALL` 独占高亮）；`/transactions`、`/dashboard` = `false`。
+
+**M-6 负向对照**：删 `router.jsx:67` 的 `PORTFOLIO_TX_IMPORT` → `FAIL 2 / 16`（`router.jsx 未声明 PORTFOLIO_TX_IMPORT` + `import 路由未匹配`），exit 1；`cp` 还原后 `PASS 16 / 16`，`git status --porcelain` 为空。
+
+### 12.4 Findings
+
+| # | 严重度 | 位置 | 现象 | 修法方向 |
+|---|---|---|---|---|
+| F-047-1 | **MAJOR** | `client/scripts/e2e-task-044.mjs:55`；计划 §11.7 | AC5 要求「重跑通过」+「脚本顶部注明断言总数与实际通过数」。① 计划 §11.7 自述**未运行 E2E**，无通过证据；② 脚本首条断言 `check('AC1 顶层导航项 = 6', navCount === 6, …)` 与当前侧栏不符——`navItems` 只有 **4** 个 depth-1 项（Dashboard / 组合管理 / 今日行情 / 日志），每项渲染 1 个 `<nav>` 直接子节点，故 `navCount` 必为 **4**，该断言**必然 FAIL**（`家庭视图`/`提醒规则` 已在 TASK-058 U2 移出侧栏，断言未随之更新）；③ 脚本头部无断言总数/通过数 | 把 `navCount === 6` 改为与当前侧栏一致的 4（或改为断言具体项文本集合，避免再次随导航漂移）；在脚本头部注明「断言总数 38 / 期望通过 38」；在有前后端 + 测试库的环境跑一次并贴真实 `N/38` 输出。**不要**把该断言删掉了事 |
+| F-047-2 | **MAJOR** | 计划 §11.2；`server/test/integration/transaction.portfolioImmutable.test.js` | AC1 明写「用真实 DB 读回验证，**不接受仅 mock**」。提交的用例全是 mock（`Transaction.findById`/`findByIdAndUpdate` 被替换）；真实 Mongo 证据只存在于计划 §11.2 的文字（含临时 ID），不可独立复跑，无脚本/无输出快照 | 把真实库验证做成可复跑资产（例如在 `portomind_dev` 上跑的 `server/scripts/verify-portfolio-immutable.cjs`，或用 mongodb-memory-server；本机无 `mongod`，故 `.cjs` + 文档化前置条件更现实），并在计划中贴出可核对的输出 |
+| F-047-3 | MINOR | `docs/development/exec-plans/active/TASK-047-review-followups-plan.md:9` | 计划写 `Branch / Base：main @ ee989c7`，实际分支基于 `e1730a0`（`git merge-base main HEAD` = `e1730a0`）。`ee989c7..e1730a0` 之间只有 2 个文档提交，**不影响代码 diff**，但 SHA 记录与事实不符 | 改为 `e1730a0`（或写「自 `ee989c7` 起草、基于 `e1730a0` 实施」） |
+| F-047-4 | MINOR | `client/src/pages/Transaction/EditTransaction.jsx:20-32` | `form` 初值仍含 `portfolioId`，且 `setForm({...tx})` 会把服务端返回的 `portfolioId`、`assetType`、`market`、`currency` 等一并留在 form 里（提交时已被显式白名单过滤，**无行为缺陷**）；仅属残留字段 | 可保留（白名单已确保不发送）；若清理，注意 `form.market` 仍被 A 股整手提示使用，不能删 market |
+
+### 12.5 残余风险
+
+1. **前端不再发送 `portfolioId`**，故正常 UI 编辑不会触发后端守卫；守卫对 curl / 旧客户端 / 篡改请求仍是权威防线。两侧同 PR 已消除「后端已拒、前端仍发」的错配（`EditTransaction.jsx:90-99` 只发 7 个可写字段）。
+2. `EditTransaction.jsx:46` 用 `String(tx.portfolioId) !== String(portfolioId)` 比较；若后端返回 `portfolioId` 为已填充对象（`.populate()`），该比较会误判为不符并中止编辑。当前 `getTransaction` 不 populate，**无实际风险**，但属脆弱点。
+3. M-1 正则 `^\/portfolios\/[^/]+\/transactions` 对 `/portfolios//transactions`（空 id）不匹配，可接受；对 `/portfolios/transactions` 的排除依赖「第二段字面量」这一性质，若将来新增 `/portfolios/transactionsX` 之类路径需重新确认。
+4. E2E 脚本整体依赖运行中的前后端 + 测试库，属长期存在的可执行性缺口；本次未改善（F-047-1）。
+
+### 12.6 独立性声明
+
+审查者未参与本任务实现、计划编写或验收脚本编写；未修改任何业务代码、测试、AC 或 Status。§12.3 的临时改造（守卫挪位 / 出现即拒 / 删路由 / 回退 select）均在独立 worktree 副本中进行，已全部还原并逐次以 `git status --porcelain` 为空证净。判定不是合入许可，**Merged 与关闭归 Human**。
+
+
 
 ## 13. Completion Record
 
