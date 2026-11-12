@@ -226,3 +226,9 @@ USD/CAD 被低估，HKD 被高估 37.6%。当前家庭组合的币种桶为 `CNY
 3. **自愈路径**：`getLatestRates` 取 `date` 最新一条，因此**下次每日 09:30 同步后，该日及之后的折算即正确**；旧日期的行需等**同一 `(currency, date)` 被 upsert 覆盖**（即该日再次同步）或**手工按正确方向重录**才会纠正。
 4. 运维可选动作（无需改代码）：手动触发一次 `POST /api/family/fx/sync` 让当天的记录按新方向写入。
 5. 若将来要清理历史行，方案已在 OQ2 记录（取倒数 / 清空重采），需另立任务并另经 Human 裁决。
+
+---
+
+## 10. Review Record（独立 Reviewer，2026-11-11）
+
+**结论：`Pass with issues`**（无 BLOCKER / 无 MAJOR；3 条 MINOR：容差口径、AC5 未回收、AC4 未走 HTTP 端点）→ 详见 [ExecPlan §12](../../exec-plans/active/TASK-051-fx-rate-direction-plan.md#12-review-record)（@ `4aeeb10`，基线 `main` `e1730a0`）。

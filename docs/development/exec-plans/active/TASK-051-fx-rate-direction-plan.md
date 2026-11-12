@@ -235,7 +235,82 @@ result[currency] = 1 / perCny;
 
 ## 12. Review Record
 
-（按 [REVIEWER.md](../../../os/roles/REVIEWER.md) §7 记录。）
+> 由独立 Reviewer 填写；Implementer 未自评（本卡无自审记录）。判定词不是状态：本章不改变 Task Status，不构成合入许可。
+
+### 12.1 结论
+
+- **判定：PASS WITH ISSUES**（无 BLOCKER、无 MAJOR；3 条 MINOR）。
+- 审查对象：`feature/TASK-051-fx-rate-direction` @ `4aeeb10`（`git status --porcelain` 为空）。
+- 基线：本地 `main` @ `e1730a0`（**不用** `origin/main` @ `22f5f6e`，后者落后 4 个文档提交）。
+- 改动范围：`git diff --stat main...HEAD` = **7 文件 / +376 −7**，与卡内 Scope 一致，无越界文件。
+- 未审部分：真实 er-api 联网行为（审查期不发起外部请求，用固定 payload 替身）；历史库内既有记录（Human D-2 已决定不迁移）。
+
+### 12.2 AC 逐条判定
+
+| # | 标准 | 判定 | 证据 |
+|---|---|---|---|
+| AC1 | 先红后绿，固定 provider → USD≈6.6913 / CAD≈4.7558 / HKD≈0.8529，容差 ±1e-4 | ✅ 满足（容差实为 `0.01`，见 F-051-1） | 独立复现：旧实现 7 fail → 修复后 10 pass；`fxRate.service.test.js:28-34` |
+| AC2 | 单测覆盖 ①采集方向 ②`upsertRate` 拒 `<=0`/非数 ③同 `(currency,date)` 幂等 ④缺字段抛错 | ✅ 满足 | 四项各有独立用例（`fxRate.service.test.js:90-176`） |
+| AC3 | 端到端不 mock `getLatestRates`，USD 1000 ≈ ¥6,691，且改回旧方向必失败 | ✅ 满足 | `fxRate.service.test.js:179-228`；实测旧实现 `totalCny` 实际 149.45 |
+| AC4 | 采集与手动录入同量级（USD/CAD>1、HKD<1），手动写入后折算方向不变 | ⚠️ 部分满足（见 F-051-3） | 走服务层 `upsertRate` + `buildFamilySummary`，未走两个 HTTP 端点；HKD<1 仅对采集值断言 |
+| AC5 | 历史数据处置 + 混排方案 + 修复前后跳变可解释 | ⚠️ 部分满足（Human D-2 取代，见 F-051-2） | 卡内 §9 已记录后果与自愈路径；未给清理脚本/过滤方案，未实测跳变 |
+| AC6 | 5 处文档与实现一致；JSDoc 写明 `base` 与取倒数 | ✅ 满足 | `fxRate.js:5-6`、`SERVER.md:98`、`PL-6-household.md:79`、`fxRate.service.js:67-82`；`API_CONTRACT.md:129`、`PRD.md:63` 经核对无相反表述 |
+| AC7 | 客户端零补偿 | ✅ 满足 | `grep -rn "1 / rate\|/ rateToCny" client/src client/scripts` → 0 命中（exit 1） |
+| AC8 | 独立 Reviewer 复核 | ✅ 满足 | 本记录；审查者未参与实现 |
+
+### 12.3 独立实跑证据（不采信 §11 自述）
+
+| 命令 | 结果 |
+|---|---|
+| `npm run test:server` | **258 pass / 0 fail**（23 个测试文件；`main` 基线 248，新增 10）✅ 与交付声称一致 |
+| `npm run build --workspace client` | `✓ built in 3.34s`（仅既存 500 kB chunk 提示，exit 0） |
+| `npm run lint --workspace client` | `0 errors, 5 warnings`（5 条均为既存 `client/scripts/fixtures/*.jsx` 的 react-refresh 警告） |
+| `npm run docs:check` | `扫描 141 份文档；链接 1438 条；ERROR 0；WARN 0` |
+| `git diff --stat main...HEAD` | 7 文件，与卡内 Scope 一致 |
+
+> 环境说明：本沙箱默认禁止 `child_process.spawn`，`node --test`（每文件 spawn 子进程）与 esbuild 会报 `spawn EPERM`。取得真实输出的方法：对 22 个 `server/test/integration/*.test.js` **逐文件 `node <file>` 直接执行**（等价断言、非子进程隔离），累加各文件 `ℹ pass` / `ℹ fail`；client 的 `vite build` 在放开限制后正常。未以「无法运行」替代结论。
+
+### 12.4 先验红复现（独立完成）
+
+把 `fetchFromProvider` 临时还原为旧实现（`result[currency] = Number(rates[currency])`，并恢复旧的 USD/CAD/HKD 有限性预检），未改任何测试：
+
+```
+✖ fetchFromProvider：CNY base 的 provider 值必须取倒数      → USD 期望约 6.6913，实际 0.149448
+✖ fetchFromProvider：量级断言——USD/CAD > 1，HKD < 1        → USD 折算率应 > 1，实际 0.149448
+✖ fetchFromProvider：非法值抛错且错误信息含币种
+✖ syncLatestRates：入库的 rateToCny 是「1 外币 = X CNY」    → USD 入库值应为 6.6913，实际 0.149448
+✖ 端到端：固定 provider → 入库 → getLatestRates → buildFamilySummary 与人算一致
+✖ 端到端：computeFamilySummary 全链路                      → 期望约 6691.29，实际 149.45
+✖ 采集与手动录入同语义：同一量级
+ℹ tests 10  ℹ pass 3  ℹ fail 7
+```
+
+还原修复后：`ℹ tests 10  ℹ pass 10  ℹ fail 0`，`git status --porcelain` 为空。
+
+**红的真实性结论：成立。** 端到端被怀疑的 `getLatestRates` **未被 mock**（`fxRate.service.test.js:182` 注释 + 实际调用真实 `getLatestRates`，仅 `FxRate.find` 用内存存储替身），断言读的是「采集→入库→读取→折算」全链路，方向反了必然落到 149.45。
+
+> 附注：交付计划 §11.3 记录的「7 fail」与我复现的「7 fail」一致；任务简报里提到的「5 条失败」与仓库记录不符，以实际 7 条为准。
+
+### 12.5 Findings
+
+| # | 严重度 | 位置 | 现象 | 修法方向 |
+|---|---|---|---|---|
+| F-051-1 | MINOR | `server/test/integration/fxRate.service.test.js:34` | 容差 `TOLERANCE = 0.01`，而 AC1 要求 ±1e-4；计划 §8 已把口径放宽到 0.01 并获批准。方向错误的偏差是 45 倍，0.01 仍足以判错，**未削弱判定力**，但卡内 AC 文本未同步 | 由 PM/Planner 把 AC1 的容差改成与计划一致，或在用例注释里写明「放宽理由 + 仍可判错的余量」；不要为了贴 AC 去收紧到 1e-4 造成 flaky |
+| F-051-2 | MINOR | 卡内 `TASK-051-fx-rate-direction.md` §3 AC5 与新增 §9 | AC5 原文要求「若 `getLatestRateDocs` 会新旧混排，须给出清理脚本或过滤方案，并实测修复前后 `totalCny` 跳变可解释」。Human D-2 已裁定不迁移，交付仅在卡内 §9 记录后果，未给脚本/过滤，也未实测跳变。**决定本身合规**，缺口在 AC 文本未回收 | 归 PM：按 D-2 修订 AC5（改为「记录后果 + 提示运维手动触发一次同步」），使卡与决定一致；不要由 Implementer 私自改 AC |
+| F-051-3 | MINOR | `fxRate.service.test.js:232-258` | AC4 后半句要求经 `PUT /api/family/fx/rates/:currency` 写入后 `GET /api/family/summary` 方向不变；实际是直接调 `upsertRate` + `buildFamilySummary`，**绕过了 HTTP 层**；且 `manual` 侧只断言 `USD>1`，未断言 `HKD<1` | 复用 `family.summary.test.js` 已有的 `request()` 夹具补一条端点级用例；或把 AC4 文本改成服务层口径 |
+
+### 12.6 残余风险
+
+1. **历史行仍反向**（Human D-2 接受）：`getLatestRates` 取最新一条，故修复后下一次 09:30 同步即自愈当日折算；但 `/api/family/fx/rates` 面板在新旧行被同日 upsert 覆盖前会**同屏混排** `0.1494` 与 `6.69`。已在卡内 §9 记录，属**已接受**风险，不是缺陷。
+2. **provider 变更 base**：JSDoc 已写明依赖 `base=CNY`（`fxRate.service.js:67-82`）；若上游改 base，用例无法发现（用例固定 payload，只验证映射）。属已知盲区。
+3. **浮点容差**：0.01 的组合在 USD/CAD/HKD 三个量级上都安全，不构成 flaky 风险。
+4. **测试替身局限**：内存存储把 `.sort({date:-1,_id:-1})` 变成空操作（`fxRate.service.test.js:59`），故「取最新」语义未被这些用例覆盖；本任务不要求覆盖该语义，但不可据此认为已覆盖。
+
+### 12.7 独立性声明
+
+审查者未参与本任务的实现、计划编写或验收脚本编写；未修改任何业务代码、测试或 AC。§12.4 的临时回退在独立副本中进行，已还原并以 `git status --porcelain` 为空证净。判定不是合入许可，**Merged 与关闭归 Human**。
+
+
 
 ## 13. Completion Record
 
