@@ -217,7 +217,101 @@ cleanup done
 
 ## 12. Review Record
 
-（按 [REVIEWER.md](../../../os/roles/REVIEWER.md) §7 记录。）
+> 由独立 Reviewer 填写；Implementer 未自评（本卡无自审记录）。判定词不是状态：本章不改变 Task Status，不构成合入许可。
+
+### 12.1 结论
+
+- **判定：PASS WITH ISSUES**（无 BLOCKER、无 MAJOR；3 条 MINOR）。
+- 审查对象：`feature/TASK-046-csv-import-dedup` @ `89ff420`（`git status --porcelain` 为空）。
+- 基线：本地 `main` @ `e1730a0`（**不用** `origin/main` @ `22f5f6e`）。
+- 改动范围：`git diff --stat main...HEAD` = **4 文件 / +228 −11**——生产代码只有 **1 行投影 + 2 行注释**，其余是测试重写与文档。与卡内 Scope 完全一致，无越界。
+- 未审部分：真实 Mongo 端到端（本机无 `mongod`/`mongodb-memory-server`，见 F-046-2）；生产库历史重复数据（卡 §7 明确 Out of Scope）。
+
+### 12.2 AC 逐条判定
+
+| # | 标准 | 判定 | 证据 |
+|---|---|---|---|
+| AC1 | 同 CSV 连导两次：`imported=N/skipped=0` → `imported=0/skipped=N`，库内只增 N | ✅ 满足 | 用例 `transaction.enhanced.test.js:178-200`（断言 `store.length === 2`，不只看返回体）；我回退投影后该用例**转红**（`actual: 2, expected: 0`） |
+| AC2 | 同批次内重复行仍去重（不回归） | ✅ 满足 | 用例 `:202-217`；回退投影时该用例**保持绿**（证明批次内去重未被改动、且与库侧键独立） |
+| AC3 | 同一 CSV 导入两个不同组合：两边都成功，不跨组合误判 | ⚠️ 无专门用例，语义经我实测成立（F-046-1） | 我写的独立探针：A 导入 1、B 导入 1、库内 2 行；A 再导入 → `skipped=1` |
+| AC4 | 字段有差异（fee/quantity/price/date 差一天/action）不判重 | ⚠️ 无专门用例，语义经我实测成立（F-046-1） | 同一探针：5 种差异均 `imported=1/skipped=0`；对照组完全相同的行仍 `skipped=1` |
+| AC5 | 用例模拟真实投影（mock 不得返回投影外字段），旧实现上必须失败 | ✅ 满足 | `createProjectedStore` 的 `pick()` 按 `select` 参数裁剪（`:113-146`）；先验红见 §12.4 |
+| AC6 | 非法行整批回滚、≤500 行上限不变 | ✅ 满足 | 既有用例 `:219-236` 保持绿；`imported=0` + 错误返回 |
+| AC7 | 独立 Reviewer 在真实 Mongo 语义下确认 `skipped` 可达 | ⚠️ 部分满足（F-046-2） | 我以「尊重投影的内存存储 + 真实 `importTransactions`」证明 `skipped` 在**正确投影**下可达；未在真实 Mongo 实例上跑（环境无 mongod） |
+
+### 12.3 我独立实跑的证据（不采信 §11 自述）
+
+| 命令 | 结果 |
+|---|---|
+| `npm run test:server` | **250 pass / 0 fail**（22 文件；`main` 基线 248，新增 2）✅ 与声称一致 |
+| `npm run build --workspace client` | `✓ built in 2.70s`（exit 0） |
+| `npm run lint --workspace client` | `0 errors, 5 warnings`（既存 fixture 警告） |
+| `npm run docs:check` | `141 文档 / 1438 链接 / ERROR 0 / WARN 0` |
+| `git diff --stat main...HEAD` | 4 文件；`shared/services/transaction.service.js` 仅 `select()` 加 `portfolioId` + 注释 |
+
+> 环境说明：沙箱默认禁 `child_process.spawn`（`node --test` 报 `spawn EPERM`）。取得真实输出的方法：逐文件 `node <file>` 执行 22 个测试文件并累加 `ℹ pass`/`ℹ fail`。
+
+### 12.4 先验红复现 + 假阳性根因的独立证明（本任务最关键）
+
+**(1) 先验红**：把 `select('portfolioId symbol action quantity price date fee')` 回退为 `select('symbol action quantity price date fee')`，测试文件不动：
+
+```
+✖ importTransactions：幂等去重 + 成功导入计数          → actual: 2, expected: 1
+✖ importTransactions：连续导入两次 → 第二次全部跳过（AC1） → 二次导入不应新增（AC1）actual: 2, expected: 0
+✔ importTransactions：同批次内重复行去重（AC2）
+✔ importTransactions：非法行整批回滚
+✔ importTransactions：超卖导致整批回滚
+ℹ tests 14  ℹ pass 12  ℹ fail 2
+```
+还原后：`ℹ tests 14  ℹ pass 14  ℹ fail 0`，`git status --porcelain` 为空。
+
+**(2) 假阳性根因的独立证明**（比「先验红」更强，直接证伪「只补投影不改 mock 也算修好」）：保持**缺陷存在**（`select` 仍缺 `portfolioId`），只把新 mock 的 `pick()` 换回「无视投影直接返回整行」——即复刻旧 mock 的行为：
+
+```
+✔ importTransactions：幂等去重 + 成功导入计数
+✔ importTransactions：连续导入两次 → 第二次全部跳过（AC1）
+✔ importTransactions：同批次内重复行去重（AC2）
+ℹ tests 14  ℹ pass 14  ℹ fail 0
+```
+
+**结论：缺陷仍在，但 14/14 全绿——这精确复现了原假阳性机制。** 因此交付的 `createProjectedStore` 按投影裁剪**不是装饰性改动，而是本次修复可信度的前提**；「只补投影、不改 mock」的修法在本分支上会被判不合格（该交付确实同时改了 mock，✅）。已还原，`git status --porcelain` 为空。
+
+**(3) AC3/AC4 语义探针**（我独立编写，非交付测试；用尊重投影的内存存储驱动真实 `importTransactions`）：
+
+```
+PASS  AC3 first portfolio imports — {"imported":1,"skipped":0,"errors":[]}
+PASS  AC3 second portfolio also imports (no cross-portfolio dedupe) — {"imported":1,"skipped":0,...}
+PASS  AC3 store has 2 rows — rows=2
+PASS  AC3 re-import into A skips — {"imported":0,"skipped":1,"errors":[]}
+PASS  AC4 differing fee is NOT deduped        — {"imported":1,"skipped":0,...}
+PASS  AC4 differing quantity is NOT deduped   — {"imported":1,"skipped":0,...}
+PASS  AC4 differing price is NOT deduped      — {"imported":1,"skipped":0,...}
+PASS  AC4 differing date +1 day is NOT deduped — {"imported":1,"skipped":0,...}
+PASS  AC4 differing action is NOT deduped     — {"imported":1,"skipped":0,...}
+PASS  AC4 control: identical row still skipped — {"imported":0,"skipped":1,"errors":[]}
+ALL AC3/AC4 PROBES OK
+```
+
+### 12.5 Findings
+
+| # | 严重度 | 位置 | 现象 | 修法方向 |
+|---|---|---|---|---|
+| F-046-1 | MINOR | `server/test/integration/transaction.enhanced.test.js` | AC3（跨组合）与 AC4（字段差异）**没有对应用例**，只有计划 §11.5 的口头论证。我用独立探针证明语义目前**成立**，但缺用例意味着将来改 `dedupKey` 时无声回归 | 把跨组合与 5 种字段差异补成正式用例（约 30 行，复用 `createProjectedStore`）；这是 AC 的直接要求，不是增强 |
+| F-046-2 | MINOR | 卡 §6 AC7；计划 §11.4 | AC7 要求「在真实 Mongo 语义下确认 `skipped` 可达，不接受仅 mock」。交付的真实库输出只存在于计划 §11.4 的文字，我无法复跑（本机无 `mongod`/`mongodb-memory-server`）。我用「尊重投影的内存存储 + 真实服务函数」替代验证，`skipped` 可达性成立 | 与 047 同源问题：把真实库验证做成可复跑脚本并文档化前置条件；或在 CI/开发机记录一次可核对输出 |
+| F-046-3 | MINOR | 计划 §11.3 与 `transaction.service.js:233-236` | 修复注释写作 `service.js:233-235`，实际注释在 `:233-234`、`select` 在 `:235-237`（差 1 行，纯文档漂移） | 可忽略；若顺手改，只改行号 |
+
+### 12.6 残余风险
+
+1. **历史已重复数据不会自愈**（卡 §7 Out of Scope）：修复只保证「将来不再重复导入」。库内若已有同键多行，新逻辑不会清理；`R-1` 已记录，需 Human 另行裁决。
+2. **浮点全等**：`dedupKey` 用 `Number` 全等（未引入 epsilon）。CSV `100` 与 `100.00` 解析后相等，但若上游产生 `100.0000000001` 之类的精度差，会判为不同行而重复导入。这是**刻意**的（AC4 要求「有差异即不判重」，epsilon 会误判），属已接受口径。
+3. `select()` 投影与 `dedupKey` 之间存在**隐式耦合**：键拼接字段必须全部出现在投影里，否则再次失效。本次已加注释说明，但无机制性保护（例如从同一个字段常量数组同时生成 `select` 字符串与键拼接）。若后续给键加字段而忘改投影，缺陷会重现——这是本修复的结构性脆弱点，值得在将来重构时消除。
+4. 用例的 `pick()` 只处理空格分隔的投影字符串，不支持 `-field`（排除）语法或对象投影；当前生产代码只用空格分隔正列表，够用，但 mock 与真实 Mongo 的保真度仍有边界。
+
+### 12.7 独立性声明
+
+审查者未参与本任务实现、计划编写或验收脚本编写；未修改任何业务代码、测试或 AC。§12.4 的临时回退与 mock 改造均在独立 worktree 副本中进行，已全部还原并以 `git status --porcelain` 为空证净。判定不是合入许可，**Merged 与关闭归 Human**。
+
+
 
 ## 13. Completion Record
 

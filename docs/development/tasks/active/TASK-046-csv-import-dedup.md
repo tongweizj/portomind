@@ -259,3 +259,54 @@ rows in db for temp portfolio = 2                      ← AC1 期望 1
   2. 按 AC5 重写用例：mock 严格模拟投影（返回值不得含投影外字段），并补「连续导入两次」「跨组合」「字段差异」用例；新用例须在旧实现上先验红。
 - **未验证项**：AC3 / AC4 无对应用例，未做人工验证；未处置库内历史重复数据（本次实测 `portomind_dev` 共 50 条交易、去重键无重复，无需清洗；生产库未查，属 §7 明确 Out of Scope）。
 - **状态**：本轮**未**修改 `Status`、未置 `Completed`、未归档。建议 Orchestrator 将本任务退回 `Planning`，并按 §9 B2 补 Approved ExecPlan（符合 EXECUTION_PLANS.md §2「根因明确的简单 Bug 可免计划」的例外判断由 Orchestrator 定；但当前已证实「测试假阳性 + 根因未修」，实际修复面大于原判断）。
+### 11.6 复核与修复（2026-11-11，ExecPlan Approved 后）
+
+> 上述 §11.4 的「不成立」结论已被本轮修复取代。本节为**修复后复核记录**，
+> 详细实施与红/绿输出见 `docs/development/exec-plans/active/TASK-046-csv-import-dedup-plan.md` §11。
+
+**修复**：`shared/services/transaction.service.js:233-235` 投影补 `portfolioId`
+（`select('portfolioId symbol action quantity price date fee')`）。未改 `dedupKey`、
+未改批次内去重、未改返回体、未改浮点比较。
+
+**测试重写**：`transaction.enhanced.test.js` 引入 `createProjectedStore()`，其 `find().select()`
+**按投影裁剪字段**（未请求字段不返回），并新增「连续导入两次」「同批次内重复行」用例。
+
+**红 → 绿**：
+
+```
+修复前（尊重投影的 mock）：✖ 幂等去重 + 成功导入计数 / ✖ 连续导入两次（AC1）  → pass 12 / fail 2
+修复后：                    ✔ ×14                                              → pass 14 / fail 0
+```
+
+**真实 Mongo 实测**（`portomind_dev`，临时组合/资产，用后即删）：
+
+```
+IMPORT #1 => {"imported":2,"skipped":0,"errors":[]}
+rows after #1 = 2
+IMPORT #2 => {"imported":0,"skipped":2,"errors":[]}   ← 修复前此处为 imported:1
+rows after #2 = 2                                      ← 修复前此处为 3
+IMPORT #3 (date 差一天) => {"imported":1,"skipped":0,"errors":[]}  ← AC4 不判重
+```
+
+**AC 对照（修复后）**：
+
+| # | 标准 | 结论 | 证据 |
+|---|---|---|---|
+| AC1 | 连续导入两次 → 第二次 `imported=0/skipped=N`，库内只增 N | ✅ | 单测「连续导入两次（AC1）」+ 真实库实测 |
+| AC2 | 同批次内重复行仍去重 | ✅ | 单测「同批次内重复行去重（AC2）」 |
+| AC3 | 两个不同组合各自导入成功，不跨组合误判 | ✅ | 键首段为 `portfolioId`；查询范围 `find({portfolioId})` |
+| AC4 | 字段有差异不判重 | ✅ | 真实库第 3 条（date 差一天 → imported=1） |
+| AC5 | 用例模拟真实投影，旧实现上必须失败 | ✅ | 先验红 2 fail（详见计划 §11.2） |
+| AC6 | 非法行整批回滚不变 | ✅ | 既有用例通过 |
+| AC7 | Reviewer 真实 Mongo 语义下确认 `skipped` 可达 | ⏳ | 实测已证明可达；正式复核归 Reviewer |
+
+**未做**：未清理历史重复数据（`portomind_dev` 50 条去重键无重复；生产库未查，属 §7 Out of Scope）；
+未改 `PL-1-ledger.md` TR-09 描述（归 PM）。**未修改 Status / 未置 Completed / 未归档**。
+
+---
+
+## 12. Review Record（独立 Reviewer，2026-11-11）
+
+**结论：`Pass with issues`**（无 BLOCKER / 无 MAJOR；3 条 MINOR：AC3/AC4 无用例、真实 Mongo 证据不可复跑、行号漂移）→ 详见 [ExecPlan §12](../../exec-plans/active/TASK-046-csv-import-dedup-plan.md#12-review-record)（@ `89ff420`，基线 `main` `e1730a0`）。
+> 假阳性根因已由 Reviewer 独立证伪验证：缺陷存在 + 旧式无视投影的 mock → 14/14 全绿，证明 mock 保真度是本修复可信度的前提。
+
