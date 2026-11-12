@@ -216,6 +216,68 @@ test('importTransactions：同批次内重复行去重（AC2）', async (t) => {
   assert.equal(store.length, 1);
 });
 
+// TASK-046 AC3（F-046-1 返修）：同一 CSV 导入两个不同组合——两边都应成功导入，
+// 不得跨组合误判重复。幂等键首段是 portfolioId，且库侧查询范围是 find({portfolioId})。
+test('importTransactions：同一 CSV 导入两个不同组合，两边都成功（AC3）', async (t) => {
+  t.mock.method(Portfolio, 'exists', async () => true);
+  t.mock.method(Asset, 'findOne', async () => ({ symbol: 'VTI', type: 'etf', market: 'US', currency: 'USD', active: true }));
+  const store = createProjectedStore(t);
+
+  const otherPortfolio = '64b0000000000000000000c2';
+  const csv = [{ symbol: 'VTI', action: 'buy', quantity: 10, price: 100, date: '2026-01-01' }];
+
+  const intoFirst = await transactionService.importTransactions({ portfolioId, transactions: csv });
+  assert.equal(intoFirst.imported, 1, '第一个组合应导入 1 条');
+  assert.equal(intoFirst.skipped, 0, '第一个组合不应判重');
+
+  const intoSecond = await transactionService.importTransactions({ portfolioId: otherPortfolio, transactions: csv });
+  assert.equal(intoSecond.imported, 1, '第二个组合同样应导入（不得跨组合误判重复）');
+  assert.equal(intoSecond.skipped, 0, '第二个组合不应跳过');
+
+  assert.equal(store.length, 2, '两个组合各存一份，共 2 行');
+
+  // 回到第一个组合再导入同一批 → 必须跳过（证明隔离的是归属，不是关掉了判重）
+  const backToFirst = await transactionService.importTransactions({ portfolioId, transactions: csv });
+  assert.equal(backToFirst.imported, 0, '原组合重复导入应全部跳过');
+  assert.equal(backToFirst.skipped, 1);
+});
+
+// TASK-046 AC4（F-046-1 返修）：字段有任何差异时不得判重（幂等键语义不被放宽）。
+test('importTransactions：字段有差异时不判重（AC4）', async (t) => {
+  t.mock.method(Portfolio, 'exists', async () => true);
+  t.mock.method(Asset, 'findOne', async () => ({ symbol: 'VTI', type: 'etf', market: 'US', currency: 'USD', active: true }));
+  const store = createProjectedStore(t);
+
+  const base = { symbol: 'VTI', action: 'buy', quantity: 10, price: 100, date: '2026-01-01' };
+
+  // 先导入基准行
+  const first = await transactionService.importTransactions({ portfolioId, transactions: [base] });
+  assert.equal(first.imported, 1);
+
+  // 五项差异：fee / quantity / price / date 差一天 / action
+  const variants = [
+    { label: 'fee', tx: { ...base, fee: 5 } },
+    { label: 'quantity', tx: { ...base, quantity: 11 } },
+    { label: 'price', tx: { ...base, price: 101 } },
+    { label: 'date 差一天', tx: { ...base, date: '2026-01-02' } },
+    { label: 'action', tx: { ...base, action: 'div_cash' } }
+  ];
+
+  let expectedRows = 1;
+  for (const { label, tx } of variants) {
+    const result = await transactionService.importTransactions({ portfolioId, transactions: [tx] });
+    assert.equal(result.imported, 1, `${label} 有差异时应照常导入，不得判重`);
+    assert.equal(result.skipped, 0, `${label} 有差异时 skipped 应为 0`);
+    expectedRows += 1;
+    assert.equal(store.length, expectedRows, `${label} 导入后库内应有 ${expectedRows} 行`);
+  }
+
+  // 对照：完全相同的行仍然判重（证明上面不是把判重关掉了）
+  const control = await transactionService.importTransactions({ portfolioId, transactions: [base] });
+  assert.equal(control.imported, 0, '完全相同的行应判重');
+  assert.equal(control.skipped, 1);
+});
+
 test('importTransactions：非法行整批回滚（imported=0 且返回错误）', async (t) => {
   t.mock.method(Portfolio, 'exists', async () => true);
   t.mock.method(Asset, 'findOne', async () => ({ symbol: 'VTI', type: 'etf', market: 'US', currency: 'USD', active: true }));
