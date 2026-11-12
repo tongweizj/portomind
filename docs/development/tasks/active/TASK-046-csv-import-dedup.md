@@ -303,3 +303,10 @@ IMPORT #3 (date 差一天) => {"imported":1,"skipped":0,"errors":[]}  ← AC4 �
 
 **未做**：未清理历史重复数据（`portomind_dev` 50 条去重键无重复；生产库未查，属 §7 Out of Scope）；
 未改 `PL-1-ledger.md` TR-09 描述（归 PM）。**未修改 Status / 未置 Completed / 未归档**。
+
+---
+
+## 12. Review Record（独立 Reviewer，2026-11-11）
+
+**结论：`Pass with issues`**（无 BLOCKER / 无 MAJOR；3 条 MINOR：AC3/AC4 无用例、真实 Mongo 证据不可复跑、行号漂移）→ 详见 [ExecPlan §12](../../exec-plans/active/TASK-046-csv-import-dedup-plan.md#12-review-record)（@ `89ff420`，基线 `main` `e1730a0`）。
+> 假阳性根因已由 Reviewer 独立证伪验证：缺陷存在 + 旧式无视投影的 mock → 14/14 全绿，证明 mock 保真度是本修复可信度的前提。
