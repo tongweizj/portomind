@@ -264,7 +264,7 @@ rows in db for temp portfolio = 2                      ← AC1 期望 1
 > 上述 §11.4 的「不成立」结论已被本轮修复取代。本节为**修复后复核记录**，
 > 详细实施与红/绿输出见 `docs/development/exec-plans/active/TASK-046-csv-import-dedup-plan.md` §11。
 
-**修复**：`shared/services/transaction.service.js:233-235` 投影补 `portfolioId`
+**修复**：`shared/services/transaction.service.js:235-237` 投影补 `portfolioId`
 （`select('portfolioId symbol action quantity price date fee')`）。未改 `dedupKey`、
 未改批次内去重、未改返回体、未改浮点比较。
 

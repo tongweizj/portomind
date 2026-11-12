@@ -13,6 +13,7 @@
     "verify:baseline": "node scripts/verifyBaseline.js",
     "verify": "npm run validate && npm run verify:baseline",
     "verify:portfolio-immutable": "node scripts/verify-portfolio-immutable.cjs",
+    "verify:csv-idempotency": "node scripts/verify-csv-import-idempotency.cjs",
     "e2e:auth": "node scripts/e2e-auth-058.cjs"
   },
   "keywords": [

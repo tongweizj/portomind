@@ -157,7 +157,7 @@ const existing = await Transaction.find({ portfolioId }).select(
 
 ### 11.3 W1 · 修复（单点）
 
-`shared/services/transaction.service.js:233-235`：
+`shared/services/transaction.service.js:235-237`（修复后行号；修复前 `main` 上同一处为 `:233-235`——加注释把后文整体下移 2 行，F-046-3）：
 
 ```js
 // 投影必须包含 portfolioId：下方拼键读取 tx.portfolioId，缺该字段会得到 "undefined"，
@@ -214,6 +214,104 @@ cleanup done
 - 未改 `PL-1-ledger.md` 的 TR-09 描述（归 PM）。
 - 未改前端结果页文案、CSV 解析、列映射、API 契约。
 - 说明：任务卡 §11 上一轮（2026-11-11）记录的「收口不通过」结论已被本轮修复取代，卡内已追加复核记录。
+
+### 11.8 返修记录（2026-11-12，审查 MINOR 处置）
+
+审查结论见 §12（`Pass with issues`，3 MINOR）。本轮只处置 findings，不改 AC / Scope / Status。
+基线仍为 `main` @ `e1730a0`；审查记录提交 `79c2ae4`；本条记录提交见 §11.9。
+
+#### F-046-1（MINOR）AC3 / AC4 无正式用例 —— 已修
+
+`server/test/integration/transaction.enhanced.test.js` 新增 2 条用例（复用既有 `createProjectedStore`）：
+
+1. `importTransactions：同一 CSV 导入两个不同组合，两边都成功（AC3）`
+   组合 A 导入 1 条 → 组合 B 导入同一条（必须也 `imported=1`，不得跨组合判重）→ 库内 2 行
+   → 回到 A 再导入 → `imported=0/skipped=1`（证明隔离的是归属，不是把判重关掉）。
+2. `importTransactions：字段有差异时不判重（AC4）`
+   基准行导入后，依次导入 `fee` / `quantity` / `price` / `date 差一天` / `action` 五种变体，
+   每种都必须 `imported=1/skipped=0` 且库内行数递增；末尾用「完全相同的行」做对照，
+   必须 `imported=0/skipped=1`（防止把「判重被关掉」误当成 AC4 通过）。
+
+**可证伪性（负向对照，临时回退投影后已还原）**：
+
+```
+✖ importTransactions：幂等去重 + 成功导入计数
+✖ importTransactions：连续导入两次 → 第二次全部跳过（AC1）
+✖ importTransactions：同一 CSV 导入两个不同组合，两边都成功（AC3）
+✖ importTransactions：字段有差异时不判重（AC4）
+ℹ tests 16  ℹ pass 12  ℹ fail 4
+```
+即新增的两条用例确实能捕捉「投影缺 `portfolioId`」这一缺陷。
+
+#### F-046-2（MINOR）真实库证据不可复跑 —— 已修
+
+新增 `server/scripts/verify-csv-import-idempotency.cjs`（+ `server/package.json` 脚本 `verify:csv-idempotency`）：
+
+- 读 `MONGO_URI`（默认 `mongodb://127.0.0.1:27017/portomind_dev`），**写保护**：库名须含 `_dev|_test`；
+- 覆盖 AC1（连导两次）、AC3（跨组合）、AC4（quantity 差异）；
+- 临时数据 `finally` 精确删除 + `TAG` 前缀兜底清扫 + 残留复查；退出码 0/1。
+
+**真实运行输出**（`portomind_dev`）：
+
+```
+db = portomind_dev
+tag = VERIFY46_1794497573360
+
+PASS  ① 首次导入 imported=2 / skipped=0 — {"imported":2,"skipped":0,"errors":[]}
+PASS  ① 库内新增 2 行 — rows=2
+PASS  ② 二次导入 imported=0 / skipped=2（AC1） — {"imported":0,"skipped":2,"errors":[]}
+PASS  ② 库内仍只有 2 行（未新增） — rows=2
+PASS  ③ 另一个组合导入成功（不跨组合判重，AC3） — {"imported":2,"skipped":0,"errors":[]}
+PASS  ④ 仅 quantity 不同 → 照常导入（AC4） — {"imported":1,"skipped":0,"errors":[]}
+
+断言总数 6 / 通过 6 / 失败 0
+cleanup: tx:5 pf:2 asset:1
+残留检查：transactions=0 portfolios=0 assets=0 => CLEAN
+```
+
+退出码 **0**。**负向对照**（临时回退投影为 `'symbol action quantity price date fee'`）：
+
+```
+PASS  ① 首次导入 imported=2 / skipped=0
+PASS  ① 库内新增 2 行 — rows=2
+FAIL  ② 二次导入 imported=0 / skipped=2（AC1） — {"imported":2,"skipped":0,"errors":[]}
+FAIL  ② 库内仍只有 2 行（未新增） — rows=4
+断言总数 6 / 通过 4 / 失败 2
+```
+退出码 1。即脚本在真实 Mongo 上复现了原缺陷（二次导入新增 2 行，rows 2→4），
+与审查者当时在 `portomind_dev` 观察到的现象一致。
+
+#### F-046-3（MINOR）行号漂移 —— 已修
+
+原记录写 `service.js:233-235`。核对结论：
+
+- **修复前**（`main`）该 `select(...)` 确实在 `:233-235`，原记录在当时是对的；
+- 本次修复在两行 `select` 之前加了 2 行注释，使同一处变为 `:235-237`。
+
+已把 §11.3 与卡内 §11.6 的引用更新为 `:235-237`，并在 §11.3 注明「修复前为 `:233-235`，
+加注释后下移 2 行」，避免下次再被判为漂移。
+
+#### 本轮验证
+
+| 命令 | 结果 |
+|---|---|
+| `npm run test:server` | **252 pass / 0 fail**（250 + 新增 2） |
+| `npm run build --workspace client` | ✅ `✓ built` |
+| `npm run lint --workspace client` | ✅ `0 errors, 5 warnings`（既存 fixture 警告） |
+| `npm run docs:check` | ✅ `141 文档 / 1438 链接 / ERROR 0 / WARN 0` |
+
+#### 边界
+
+未改 `dedupKey`、批次内去重、`skipped` 语义、返回体、浮点比较策略；
+未清理任何历史数据；未改 `PL-1-ledger.md`（归 PM）；
+`shared/services/transaction.service.js` 生产代码**零改动**（本轮只加测试与脚本）。
+
+### 11.9 提交
+
+| SHA | 内容 |
+|---|---|
+| `79c2ae4` | `docs(TASK-046): record independent review verdict`（审查记录） |
+| 见 `git log -1` | `test(TASK-046): 返修 MINOR——AC3/AC4 用例 + 真实库可复跑脚本` |
 
 ## 12. Review Record
 
