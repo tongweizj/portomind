@@ -27,7 +27,7 @@
 `None`
 
 **Execution Plan:**  
-[Draft：TASK-047-plan](../../exec-plans/active/TASK-047-review-followups-plan.md)（2026-11-11 起草；`Draft → Approved` 归 Human）
+[Draft：TASK-047-plan](../../exec-plans/completed/TASK-047-review-followups-plan.md)（2026-11-11 起草；`Draft → Approved` 归 Human）
 待创建
 
 **来源：**  
@@ -171,7 +171,7 @@ TASK-044 的独立审查提出 6 条改进建议（M-1~M-6），Implementer 因�
 
 ## 9. Review Record（独立 Reviewer，2026-11-11）
 
-**结论：`Fail`**（2 条 MAJOR：AC5 的 E2E 未重跑且首条断言与当前侧栏不符必然失败、AC1 的真实 Mongo 证据不可复跑；2 条 MINOR）→ 详见 [ExecPlan §12](../../exec-plans/active/TASK-047-review-followups-plan.md#12-review-record)（@ `4940c39`，基线 `main` `e1730a0`）。
+**结论：`Fail`**（2 条 MAJOR：AC5 的 E2E 未重跑且首条断言与当前侧栏不符必然失败、AC1 的真实 Mongo 证据不可复跑；2 条 MINOR）→ 详见 [ExecPlan §12](../../exec-plans/completed/TASK-047-review-followups-plan.md#12-review-record)（@ `4940c39`，基线 `main` `e1730a0`）。
 > M-2 守卫本身经独立加固验证正确（R-1b / R-1c 双陷阱均可被用例捕获）；FAIL 仅因证据类 AC 未交付。
 
-> **复审（第二轮，2026-11-12）**：`Pass with issues` @ `5a89691` — **由首轮 `Fail` 升级**：2 条 MAJOR 均闭环（F-047-2 已由 Reviewer 独立复跑 8/8 PASS + CLEAN；F-047-1 静态已修、本人未能复跑，证据强度另述）；新增 F-047-5（E2E 导入段不清理数据，与 046 合并后重跑失败）。详见 [ExecPlan §12.7](../../exec-plans/active/TASK-047-review-followups-plan.md#127-复审记录第二轮2026-11-12)。判定不是合入许可，Merged 与关闭归 Human。
+> **复审（第二轮，2026-11-12）**：`Pass with issues` @ `5a89691` — **由首轮 `Fail` 升级**：2 条 MAJOR 均闭环（F-047-2 已由 Reviewer 独立复跑 8/8 PASS + CLEAN；F-047-1 静态已修、本人未能复跑，证据强度另述）；新增 F-047-5（E2E 导入段不清理数据，与 046 合并后重跑失败）。详见 [ExecPlan §12.7](../../exec-plans/completed/TASK-047-review-followups-plan.md#127-复审记录第二轮2026-11-12)。判定不是合入许可，Merged 与关闭归 Human。

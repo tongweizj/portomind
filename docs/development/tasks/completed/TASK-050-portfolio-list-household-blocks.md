@@ -265,7 +265,7 @@ Human 于 2026-10-21 指令「开始做 TASK-050」。本节记录前置核查�
 - **静态**：build exit 0（**2408 modules**）· eslint 0 error/0 warning · AC15 三条 grep 全 0 · AC16 两条达标（`ACTION_LABELS = {` 0 行、`Object.fromEntries(TRANSACTION_ACTIONS` 恰 1 行）· OD-2 `{rec.status}` 0 行 · 侧栏 5 项。
 - **运行时**（1440×900，`portomind_e2e` 副本 + `page.route` 构造数据）：AC9 七段顺序 · AC10 两段合计 80% · AC11 图例跳转 · AC12 12→5 行 · AC13 收起态 0 次请求 / 展开 1 次 / 同步与录入后两 query 均刷新 · AC14 两态均有说明 · AC16 分红浅紫 + 无空 badge · AC17 `/family` → `/portfolios` · OD-2 状态列中文 · R-3 汇总 500 时卡片仍渲染。
 - **差异**：D-1 `FxPanel` 不再手动 `refetch()`（由 hook 的 invalidate 保证）；D-2 折算不完整项图例用中性灰；D-3 标题改「组合占比」；D-4 `CLIENT.md` 另清 4 处失效名词；D-5 `PREVIEW_LIMIT` 提常量；D-6 同步状态行（未动 AC/Scope）。
-- **⚠️ 新发现 F-1（需立项，未修）→ ✅ 已立项 [`TASK-051`](../active/TASK-051-fx-rate-direction.md)（2026-10-21）**：家庭折算的**汇率方向疑似反了** —— 采集端取的是「以 CNY 为基准」的 `1 CNY = X 外币`，却当 `rateToCny` 入库并用乘法折算，导致家庭总资产被系统性低估（实测 CAD `13836.49 × 0.2112 = 2922.5`，正确应约 `65,509`），且与手动录入示例 `7.20` 的语义矛盾。属服务端 + 折算口径，超出本任务边界（NG-5 / AC19）。
+- **⚠️ 新发现 F-1（需立项，未修）→ ✅ 已立项 [`TASK-051`](../completed/TASK-051-fx-rate-direction.md)（2026-10-21）**：家庭折算的**汇率方向疑似反了** —— 采集端取的是「以 CNY 为基准」的 `1 CNY = X 外币`，却当 `rateToCny` 入库并用乘法折算，导致家庭总资产被系统性低估（实测 CAD `13836.49 × 0.2112 = 2922.5`，正确应约 `65,509`），且与手动录入示例 `7.20` 的语义矛盾。属服务端 + 折算口径，超出本任务边界（NG-5 / AC19）。
 - 改动**未提交**，位于 `feature/TASK-050` 工作树；真实库 `portomind` 未被读写。
 
 ---

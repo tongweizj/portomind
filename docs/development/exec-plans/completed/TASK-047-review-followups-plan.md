@@ -4,7 +4,7 @@
 
 Status：Approved（2026-11-11，Human 批准「051、047、046 三份计划」；`Draft → Approved` 归 Human）
 
-Related Task：[TASK-047](../../tasks/active/TASK-047-review-followups.md)（独立维护任务，无 Story）。
+Related Task：[TASK-047](../../tasks/completed/TASK-047-review-followups.md)（独立维护任务，无 Story）。
 
 Branch / Base：自 `ee989c7` 起草计划（`git merge-base main HEAD` = `e1730a0`），实施基于 **本地 `main` @ `e1730a0`**，分支 `feature/TASK-047-review-followups`（未 rebase）。
 

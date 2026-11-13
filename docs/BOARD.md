@@ -6,7 +6,7 @@
 
 ## 当前 Story
 
-> **当前格局（2026-11-08）**：**当前无开发中的 Story**。[US-004](./development/requirements/stories/active/US-004-dashboard-portfolio-health.md) 已于 2026-11-08 由 Human 关闭（`Completed`），过程目录归档在 `delivery/completed/US-004/`；US-001 亦已 `Completed` 并归档（`delivery/completed/US-001/`）。US-002 / US-003 / US-005 仍为 `Backlog`，需求留在 `requirements/stories/`，不预建交付目录。
+> **当前格局（2026-11-12）**：**当前无开发中的 Story**。[US-004](./development/requirements/stories/active/US-004-dashboard-portfolio-health.md) 已于 2026-11-08 由 Human 关闭（`Completed`），过程目录归档在 `delivery/completed/US-004/`；US-001 亦已 `Completed` 并归档（`delivery/completed/US-001/`）。US-002 / US-003 / US-005 仍为 `Backlog`，需求留在 `requirements/stories/`，不预建交付目录。
 
 > 默认只推进一个当前 Story（开发中），可另有一个预研 Story 做前期准备；不采用 Sprint。
 
@@ -117,7 +117,7 @@
 | 全部已登记 Story（排除取消） | 2 | 0 | 0 | 0 | 0 | 0 | 2 |
 | US-001 已关联 Task（已归档，全 Completed） | 7 | 0 | 0 | 0 | 0 | 0 | 7 |
 | US-004 已关联 Task | 5 | 0 | 0 | 0 | 0 | 0 | 5 |
-| 尚未关联 Story 的未完成 Task | 5 | 1 | 4 | 0 | 0 | 0 | 0 |
+| 尚未关联 Story 的未完成 Task | 2 | 1 | 1 | 0 | 0 | 0 | 0 |
 
 > 统计来自卡片；旧词按 STATES.md §7.1 映射，不证明当前实施授权。已关联任务不重复计入未关联任务。US-001 七张卡全部 `Completed` 并已合入 `main`、过程目录已归档；TASK-054 的既有 Completed 计为 1 个支撑任务完成，不表示 US-001 已验收（Story 另由 Human 关闭）。US-004 的 5 张卡全部 `Completed` 且全部合入 `main`：065（`6f556aa`）、066（`af1f4d2`，PR #42）、067（`d95be45`）、068（`6f0b4df`）、069（`d42a1bb`，PR #43）；**US-004 已于 2026-11-08 由 Human 关闭（`Completed`）并归档至 `delivery/completed/US-004/`**。共 13 条历史完成记录保留作证据索引，与本 Story 进度不可相加。
 
@@ -152,16 +152,13 @@
 
 > 兼容既有任务与独立维护工作。US-001 已关联 TASK-053～057及063/064（其中054保持既有完成记录）；反向关联已核对，登记结果见上表。其余未确认关联的任务仍在下表。
 >
-> **2026-11-09 增补跟踪**（**2026-11-11 更新**）：TASK-071、TASK-072 已完成并合入 `main`（PR #53 / #52），卡片与计划已归档，见「历史完成 Task」表。下表只保留未完成项。**更正**：046 此前被判断为「已实现、仅需收口」，经端到端复核证伪——投影缺 `portfolioId` 导致去重失效、测试为假阳性，缺陷仍在。
+> **2026-11-09 增补跟踪**（**2026-11-12 更新**）：TASK-071/072、TASK-051/047/046 全部完成并合入 `main`（PR #53/#52/#56/#55/#54），卡片与计划已归档到 `tasks/completed/`、`exec-plans/completed/`，见「历史完成 Task」表。下表只保留未完成项（045/062/070）。
 >
-> **议定推进顺序（2026-11-11 批准）**：`TASK-051` → `TASK-047` → `TASK-046`，三份计划均已 `Approved`、任务均 `Implementing`；已完成的 `TASK-072`、`TASK-071` 见「历史完成 Task」；`TASK-062` / `TASK-070` 等 Human 审阅；`TASK-045` 保持 Backlog。**完成一张即归档一张**（`tasks/active` → `tasks/completed`，计划 `exec-plans/active` → `exec-plans/completed`），**不迁入 `delivery/`**（该目录只属于 Story 过程资料）。
+> **议定推进顺序（2026-11-11 批准，2026-11-12 全部完成）**：`TASK-051` → `TASK-047` → `TASK-046` 均已实施、复审（046 `Pass`；047 由 Fail 升 `Pass with issues`；051 维持 `Pass with issues`）并合入；已完成的 `TASK-072`、`TASK-071` 见「历史完成 Task」；`TASK-062` / `TASK-070` 等 Human 审阅；`TASK-045` 保持 Backlog。**完成一张即归档一张**（`tasks/active` → `tasks/completed`，计划 `exec-plans/active` → `exec-plans/completed`），**不迁入 `delivery/`**（该目录只属于 Story 过程资料）。
 
 | Task | 工作 | Story | Status | Priority | 待处理 / 下一步 |
 |---|---|---|---|---|---|
 | [TASK-045](./development/tasks/active/TASK-045-transaction-query-filters.md) | 交易流水查询与筛选 | 未关联 | Backlog | Medium | 待排期。前置未决：跨组合+时间范围查询无索引前缀（`transaction.js` 复合索引均以 `portfolioId` 开头），需先定索引方案 |
-| [TASK-046](./development/tasks/active/TASK-046-csv-import-dedup.md) | CSV 二次导入未去重（幂等失效） | 未关联 | **Reviewing**（复审 `Pass`，2026-11-12） | High | 已交付 `eb1975e`（252 测试全绿）；二轮复审 3 项 MINOR 全部闭环、无新增 finding，我方独立复跑真实库脚本 6/6 PASS。分支待 Human 合入。：`transaction.service.js:233-235` 的 `select()` 投影不含 `portfolioId`，`:237-240` 拼键得到 `undefined`，与库比对永不命中；`transaction.enhanced.test.js` 的 mock 返回了投影外字段 → **假阳性**。实测连续导入两次仍 `imported=1`。需先修投影 + 按 AC5 先验红重写用例（详见卡 §11） |
-| [TASK-047](./development/tasks/active/TASK-047-review-followups.md) | TASK-044 审查遗留整改（M-1/M-2/M-5/M-6） | 未关联 | **Reviewing**（复审 `Pass with issues`，由首轮 Fail 升级，2026-11-12） | High | 已交付 `5a89691`（252 测试全绿、E2E 38/38、真实库脚本 8/8）；二轮复审 2 条 MAJOR 闭环，新增 1 条 MINOR（F-047-5：E2E 导入段不清理，与 046 合并后升级 MAJOR）。分支待 Human 合入。 **仍未修**：M-2 `WRITABLE_FIELDS` 仍含 `portfolioId`（可静默把交易迁到别的组合）；M-1 `Sidebar.isPortfolioListPath` 未覆盖 `/portfolios/:id/transactions`。Human 已裁定 M-2 = 后端拒绝改写 |
-| [TASK-051](./development/tasks/active/TASK-051-fx-rate-direction.md) | 家庭折算汇率方向反了（`rateToCny` 存成 `1 CNY = X 外币`） | 未关联 | **Reviewing**（复审 `Pass with issues`，2026-11-12） | High | 已交付 `0dc23d4`（260 测试全绿）；二轮复审维持 `Pass with issues`（2 项 MINOR 已修、AC5 文本回收留 PM）。分支待 Human 合入。 **仍未修**：`fxRate.service.js:78-96` 采集结果未取倒数直接入库，`familySummary` 按乘法折算 → 家庭总资产被算成约 1/24；真实库已有反向数据；当前无该模块测试。**最高优先** |
 | [TASK-062](./development/tasks/active/TASK-062-agent-role-boundary-and-overhead.md) | Agent 角色权限边界与执行开销整改 | 未关联 | Planning | High | 待审阅范围及裁决；提案未批准，不作为现行规则 |
 | [TASK-070](./development/tasks/active/TASK-070-dsh-agent-teams-workflow-proposal.md) | 基于 DSH Agent Teams 插件的工作流适配（提案） | 未关联 | Planning | High（建议，待 Human 定） | 待 Human 审阅范围与 AC；仅机制核对 + 工作流草案，未启用插件、未改规则，不作为现行规则；与 TASK-062 另起新卡不合并 |
 
@@ -194,13 +191,15 @@
 | TASK-043 | 标的频道合并（资产管理 + 价格） | 2026-10-19 | `Merged` #32 | [任务卡](./development/tasks/completed/TASK-043-asset-price-consolidation.md) |
 
 
+> 2026-11-12（Orchestrator 登记 TASK-051 / 047 / 046 → Completed + 归档）：三份 ExecPlan 经 Human 批准后实施；**二轮独立复审**——046 `Pass`（3 MINOR 全闭环）、047 由 `Fail` 升 **`Pass with issues`**（2 MAJOR 闭环：E2E 断言修正并真实跑 38/38、新增真实库可复跑脚本 8/8；新增 MINOR F-047-5：E2E 导入段不清理，与 046 合并后升级 MAJOR）、051 `Pass with issues`（2 MINOR 已修、AC5 文本回收留 PM）。Orchestrator 独立复跑：`fxRate.service.test.js` 260/260、`transaction.enhanced.test.js` 252/252、047 真实库脚本 **8/8 PASS + DB CLEAN**、046 真实库脚本 **6/6 PASS + DB CLEAN**（`portomind_dev`，临时数据已清理）。三支经 PR 合入：**#56 `c62da71`（051）、#55 `e5f9679`（047）、#54 `84b0434`（046）**；二轮复审记录提交（`5cb948a` / `bce444e`+`102b404` / `0b26e38`+`5eeba8f`）原未包含在 PR 内，已由 Orchestrator 补并入 `main`（`3a6a96a` / `c8d0828` / `6a40493`，`server/package.json` 冲突保留双方 npm 脚本）。按 [STATES.md §4](./os/process/STATES.md#4-谁可以改变状态) 登记 `Reviewing → Completed`，卡片与计划移入 `tasks/completed/`、`exec-plans/completed/`，链接已修复。**遗留**：051 历史汇率数据未迁移（D-2，可手动触发同步自愈最新值）；051 AC5 文本回收、047 F-047-5（E2E 导入段清理）待后续任务。
+
 ## Roadmap
 
 
 1. 将资产管理和价格，合并。—— ✅ TASK-043
 2. 将交易记录，收拢进组合管理 —— ✅ TASK-044
 3. 家庭视图，融入进 dashboard —— ✅ **已完成（2026-10-26 收官）**：`TASK-049` 总资产卡 → `/`（2026-10-19 结案）；`TASK-050` 其余五块 → `/portfolios` 且 `/family` 下线（2026-10-21 实施 → R-1 返修 → 复验通过 → **2026-10-26 合入 `main` `cafcc5d`，PR #35**）。需求：[`specs/completed/FS-household-view-split.md`](./development/requirements/specs/completed/FS-household-view-split.md)
-4. 交易线遗留修复（**2026-11-11 更新**）：`TASK-051`（汇率方向，P0 数据错误）→ `TASK-047`（M-2 归属守卫 + M-1 侧栏高亮）→ `TASK-046`（CSV 幂等**仍失效**，需修投影 + 重写假阳性用例）；~~`TASK-072`（API 契约残差）~~ ✅ **2026-11-11 合入 #52**；~~`TASK-071`（结构清理）~~ ✅ **2026-11-11 合入 #53**；~~`TASK-048`（分红标签）~~ ✅ **已完成 2026-10-20**
+4. 交易线遗留修复：~~`TASK-051`（汇率方向）~~ ✅ **2026-11-12 合入 #56**；~~`TASK-047`（M-2 归属守卫 + M-1 侧栏 + 验证资产）~~ ✅ **2026-11-12 合入 #55**；~~`TASK-046`（CSV 幂等投影修复）~~ ✅ **2026-11-12 合入 #54**；~~`TASK-072`（API 契约残差）~~ ✅ **2026-11-11 合入 #52**；~~`TASK-071`（结构清理）~~ ✅ **2026-11-11 合入 #53**；~~`TASK-048`（分红标签）~~ ✅ **已完成 2026-10-20**
 5. 家庭线遗留（本 FS 明确不做，需独立立项）：家庭总资产趋势（`FAM-01` P1，无快照模型）· 家庭视图按账户类型/大类分组（PRD `CM-05`/`AS-09` 声称已就绪，实现中 `familySummary` 既无 `accountType` 也无大类聚合）
 6. dashboard，增加组合健康表，内容是最新的3个提示。一个url ，跳转全部
 

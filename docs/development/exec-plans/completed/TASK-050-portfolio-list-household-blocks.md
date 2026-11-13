@@ -697,7 +697,7 @@ W1 单元核对（`esbuild` 打包后直接调用，7/7）：`formatMoney(1234.5
 
 | # | 发现 | 影响 | 建议 |
 |---|---|---|---|
-| **F-1（新，服务端）→ 已立项 [`TASK-051`](../../tasks/active/TASK-051-fx-rate-direction.md)** | **家庭折算的汇率方向疑似反了**：`fxRate.service.fetchFromProvider` 取的是 `open.er-api.com/v6/latest/CNY`（**以 CNY 为基准**，返回 `1 CNY = X 外币`），却被当成 `rateToCny` 入库，`familySummary.service` 再用 `amount * rate` 折算。实测 `buckets.CAD.rate = 0.211217`，`13836.49 × 0.2112 = 2922.5`，而正确值应约 `13836.49 ÷ 0.2112 ≈ 65,509` | 家庭总资产与分桶折算值被**系统性低估**；页面脚注「1 CAD ≈ ¥0.2112」与手动录入的语义（示例 `7.20`）**互相矛盾**。属 `TASK-049` 之前既有缺陷，本任务只是把同一段展示搬过来 | **单独立项**（服务端 + 口径，超出本任务 NG-5 / AC19 边界）。修法二选一：采集时存倒数，或折算时改除法；并统一手动录入语义 |
+| **F-1（新，服务端）→ 已立项 [`TASK-051`](../../tasks/completed/TASK-051-fx-rate-direction.md)** | **家庭折算的汇率方向疑似反了**：`fxRate.service.fetchFromProvider` 取的是 `open.er-api.com/v6/latest/CNY`（**以 CNY 为基准**，返回 `1 CNY = X 外币`），却被当成 `rateToCny` 入库，`familySummary.service` 再用 `amount * rate` 折算。实测 `buckets.CAD.rate = 0.211217`，`13836.49 × 0.2112 = 2922.5`，而正确值应约 `13836.49 ÷ 0.2112 ≈ 65,509` | 家庭总资产与分桶折算值被**系统性低估**；页面脚注「1 CAD ≈ ¥0.2112」与手动录入的语义（示例 `7.20`）**互相矛盾**。属 `TASK-049` 之前既有缺陷，本任务只是把同一段展示搬过来 | **单独立项**（服务端 + 口径，超出本任务 NG-5 / AC19 边界）。修法二选一：采集时存倒数，或折算时改除法；并统一手动录入语义 |
 | **F-2** | `client/scripts/e2e-task-049.mjs:87,101` 仍访问 `/family` 并断言 `h1=家庭视图` | 该一次性脚本已失效（不在 `client/src`，无 npm script 引用，不属 AC15） | 若要复跑 TASK-049 回归需先更新；本任务未改（计划 §3.3 附注已预见） |
 | **F-3** | 全仓现有两个 `formatMoney`：`utils/priceDisplay.js`（value, currency）与 `pages/Portfolio/KpiCards.jsx:17`（仅 value） | 同名不同签名，读代码时易误用 | 计划 §3.8 附注已明确不顺手改（避免扩大改动面），建议后续统一命名（如 `formatMoneyCompact`） |
 | **F-4** | `components/Household/TotalAssetsCard.jsx:3,22` 注释仍提 `/family` 与 `Family.jsx:182` | 不匹配 AC15 的两条 grep（无 `pages/` 前缀、无引号），属可接受残留 | 可随下次触碰该文件时清理 |

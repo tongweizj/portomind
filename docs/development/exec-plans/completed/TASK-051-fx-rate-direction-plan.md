@@ -4,7 +4,7 @@
 
 Status：Approved（2026-11-11，Human 批准「051、047、046 三份计划」；`Draft → Approved` 归 Human）
 
-Related Task：[TASK-051](../../tasks/active/TASK-051-fx-rate-direction.md)（独立维护任务，无 Story）。
+Related Task：[TASK-051](../../tasks/completed/TASK-051-fx-rate-direction.md)（独立维护任务，无 Story）。
 
 Branch / Base：`main` @ `ee989c7`。实施时从最新 `main` 开 `feature/TASK-051-fx-rate-direction`。
 
