@@ -3,7 +3,7 @@
 ## Metadata
 
 **Status:**  
-`Implementing`（2026-11-11）：计划已批准（小计划 `Draft → Approved`），按 [STATES.md](../../../os/process/STATES.md#4-谁可以改变状态) 登记 `Planning → Implementing`；修投影 + 重写假阳性用例
+`Completed`（2026-11-12，Human 合入 PR #54）：投影补 `portfolioId` + 重写假阳性用例 + 真实库脚本；`Merged` = `84b0434`。复审：**`Pass`**（3 MINOR 全闭环，Reviewer 独立复跑 6/6 PASS）（小计划 `Draft → Approved`），按 [STATES.md](../../../os/process/STATES.md#4-谁可以改变状态) 登记 `Planning → Implementing`；修投影 + 重写假阳性用例
 
 **Priority:**  
 `High`（静默污染成本与持仓，修复面极小；若认定触发需人工重复操作，可下调至 Medium）

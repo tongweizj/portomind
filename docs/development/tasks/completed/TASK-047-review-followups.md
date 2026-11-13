@@ -3,7 +3,7 @@
 ## Metadata
 
 **Status:**  
-`Implementing`（2026-11-11）：计划已批准（`Draft → Approved`），按 [STATES.md](../../../os/process/STATES.md#4-谁可以改变状态) 登记 `Planning → Implementing`；M-2 采用后端拒绝改写
+`Completed`（2026-11-12，Human 合入 PR #55）：M-2 归属不可变守卫 + M-1 侧栏高亮 + M-5/M-6 验证资产修正；`Merged` = `e5f9679`。复审：由首轮 `Fail` 升 **`Pass with issues`**（2 MAJOR 闭环：E2E 38/38 真实跑、真实库脚本 8/8；新增 MINOR F-047-5 E2E 导入段不清理，与 046 合并后升级 MAJOR，待后续修复）（`Draft → Approved`），按 [STATES.md](../../../os/process/STATES.md#4-谁可以改变状态) 登记 `Planning → Implementing`；M-2 采用后端拒绝改写
 
 **Priority:**  
 `High`（由 M-2 决定；其余为 Low，见 §2 分级）

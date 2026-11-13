@@ -3,7 +3,7 @@
 ## Metadata
 
 **Status:**  
-`Implementing`（2026-11-11）：计划已批准（`Draft → Approved`），按 [STATES.md](../../../os/process/STATES.md#4-谁可以改变状态) 登记 `Planning → Implementing`；历史数据按 Human 决定**不迁移**（只修采集）
+`Completed`（2026-11-12，Human 合入 PR #56）：采集端取倒数修复 + 10 条回归测试；`Merged` = `c62da71`。复审：`Pass with issues`（2 MINOR 已修，AC5 文本回收留 PM）。历史数据未迁移（D-2）（`Draft → Approved`），按 [STATES.md](../../../os/process/STATES.md#4-谁可以改变状态) 登记 `Planning → Implementing`；历史数据按 Human 决定**不迁移**（只修采集）
 
 **Priority:**  
 `High`（已交付功能的核心数字错误：家庭总资产被算错一个数量级）
