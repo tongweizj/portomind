@@ -105,18 +105,58 @@ test('detectLotWarnings：CN buy 非整手返回警告，整手/卖出/基金无
 
 // ───────────────────────── TR-09：CSV 批量导入 ─────────────────────────
 
+// TASK-046：内存版 Transaction 存储，**尊重 select() 投影**。
+// 原 mock 无视投影、直接返回 portfolioId，导致「库侧键含 portfolioId」的假阳性；
+// 这里按 select 参数裁剪字段，未请求的字段一律不出现（与真实 Mongo 行为一致）。
+const PICK_ALL = ['portfolioId', 'symbol', 'action', 'quantity', 'price', 'date', 'fee', 'notes'];
+
+function createProjectedStore(t, initial = [], store = []) {
+  const rows = [...initial, ...store];
+  const pick = (doc, projection) => {
+    if (!projection) return { ...doc };
+    const fields = String(projection).split(/\s+/).filter(Boolean);
+    const out = {};
+    for (const field of fields) {
+      if (field in doc) out[field] = doc[field];
+    }
+    // 真实 Mongo 一定返回 _id（除非显式排除），这里保留以便调试
+    if (doc._id !== undefined && !fields.includes('-_id')) out._id = doc._id;
+    return out;
+  };
+
+  t.mock.method(Transaction, 'find', (query = {}) => {
+    const matched = rows.filter(row => {
+      if (query.portfolioId && String(row.portfolioId) !== String(query.portfolioId)) return false;
+      if (query.symbol && row.symbol !== query.symbol) return false;
+      return true;
+    });
+    const chain = {
+      select(projection) {
+        chain._projection = projection;
+        return chain;
+      },
+      sort: () => chain,
+      limit: () => chain,
+      lean: async () => matched.map(row => pick(row, chain._projection))
+    };
+    return chain;
+  });
+
+  t.mock.method(Transaction, 'insertMany', async (docs) => {
+    const created = docs.map((doc, i) => ({ _id: `new-${rows.length + i}`, ...doc }));
+    rows.push(...created);
+    return created;
+  });
+
+  return rows;
+}
+
 test('importTransactions：幂等去重 + 成功导入计数', async (t) => {
   t.mock.method(Portfolio, 'exists', async () => true);
   t.mock.method(Asset, 'findOne', async () => ({ symbol: 'VTI', type: 'etf', market: 'US', currency: 'USD', active: true }));
-  t.mock.method(Transaction, 'find', (query) => {
-    if (query.portfolioId && !query.symbol) {
-      return { select: () => ({ lean: async () => [
-        { portfolioId, symbol: 'VTI', action: 'buy', quantity: 10, price: 100, date: new Date('2026-01-01T12:00:00Z'), fee: 0 }
-      ] }) };
-    }
-    return { lean: async () => [] };
-  });
-  t.mock.method(Transaction, 'insertMany', async (docs) => docs);
+  createProjectedStore(t, [
+    { portfolioId, symbol: 'VTI', action: 'buy', quantity: 10, price: 100, date: new Date('2026-01-01T12:00:00Z'), fee: 0 }
+  ]);
 
   const result = await transactionService.importTransactions({
     portfolioId,
@@ -132,6 +172,48 @@ test('importTransactions：幂等去重 + 成功导入计数', async (t) => {
   assert.equal(result.imported, 1);
   assert.equal(result.skipped, 1);
   assert.deepEqual(result.errors, []);
+});
+
+// TASK-046 AC1：同一 CSV 连续导入两次——第二次必须全部跳过，库内只增 N 条。
+test('importTransactions：连续导入两次 → 第二次全部跳过（AC1）', async (t) => {
+  t.mock.method(Portfolio, 'exists', async () => true);
+  t.mock.method(Asset, 'findOne', async () => ({ symbol: 'VTI', type: 'etf', market: 'US', currency: 'USD', active: true }));
+  const store = createProjectedStore(t);
+
+  const csv = [
+    { symbol: 'VTI', action: 'buy', quantity: 10, price: 100, date: '2026-01-01' },
+    { symbol: 'VTI', action: 'buy', quantity: 5, price: 101, date: '2026-03-01', fee: 2 }
+  ];
+
+  const first = await transactionService.importTransactions({ portfolioId, transactions: csv });
+  assert.equal(first.imported, 2, '首次导入 2 条');
+  assert.equal(first.skipped, 0, '首次无跳过');
+  assert.deepEqual(first.errors, []);
+
+  const second = await transactionService.importTransactions({ portfolioId, transactions: csv });
+  assert.equal(second.imported, 0, '二次导入不应新增（AC1）');
+  assert.equal(second.skipped, 2, '二次导入应全部跳过（AC1）');
+  assert.deepEqual(second.errors, []);
+
+  assert.equal(store.length, 2, '库内只应有 2 行（AC1）');
+});
+
+// TASK-046 AC2：批次内重复行仍去重（不回归）。
+test('importTransactions：同批次内重复行去重（AC2）', async (t) => {
+  t.mock.method(Portfolio, 'exists', async () => true);
+  t.mock.method(Asset, 'findOne', async () => ({ symbol: 'VTI', type: 'etf', market: 'US', currency: 'USD', active: true }));
+  const store = createProjectedStore(t);
+
+  const result = await transactionService.importTransactions({
+    portfolioId,
+    transactions: [
+      { symbol: 'VTI', action: 'buy', quantity: 10, price: 100, date: '2026-01-01' },
+      { symbol: 'VTI', action: 'buy', quantity: 10, price: 100, date: '2026-01-01' }
+    ]
+  });
+
+  assert.equal(result.imported, 1, '同批重复只导入 1 条');
+  assert.equal(store.length, 1);
 });
 
 test('importTransactions：非法行整批回滚（imported=0 且返回错误）', async (t) => {

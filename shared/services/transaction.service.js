@@ -230,8 +230,10 @@ async function importTransactions({ portfolioId, transactions = [] }) {
 
   const existingKeys = new Set();
   if (unique.length > 0) {
+    // 投影必须包含 portfolioId：下方拼键读取 tx.portfolioId，缺该字段会得到 "undefined"，
+    // 使库侧键与导入侧键永不相等、幂等失效（TASK-046）。
     const existing = await Transaction.find({ portfolioId }).select(
-      'symbol action quantity price date fee'
+      'portfolioId symbol action quantity price date fee'
     ).lean();
     for (const tx of existing) {
       existingKeys.add([
