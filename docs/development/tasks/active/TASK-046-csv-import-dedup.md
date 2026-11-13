@@ -3,7 +3,7 @@
 ## Metadata
 
 **Status:**  
-`PLANNING`（待 Human 确认优先级与是否排期；**根因已定位**，非待查缺陷）
+`Implementing`（2026-11-11）：计划已批准（小计划 `Draft → Approved`），按 [STATES.md](../../../os/process/STATES.md#4-谁可以改变状态) 登记 `Planning → Implementing`；修投影 + 重写假阳性用例
 
 **Priority:**  
 `High`（静默污染成本与持仓，修复面极小；若认定触发需人工重复操作，可下调至 Medium）
@@ -28,6 +28,7 @@
 `None`
 
 **Execution Plan:**  
+[Draft：TASK-046-plan](../../exec-plans/active/TASK-046-csv-import-dedup-plan.md)（2026-11-11 起草的小计划；`Draft → Approved` 归 Human）
 待创建（须在本任务卡经 Human 确认后由 Planner 产出）
 
 **来源：**  

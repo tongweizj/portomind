@@ -3,7 +3,7 @@
 ## Metadata
 
 **Status:**  
-`PLANNING`（范围与关键分叉已由 Human 于 2026-10-19 裁定：M-2 = 方案② 后端拒绝改写；M-3 已拆出至 TASK-048）
+`Implementing`（2026-11-11）：计划已批准（`Draft → Approved`），按 [STATES.md](../../../os/process/STATES.md#4-谁可以改变状态) 登记 `Planning → Implementing`；M-2 采用后端拒绝改写
 
 **Priority:**  
 `High`（由 M-2 决定；其余为 Low，见 §2 分级）
@@ -27,6 +27,7 @@
 `None`
 
 **Execution Plan:**  
+[Draft：TASK-047-plan](../../exec-plans/active/TASK-047-review-followups-plan.md)（2026-11-11 起草；`Draft → Approved` 归 Human）
 待创建
 
 **来源：**  

@@ -95,7 +95,7 @@ curl "http://localhost:8080/api/prices/date/$(date +%F)?page=1&pageSize=20"
 |---|---|---|
 | `GET` | `/api/cron/status` | **只读**聚合查询：5 个定时任务的最近一次运行（运行态）+ 数据态派生指标（价格完成度 / 完整性缺口 / 提醒 / 汇率 / 再平衡）。**不触发任务、不写库**；详情用 `?detail=rebalance&date=&portfolioId=`（同一端点，不新增第二条路由） |
 | `POST` | `/api/alerts/evaluate` | 手动跑一次提醒规则评估（界面「立即评估」按钮同效） |
-| `POST` | `/api/family/fx/sync` | 手动同步汇率（USD/CAD/HKD → CNY） |
+| `POST` | `/api/family/fx/sync` | 手动同步汇率（USD/CAD/HKD → CNY）。采集源以 CNY 为 base，入库前取倒数转成 `rateToCny` =「1 外币 = X CNY」 |
 | `PUT` | `/api/family/fx/rates/<CUR>` | 手动录入汇率，如 `PUT /api/family/fx/rates/USD` body `{"rateToCny":7.2}`（数据以 `manual` 标记） |
 | `PUT` | `/api/valuations/<CODE>/<METRIC>` | 手动录入估值分位，如 `PUT /api/valuations/000300/pe` body `{"value":12.5,"percentile":25}` |
 | `POST` | `/api/portfolios/:pid/rebalance/execute` | 执行再平衡建议（仅在本系统生成交易流水，**不连券商**） |

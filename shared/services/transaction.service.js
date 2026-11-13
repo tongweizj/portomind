@@ -125,6 +125,17 @@ async function createTransaction(input) {
 async function updateTransaction(id, input) {
   const existing = await Transaction.findById(id).lean();
   if (!existing) throw businessError(404, 'TRANSACTION_NOT_FOUND', 'Transaction not found');
+  // M-2（TASK-047）：归属不可变，由数据层保证，不依赖界面。
+  // 必须在 normalizeInput 合并入参「之前」比较：之后 existing 已被入参覆盖。
+  // 只拒「值不一致」，不拒「字段出现」——编辑页每次提交都会携带该字段（卡内 R-1b）。
+  if (input && input.portfolioId !== undefined &&
+      String(input.portfolioId) !== String(existing.portfolioId)) {
+    throw businessError(
+      400,
+      'PORTFOLIO_ID_IMMUTABLE',
+      'portfolioId cannot be changed after creation; recreate the transaction in the target portfolio instead'
+    );
+  }
   const data = normalizeInput(input, existing);
   const asset = await validateReferences(data);
   const transaction = {
@@ -230,8 +241,10 @@ async function importTransactions({ portfolioId, transactions = [] }) {
 
   const existingKeys = new Set();
   if (unique.length > 0) {
+    // 投影必须包含 portfolioId：下方拼键读取 tx.portfolioId，缺该字段会得到 "undefined"，
+    // 使库侧键与导入侧键永不相等、幂等失效（TASK-046）。
     const existing = await Transaction.find({ portfolioId }).select(
-      'symbol action quantity price date fee'
+      'portfolioId symbol action quantity price date fee'
     ).lean();
     for (const tx of existing) {
       existingKeys.add([
