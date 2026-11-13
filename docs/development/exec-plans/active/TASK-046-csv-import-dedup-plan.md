@@ -410,6 +410,98 @@ ALL AC3/AC4 PROBES OK
 审查者未参与本任务实现、计划编写或验收脚本编写；未修改任何业务代码、测试或 AC。§12.4 的临时回退与 mock 改造均在独立 worktree 副本中进行，已全部还原并以 `git status --porcelain` 为空证净。判定不是合入许可，**Merged 与关闭归 Human**。
 
 
+### 12.8 复审记录（第二轮，2026-11-12）
+
+**对象**：`feature/TASK-046-csv-import-dedup` @ `eb1975e`（返修提交 `eb1975e`；首轮审查记录提交 `79c2ae4`）。基线 `main` @ `e1730a0`。审查开始时 `git status --porcelain` 为空，未审到任何未提交的工作区改动。
+
+**结论**：`Pass`（首轮 `Pass with issues` → 本轮 3 条 MINOR 全部闭环，无新增 finding）。判定不是合入许可；Merged 与关闭归 Human。
+
+#### 12.8.1 Findings 逐条复核
+
+| Finding | 首轮 | 本轮判定 | 依据 |
+|---|---|---|---|
+| F-046-1 AC3 / AC4 无正式用例 | MINOR | **已修** | AC3 新用例：组合 A 导入 1 条 → 组合 B 导入同一条仍 `imported=1`（不跨组合误判）→ 库内 2 行 → 回 A 再导入 `imported=0/skipped=1`（证明隔离的是归属、不是把判重关掉）。AC4 新用例覆盖 **5 类字段差异**（fee / quantity / price / date 差一天 / action），每类断言 `imported=1/skipped=0` 且库内行数递增；**末尾 1 条控制组**用完全相同的行断言 `imported=0/skipped=1`，防止「判重被关掉」被误判为 AC4 通过 |
+| F-046-2 真实库证据不可复跑 | MINOR | **已修，且本审查者已独立复跑通过** | 见 12.8.2 |
+| F-046-3 行号漂移 | MINOR | **已修** | 核对实际文件：注释在 `:233-234`、`select` 在 `:235-237`；计划 §11.3 与卡内 §11.6 均已更新为 `:235-237`，并注明「修复前 `main` 上为 `:233-235`」 |
+
+#### 12.8.2 F-046-2：可复跑脚本与我的实跑结果
+
+**可复跑资产**：`server/scripts/verify-csv-import-idempotency.cjs`（入口 `npm run verify:csv-idempotency --workspace server`，见 `server/package.json:15`）。
+
+```bash
+MONGO_URI=mongodb://127.0.0.1:27017/portomind_dev \
+  node server/scripts/verify-csv-import-idempotency.cjs
+```
+
+我在独立库 `portomind_review2_test` 上实跑（未污染 `portomind_dev`）：
+
+```
+PASS  ① 首次导入 imported=2 / skipped=0 — {"imported":2,"skipped":0,"errors":[]}
+PASS  ① 库内新增 2 行 — rows=2
+PASS  ② 二次导入 imported=0 / skipped=2（AC1） — {"imported":0,"skipped":2,"errors":[]}
+PASS  ② 库内仍只有 2 行（未新增） — rows=2
+PASS  ③ 另一个组合导入成功（不跨组合判重，AC3） — {"imported":2,"skipped":0,"errors":[]}
+PASS  ④ 仅 quantity 不同 → 照常导入（AC4） — {"imported":1,"skipped":0,"errors":[]}
+断言总数 6 / 通过 6 / 失败 0
+cleanup: tx:5 pf:2 asset:1
+残留检查：transactions=0 portfolios=0 assets=0 => CLEAN
+```
+
+退出码 0。逐项核对所要求的性质：
+
+| 要求 | 结论 |
+|---|---|
+| 写保护（库名须含 `_dev`/`_test`） | ✅ 与 047 同一实现（`assertSafeDatabase`），非 `_dev`/`_test` 直接拒绝 |
+| 真实库连续导入两次 | ✅ ② 在真实 Mongo 上跑完整 `importTransactions` 链路，第二次 `imported=0/skipped=2` |
+| 库内只有 1 份 | ✅ 以 `countDocuments` 断言 rows 恒为 2（两行数据各 1 份） |
+| `finally` 清理 | ✅ 清理 + 残留复查，输出 `CLEAN` |
+| `server/package.json` 有入口 | ✅ `:15` |
+| 计划贴出真实输出 | ✅ §11.8 已贴，与本处一致 |
+
+**定级：已修**（运行证据由我本人取得）。
+
+#### 12.8.3 回归复核
+
+- `test:server`：**252 / 252 pass，0 fail**（我逐文件就地跑并求和）。相对 `main` 的 248：`transaction.enhanced.test.js` 12 → 14（+2），合计 250；再加本轮… **注**：实测 252 = main 248 + 2（首轮 enhanced 新增）+ 2（本轮新增）。与卡内「250 + 2」的口径一致（其 250 已含首轮新增）。
+- **未删除旧断言**：返修 diff 中 `assert` 仅新增，无 `-assert` 行。
+- 关键逻辑未被改动：`dedupKey`、批次内去重、浮点比较（`toFixed`/`Math.abs`）在 `git diff main..eb1975e` 中**零命中**；改动只有 `select` 投影补 `portfolioId`。
+
+#### 12.8.4 我独立完成的负向对照（证明新增用例可证伪）
+
+把投影回退为 `'symbol action quantity price date fee'`（即还原原始缺陷）后跑 `transaction.enhanced.test.js`：
+
+```
+✖ importTransactions：幂等去重 + 成功导入计数
+✖ importTransactions：连续导入两次 → 第二次全部跳过（AC1）
+✖ importTransactions：同一 CSV 导入两个不同组合，两边都成功（AC3）
+✖ importTransactions：字段有差异时不判重（AC4）
+ℹ tests 16  ℹ pass 12  ℹ fail 4
+```
+
+**4 fail，其中包含本轮新增的 AC3 / AC4 两条**。还原后恢复 16/16。证实新增用例抓的正是该缺陷，不是恒真断言。
+
+#### 12.8.5 与 TASK-047 的合并安全性
+
+两任务同改 `shared/services/transaction.service.js`：
+
+- 047 的守卫在 `updateTransaction`（~`:128-138`），046 的投影在 `importTransactions`（~`:235-237`），**相隔约 105 行、互不相邻**；
+- 我做了双向合并试跑（047→046 与 046→047），该文件**三向合并零冲突**，合并后守卫与投影两处改动俱在；
+- 唯一冲突在 `server/package.json`（两分支在同一位置各插一行 `verify:*` 脚本），需手工取并集，取完两种顺序产物一致；
+- 合并后测试集 **256 / 256 pass，0 fail**（两种顺序均同）。注：并集为 252 + 4（047 的 4 条 immutable 用例），不是 252+252。
+
+**建议顺序**：先合 **046**，再合 **047**。理由：047 的 E2E 存在问题（见下），先合 046 可让 047 的返修一并处理该交互。
+
+> **交互缺陷提示（归 047 处置，记录于此供合并时参考）**：047 的 `e2e-task-044.mjs` 导入段不清理其写入的 2 行。单独在 047 上重跑第二次导入仍 `imported=2`（断言通过）；与 046 合并后第二次导入变 `imported=0/skipped=2`，`AC7 导入成功（2 条）` 必然 FAIL。生产代码无影响，缺陷在验证资产。我已在 047 计划 §12.7.6 记为 F-047-5。
+
+#### 12.8.6 残余风险
+
+1. 计划 §3 第 29 行仍写 `:233-235`，那是对**缺陷行**的描述（修复前位置），可解释、不算错。
+2. 历史重复数据未清理（Out of Scope）；`portomind_dev` 实测去重键无重复。
+3. 脚本依赖真实 Mongo；无库环境不可运行（与设计一致，已文档化前置条件）。
+
+#### 12.8.7 独立性声明
+
+审查者未参与本任务实现、计划编写或验收脚本编写；本轮未修改任何业务代码、测试、AC 或 Status；未 `git add`/`commit`/`push`；未合并 `main`、未填 `Merged`。对 `select` 投影的负向回退、以及 046+047 的双向合并试跑均在 `.review-tmp/` 独立快照中进行，已全部删除并以 `git status --porcelain` 为空证净。判定不是合入许可，**Merged 与关闭归 Human**。
 
 ## 13. Completion Record
 
