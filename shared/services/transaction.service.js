@@ -125,6 +125,17 @@ async function createTransaction(input) {
 async function updateTransaction(id, input) {
   const existing = await Transaction.findById(id).lean();
   if (!existing) throw businessError(404, 'TRANSACTION_NOT_FOUND', 'Transaction not found');
+  // M-2（TASK-047）：归属不可变，由数据层保证，不依赖界面。
+  // 必须在 normalizeInput 合并入参「之前」比较：之后 existing 已被入参覆盖。
+  // 只拒「值不一致」，不拒「字段出现」——编辑页每次提交都会携带该字段（卡内 R-1b）。
+  if (input && input.portfolioId !== undefined &&
+      String(input.portfolioId) !== String(existing.portfolioId)) {
+    throw businessError(
+      400,
+      'PORTFOLIO_ID_IMMUTABLE',
+      'portfolioId cannot be changed after creation; recreate the transaction in the target portfolio instead'
+    );
+  }
   const data = normalizeInput(input, existing);
   const asset = await validateReferences(data);
   const transaction = {
