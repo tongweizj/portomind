@@ -232,3 +232,5 @@ USD/CAD 被低估，HKD 被高估 37.6%。当前家庭组合的币种桶为 `CNY
 ## 10. Review Record（独立 Reviewer，2026-11-11）
 
 **结论：`Pass with issues`**（无 BLOCKER / 无 MAJOR；3 条 MINOR：容差口径、AC5 未回收、AC4 未走 HTTP 端点）→ 详见 [ExecPlan §12](../../exec-plans/active/TASK-051-fx-rate-direction-plan.md#12-review-record)（@ `4aeeb10`，基线 `main` `e1730a0`）。
+
+> **复审（第二轮，2026-11-12）**：`Pass with issues` @ `0dc23d4` — 3 条 MINOR 中 F-051-1 / F-051-3 已修，F-051-2（AC5 回收）按指示留 PM；`test:server` 260/260。详见 [ExecPlan §12.8](../../exec-plans/active/TASK-051-fx-rate-direction-plan.md#128-复审记录第二轮2026-11-12)。判定不是合入许可，Merged 与关闭归 Human。
