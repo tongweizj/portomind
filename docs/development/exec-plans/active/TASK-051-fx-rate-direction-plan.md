@@ -374,6 +374,44 @@ Human 2026-11-11 已裁定 D-2「历史数据不迁移」，交付只在卡内 �
 审查者未参与本任务的实现、计划编写或验收脚本编写；未修改任何业务代码、测试或 AC。§12.4 的临时回退在独立副本中进行，已还原并以 `git status --porcelain` 为空证净。判定不是合入许可，**Merged 与关闭归 Human**。
 
 
+### 12.8 复审记录（第二轮，2026-11-12）
+
+**对象**：`feature/TASK-051-fx-rate-direction` @ `0dc23d4`（返修提交 `0dc23d4`；首轮审查记录提交 `3539fb5`）。基线 `main` @ `e1730a0`。审查开始与结束时 `git status --porcelain` 均为空；未审到任何未提交的工作区改动。
+
+**结论**：`Pass with issues`（维持首轮判定，3 项 MINOR 中 2 项已修、1 项按指示留 PM）。判定不是合入许可；Merged 与关闭归 Human。
+
+#### 12.8.1 Findings 复核
+
+| Finding | 首轮 | 本轮判定 | 依据 |
+|---|---|---|---|
+| F-051-1 容差口径 | MINOR | **已修** | 用例 `TOLERANCE` 上方新增注释：AC1 写 ±1e-4、**批准计划 §8 已放宽为 0.01**、方向错时偏差为 45×（USD）/22.6×（CAD）量级差故 0.01 仍可判错、**是否收紧归 PM**。`TOLERANCE` 保持 `0.01`，**AC1 文本逐字未改** |
+| F-051-3 AC4 未走 HTTP 端点 | MINOR | **已修** | 新增 2 条用例，经真实 Express（`app.listen` + 复用 `family.summary.test.js` 的 `installAdminSession()` / `authHeaders()` / `request()` 夹具）打 `PUT /api/family/fx/rates/USD` → `GET /api/family/summary`；断言 `totalCny = 1000 × 7.2 = 7200`（±0.01）且 `> 7000`、`fxRates.USD === 7.2`；另补 manual 侧 `HKD < 1` 断言。运行时日志可见真实 `PUT status=201` / `GET status=200`，确认走的是 HTTP 层而非服务层直调 |
+| F-051-2 AC5 未回收 | MINOR | **按指示未处理（正确）** | 卡内 AC5 行逐字未变；仅在 §11.8 点名「AC5 仍未回收，需 PM 处置」。**未私改 AC5** |
+
+#### 12.8.2 回归与方向复核
+
+- `test:server`：**260 / 260 pass，0 fail**（我逐文件就地跑并求和）。相对 `main` 的 248：+10（首轮采集方向用例）→ 258，+2（本轮 AC4 用例）= 260，与实现者声称一致；**未删除任何旧断言**（返修 diff 中 `assert` 仅新增，无 `-assert` 行）。
+- 方向修复未被改动：`shared/services/fxRate.service.js` 仍为 `result[currency] = 1 / perCny;`。
+- 前端零补偿成立：`git diff main..0dc23d4 --name-only` **无任何 `client/` 文件**。
+
+#### 12.8.3 我独立完成的负向对照（证明新增用例可证伪）
+
+| 注入的缺陷 | 结果 |
+|---|---|
+| `1 / perCny` 改回 `perCny`（采集端反向） | **6 fail**（方向 / 量级 / 入库 / 两条端到端 / 同语义） |
+| `familySummary` 的 `amount * rate` 改为 `amount / rate`（折算端反向） | **5 fail，其中包含本轮新增的两条 AC4 用例** |
+
+两处注入均在独立副本中进行、逐次还原并以再次全绿证净。说明新增用例不是恒真断言。
+
+#### 12.8.4 残余风险
+
+1. **AC5 文本仍未回收**（需 PM 按 Human D-2 修订）——属流程悬空，非实现缺陷。
+2. 内存替身使 `.sort({date:-1})` 成为空操作，「取最新汇率」语义未被这些用例覆盖（既存盲区）。
+3. 容差 0.01 与卡内 ±1e-4 的口径差异仍由注释承载，未上升为 AC 文本。
+
+#### 12.8.5 独立性声明
+
+审查者未参与本任务实现、计划编写或验收脚本编写；本轮未修改任何业务代码、测试或 AC/Status；未 `git add`/`commit`/`push`；未合并 `main`、未填 `Merged`。负向注入在 `.review-tmp/` 独立快照中进行并已还原，结束时 `git status --porcelain` 为空（仅含本记录改动）。判定不是合入许可，**Merged 与关闭归 Human**。
 
 ## 13. Completion Record
 
