@@ -66,18 +66,29 @@ async function upsertRate({ currency, rateToCny, date = new Date(), source = 'ma
 
 /**
  * 从公开源采集（er-api：https://open.er-api.com/v6/latest/CNY）。
- * 返回 { USD, CAD, HKD } 各币种对 CNY 汇率；请求失败抛错（调度层记日志，不中断服务）。
- * http 可注入（测试用）。
+ *
+ * ⚠️ 方向：该接口以 **CNY 为 base**，返回的 `rates.USD` 是「1 CNY = X 外币」（约 0.149）。
+ * 而本项目 `rateToCny` 的语义是「1 外币 = X CNY」（见 `models/fxRate.js`、手动录入、
+ * `familySummary.service` 的 `amount * rate`）。因此这里必须取倒数后再返回，
+ * 否则家庭折算会反向（TASK-051）。
+ *
+ * 返回 { USD, CAD, HKD } 各币种对 CNY 汇率；请求失败或值非法抛错
+ * （调度层记日志，不中断服务）。http 可注入（测试用）。
  */
 async function fetchFromProvider(http = axios) {
   const response = await http.get(PROVIDER_URL, { timeout: REQUEST_TIMEOUT_MS });
   const rates = response.data && response.data.rates;
-  if (!rates || !Number.isFinite(rates.USD) || !Number.isFinite(rates.CAD) || !Number.isFinite(rates.HKD)) {
+  if (!rates) {
     throw new Error(`FxRate provider returned invalid payload for CNY base`);
   }
   const result = {};
   for (const currency of SUPPORTED_CURRENCIES) {
-    result[currency] = Number(rates[currency]);
+    // perCny = 1 CNY 折合多少外币；取倒数得到 rateToCny = 1 外币 折合多少 CNY
+    const perCny = Number(rates[currency]);
+    if (!Number.isFinite(perCny) || perCny <= 0) {
+      throw new Error(`FxRate provider returned invalid rate for ${currency}: ${rates[currency]}`);
+    }
+    result[currency] = 1 / perCny;
   }
   return result;
 }

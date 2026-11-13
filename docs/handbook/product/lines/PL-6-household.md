@@ -76,7 +76,7 @@
 | 编号 | 功能点 | 功能描述 | 入口 |
 |---|---|---|---|
 | — | 汇率模型与幂等 | `FxRate`（`currency(USD/CAD/HKD)` / `rateToCny` / `date` / `source` / `note`），按 `(currency,date)` **唯一索引**幂等 upsert | `shared/models/fxRate.js` |
-| — | 汇率采集 | `fetchFromProvider`：`https://open.er-api.com/v6/latest/CNY`（免费免 key），超时 15s，来源标记 `source='er-api'` | `fxRate.service.js` |
+| — | 汇率采集 | `fetchFromProvider`：`https://open.er-api.com/v6/latest/CNY`（免费免 key），超时 15s，来源标记 `source='er-api'`。**该源以 CNY 为 base，返回「1 CNY = X 外币」，入库前取倒数**转为 `rateToCny` = 「1 外币 = X CNY」（TASK-051 修正） | `fxRate.service.js` |
 | — | 手动录入兜底 | 采集失败或需修正时手动录入，标记 `source='manual'`（语义：1 外币 = `rateToCny` 人民币） | `PUT /api/family/fx/rates/:currency` |
 | — | 采集调度 | 默认 **09:30**（`FX_SYNC_CRON`，央行中间价公布后）；**失败仅记日志**，不阻塞其他调度 | 定时（cron-worker） |
 | — | 家庭 API | `GET /family/summary`、`GET /family/fx/rates`、`PUT /family/fx/rates/:currency`、`POST /family/fx/sync`（失败 `502` 并提示可手动录入） | API |
