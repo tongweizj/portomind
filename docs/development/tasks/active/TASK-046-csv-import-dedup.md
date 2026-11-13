@@ -310,3 +310,5 @@ IMPORT #3 (date 差一天) => {"imported":1,"skipped":0,"errors":[]}  ← AC4 �
 **结论：`Pass with issues`**（无 BLOCKER / 无 MAJOR；3 条 MINOR：AC3/AC4 无用例、真实 Mongo 证据不可复跑、行号漂移）→ 详见 [ExecPlan §12](../../exec-plans/active/TASK-046-csv-import-dedup-plan.md#12-review-record)（@ `89ff420`，基线 `main` `e1730a0`）。
 > 假阳性根因已由 Reviewer 独立证伪验证：缺陷存在 + 旧式无视投影的 mock → 14/14 全绿，证明 mock 保真度是本修复可信度的前提。
 
+> **复审（第二轮，2026-11-12）**：`Pass` @ `eb1975e` — 3 条 MINOR 全部闭环（F-046-2 已由 Reviewer 独立复跑 6/6 PASS + CLEAN）；`test:server` 252/252。详见 [ExecPlan §12.8](../../exec-plans/active/TASK-046-csv-import-dedup-plan.md#128-复审记录第二轮2026-11-12)。判定不是合入许可，Merged 与关闭归 Human。
+
