@@ -87,6 +87,16 @@ test('flat current, completed and exited Story cards are checked, while plans ar
   assert.ok(result.errors.every(e => e.rule === 'task-status-enum'));
   assert.equal(result.warns.length, 0);
 });
+test('standalone task data-quality reports are checked for links without a card status', t => {
+  const root = fixture(t, {
+    'docs/development/tasks/active/TASK-077-data-quality-report.md': '# 探测报告\n[缺失目标](./missing.md)',
+    'docs/development/tasks/active/TASK-077-data-quality-report-2026-11-17.md': '# 探测报告',
+    'docs/development/tasks/active/TASK-077-symbol-data.md': '# 未完成的任务卡'
+  });
+  const result = run(root);
+  assert.deepEqual(result.errors.map(error => error.rule), ['broken-link']);
+  assert.deepEqual(result.warns.map(warning => warning.file), ['docs/development/tasks/active/TASK-077-symbol-data.md']);
+});
 test('at most two Story directories are allowed, and Story process directories stay flat', t => {
   const root = fixture(t, {
     [card]: '| Status | Planning |',

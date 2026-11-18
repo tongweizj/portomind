@@ -2,7 +2,7 @@
 
 ## Status
 
-Status：Approved（2026-11-17，Human 批准「073～078 计划」；`Draft → Approved` 归 Human）
+Status：Implementing（2026-11-17，Implementer 开始实施；Human 批准依据见 Approval）
 
 Owner：Planner（起草）；Implementer（待指派）
 
@@ -148,7 +148,31 @@ Approval：**已批准（2026-11-17，Human）**。本计划覆盖任务卡 AC1�
 
 ## 11. Implementation Record
 
-尚未实施。
+### 2026-11-17 · Implementer 交接
+
+- **W0。** 初始工作树干净。重新 fetch 的 `origin/main` 为 `fc1c728e8b9a3abee211b8cf2a09e5b0464d5855`（PR #58）。`65d6ad423faac2b60601c7d29a021fd8f21fdf27` 提供 `toStorageSymbol` 和 `STORAGE_SUFFIX`，模块为 [shared/utils/symbol.js](../../../../shared/utils/symbol.js)，CLI 通过 `@portomind/shared/utils/symbol` 加载。从该 main 创建 `feature/TASK-077-symbol-historical-data-migration`。
+- **可审版本。** `f182d7e32ea51a2f3c96d36a074d4740f3fa11c0`。产物包括 [迁移 CLI](../../../../scripts/migrate-symbol-data.cjs)、[只读探测 CLI](../../../../scripts/probe-symbol-data-quality.cjs)、[MongoDB 隔离集成测试](../../../../scripts/symbol-data-migration.test.cjs)、[使用手册](../../../../scripts/PROBE-SYMBOL-DATA-QUALITY.md)、[分类报告](./TASK-077-data-quality-report.md) 和 [冻结清单预览](./TASK-077-migration-dry-run.json)。预览清单属于隔离库采样证据，正式操作时需从实际目标重新生成并由 Human 确认。
+- **环境。** Windows，Node.js 24.20.0，MongoDB 原生驱动和 Database Tools，America/Toronto。用 sync:db 将 `portomind_dev` 的五个业务集合镜像到新库 `portomind_task077_probe_dev`；镜像核对了集合、索引、条数和 ID 哈希。隔离镜像实测 44 资产、80,579 价格、50 交易、4 组合、411 个 TaskRun。迁移写入和中断测试用独立的合成库与试还原库；真实行情验证另外使用仅含归一后资产资料的空行情库。
+- **执行保障。** 正式执行以实际库名、集合 UUID、冻结清单的文件 SHA256、持久归档 SHA256 和可查询的试还原副本为闸门。首次写前核对四个集合的文档和索引指纹；原清单旁的同步落盘日志记录归一阶段和逐键删价进度。断点恢复按原备份文档 ID、内容及精确键核对。已经完成的原清单只回放审计输出。恢复依赖目标写入者持续停写和本地审计文件保全。
+
+| AC | 实施证据与剩余条件 |
+|---|---|
+| AC1 | 镜像 44/44 可派生，33 项资产映射，归一后碰撞 0。合成库实际归一通过；注入缺 market 和目标键碰撞均阻断。44 条业务镜像记录尚未执行迁移。 |
+| AC2 | 镜像找到 27 个双键资产，批准前候选合计 48,332 条。示例 `001180.cn` 对应精确键 `001180` 1,177 条与 `001180.CN` 662 条。合成库实际按两键删除 2 + 1 条，非双键和停用资产的历史逐文档保留。注入跨市场同裸码后探测报告歧义并阻断删除。 |
+| AC3 | 镜像两条交易的旧键悬挂均可由 market 派生解决，合计 23 项交易映射；资产级组合目标需要改写 0 项，无法归属的引用 0 项。合成库验证资产级目标归一、`asset_class` 内容保留、真实孤立引用单独报告并保留。业务镜像的迁移后精确引用仍待核实。 |
+| AC4 | 合成库探测和默认 dry-run 前后逐文档相同。缺标记、缺持久归档、试还原内容被篡改、错误目标均拒绝写入。用持久 mongodump 归档试还原并回读；在归一完成后及单键部分删价后分别强制退出，使用原清单恢复。续跑发现新增采集价格时拒绝继续；完成后重跑原清单和再次预览均无额外写入，重采记录保留。 |
+| AC5 | 见下面分时点证据。实际 44 资产的迁移后持仓和正式目标日状态仍待验证。 |
+| AC6 | 按 [DEPLOYMENT §7](../../../handbook/ops/DEPLOYMENT.md#7-验证与测试命令) 在迁移工具实施前运行全工作区测试，实施后运行 server 和 worker 回归，均通过；隔离 MongoDB 集成回归与新脚本语法检查通过。client build / lint 退出 0，存在 bundle 体积和既有 Fast Refresh 提示。server validate 因基线上缺少 `server/config` 报 ENOENT，统一 verify 的首步也依赖此入口。独立 Reviewer 结论待安排。 |
+| AC7 | 真实隔离镜像探测五类全部成功。报告带日期、库名、SHA256、口径和各类字段。合成库覆盖悬挂交易、连续 NOT_FOUND、超时 RUNNING 和歧义；删除合成库的 taskruns 后，报告标明扫描失败并继续保留其他结果。 |
+| AC8 | 验证两个 CLI 的帮助、配置连接、默认和自定义输出。手册覆盖镜像、读权限、字段、误报排查、升级决策和迁移续跑。文档检查器已识别生成报告的命名并保留链接校验；目录索引、文档检查和对应回归均通过。 |
+
+**AC5 · 基线与采集。**
+
+- 镜像迁移前，`getLatestPrices` 按 44 个 active 资产请求命中 38 个。未命中为 `000191`、`000942`、`ARKK`、`CQQQ`、`TLT`、`VCR`。四个组合的 positionTracker 返回 39 行持仓、32 个去重 symbol，去重后 21 个缺价。未命中为 `000191.CN`、`000942.CN`、`001180.CN`、`002982.CN`、`003358.CN`、`009051.CN`、`011309.CN`、`012348.CN`、`014424.CN`、`015532.CN`、`016630.CN`、`100038.CN`、`110003.CN`、`110020.CN`、`110026.CN`、`161017.CN`、`519915.CN`、`ARKK`、`CQQQ`、`TLT`、`VCR`。
+- 镜像按 Today 页日窗和精确合并口径核对（2026-11-04 至 11-17），命中 15/44，未命中为报告中的 27 个双键资产的原小写键及 `VBG.TO`、`VBU.TO`。11-17 同日库内价格行 0。按 11-13 运行时点读取 `getStatus`，目标日 11-12 命中 42/44，缺 `VBG.TO`、`VBU.TO`。合成迁移后的真实 MongoDB 验证确认，标准保存入口写出的目标键可以命中；同日仍留裸码的 `SINGLE.US` 继续缺价。
+- 11-17 用 TASK-073 的标准 dailySync 在新建的空行情库实际采集 44 个归一资产，成功 42、跳过 0。Yahoo 对 `VBG.TO`、`VBU.TO` 返回 NOT_FOUND；`VCR.US` 和 `001180.CN` 实采成功。批量最近价、Today 的 14 日窗口及 11-17 同日精确键均命中 42/44。该空行情库在当时的 `getStatus` 目标日为 11-16，目标日数据 0/44。本次采集写的是 11-17，按目标日语义不能计入 11-16。采集库没有业务流水；本次没有在实际业务数据上执行迁移后的持仓验收。
+
+**交 Orchestrator。** 六个仅旧键的 active 资产共有 10,815 条价格会保留，归一后这些历史无法按新键精确命中。涉及 `000191`、`000942`、`VCR`、`TLT`、`CQQQ`、`ARKK`，逐键计数和范围见报告。请确认该影响的验收口径并安排独立 Reviewer。执行及关闭 AC5 前，需要 Human 针对实际目标库、可恢复归档、试还原结果和精确删除清单确认，完成迁移，再以实采结果复核今日行情、归一后持仓和 `getStatus` 对应目标日。若 Yahoo 两个标的持续缺失，需取得上游可用结果或由 Human 明确验收口径。双键资产验收范围为键命中。任务状态和审查结论由对应角色登记。
 
 ## 12. Review Record
 
