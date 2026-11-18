@@ -7,7 +7,7 @@ const { STALE_FACTOR, staleThresholdHours } = require('@portomind/shared/constan
 const { normalizeSymbol } = require('@portomind/shared/utils/symbol');
 const { marketDate } = require('@portomind/shared/utils/marketTime');
 const {
-  ROOT, args, withDb, assertReadOnly, digest, validSymbol, inventory, priceInventory, targetsOf, reportError
+  ROOT, args, withDb, assertReadOnly, digest, validSymbol, inventory, priceInventory, targetsOf, isAssetTarget, reportError
 } = require('./symbol-data-tools.cjs');
 
 const DEFAULT_OUT = path.join(ROOT, 'docs/development/tasks/active/TASK-077-data-quality-report.md');
@@ -111,7 +111,7 @@ async function dangling(read, index) {
       'transactions/' + row._id, JSON.stringify(row.symbol), 1, range(row.date), '高', recommendation
     ]),
     ...portfolios.flatMap(row => targetsOf(row).flatMap((target, i) =>
-      target?.level === 'asset' && missing(target.symbol) ? [[
+      isAssetTarget(target) && missing(target.symbol) ? [[
         'portfolios/' + row._id + '/targets/' + i, JSON.stringify(target.symbol), 1, range(row.createdAt),
         '高', recommendation
       ]] : []))
@@ -159,7 +159,7 @@ function render(db, now, zone, sections) {
     ...files.map(file => '- ' + path.basename(file) + ' SHA256：' + digest(fs.readFileSync(file))),
     '- 口径：active 为存储值 true；ADR-003 派生取 TASK-073；价格按 MongoDB 精确键计数，价格日期范围为 UTC。',
     '- NOT_FOUND 取同任务、资产、provider 的最近一段连续失败日期，按调度时区去重。没有失败记录的日期断开连续段；历史失败不代表目前仍失败。币种按 ASSET_CURRENCIES 与 asset.currency。',
-    '- 僵尸阈值由 staleThresholdHours 计算（STALE_FACTOR = ' + STALE_FACTOR + '）；悬挂引用以全部资产存储键精确比较，组合仅检查 level=asset。',
+    '- 僵尸阈值由 staleThresholdHours 计算（STALE_FACTOR = ' + STALE_FACTOR + '）；悬挂引用以全部资产存储键精确比较，组合按 Portfolio 模型的资产级口径检查（含缺省 level）。',
     ...sections.flatMap(({ title, rows, error }) => [
       '', '## ' + title, '',
       ...(error ? ['扫描失败：' + markdown(error)] : rows.length ? [

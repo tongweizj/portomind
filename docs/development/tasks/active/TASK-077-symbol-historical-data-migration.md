@@ -96,9 +96,9 @@
 - 与 [TASK-076](../active/TASK-076-asset-information-completeness-check.md)：076 发现并报告 symbol 不合规（不自动改），本卡执行统一迁移；迁移完成后 076 的 symbol 检查不再报警。
 - 硬规则：迁移规则属业务规则，**只在 `shared/`**；不新建第二份后缀派生实现（ADR-003 两张表为唯一来源）。
 
-## 8. 本卡未做的事
+## 8. 实施与审查证据
 
-未实施、未创建 ExecPlan、D-b 已裁决（含知情数据丢失）、**D-e-data 已裁决（临时脚本 + 使用手册 + 分类报告，只探测不修改）**、未执行任何数据库写入、未改任何 Task 状态（Planner 仅建卡内容）。
+计划批准、隔离库执行和返工证据见[实施计划 §11](./TASK-077-symbol-historical-data-migration-plan.md#11-implementation-record)。独立审查结论见[实施计划 §12](./TASK-077-symbol-historical-data-migration-plan.md#12-review-record)。D-b 与 D-e-data 的裁决见本卡 §6。
 
 ## 9. 记录
 

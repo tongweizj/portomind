@@ -73,10 +73,11 @@ test('TASK-077 MongoDB probe, backup guards, exact writes and crash recovery', {
       { symbol: 'ORPHAN', market: 'US', date: timestamp }
     ]);
     const broadTarget = { level: 'asset_class', symbol: 'equity', targetRatio: 100 };
-    await portfolios.insertMany([
+    const portfolioIds = (await portfolios.insertMany([
       { targets: [{ level: 'asset', symbol: '001180', targetRatio: 100 }] },
+      { targets: [{ symbol: '001180', targetRatio: 100 }] },
       { targets: [broadTarget] }
-    ]);
+    ])).insertedIds;
     const failed = { taskName: 'daily-price-sync', status: 'FAILED', failures: [
       { item: '001180.cn', provider: 'EASTMONEY', category: 'NOT_FOUND' }
     ] };
@@ -93,6 +94,8 @@ test('TASK-077 MongoDB probe, backup guards, exact writes and crash recovery', {
     assert.match(markdown, /EASTMONEY.*CNY.*\| 2 \|/);
     assert.match(markdown, /ORPHAN/);
     assert.match(markdown, /zombie/);
+    assert.ok(markdown.includes('portfolios/' + portfolioIds[0] + '/targets/0'));
+    assert.ok(markdown.includes('portfolios/' + portfolioIds[1] + '/targets/0'));
     assert.doesNotMatch(markdown, /equity/);
 
     const noApproval = run(process.execPath, [migrate, '--force'], targetEnv);
@@ -107,6 +110,15 @@ test('TASK-077 MongoDB probe, backup guards, exact writes and crash recovery', {
     assert.match(collisionPlan.stdout, /归一后唯一键冲突/);
     assert.equal(await prices.countDocuments(), 6);
     await assets.deleteOne({ _id: collision.insertedId });
+
+    const duplicateTarget = await portfolios.insertOne({ targets: [
+      { symbol: '001180', targetRatio: 50 },
+      { level: 'asset', symbol: '001180.CN', targetRatio: 50 }
+    ] });
+    const duplicatePlan = preview();
+    assert.equal(duplicatePlan.status, 1);
+    assert.match(duplicatePlan.stdout, /归一后组合目标 symbol 重复/);
+    await portfolios.deleteOne({ _id: duplicateTarget.insertedId });
 
     const ambiguous = await assets.insertOne({ symbol: '001180.US', market: 'US', active: false });
     assert.equal(scan().status, 0);
@@ -126,6 +138,8 @@ test('TASK-077 MongoDB probe, backup guards, exact writes and crash recovery', {
     assert.equal(manifest.deletions.length, 1);
     assert.equal(manifest.stranded[0].canonical, 'SINGLE.US');
     assert.equal(manifest.unresolved[0].symbol, 'ORPHAN');
+    assert.deepEqual(manifest.mapping.filter(row => row.collection === 'portfolios').map(row => row.id).sort(),
+      [String(portfolioIds[0]), String(portfolioIds[1])].sort());
     fs.writeFileSync(plan, candidate.stdout);
     const approval = {
       approvedBy: 'synthetic verification only',
@@ -203,8 +217,11 @@ test('TASK-077 MongoDB probe, backup guards, exact writes and crash recovery', {
       [['001180', 2, 0, 2], ['001180.CN', 1, 0, 1]]);
     assert.deepEqual(await prices.find().sort({ _id: 1 }).toArray(),
       before[3].filter(row => !['001180', '001180.CN'].includes(row.symbol)));
-    assert.ok(await portfolios.findOne({ 'targets.symbol': '001180.CN' }));
-    assert.deepEqual((await portfolios.findOne({ 'targets.level': 'asset_class' })).targets, [broadTarget]);
+    assert.deepEqual((await portfolios.findOne({ _id: portfolioIds[0] })).targets,
+      [{ level: 'asset', symbol: '001180.CN', targetRatio: 100 }]);
+    assert.deepEqual((await portfolios.findOne({ _id: portfolioIds[1] })).targets,
+      [{ symbol: '001180.CN', targetRatio: 100 }]);
+    assert.deepEqual((await portfolios.findOne({ _id: portfolioIds[2] })).targets, [broadTarget]);
     assert.ok(await transactions.findOne({ symbol: 'ORPHAN' }));
 
     const now = new Date('2026-11-13T20:00:00Z');
@@ -226,6 +243,10 @@ test('TASK-077 MongoDB probe, backup guards, exact writes and crash recovery', {
     assert.equal(force().status, 0);
     assert.match(preview().stderr, /无需变更/);
     assert.deepEqual(await contents(), after);
+    assert.equal(scan().status, 0);
+    const repairedReport = fs.readFileSync(report, 'utf8');
+    assert.ok(!repairedReport.includes('portfolios/' + portfolioIds[1] + '/targets/0'));
+    assert.doesNotMatch(repairedReport, /equity/);
 
     await taskruns.drop();
     assert.equal(scan().status, 1);

@@ -36,7 +36,7 @@
 | [TASK-074](./active/TASK-074-price-pipeline-observability-and-robustness.md) | 价格链路观测与健壮性（SUCCEEDED 语义 / 新鲜度 / 熔断 / NOT_FOUND 提示） | Implementing | Medium（建议） | 计划 `Draft` 未批准；D-e 已收敛到 073 D-d、D-f 待裁决 |
 | [TASK-075](./active/TASK-075-today-symbol-case-mismatch.md) | 今日行情 29 基金「无数据」：客户端 symbol 未归一化 | Implementing | High（建议） | 计划 `Draft` 未批准；D-h 已裁决（方案 A）；客户端消费端对齐 |
 | [TASK-076](./active/TASK-076-asset-information-completeness-check.md) | 资产信息完整性检查（launchDate 抓取 / 前台可编辑 / 手动检查 / 看板卡片与详情） | Implementing | High（建议） | 计划 `Draft` 未批准；跨 shared / cron-worker / server / client |
-| [TASK-077](./active/TASK-077-symbol-historical-data-migration.md) | 历史数据 symbol 归一迁移（按 ADR-003 改写存量） | Implementing | High（建议） | 计划 `Draft` 未批准；D-b 待裁决；不可逆迁移，需备份 + 幂等脚本 |
+| [TASK-077](./active/TASK-077-symbol-historical-data-migration.md) | 历史数据 symbol 归一迁移（按 ADR-003 改写存量） | Implementing | High（建议） | 获批计划已在隔离库执行，D-b 已裁决。见 [独立审查](./active/TASK-077-symbol-historical-data-migration-plan.md#12-review-record) 与 [实施记录](./active/TASK-077-symbol-historical-data-migration-plan.md#11-implementation-record)。 |
 | [TASK-078](./active/TASK-078-price-collection-timing-bucketing.md) | 价格采集时刻与归桶修正（P0-3 / P2-8） | Implementing | High（建议） | 计划 `Draft` 未批准；D-a 已裁决（CN 组 ET 12:00） |
 
 ## completed

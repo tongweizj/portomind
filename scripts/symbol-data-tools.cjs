@@ -6,11 +6,13 @@ const dotenv = require('dotenv');
 const { STORAGE_SUFFIX, normalizeSymbol, marketFromSuffix, toStorageSymbol } =
   require('@portomind/shared/utils/symbol');
 const Asset = require('@portomind/shared/models/asset');
+const Portfolio = require('@portomind/shared/models/portfolio');
 
 const NAMES = ['assets', 'transactions', 'portfolios', 'prices'];
 const EXACT = { collation: { locale: 'simple' } };
 const FIND = { ...EXACT, promoteValues: false };
 const ROOT = path.resolve(__dirname, '..');
+const DEFAULT_TARGET_LEVEL = Portfolio.schema.path('targets').schema.path('level').defaultValue;
 
 function args(argv, valued, flags) {
   const options = {};
@@ -172,6 +174,12 @@ function targetsOf(portfolio) {
   return Array.isArray(portfolio.targets) ? portfolio.targets : [];
 }
 
+function isAssetTarget(target) {
+  if (!target) return false;
+  const level = target.level === undefined ? DEFAULT_TARGET_LEVEL : target.level;
+  return level === 'asset';
+}
+
 function reportError(error) {
   // MongoDB 连接类异常可能在 message 中包含主机等连接信息。
   return error.name.startsWith('Mongo') ? error.name + ' (' + (error.code ?? '无错误码') + ')' : error.message;
@@ -179,5 +187,5 @@ function reportError(error) {
 
 module.exports = {
   NAMES, EXACT, FIND, ROOT, args, env, withDb, assertReadOnly, digest, bson, validSymbol,
-  symbolIdentity, inventory, priceInventory, targetsOf, reportError
+  symbolIdentity, inventory, priceInventory, targetsOf, isAssetTarget, reportError
 };

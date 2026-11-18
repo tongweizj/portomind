@@ -6,7 +6,7 @@ const { createHash } = require('node:crypto');
 const { normalizeSymbol } = require('@portomind/shared/utils/symbol');
 const {
   NAMES, EXACT, FIND, args, withDb, assertReadOnly, digest, bson, inventory, priceInventory,
-  targetsOf, symbolIdentity, reportError
+  targetsOf, isAssetTarget, symbolIdentity, reportError
 } = require('./symbol-data-tools.cjs');
 
 const WRITE = { ...EXACT, writeConcern: { w: 'majority', j: true } };
@@ -117,7 +117,7 @@ function changes(data) {
   for (const doc of data.portfolios.rows) {
     let changed = false;
     const targets = targetsOf(doc).map((target, i) => {
-      if (target?.level !== 'asset') return target;
+      if (!isAssetTarget(target)) return target;
       const location = { collection: 'portfolios', id: String(doc._id), targetIndex: i };
       const exact = index.exact.get(target.symbol);
       const alias = index.aliases.get(normalizeSymbol(target.symbol));
@@ -134,7 +134,7 @@ function changes(data) {
       return { ...target, symbol: canonical };
     });
     if (changed) {
-      const symbols = targets.filter(target => target?.level === 'asset').map(target => target.symbol);
+      const symbols = targets.filter(isAssetTarget).map(target => target.symbol);
       if (new Set(symbols).size !== symbols.length) blockers.push('归一后组合目标 symbol 重复：' + doc._id);
       add('portfolios', doc, { targets });
     }
