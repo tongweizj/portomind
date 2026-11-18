@@ -26,7 +26,7 @@
 
 ### Why
 
-`SCHEDULER_ENABLED=true` 的「唯一所有者」约束与两侧调度器的**任务覆盖不重合**直接冲突，导致无论选哪个所有者都必然有任务静默停跑。详见 `docs/development/exec-plans/completed/DOCS-DEDUP-2026-10-15.md` §3（Q10）与 `docs/handbook/ops/CRON_WORKER.md` §3.1。
+`SCHEDULER_ENABLED=true` 的「唯一所有者」约束与两侧调度器的**任务覆盖不重合**直接冲突，导致无论选哪个所有者都必然有任务静默停跑。详见 `docs/development/tasks/completed/DOCS-DEDUP-2026-10-15.md` §3（Q10）与 `docs/handbook/ops/CRON_WORKER.md` §3.1。
 
 ### Scope
 

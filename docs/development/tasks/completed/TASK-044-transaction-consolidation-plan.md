@@ -10,7 +10,7 @@
 
 ## Status
 
-`Completed` — **2026-10-19**。全链路闭环：`Approved`（2026-10-18 Plan Review）→ 实现（2026-10-18）→ 两轮独立评审（2026-10-19，§11 / §11.9）→ R-1/R-2 整改（§11.8）→ 全系统验证 229/229（§11.10）→ **Human 提交合并 `30dc525`**（2026-10-19）→ **Human 最终验收通过**（2026-10-19，见 §11.11）。归档位置：`docs/development/exec-plans/completed/TASK-044-transaction-consolidation.md`。
+`Completed` — **2026-10-19**。全链路闭环：`Approved`（2026-10-18 Plan Review）→ 实现（2026-10-18）→ 两轮独立评审（2026-10-19，§11 / §11.9）→ R-1/R-2 整改（§11.8）→ 全系统验证 229/229（§11.10）→ **Human 提交合并 `30dc525`**（2026-10-19）→ **Human 最终验收通过**（2026-10-19，见 §11.11）。归档位置：`docs/development/tasks/completed/TASK-044-transaction-consolidation-plan.md`。
 
 Owner:
 
@@ -418,7 +418,7 @@ AC1 ✅（`navItems` 6 项，「组合管理」含 2 子项，顶层无「交易
 | **M-1** | 建议（回归） | 侧边栏**写路由无激活态**：`/portfolios/:id/transactions/{new,edit/:txId,import}` 既不命中 `isPortfolioListPath`（只覆盖 `/portfolios`、`/portfolios/new|edit|view`），也不命中「全部交易」，导致在这三页时导航**无任何高亮**；改动前 `/transactions/new` 会高亮「交易记录」 | `client/src/components/layout/Sidebar.jsx:22-26`。一行修复：把写路由并入「组合列表」族（如 `/\d+\/transactions/` 判定），或为父项补 `active` 兜底 |
 | **M-2** | 建议（数据面） | `EditTransaction` 把 `portfolioId` **无条件**覆盖为路径值（`setForm({...tx, portfolioId})`）：若 URL 的组合 id 与该交易真实归属不符，提交即**静默把交易迁移到另一个组合**，触发两个组合的持仓/成本重算 | `EditTransaction.jsx:42-51, 82`。建议：`getTransaction(txId)` 回来后校验 `String(tx.portfolioId) !== portfolioId` 则报错并中止（而非静默改写） |
 | **M-3** | 建议（一致性） | 存在**第三处**交易类型展示点仍在用二元映射：`client/src/pages/Family.jsx:17,238` 的 `ACTION_LABELS = { buy, sell }`，分红类会渲染成 `undefined`（空 badge，且被染成「跌」色）。D-4 已顺手统一导入预览，此处属同类遗漏 | 复用 `enums.TRANSACTION_ACTIONS`（与 R8「统一中文标签」精神一致）。属任务 Scope 外，建议并入 TASK-046 或另立小单 |
-| **M-4** | 建议（文档纪律） | `docs/readme.md` 未登记本次新增文档：`specs/FS-transaction-consolidation.md`、`specs/FS-transaction-query-filters.md`、`development/tasks/active/TASK-044/046`；且索引中仍把 `TASK-042` 列为活跃任务、`development/exec-plans/active/TASK-003-github-login.md` 指向不存在的文件 | 按「唯一索引入口」约定补登记；陈旧条目一并清理（可拆给 Orchestrator） |
+| **M-4** | 建议（文档纪律） | `docs/readme.md` 未登记本次新增文档：`specs/FS-transaction-consolidation.md`、`specs/FS-transaction-query-filters.md`、`development/tasks/active/TASK-044/046`；且索引中仍把 `TASK-042` 列为活跃任务、`development/tasks/active/TASK-003-github-login.md` 指向不存在的文件 | 按「唯一索引入口」约定补登记；陈旧条目一并清理（可拆给 Orchestrator） |
 | **M-5** | 建议（验证质量） | E2E 两处断言**恒真**：`e2e-task-044.mjs:111` 的 `!url.includes('/transactions/') \|\| url.includes('/portfolios/')` —— 组合内 URL 必然含 `/portfolios/`，故永不失败；`:126` 的 `!editedRow.includes('\t7\t')` —— `innerText` 分隔符是 `\n` 而非 `\t`，负向半边恒真 | 改为断言「当前 URL 不匹配 `^/transactions`」与「首行份额单元格 === '9'」这类可证伪形式（TASK-043「期望值不得从被测实现反推」的同类风险） |
 | **M-6** | 建议（验证质量） | `verify-transaction-routes.mjs` 在脚本内**复制**路由表而非读取 `router.jsx`：若 `router.jsx` 日后漏声明某条路由，脚本仍全绿 | 至少从 `router.jsx` 抽出路由声明数组供脚本 import；或在脚本注释中显式标注「与 router.jsx 需人工同步」并加一条 grep 校验 |
 
@@ -533,7 +533,7 @@ AC1 ✅（`navItems` 6 项，「组合管理」含 2 子项，顶层无「交易
 
 | 组 | 内容 |
 |---|---|
-| 主提交（TASK-044） | `client/src/**`（12 个文件）、`client/scripts/e2e-task-044.mjs`、`client/scripts/verify-transaction-routes.mjs`、`client/vite.config.js`、`docs/development/exec-plans/active/TASK-044-*.md`、`docs/development/tasks/active/TASK-044-*.md`、`docs/handbook/manual/CLIENT.md`、`docs/handbook/product/lines/PL-0|PL-1`、`docs/readme.md`、`docs/BOARD.md`、`.workbuddy/memory/*` |
+| 主提交（TASK-044） | `client/src/**`（12 个文件）、`client/scripts/e2e-task-044.mjs`、`client/scripts/verify-transaction-routes.mjs`、`client/vite.config.js`、`docs/development/tasks/active/TASK-044-*.md`、`docs/development/tasks/active/TASK-044-*.md`、`docs/handbook/manual/CLIENT.md`、`docs/handbook/product/lines/PL-0|PL-1`、`docs/readme.md`、`docs/BOARD.md`、`.workbuddy/memory/*` |
 | 建议同批（文档产出，与本任务同期） | `docs/development/requirements/specs/completed/FS-transaction-consolidation.md`、`FS-transaction-query-filters.md`、`docs/development/tasks/active/TASK-045/046/047/048-*.md` |
 
 > 若拆成两个 commit：① `TASK-044 交易记录收拢进组合管理`；② `docs: 交易线后续需求与任务登记（TASK-045~048）`。
@@ -546,7 +546,7 @@ AC1 ✅（`navItems` 6 项，「组合管理」含 2 子项，顶层无「交易
 | 提交范围 | 与 §11.10-D 建议边界一致：`client/src/**`（12 文件）+ `client/scripts/{e2e-task-044,verify-transaction-routes}.mjs` + `client/vite.config.js` + ExecPlan/任务卡/`CLIENT.md`/`PL-0`/`PL-1`/`readme.md`/`BOARD.md` + `.workbuddy/memory/*` |
 | 提交后工作区 | `git status --short` 空输出（无未申报残留） |
 | 最终验收 | **Human 于 2026-10-19 声明「已经提交 git」并指令置 `Completed`** → 依 §7 Ownership 视为最终验收通过 |
-| 归档动作 | ExecPlan → `docs/development/exec-plans/completed/`；任务卡 → `docs/development/tasks/completed/`；`BOARD.md` 移入 Done；`docs/readme.md` 索引同步 |
+| 归档动作 | ExecPlan → `docs/development/tasks/completed/`；任务卡 → `docs/development/tasks/completed/`；`BOARD.md` 移入 Done；`docs/readme.md` 索引同步 |
 | 验收标准 | AC1–AC12 全部满足（§11.3）；AC12「零服务端改动」经 `git status server shared cron-worker` 空输出二次确认 |
 | 遗留移交 | M-1/M-2/M-5/M-6 → `TASK-047`；M-3 → `TASK-048`；M-4 → 已闭环；CSV 幂等缺陷 → `TASK-046`；OQ1（筛选查询）→ `TASK-045` |
 | 未做 | 未执行任何 `git` 写操作（Orchestrator 无合并授权）；未修改验收标准；未改动 `server/` `shared/` `cron-worker/` |

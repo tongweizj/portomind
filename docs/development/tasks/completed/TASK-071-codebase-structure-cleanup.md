@@ -10,7 +10,7 @@
 | 所属 Story | 无（独立维护任务；不新建 Story） |
 | 覆盖的验收条件 | 见 §3（AC-01～AC-07） |
 | Related | [ARCHITECTURE.md §7](../../../os/architecture/ARCHITECTURE.md)、[GIT.md](../../../os/standards/GIT.md)、[TESTING.md](../../../os/standards/TESTING.md) |
-| Execution Plan | [Completed：TASK-071-plan](../../exec-plans/completed/TASK-071-codebase-structure-cleanup-plan.md) |
+| Execution Plan | [Completed：TASK-071-plan](../../tasks/completed/TASK-071-codebase-structure-cleanup-plan.md) |
 
 ## 1. 问题
 

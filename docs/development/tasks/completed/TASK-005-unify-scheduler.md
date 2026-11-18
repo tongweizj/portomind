@@ -30,7 +30,7 @@
 
 ## ExecPlan
 
-[`docs/development/exec-plans/completed/TASK-005-unify-scheduler.md`](../../exec-plans/completed/TASK-005-unify-scheduler.md)
+[`docs/development/tasks/completed/TASK-005-unify-scheduler-plan.md`](../../tasks/completed/TASK-005-unify-scheduler-plan.md)
 
 ---
 
@@ -139,7 +139,7 @@
 - Manual: `docs/handbook/ops/DEPLOYMENT.md`（本地环境配置与安装）
 - Standards: `docs/os/standards/CODING.md`、`docs/os/standards/TESTING.md`、`docs/os/standards/DOCS.md`
 - Process: `docs/os/process/EXECUTION_PLANS.md`
-- 背景记录：`docs/development/exec-plans/completed/DOCS-DEDUP-2026-10-15.md` §3（Q10 发现过程）
+- 背景记录：`docs/development/tasks/completed/DOCS-DEDUP-2026-10-15.md` §3（Q10 发现过程）
 
 ---
 
@@ -152,13 +152,13 @@
 
 符合 `EXECUTION_PLANS.md` §2 的多项触发条件：跨多个模块（server / cron-worker 及其 models、services、tasks）、架构变更（调度所有权归属）、迁移性质、涉及生产环境配置与运维流程、存在显著技术风险与不确定的架构方向选择、需要人工 Plan Review 后才可实施。
 
-ExecPlan 路径：[`docs/development/exec-plans/completed/TASK-005-unify-scheduler.md`](../../exec-plans/completed/TASK-005-unify-scheduler.md)
+ExecPlan 路径：[`docs/development/tasks/completed/TASK-005-unify-scheduler-plan.md`](../../tasks/completed/TASK-005-unify-scheduler-plan.md)
 
 ---
 
 ## Coordination Notes
 
-- 本任务由文档整改（TASK 之外的 docs/manual 去重工作）中发现的 Q10 缺口衍生而来，见 `docs/development/exec-plans/completed/DOCS-DEDUP-2026-10-15.md`。
+- 本任务由文档整改（TASK 之外的 docs/manual 去重工作）中发现的 Q10 缺口衍生而来，见 `docs/development/tasks/completed/DOCS-DEDUP-2026-10-15.md`。
 - **人工裁决已完成**（D1=A / D2=是 / D3=① / D4 不适用 / D5=是），实施与验收均已完成。
 - **跨任务影响**：本次引入 npm workspaces 后，任何新增 `require('../models/...')` 式的跨包相对引用都会失效——必须使用 `@portomind/shared/...`。后续任务（含 TASK-003 GitHub Login）需注意此约定。
 

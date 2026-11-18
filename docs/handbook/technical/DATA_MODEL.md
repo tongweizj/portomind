@@ -327,7 +327,9 @@ AlertRule ──_id──> AlertEvent.ruleId（**可空**：再平衡通知没�
 
 ### 5.1 `symbol` 写法不统一（P0，影响跨表 join）
 
-`Asset.symbol` 与 `Price.symbol` 存的是裸代码（如 `000191`），而部分 `Transaction.symbol` / `Portfolio.targets[].symbol` 带市场后缀（如 `000191.cn`）。模型层两者都合法（`uppercase` 不会加/去后缀），**没有任何约束保证一致**。
+> **决策已定、迁移未完成**：[ADR-003](../../os/architecture/adr/ADR-003-symbol-suffix-contract.md)（`Accepted`，2026-11-17 Human 正式批准）已裁决目标格式为「按 `market` 派生大写后缀」（`001180.CN` / `VOO.US` / `600519.SS`），创建时由 market 自动派生、采集时按 `PROVIDER_SUFFIX` 去除/保留。**本段描述的是迁移前的当前代码状态；迁移完成（TASK-073 / TASK-075）后须更新为统一格式。**
+
+`Asset.symbol` 与 `Price.symbol` 存的是裸代码（如 `000191`），而部分 `Transaction.symbol` / `Portfolio.targets[].symbol` 带市场后缀（如 `000191.cn`）。模型层两者都合法（`uppercase` 不会加/去后缀），**没有任何约束保证一致**。实测还有小写 `.cn` 与大写 `.CN` 并存（同一基金两套价格序列）。
 
 后果：`suggestionGenerator` 按 `000191.CN` 查 `Price` 恒失败 → 相关组合的再平衡每日 `FAILED`。查任何「资产 ↔ 交易 ↔ 价格」关联时，**不要假设 symbol 可直接相等比较**。
 

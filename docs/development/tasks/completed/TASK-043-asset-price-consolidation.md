@@ -24,7 +24,7 @@
 `None`
 
 **Execution Plan:**  
-`docs/development/exec-plans/completed/TASK-043-asset-price-consolidation.md`（**✅ Completed 2026-10-19**）
+`docs/development/tasks/completed/TASK-043-asset-price-consolidation-plan.md`（**✅ Completed 2026-10-19**）
 
 ---
 
@@ -143,4 +143,4 @@
 - **详情页口径收窄已接受**：单标的无法建基准 → 有数据只中性显示「N 天前」，仅 90 天全无价格才标红。缺口告警职责归列表页。
 - **遗留（未随本任务关闭）**：`docs/development/requirements/specs/completed/FS-asset-price-consolidation.md` 的 **R6 与验收标准仍写「≥3 天未更新标红」**，与实现口径（落后同市场 3 个工作日）不一致，且「详情页也标红」已被有意收窄。FS 属 Human Intent，Orchestrator 不擅自改措辞，**待 PM/Human 同步**。
 - **流程偏离已追认**：本任务曾由 Orchestrator 代行 Implementer 并跳过 Plan Review（ExecPlan §8），Human 于 2026-10-18 追认（仅限本任务、不构成先例）。该事件直接促成 `docs/os/roles/PLANNER.md` / `IMPLEMENTER.md` 补全与后续「实现与审查分离」纪律。
-- 归档位置：任务卡 `docs/development/tasks/completed/TASK-043-asset-price-consolidation.md`；ExecPlan `docs/development/exec-plans/completed/TASK-043-asset-price-consolidation.md`。本卡归档后不再变更。
+- 归档位置：任务卡 `docs/development/tasks/completed/TASK-043-asset-price-consolidation.md`；ExecPlan `docs/development/tasks/completed/TASK-043-asset-price-consolidation-plan.md`。本卡归档后不再变更。

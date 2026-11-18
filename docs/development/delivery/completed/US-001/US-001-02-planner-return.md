@@ -147,7 +147,7 @@ Human需决定：是否采用推荐新集合与可选API字段，或改选方案
 
 - 已正式登记 [TASK-063](./TASK-063.md)、[TASK-064](./TASK-064.md)，初始 Status 为 Planning，Priority 为 High，Owner 为待指派。两卡补齐现有 Story 的接入与读侧缺口，未增加 Story 范围；登记沿用当前 Story 授权，不另造立项批准。
 - 已接收 TASK-053/055/056/057 的 Draft，将四卡原 BACKLOG 登记为 Planning，分别在卡片保留原阶段和本轮依据。六张待实施卡统一处于规划审阅阶段；没有进入 Implementing。
-- [TASK-054](../../../tasks/completed/TASK-054-cron-status-aggregate-api.md) 仍为 Completed，[既有计划](../../../exec-plans/completed/TASK-054-cron-status-aggregate-api.md) 与 BOARD 中的 Merged #36 均未改变；不重开、不重复批准、不将其历史结果当作本轮运行。
+- [TASK-054](../../../tasks/completed/TASK-054-cron-status-aggregate-api.md) 仍为 Completed，[既有计划](../../../tasks/completed/TASK-054-cron-status-aggregate-api-plan.md) 与 BOARD 中的 Merged #36 均未改变；不重开、不重复批准、不将其历史结果当作本轮运行。
 - 规划材料已具备提交审阅的入口：七张关联卡、六份 Draft、§3 的 11 项 Story AC 覆盖矩阵及任务/计划反向链接均已核对。覆盖表示有承担任务，不表示已验证、已批准或所有依赖已解决。
 - 结果写侧→读侧适配→前端分别由 057→064→063 承担；053 提供骨架，056 提供统一映射，055 提供价格组件，054 提供既有读侧支撑。055 与 063 的接入依赖仍需明确接口，见 R-01。
 - 当前 Story 保持 Planning；已登记关联 Task 为 7 项：6 Planning、1 Completed。没有待登记卡，没有实施者或独立 Reviewer 已被指派。

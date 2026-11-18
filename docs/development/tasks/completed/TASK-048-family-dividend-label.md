@@ -3,7 +3,7 @@
 ## Metadata
 
 **Status:**  
-`COMPLETED`（2026-10-20）—— 独立 Reviewer 评审通过（2026-10-20，AC1–AC8 全满足、边界清单 9/10 成立、无阻塞项，见 ExecPlan §13）→ Orchestrator 归档前复跑（`build` 0 / `eslint` 0-0 / AC4 检测式 1 行 / `test:server` 152 + `test:worker` 77 = **229 pass 0 fail**）→ **Human 于 2026-10-20 验收并指令结案**。已归档至 `development/tasks/completed/`，ExecPlan 归档至 `development/exec-plans/completed/`。
+`COMPLETED`（2026-10-20）—— 独立 Reviewer 评审通过（2026-10-20，AC1–AC8 全满足、边界清单 9/10 成立、无阻塞项，见 ExecPlan §13）→ Orchestrator 归档前复跑（`build` 0 / `eslint` 0-0 / AC4 检测式 1 行 / `test:server` 152 + `test:worker` 77 = **229 pass 0 fail**）→ **Human 于 2026-10-20 验收并指令结案**。已归档至 `development/tasks/completed/`，ExecPlan 归档至 `development/tasks/completed/`。
 
 > ⚠️ 改动**仍在工作区，未提交 git**：代码 4 个文件与本次归档文档均位于 `feature/TASK-048-family-dividend-label` 分支工作树。提交属 Human 职权，不在本卡范围内。
 >
@@ -31,10 +31,10 @@
 `None`
 
 **Execution Plan:**  
-`docs/development/exec-plans/completed/TASK-048-family-dividend-label.md`（`Approved` 2026-10-19 → 已实施 §12 → 评审通过 §13 → **`Completed` §14）
+`docs/development/tasks/completed/TASK-048-family-dividend-label-plan.md`（`Approved` 2026-10-19 → 已实施 §12 → 评审通过 §13 → **`Completed` §14）
 
 **来源：**  
-`docs/development/exec-plans/completed/TASK-044-transaction-consolidation.md` §11 独立审查 **M-3**。原计划并入 TASK-047，Human 于 2026-10-19 裁决**拆出独立立项**（M-3 与 TASK-047 的路由/归属守卫无文件交叠）。
+`docs/development/tasks/completed/TASK-044-transaction-consolidation-plan.md` §11 独立审查 **M-3**。原计划并入 TASK-047，Human 于 2026-10-19 裁决**拆出独立立项**（M-3 与 TASK-047 的路由/归属守卫无文件交叠）。
 
 ---
 
@@ -194,7 +194,7 @@ Orchestrator 曾提交三个处置方案（见 `TASK-050` 卡 §8.2），Human �
 |---|---|
 | 状态流转 | `PLANNING` → `PLAN_REVIEW` → `Approved`（2026-10-19 Human 批准，OD-2 方案 A 浅紫 / OD-3 表单选项不改）→ `Implementing` → `Reviewing`（2026-10-20 独立评审通过）→ **`COMPLETED`（2026-10-20）** —— 本卡未单独落 `Integrating` 状态，归档前复跑并入本节 |
 | 最终验收 | Human 于 2026-10-20 明确「TASK-048 已经评审通过，请改为 done」；依 `EXECUTION_PLANS.md §7 Ownership`，最终验收属 Human，此为一次有效表达 |
-| 归档位置 | 任务卡 `docs/development/tasks/completed/TASK-048-family-dividend-label.md`（`git mv`，保留历史）；ExecPlan `docs/development/exec-plans/completed/TASK-048-family-dividend-label.md`（该文件原为**未跟踪**状态，故用 `mv`；提交时须一并纳入） |
+| 归档位置 | 任务卡 `docs/development/tasks/completed/TASK-048-family-dividend-label.md`（`git mv`，保留历史）；ExecPlan `docs/development/tasks/completed/TASK-048-family-dividend-label-plan.md`（该文件原为**未跟踪**状态，故用 `mv`；提交时须一并纳入） |
 | 归档前复跑（Orchestrator，本分支） | `npm run build --workspace client` → `BUILD_EXIT=0`（5.57s）；`cd client && ../node_modules/.bin/eslint "src/**/*.{js,jsx}"` → `ESLINT_EXIT=0`、输出 0 行；`npm run test:server` → **152 pass / 0 fail**；`npm run test:worker` → **77 pass / 0 fail**（合计 **229 / 0**，与 TASK-049 一致，零服务端改动之预期） |
 | AC 复验 | AC4 `grep -rn "Object.fromEntries(TRANSACTION_ACTIONS\b" client/src` → **恰好 1 行**（`constants/enums.js:29`），排除 enums 后 **0 行**；`ACTION_LABELS = {` 就地映射 **0 处**；AC5 `AlertRules.jsx` diff 空；AC7 `git status --short server shared cron-worker` 空；AC6 见上一行 |
 | 改动白名单 | `git status --short client` → **恰好 4 个文件**（`constants/enums.js` · `components/TransactionTable/index.jsx` · `pages/Transaction/ImportTransactions.jsx` · `pages/Family.jsx`），无新增文件 |

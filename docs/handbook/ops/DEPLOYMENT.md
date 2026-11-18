@@ -309,7 +309,7 @@ cd cron-worker && npm test
 
 - **认证与 CORS 已由 TASK-058 落地，U2/U3 前端同批就绪**：业务端点默认要求登录（`/api/auth/login` 等公开端点除外）；CORS 使用白名单 + `credentials:true`，`CORS_ORIGINS` 生效且生产必填。前端 `/login`、`/account`、`/account/users` 已实现（独立真实浏览器验收 28/28 PASS）；**U1 与 U2 必须同批发布**（只上 U1 会全站 401）。详见 §9。
 - 当前使用 npm workspaces monorepo：`shared`（唯一业务实现）、`server`（API）、`cron-worker`（唯一调度）、`client`（前端）。改业务逻辑时改 `shared/`，不要在 `server`/`cron-worker` 下复制实现。
-- 当前后端使用 Mongoose 6.13；跨主版本升级计划见 [`DEPENDENCY_UPGRADES.md`](../../development/exec-plans/completed/DEPENDENCY_UPGRADES.md)。
+- 当前后端使用 Mongoose 6.13；跨主版本升级计划见 [`DEPENDENCY_UPGRADES.md`](../../development/tasks/completed/DEPENDENCY_UPGRADES.md)。
 - 默认日志写入**仓库根 `logs/`**（由 `shared/config/logger.js` 决定，`app-*.log` 与 `task-*.log` 分文件），并被 Git 忽略；`server` 与 `cron-worker` 共用该目录。日志脱敏规则见 §9。
 - 当前组合计算按原币种分组，不会直接相加 USD、CAD 与 CNY；跨币种折算仅发生在家庭视图（业务口径见 [client 使用手册](../manual/CLIENT.md) §5）。
 

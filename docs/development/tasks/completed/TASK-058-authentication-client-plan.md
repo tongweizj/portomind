@@ -4,7 +4,7 @@
 
 Current status:
 
-`Completed`（2026-10-27 实施完成；**2026-10-28 随 `TASK-058` 结案归档 `complete/`**）—— 实施完成（§11）；独立 Reviewer 真实浏览器验收 **28/28 PASS**、EXIT=0，代码复核 **PASS（无 BLOCKER / 无 MAJOR，6 条 MINOR 不阻塞）**（§12），2026-10-28 对 `dd388ac` 全量复验再次 28/28 + 2 条负向对照成立（见任务卡 §12）；**代码仍在分支 `dd388ac`，未合入 `main`**（合入属 Human 动作；U1+U2 必须同批）。**授权依据**：Human 2026-10-27 直接指令「请阅读 task58 任务卡以及相关的文档！检查当前完成了多少，把没有完成的代码继续完成」。本计划范围严格等于 `specs/completed/FS-authentication.md §6.2 / §6.3` 与任务卡 `§3` 的 U2 / U3，不含任何新增产品裁决；U1（`docs/development/exec-plans/completed/TASK-058-authentication-kernel.md`）判定不变。
+`Completed`（2026-10-27 实施完成；**2026-10-28 随 `TASK-058` 结案归档 `complete/`**）—— 实施完成（§11）；独立 Reviewer 真实浏览器验收 **28/28 PASS**、EXIT=0，代码复核 **PASS（无 BLOCKER / 无 MAJOR，6 条 MINOR 不阻塞）**（§12），2026-10-28 对 `dd388ac` 全量复验再次 28/28 + 2 条负向对照成立（见任务卡 §12）；**代码仍在分支 `dd388ac`，未合入 `main`**（合入属 Human 动作；U1+U2 必须同批）。**授权依据**：Human 2026-10-27 直接指令「请阅读 task58 任务卡以及相关的文档！检查当前完成了多少，把没有完成的代码继续完成」。本计划范围严格等于 `specs/completed/FS-authentication.md §6.2 / §6.3` 与任务卡 `§3` 的 U2 / U3，不含任何新增产品裁决；U1（`docs/development/tasks/completed/TASK-058-authentication-kernel-plan.md`）判定不变。
 
 Owner:
 

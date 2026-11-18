@@ -12,7 +12,7 @@
 | Related Product Spec / ADR | <相关章节链接或 None> |
 | Execution Plan | <计划链接或 Not required，并在 §7 说明免计划依据> |
 
-新Story任务命名 TASK-编号.md，直接放 docs/development/delivery/US-编号/，不建 tasks/ 子目录；对应计划为同目录 TASK-编号-plan.md。独立及既有任务沿用原位置，详见 [DOCS.md §1.1](../standards/DOCS.md#11-story-交付目录与文档生命周期)。复制后按实际目录深度修正链接；Status 在本卡登记，docs/BOARD.md 作投影。进入实施前补齐 Story 关联和覆盖关系，不复制 Story AC 另作权威。
+任务卡命名 `TASK-<编号>-<描述>.md`，对应计划 `TASK-<编号>-<描述>-plan.md`，两者成对、同目录平铺；同一编号有多个计划时用描述段区分。新 Story 任务放 docs/development/delivery/US-编号/（不建 tasks/ 子目录），独立维护任务放 development/tasks/ 对应子目录（active/、backlog/ 或 completed/），**不另设计划目录**。详见 [DOCS.md §1.1](../standards/DOCS.md#11-story-交付目录与文档生命周期)。复制后按实际目录深度修正链接；Status 在本卡登记，docs/BOARD.md 作投影。进入实施前补齐 Story 关联和覆盖关系，不复制 Story AC 另作权威。
 
 ## 1. 问题
 

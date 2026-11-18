@@ -12,7 +12,7 @@
 | 创建日期 | 2026-11-05 |
 | 最近更新 | 2026-11-05 |
 | 交付目录 | docs/development/delivery/US-005/（启动时建立） |
-| 需求来源 | Human 2026-11-05 指示整理 `specs/` 遗留需求；本 Story 承接 [FS-transaction-query-filters](../../specs/FS-transaction-query-filters.md) 的 Q1～Q6，对应既有任务卡 [TASK-045](../../../tasks/active/TASK-045-transaction-query-filters.md) |
+| 需求来源 | Human 2026-11-05 指示整理 `specs/` 遗留需求；本 Story 承接 [FS-transaction-query-filters](../../specs/FS-transaction-query-filters.md) 的 Q1～Q6，对应既有任务卡 [TASK-045](../../../tasks/backlog/TASK-045-transaction-query-filters.md) |
 
 > 状态、转换权限与取消处理唯一依据 [STATES.md](../../../../os/process/STATES.md) §2.2–§4；本卡 Status 为权威，目录不决定状态。
 
@@ -55,7 +55,7 @@
 ### 相关资料
 
 - Spec：[FS-transaction-query-filters.md](../../specs/FS-transaction-query-filters.md) —— §1 证据、§2 Goals、§3 Non-Goals、§4 Requirements Q1～Q6、§5 索引缺口、§6 Open Questions、§7 拆分理由
-- 既有任务卡：[TASK-045](../../../tasks/active/TASK-045-transaction-query-filters.md)（`BACKLOG`，未排期，未创建 ExecPlan）
+- 既有任务卡：[TASK-045](../../../tasks/backlog/TASK-045-transaction-query-filters.md)（`BACKLOG`，未排期，未创建 ExecPlan）
 - 父需求：[FS-transaction-consolidation.md](../../specs/completed/FS-transaction-consolidation.md)（OQ1 由本需求承接）
 - 现状落点：`server/controllers/transaction.controller.js`、`shared/services/transaction.service.js`、`client/src/services/transaction.service.js`、`shared/models/transaction.js` 索引定义
 
@@ -92,11 +92,11 @@
 
 ## 6. 关联 Task 与验收覆盖
 
-已有任务卡 [TASK-045](../../../tasks/active/TASK-045-transaction-query-filters.md)（`BACKLOG`，未排期、未创建 ExecPlan），覆盖范围与本 Story 一致，可直接复用，**不新占编号**。
+已有任务卡 [TASK-045](../../../tasks/backlog/TASK-045-transaction-query-filters.md)（`BACKLOG`，未排期、未创建 ExecPlan），覆盖范围与本 Story 一致，可直接复用，**不新占编号**。
 
 | Task | 工作摘要 | 覆盖的验收条件 | 必要性 / 关联说明 |
 |---|---|---|---|
-| [TASK-045](../../../tasks/active/TASK-045-transaction-query-filters.md) | 交易流水查询与筛选（服务端 + `shared` + 客户端） | AC-01～AC-12 | 交付必需；范围已核对与本 Story 一致 |
+| [TASK-045](../../../tasks/backlog/TASK-045-transaction-query-filters.md) | 交易流水查询与筛选（服务端 + `shared` + 客户端） | AC-01～AC-12 | 交付必需；范围已核对与本 Story 一致 |
 
 > 若 Planner 认为需拆分（例如服务端筛选与前端工具栏分两张卡），在立项时按 BOARD 当前最大号顺延；现有 TASK-045 不重号。
 

@@ -23,7 +23,7 @@ Branch / Base:
 `feature/TASK-048-family-dividend-label` / `56c6507`
 
 > 说明：`docs/os/templates/EXEC_PLAN_TEMPLATE.md` 当前为 0 字节空文件（2026-10-19 实读）。本文结构依据
-> `docs/os/process/EXECUTION_PLANS.md` §8，并参照 `docs/development/exec-plans/completed/TASK-049-dashboard-household-total.md` 的既有格式。
+> `docs/os/process/EXECUTION_PLANS.md` §8，并参照 `docs/development/tasks/completed/TASK-049-dashboard-household-total-plan.md` 的既有格式。
 
 ---
 
@@ -88,7 +88,7 @@ Branch / Base:
 
 ## 2. Context
 
-- 问题来源：`docs/development/exec-plans/completed/TASK-044-transaction-consolidation.md` §11 独立审查 **M-3**
+- 问题来源：`docs/development/tasks/completed/TASK-044-transaction-consolidation-plan.md` §11 独立审查 **M-3**
 - 任务卡：`docs/development/tasks/active/TASK-048-family-dividend-label.md`（归档后为 `docs/development/tasks/completed/TASK-048-family-dividend-label.md`；§8 裁决：**按原范围先做**，不缩为只做 AC4）
 - 关联任务：`TASK-050`（其 In Scope 包含删除 `client/src/pages/Family.jsx`；其 AC16 依赖本任务的单一导出）
 - 相关产品需求：无（缺陷修复，不改需求口径）
@@ -809,10 +809,10 @@ git revert <TASK-048 commit sha>
 
 | 对象 | 动作 |
 |---|---|
-| 本 ExecPlan | `docs/development/exec-plans/active/` → `docs/development/exec-plans/completed/`（原为**未跟踪**文件，用 `mv`；提交时须纳入）；Status → `Completed`；关联任务指向 `development/tasks/completed/`；补本节 |
-| 任务卡 | `docs/development/tasks/active/` → `docs/development/tasks/completed/`（`git mv`）；Status → `COMPLETED`；补 §11 Completion Record；`Execution Plan` 指针改指 `development/exec-plans/completed/` |
+| 本 ExecPlan | `docs/development/tasks/active/` → `docs/development/tasks/completed/`（原为**未跟踪**文件，用 `mv`；提交时须纳入）；Status → `Completed`；关联任务指向 `development/tasks/completed/`；补本节 |
+| 任务卡 | `docs/development/tasks/active/` → `docs/development/tasks/completed/`（`git mv`）；Status → `COMPLETED`；补 §11 Completion Record；`Execution Plan` 指针改指 `development/tasks/completed/` |
 | `docs/BOARD.md` | Active 表清空（写「无活跃任务」）；Done 新增 TASK-048 行；**`TASK-050` 的 B2 硬前置解除**；Roadmap 第 3、4 项同步 |
-| `docs/readme.md` | 活跃任务 → 无；已完成任务补 TASK-048；`development/exec-plans/active/` 恢复为空 |
+| `docs/readme.md` | 活跃任务 → 无；已完成任务补 TASK-048；`development/tasks/active/` 恢复为空 |
 | 交叉引用 | `specs/completed/FS-household-view-split.md`（D-1 依赖、D-2 备注、Appendix A 缺陷行）；`TASK-050` 卡（§6 B2、§7 协调说明） |
 
 ### 14.4 §13.5「须处理」两项的处置

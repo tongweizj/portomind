@@ -55,7 +55,7 @@
 - 产品规格：[FS-cron-worker-status-board](../../specs/FS-cron-worker-status-board.md) §2～§6、§7.2、§10；本次阅读版本标记最近修订 2026-10-26。
 - 原拆分：[FS-cron-worker-status-board-tasks](../../specs/FS-cron-worker-status-board-tasks.md) C-01～C-05。
 - 现行接口：[API_CONTRACT.md](../../../../handbook/technical/API_CONTRACT.md) 的 GET /api/cron/status。
-- 已交付读侧口径：[TASK-054 ExecPlan](../../../exec-plans/completed/TASK-054-cron-status-aggregate-api.md) §4.3 / §4.4。
+- 已交付读侧口径：[TASK-054 ExecPlan](../../../tasks/completed/TASK-054-cron-status-aggregate-api-plan.md) §4.3 / §4.4。
 - 原型参考：[TASK-061](../../../tasks/completed/TASK-061-cron-board-prototype.md)。
 
 ## 4. 验收条件

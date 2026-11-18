@@ -310,7 +310,7 @@ D-1～D-4 四项我逐条比对版式与源码，**均在 §1 Constraints / §4 
 
 | # | 问题 | 落点 | 要求 |
 |---|---|---|---|
-| R-1 | **索引与事实不符（两处）**：① 仍写 TASK-049「`APPROVED · 待 Planner 出 ExecPlan`」，与任务卡/BOARD.md 的「已实施、待评审」矛盾；② 写「活跃执行计划目录（当前为空）」，但 `docs/development/exec-plans/active/TASK-049-*.md` 已存在 | `docs/readme.md:59`、`:72` | 由 Orchestrator 按事实改两行（`readme` 是唯一索引，不能留已知假话） |
+| R-1 | **索引与事实不符（两处）**：① 仍写 TASK-049「`APPROVED · 待 Planner 出 ExecPlan`」，与任务卡/BOARD.md 的「已实施、待评审」矛盾；② 写「活跃执行计划目录（当前为空）」，但 `docs/development/tasks/active/TASK-049-*.md` 已存在 | `docs/readme.md:59`、`:72` | 由 Orchestrator 按事实改两行（`readme` 是唯一索引，不能留已知假话） |
 | R-2 | **失效名词残留**：应用顶栏铃铛 `title="提醒中心"` —— 与本任务 D-1 已修的「提醒中心」属同一类，且该按钮实际跳 `/alerts/rules`，名与实都不对 | `client/src/components/layout/AppLayout.jsx:87,91` | 建议改 `title="提醒规则"`（或「未读提醒」）。一行，随本次一并改或并入 TASK-047 |
 
 ### 11.6 Human 裁决（2026-10-19，两项均「不改」）
@@ -325,7 +325,7 @@ D-1～D-4 四项我逐条比对版式与源码，**均在 §1 Constraints / §4 
 - **N-1 布局抖动**：`isLoading` 返回浅底 `LoadingState`（约 64px），数据到达后变 136px 渐变卡，冷启动首屏会把提醒列表下推约 70px。可给 `LoadingState` 包一个同高占位（`min-h-[136px]`）。
 - **N-2 双份未彻底消除**：`formatCny` 已单一来源（达标），但卡片的三段文案与 `incomplete` 判定式仍是 `Family.jsx` / `TotalAssetsCard.jsx` 两份。AC2 当前成立；彻底去重随 TASK-050 删页完成。
 - **N-3 实现者走查脚本有 2 处偏弱断言**：`e2e-task-049.mjs:157`「立即评估后页面仍可用」只断言 `h2` 可见（几乎恒真）；`:138` 用 `>=`。结论不受影响（我已独立覆盖），但建议沿用 §10.4「负向对照」的做法并固化为脚本惯例——**每个脚本至少留一条「能失败」的证据**。
-- **N-4** `docs/development/exec-plans/active/` 目录整体处于未跟踪状态（含本 ExecPlan）。归档/提交时注意别漏。
+- **N-4** `docs/development/tasks/active/` 目录整体处于未跟踪状态（含本 ExecPlan）。归档/提交时注意别漏。
 
 ### 11.8 关于「未复跑实现者脚本」
 
@@ -357,7 +357,7 @@ D-1～D-4 四项我逐条比对版式与源码，**均在 §1 Constraints / §4 
 | N-1 | §11.7 | ⏸ 不处理：加载态高度抖动为观感问题，改 `LoadingState` 会波及全站，非本任务范围 |
 | N-2 | §11.7 | ⏸ 计划内：`formatCny` 已单一来源；卡片文案与判定式的双份随 `TASK-050` 删页消除 |
 | N-3 | §11.7 | ⏸ 不处理：`e2e-task-049.mjs` 的两处弱断言不影响结论（Reviewer 已独立覆盖）；「每个脚本至少一条能失败的证据」已作为惯例记录 |
-| N-4 | §11.7 | ✅ 已注意：本次提交须包含 `docs/development/exec-plans/active/` 目录 |
+| N-4 | §11.7 | ✅ 已注意：本次提交须包含 `docs/development/tasks/active/` 目录 |
 
 ### 12.3 未执行项与原因
 
@@ -371,9 +371,9 @@ D-1～D-4 四项我逐条比对版式与源码，**均在 §1 Constraints / §4 
 | 业务代码 | `client/src/components/Household/TotalAssetsCard.jsx`（新增）· `client/src/pages/Dashboard.jsx` · `client/src/components/layout/Sidebar.jsx` · `client/src/utils/priceDisplay.js` |
 | 验证脚本 | `client/scripts/e2e-task-049.mjs`（新增） |
 | 手册 | `docs/handbook/manual/CLIENT.md` |
-| 任务与计划 | `docs/development/exec-plans/active/TASK-049-dashboard-household-total.md` · `docs/development/tasks/active/TASK-049-dashboard-household-total.md` · `docs/BOARD.md` |
+| 任务与计划 | `docs/development/tasks/active/TASK-049-dashboard-household-total.md` · `docs/development/tasks/active/TASK-049-dashboard-household-total.md` · `docs/BOARD.md` |
 | 需求与索引 | `docs/development/requirements/specs/completed/FS-household-view-split.md` · `docs/development/tasks/active/TASK-050-*.md` · `docs/readme.md` |
-| 上一批（TASK-043/044 归档） | `docs/development/exec-plans/completed/TASK-043|044-*` · `docs/development/tasks/completed/TASK-043|044-*` · `docs/development/requirements/specs/completed/FS-transaction-consolidation.md` · `docs/development/tasks/active/TASK-046|047|048-*` |
+| 上一批（TASK-043/044 归档） | `docs/development/tasks/completed/TASK-043|044-*` · `docs/development/tasks/completed/TASK-043|044-*` · `docs/development/requirements/specs/completed/FS-transaction-consolidation.md` · `docs/development/tasks/active/TASK-046|047|048-*` |
 
 > 工作区里混有**两批**未提交改动（TASK-043/044 归档 + TASK-049 实施）。建议拆两个 commit，避免把「上一轮归档」与「本轮功能」混在一个提交里。
 
@@ -397,7 +397,7 @@ D-1～D-4 四项我逐条比对版式与源码，**均在 §1 Constraints / §4 
 
 | 对象 | 动作 |
 |---|---|
-| 本 ExecPlan | `git mv` `development/exec-plans/active/` → `development/exec-plans/completed/`；Status → `Completed`；关联任务指向 `development/tasks/completed/` |
+| 本 ExecPlan | `git mv` `development/tasks/active/` → `development/tasks/completed/`；Status → `Completed`；关联任务指向 `development/tasks/completed/` |
 | 任务卡 | `git mv` `development/tasks/active/` → `development/tasks/completed/`；Status → `COMPLETED`；补 §12 Completion Record |
 | `docs/BOARD.md` | Active 清空（写「无活跃任务」）；Done 新增 TASK-049 行；`TASK-050` 的 B1 硬前置解除 |
 | `docs/readme.md` | 活跃任务 → 无；已完成任务补 TASK-049；归档段活跃执行计划目录改为「当前为空」 |

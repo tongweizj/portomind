@@ -1,6 +1,6 @@
 # 用户故事索引
 
-> 本文件只维护 Story 文档索引；优先级队列、当前 Story 和进度视图统一见 [BOARD.md](../../../BOARD.md)。状态与权限见 [STATES.md](../../../os/process/STATES.md)，卡片 Status 为权威，目录不决定状态。
+> 本文件只维护 Story 文档索引；当前开发中的 Story（n/m 进度）与独立 Task 见 [BOARD.md](../../../BOARD.md)，各 Story 的详情、下挂 Task 明细与开发进度说明见其过程目录的 `readme.md`（归档后在 `delivery/completed/US-<编号>/`）。状态与权限见 [STATES.md](../../../os/process/STATES.md)，卡片 Status 为权威，目录不决定状态。
 
 ## Story 清单
 

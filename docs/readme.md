@@ -8,9 +8,10 @@
 
 | 我想找 | 入口 |
 |---|---|
-| 当前 Story、任务进度、下一步交接 | [BOARD.md](./BOARD.md) |
+| 当前开发中 Story 的 n/m 进度、独立 Task | [BOARD.md](./BOARD.md) |
+| 独立 Task 的 active / completed 计数与清单 | [tasks/readme.md](./development/tasks/readme.md) |
 | Story 的价值、范围与验收条件 | [STORIES.md](./development/requirements/stories/STORIES.md) |
-| 已归档 Story 的任务、计划与交接材料 | [US-004 交付目录](./development/delivery/completed/US-004)、[US-001 交付目录](./development/delivery/completed/US-001)；当前进度以看板为准 |
+| 各 Story 的详情、下挂 Task 明细与开发进度说明 | [US-001 readme](./development/delivery/completed/US-001/readme.md)、[US-004 readme](./development/delivery/completed/US-004/readme.md)（各 Story 过程目录的 `readme.md`）；已归档 Story 的任务卡与计划见各自交付目录 |
 | 产品方向、需求规格、用户研究 | [PRODUCT.md](./development/requirements/PRODUCT.md)、[PRD.md](./development/requirements/PRD.md)、[specs/](./development/requirements/specs)、[USER_RESEARCH.md](./development/requirements/USER_RESEARCH.md) |
 | 角色职责、状态权限、交付流程 | [roles/](./os/roles)、[STATES.md](./os/process/STATES.md)、[WORKFLOW.md](./os/process/WORKFLOW.md) |
 | 架构边界、技术决策、编码规范 | [ARCHITECTURE.md](./os/architecture/ARCHITECTURE.md)、[adr/](./os/architecture/adr)、[standards/](./os/standards) |
@@ -35,11 +36,13 @@ docs/
 │   └── templates/            # 空白模板
 ├── development/              # 需求与交付工作
 │   ├── requirements/         # 产品定义、研究、Spec、场景、Story
-│   ├── delivery/             # Story 过程资料
-│   │   ├── US-001/           # 当前 Story：所有文件平铺
-│   │   └── completed/        # 已完成：每个 Story 一个目录
-│   ├── tasks/                # 独立维护任务及既有任务记录
-│   ├── exec-plans/           # 独立维护任务及既有计划
+│   ├── delivery/             # Story 过程资料（每目录含 readme.md 详情）
+│   │   └── completed/        # 已完成：每个 Story 一个目录 + readme.md
+│   ├── tasks/                # 独立维护任务（卡 + 同编号 -plan.md 成对）
+│   │   ├── readme.md         # active / completed 计数与清单
+│   │   ├── active/           # 未结案
+│   │   ├── backlog/          # 排队未排期
+│   │   └── completed/        # 已结案
 │   ├── prototypes/           # HTML 交互原型、设计稿与截图
 │   └── issues.md             # 问题记录
 └── handbook/                 # 持续维护的系统资料
@@ -56,15 +59,15 @@ docs/
 
 - 角色：[PM](./os/roles/PRODUCT_MANAGER.md)、[Orchestrator](./os/roles/ORCHESTRATOR.md)、[Planner](./os/roles/PLANNER.md)、[Implementer](./os/roles/IMPLEMENTER.md)、[Reviewer](./os/roles/REVIEWER.md)。
 - 流程：[需求编写](./os/process/REQUIREMENTS.md)、[协作流程](./os/process/WORKFLOW.md)、[状态与权限](./os/process/STATES.md)、[执行计划](./os/process/EXECUTION_PLANS.md)、[完成标准](./os/process/DEFINITION_OF_DONE.md)。
-- 工程：[架构](./os/architecture/ARCHITECTURE.md)、[ADR](./os/architecture/adr)、[编码](./os/standards/CODING.md)、[测试](./os/standards/TESTING.md)、[安全](./os/standards/SECURITY.md)、[Git](./os/standards/GIT.md)、[文档结构](./os/standards/DOCS.md)。
+- 工程：[架构](./os/architecture/ARCHITECTURE.md)、[ADR](./os/architecture/adr)（含 [ADR-003 symbol 后缀统一契约](./os/architecture/adr/ADR-003-symbol-suffix-contract.md)）、[编码](./os/standards/CODING.md)、[测试](./os/standards/TESTING.md)、[安全](./os/standards/SECURITY.md)、[Git](./os/standards/GIT.md)、[文档结构](./os/standards/DOCS.md)。
 - 模板：[Story](./os/templates/STORY_TEMPLATE.md)、[Task](./os/templates/TASK_TEMPLATE.md)、[ExecPlan](./os/templates/EXEC_PLAN_TEMPLATE.md)、[场景](./os/templates/SCN_TEMPLATE.md)。
 
 ## 开发入口（development）
 
 - 需求：[产品总览](./development/requirements/PRODUCT.md)、[PRD](./development/requirements/PRD.md)、[用户研究](./development/requirements/USER_RESEARCH.md)、[Spec](./development/requirements/specs)、[场景索引](./development/requirements/scenarios/SCENARIOS.md)、[Story 索引](./development/requirements/stories/STORIES.md)。
 - 原型与设计：[HTML 原型、设计稿与截图](./development/prototypes/README.md)。
-- 交付：从 [BOARD.md](./BOARD.md) 进入当前 Story 的交付目录（当前无开发中 Story；已归档见 [US-004](./development/delivery/completed/US-004)、[US-001](./development/delivery/completed/US-001)）；任务卡 TASK-编号.md、计划 TASK-编号-plan.md、按序号命名的交接记录直接平铺。Human 关闭后整体移入 [completed/](./development/delivery/completed)，具体规则见 DOCS.md §1.1。
-- 独立与既有记录：[任务卡](./development/tasks)、[执行计划](./development/exec-plans)、[问题记录](./development/issues.md)。共享资料通过链接复用。独立提案：[TASK-070 DSH Agent Teams 工作流适配提案](./development/tasks/active/TASK-070-dsh-agent-teams-workflow-proposal.md)（待 Human 审阅，未生效）。
+- 交付：[BOARD.md](./BOARD.md) 只显示当前开发中 Story 的 n/m 进度与独立 Task；各 Story 的详情、下挂 Task 明细与开发进度说明见其过程目录的 `readme.md`（当前无开发中 Story；已归档见 [US-004 readme](./development/delivery/completed/US-004/readme.md)、[US-001 readme](./development/delivery/completed/US-001/readme.md)）；任务卡 TASK-编号.md、计划 TASK-编号-plan.md、按序号命名的交接记录直接平铺。Human 关闭后整体移入 [completed/](./development/delivery/completed)，具体规则见 DOCS.md §1.1。
+- 独立与既有记录：[任务卡与计划](./development/tasks)（计划与同编号任务卡同目录成对存放）、[独立 Task 计数与清单](./development/tasks/readme.md)、[问题记录](./development/issues.md)。共享资料通过链接复用。独立提案：[TASK-070 DSH Agent Teams 工作流适配提案](./development/tasks/backlog/TASK-070-dsh-agent-teams-workflow-proposal.md)（待 Human 审阅，未生效）。
 
 ## 资料入口（handbook）
 

@@ -80,7 +80,7 @@ Never commit:
 
 - Prefer the existing stack; a new dependency is a scope decision, not an implementation detail.
 - A dependency added for auth, crypto, HTTP or serialization needs Human approval (§3).
-- Do not run `npm audit fix --force` or bulk-upgrade across major versions as part of an unrelated task. Dependency work has its own record: [DEPENDENCY_UPGRADES](../../development/exec-plans/completed/DEPENDENCY_UPGRADES.md).
+- Do not run `npm audit fix --force` or bulk-upgrade across major versions as part of an unrelated task. Dependency work has its own record: [DEPENDENCY_UPGRADES](../../development/tasks/completed/DEPENDENCY_UPGRADES.md).
 
 ---
 

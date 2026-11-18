@@ -16,8 +16,7 @@
 | `os/templates/` | Story、Task、ExecPlan、场景的空白模板 | 已填写的实例 |
 | `development/requirements/` | 产品定义与需求：PRD、用户研究；`specs/` 放规格、`scenarios/` 放可选场景、`stories/` 放长期保留的 Story；状态以卡片字段为准 | 实施记录、运维步骤、重复的功能全景正文 |
 | `development/delivery/` | 按 Story 集中保存过程文档，位置和收尾规则见 §1.1 | 长期产品规则、重复的共享任务副本 |
-| `development/tasks/` | 独立维护任务及既有任务记录；新 Story 过程资料按 §1.1 | 新 Story 的重复过程副本 |
-| `development/exec-plans/` | 独立维护任务及既有计划（`active/`、`completed/`）；新 Story 计划按 §1.1 | 长期产品或系统参考资料 |
+| `development/tasks/` | 独立维护任务及既有任务记录，**任务卡 `TASK-<编号>-<描述>.md` 与计划 `TASK-<编号>-<描述>-plan.md` 成对平铺**（命名规则见 §1.1；未结案放 `active/` 或 `backlog/`、已结案放 `completed/`）；根目录 `readme.md` 是独立 Task 的**计数与清单入口**（active / completed），新 Story 过程资料按 §1.1 | 新 Story 的重复过程副本；另一份任务状态看板；独立的计划目录 |
 | `development/issues.md` | 问题线索与待确认事项，立项后链接 Task / Story | 另一份任务状态看板 |
 | `development/archive/`（按需创建） | 已退出 Story 及不再维护的历史需求；注明归档与失效条件 | 现行有效需求；Story 过程目录仍按 §1.1 归档 |
 | `handbook/technical/` | API、数据模型与组件开发参考 | 待实施需求、临时实施记录 |
@@ -27,17 +26,18 @@
 | `development/prototypes/` | 设计稿、原型、截图及其配套检查资料 | 正式需求与任务状态正文 |
 | `assets/`（docs 根目录） | 各类文档共用的图片等静态资源 | 需求、规则与过程文档正文 |
 | `handbook/README.zh-CN.md` | 中文项目介绍 | 过程资料 |
-| `BOARD.md`（docs 根目录） | 全局 Story 与任务调度看板 | 需求或实施细节正文 |
+| `BOARD.md`（docs 根目录） | 只显示**当前开发中的 Story（n/m 进度）**与**独立 Task**；其余内容不进看板 | Story 详情、下挂 Task 明细、开发进度说明、历史区、Backlog 队列、进度汇总 |
 | 仓库根 `AGENTS.md` | Agent 入口：项目定位、**主题→唯一权威路由表**、硬规则、本仓库特有的坑、停手上报条件 | 任何知识的详细正文（技术栈、命令、字段表、端点表、角色职责全文）——它们各有归属 |
 
 **索引**：`docs/readme.md` 是 `docs/` 的**唯一索引入口**；新增目录或文档时必须同步登记。
 
 ### 1.1 Story 交付目录与文档生命周期
 
-- 全局调度入口固定为 docs/BOARD.md，只保存当前 Story、队列、状态投影与证据链接，不复制需求或实施正文。
+- 全局调度入口固定为 docs/BOARD.md，**只显示两类内容**：① 当前开发中的 Story，压缩为一行「US-xxx · n/m」（n=已完成 Task 数，m=总 Task 数）；② 独立维护 Task。不列 Story Backlog 队列、已完成/退出 Story 索引、历史完成 Task 表、进度汇总，也不复制需求或实施正文。当前无开发中 Story 时如实留空。
+- 每个 Story 的**详情、下挂 Task 明细表、开发进度说明**统一写在该 Story 过程目录下的 `readme.md`（平铺，不建子目录）：开发中放 `development/delivery/US-<编号>/readme.md`，Human 关闭归档后随过程目录整体移到 `development/delivery/completed/US-<编号>/readme.md`。BOARD.md 只保留指向该 readme.md 的链接（如有）；已关闭 Story 的详细记录以归档 readme.md 为唯一去处的正文，卡片与计划仍留在同目录。
 - Story 是长期保留的需求与交付记录，放 development/requirements/stories/；产品当前规则写产品文档/Spec，重要技术取舍写架构文档/ADR，回归能力保留为测试或脚本。
 - 当前 Story 的过程目录直接放 development/delivery/US-<编号>/；delivery 根目录最多保留**两个** Story 目录——**一个当前 Story 目录**（开发中）与**一个预研 Story 目录**（前期准备：拆 Task、写 ExecPlan、写提示词等，不进入实施），不设 active/ 层。其余排队 Story 的需求仍保留在 requirements/stories/，不提前建立交付目录。预研 Story 由 PM 登记为 Planning 后才由 Planner 拆卡。规划、角色切换及返工沿用同一目录。
-- Story 过程目录内不再分子目录。任务卡命名 TASK-<编号>.md，对应计划命名 TASK-<编号>-plan.md；以相同任务编号相邻排列。Task 编号全局唯一，不因换 Story 重编。文件名只区分资料，不表示状态或批准。
+- Story 过程目录内不再分子目录。任务卡命名 `TASK-<编号>-<描述>.md`，对应计划命名 `TASK-<编号>-<描述>-plan.md`；两者同目录、以相同任务编号相邻排列。**同一编号存在多个计划时（如 TASK-058 的 kernel / client）必须用描述段区分，不可只用编号**，否则会撞名。Task 编号全局唯一，不因换 Story 重编。文件名只区分资料，不表示状态或批准。
 - 交接信息默认写在 Story 的当前进度或 Task/ExecPlan 的交接节。确需独立记录时，直接放同一 Story 目录，命名 US-<编号>-<两位递增序号>-<内容>.md，例如 US-001-01-planner-handoff.md；不要求固定生成 handoff/return 两份文件。其他证据按 TASK-<编号>-evidence-<名称>.<扩展名> 命名，同样平铺存放。
 - 单个 Task 或计划完成只更新其字段与记录，仍留在 Story 目录内，不提前单独移出。
 - Human 关闭 Story 后，PM 补齐交付摘要、验收结论、对应版本与证据，核对长期规则已沉淀；Orchestrator 检查下挂工作处置、未决事项与引用后，将专属过程目录整体移到 development/delivery/completed/US-<编号>/，同步 BOARD 和索引。
@@ -45,7 +45,8 @@
 - 被复用的历史或共享 Task/计划保持唯一存放位置，通过链接引用，不复制进多个 Story。其他 Story 仍依赖的共享资料不能随当前 Story 移动而失去可访问性。
 - 取消沿用 STATES.md §2.3 的退出记录；下挂任务处置完成后，过程目录移到既有退出归档区域 development/archive/delivery/US-<编号>/，不放 delivery/completed/，不能因此记为 Completed。Human 决定重新打开后，将同一 Story 过程目录恢复到 delivery/US-<编号>/，先协调现有当前 Story，保留之前验收和退出记录。
 - Status 始终以各卡片/计划字段为准；根目录与 completed/ 只组织资料，不新增状态或实施授权。移动目录后检查内部、外部和索引链接；校验工具须识别平铺的任务卡与计划，并覆盖 completed/ 下的同类资料。
-- 既有资料可按明确迁移指令迁入所属Story目录；移后整体验证引用，不保留重复副本。被复用的已交付资料仍保留原位置。独立维护任务仍用 development/tasks/active/ → development/tasks/completed/，对应计划仍用 development/exec-plans/active/ → development/exec-plans/completed/。
+- 既有资料可按明确迁移指令迁入所属Story目录；移后整体验证引用，不保留重复副本。被复用的已交付资料仍保留原位置。独立维护任务仍用 development/tasks/active/（或 backlog/）→ development/tasks/completed/，**同编号计划 `TASK-<编号>-<描述>-plan.md` 与任务卡一起移动、始终同目录**，不再另设 exec-plans/ 目录；命名同上一条。
+- 独立 Task 的汇总入口固定为 development/tasks/readme.md，只保存两个计数（active / completed）与 active 清单，**不复制卡片正文**；状态枚举见 [STATES.md §2](../process/STATES.md)。卡片 Status 为状态权威，本 readme 只作投影。
 
 ## 2. 单一归属规则（核心）
 

@@ -27,7 +27,7 @@ Branch / Base:
 `feature/TASK-050`（已合并入 `main` = `cafcc5d`，PR #35）/ 开发基线 `c463c85`（2026-10-21 rebase 到 `feature/TASK-048-family-dividend-label` 顶端，含 `TASK-044` + `TASK-049` + `TASK-048` 全部前置）
 
 > 说明：`docs/os/templates/EXEC_PLAN_TEMPLATE.md` 仍为 0 字节空文件（2026-10-19 实读）。本文结构依据
-> `docs/os/process/EXECUTION_PLANS.md` §8，并参照 `docs/development/exec-plans/completed/TASK-048-family-dividend-label.md` 的既有格式。
+> `docs/os/process/EXECUTION_PLANS.md` §8，并参照 `docs/development/tasks/completed/TASK-048-family-dividend-label-plan.md` 的既有格式。
 
 ---
 
@@ -95,7 +95,7 @@ Branch / Base:
 
 - 产品需求：`docs/development/requirements/specs/completed/FS-household-view-split.md`（G2，R8–R18）
 - 任务卡：`docs/development/tasks/completed/TASK-050-portfolio-list-household-blocks.md`（结案归档后位置；开发期为 `development/tasks/active/`）
-- 已完成的前置：`docs/development/exec-plans/completed/TASK-049-dashboard-household-total.md`（总资产卡已进 `/`）、`docs/development/exec-plans/completed/TASK-048-family-dividend-label.md`（`TRANSACTION_ACTION_LABELS` 单一导出）
+- 已完成的前置：`docs/development/tasks/completed/TASK-049-dashboard-household-total-plan.md`（总资产卡已进 `/`）、`docs/development/tasks/completed/TASK-048-family-dividend-label-plan.md`（`TRANSACTION_ACTION_LABELS` 单一导出）
 - 家庭汇总服务：`shared/services/familySummary.service.js`（一次返回 `totalCny` / `buckets` / `fxRates` / `portfolioContributions` / `recentTransactions` / `recentRebalanceRecords` / `asOf`；排除 `archived`）
 - 前端 hook：`client/src/hooks/useFamily.js`（`useFamilySummary` / `useFxRates` / `useSyncFxRates` / `useUpsertFxRate`）
 
@@ -978,11 +978,11 @@ if (list.length === 0) return (<div className="space-y-2"><EmptyState /><p class
 
 | 对象 | 动作 |
 |---|---|
-| 本 ExecPlan | `git mv` `development/exec-plans/active/` → `development/exec-plans/completed/`；Status → `Completed`；`Related task` 改指 `development/tasks/completed/`；`Branch / Base` 补合并落点 |
+| 本 ExecPlan | `git mv` `development/tasks/active/` → `development/tasks/completed/`；Status → `Completed`；`Related task` 改指 `development/tasks/completed/`；`Branch / Base` 补合并落点 |
 | 任务卡 | `git mv` `development/tasks/active/` → `development/tasks/completed/`；Status → `COMPLETED`；§6 的 B5（独立 Reviewer 复核）由「⏳ 交付时」改为已解除；补 **§14 Completion Record**（含 §14.1 遗留现状核对） |
 | `docs/BOARD.md` | Active 清空（写「无活跃任务」）；Blocked 改为「无」；Done 新增 TASK-050 行；Roadmap 第 3 项标记完成 |
-| `docs/readme.md` | 活跃任务 → 无；已完成任务补 TASK-050；归档段 `development/exec-plans/active/` 改为「当前为空」 |
-| 交叉引用 | `specs/completed/FS-household-view-split.md`（状态行补「两交付单元全部完成」、§9 Phasing）；`FS-portfolio-ia-cleanup.md`（D-1 依赖解除）；`TASK-052` 卡内指向 `development/exec-plans/active/TASK-050` 的相对链接改指 `complete/` |
+| `docs/readme.md` | 活跃任务 → 无；已完成任务补 TASK-050；归档段 `development/tasks/active/` 改为「当前为空」 |
+| 交叉引用 | `specs/completed/FS-household-view-split.md`（状态行补「两交付单元全部完成」、§9 Phasing）；`FS-portfolio-ia-cleanup.md`（D-1 依赖解除）；`TASK-052` 卡内指向 `development/tasks/active/TASK-050` 的相对链接改指 `complete/` |
 
 ### 16.3 遗留与移交
 

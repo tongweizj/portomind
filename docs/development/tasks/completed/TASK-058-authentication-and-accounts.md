@@ -5,7 +5,7 @@
 **Status:**  
 `COMPLETED`（2026-10-28）—— **U1（后端认证内核）+ U2（前端登录 / 账户 / 守卫 / 401 / 顶栏下拉）+ U3（管理员系统设置页）全部实施并复核通过，本卡归档 `complete/`**。结案证据：U1 三轮复核 PASS（`211/0` + `77/0` + 真实 Mongo E2E 15/15）；U2/U3 四轮真实浏览器验收（19→25→28→28 PASS）+ 2026-10-28 对 `dd388ac` 全量复验（build 0 / `211-0` / `77-0` / eslint `0-0` / E2E 28/28 + 2 条负向对照成立，见 §12）；本轮结案独立复跑 `211-0` · `77-0` · build exit 0 · eslint `0-0`（见 §13）。**⚠️ 代码仍在分支 `feature/TASK-058-auth-kernel` = `dd388ac`，未合入 `main`**（`git merge-base --is-ancestor dd388ac main` = 否）—— 与 `TASK-054` 同样按「实现+复核完成即归档、合入单列」处理。**发布约束不变：U1 与 U2 必须同批发布**（U1 单独上线 = 全站 401）
 
-> ℹ️ **历史记录（2026-10-27 首次 U2 验收 `FAIL`）**：提交 `68f040c` 的 message 声称 `feat(client)` 已加 `/login` 与会话外壳，但 `client/` **零文件**（实为 TASK-059/060/061 结案 + 原型重导）——取证见 §10。U2/U3 已于同日晚按 `docs/development/exec-plans/active/TASK-058-authentication-client.md` 重新实施，实施与验收记录见 §11。
+> ℹ️ **历史记录（2026-10-27 首次 U2 验收 `FAIL`）**：提交 `68f040c` 的 message 声称 `feat(client)` 已加 `/login` 与会话外壳，但 `client/` **零文件**（实为 TASK-059/060/061 结案 + 原型重导）——取证见 §10。U2/U3 已于同日晚按 `docs/development/tasks/active/TASK-058-authentication-client.md` 重新实施，实施与验收记录见 §11。
 
 **Priority:**  
 `Critical`（P0 安全闸门。当前任何人访问 IP 即可看到全部家庭资产，且侧栏存在一个无 handler 的「退出登录」假按钮）
@@ -29,8 +29,8 @@
 `docs/os/architecture/adr/ADR-001-authentication.md`（`Accepted`，2026-10-26）
 
 **Execution Plan:**  
-U1 → [`docs/development/exec-plans/completed/TASK-058-authentication-kernel.md`](../../exec-plans/completed/TASK-058-authentication-kernel.md)（`Approved` 2026-10-26，§9 的 5 项实施裁决已全部确认；**`Completed`，2026-10-28 已归档**）  
-U2 / U3 → [`docs/development/exec-plans/completed/TASK-058-authentication-client.md`](../../exec-plans/completed/TASK-058-authentication-client.md)（`Approved` 2026-10-27；授权依据＝Human 同日指令「检查完成了多少，把没有完成的代码继续完成」，范围严格等于 FS §6.2 / §6.3；**`Completed`，2026-10-28 已归档**，实施记录见其 §11）
+U1 → [`docs/development/tasks/completed/TASK-058-authentication-kernel-plan.md`](../../tasks/completed/TASK-058-authentication-kernel-plan.md)（`Approved` 2026-10-26，§9 的 5 项实施裁决已全部确认；**`Completed`，2026-10-28 已归档**）  
+U2 / U3 → [`docs/development/tasks/completed/TASK-058-authentication-client-plan.md`](../../tasks/completed/TASK-058-authentication-client-plan.md)（`Approved` 2026-10-27；授权依据＝Human 同日指令「检查完成了多少，把没有完成的代码继续完成」，范围严格等于 FS §6.2 / §6.3；**`Completed`，2026-10-28 已归档**，实施记录见其 §11）
 
 **来源：**  
 Human 2026-10-26 直接立项（议题起点：「注册、登录算不算产品线」→ 结论：不是产品线，是 `PL-0 M0.2d` 的准入约束）
@@ -101,7 +101,7 @@ Human 2026-10-26 直接立项（议题起点：「注册、登录算不算产品
 
 ## 9. 实施裁决（2026-10-26，Human 采纳全部建议）
 
-明细与实施要点见 [ExecPlan §9](../../exec-plans/completed/TASK-058-authentication-kernel.md)。摘要：
+明细与实施要点见 [ExecPlan §9](../../tasks/completed/TASK-058-authentication-kernel-plan.md)。摘要：
 
 | # | 裁决 |
 |---|---|
@@ -200,7 +200,7 @@ Human 2026-10-26 直接立项（议题起点：「注册、登录算不算产品
 
 **结论：U2 / U3 已实施完成，独立 Reviewer 真实浏览器验收 28/28 PASS、代码复核无 BLOCKER/MAJOR（6 条 MINOR 不阻塞）。待 Human 合入 `main`（U1 + U2 必须同批）。**
 
-ExecPlan：[`docs/development/exec-plans/completed/TASK-058-authentication-client.md`](../../exec-plans/completed/TASK-058-authentication-client.md)（`Completed` 2026-10-27，**2026-10-28 随本卡归档**；实施记录见 §11、复核记录见 §12）。
+ExecPlan：[`docs/development/tasks/completed/TASK-058-authentication-client-plan.md`](../../tasks/completed/TASK-058-authentication-client-plan.md)（`Completed` 2026-10-27，**2026-10-28 随本卡归档**；实施记录见 §11、复核记录见 §12）。
 
 ### 11.1 交付（21 个文件：13 新增 / 8 修改）
 
@@ -335,8 +335,8 @@ D-1 强制改密态仍要求「当前密码」（服务端强校验，原型曾�
 | # | 动作 | 结果 |
 |---|---|---|
 | 1 | 本卡 `git mv` → `docs/development/tasks/completed/` | ✅ |
-| 2 | `docs/development/exec-plans/active/TASK-058-authentication-kernel.md` → `complete/` | ✅ |
-| 3 | `docs/development/exec-plans/active/TASK-058-authentication-client.md` → `complete/` | ✅ |
+| 2 | `docs/development/tasks/active/TASK-058-authentication-kernel.md` → `complete/` | ✅ |
+| 3 | `docs/development/tasks/active/TASK-058-authentication-client.md` → `complete/` | ✅ |
 | 4 | 卡内 `Status` → `COMPLETED`；本 §13 为完成记录 | ✅ |
 | 5 | `docs/BOARD.md`：Active 段移除 058、Done 表新增一行；「`Approved` ExecPlan 现有 2 份」改写为已归档 | ✅ |
 | 6 | `docs/readme.md`：058 由「活跃任务」移入「已完成任务」 | ✅ |

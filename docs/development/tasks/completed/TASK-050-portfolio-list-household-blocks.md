@@ -27,7 +27,7 @@
 `None`
 
 **Execution Plan:**  
-[`docs/development/exec-plans/completed/TASK-050-portfolio-list-household-blocks.md`](../../exec-plans/completed/TASK-050-portfolio-list-household-blocks.md)（`Approved` 2026-10-21 → 已实施 §12 → 结案 §16）
+[`docs/development/tasks/completed/TASK-050-portfolio-list-household-blocks-plan.md`](../../tasks/completed/TASK-050-portfolio-list-household-blocks-plan.md)（`Approved` 2026-10-21 → 已实施 §12 → 结案 §16）
 
 **来源：**  
 Human 于 2026-10-19 裁决「家庭视图拆分式搬迁」，并要求拆成两个任务：本任务负责组合列表页部分。
@@ -195,7 +195,7 @@ git checkout -b feature/TASK-050
 
 ### 8.3 ExecPlan 未产出（阻塞）
 
-> ✅ **已于 2026-10-21 解除**：ExecPlan 已产出并落盘 `docs/development/exec-plans/active/TASK-050-portfolio-list-household-blocks.md`（现为 `Plan Review`），待 Human 批准。本节保留为历史记录。
+> ✅ **已于 2026-10-21 解除**：ExecPlan 已产出并落盘 `docs/development/tasks/active/TASK-050-portfolio-list-household-blocks.md`（现为 `Plan Review`），待 Human 批准。本节保留为历史记录。
 
 `B4` 未开始。按纪律（业务代码改动前必须有 `Approved` ExecPlan），本任务在 8.1 / 8.2 裁决、且 Planner 产出 ExecPlan 并经 Human Plan Review 之前，**不得改动任何代码**。
 
@@ -234,7 +234,7 @@ Human 于 2026-10-21 指令「开始做 TASK-050」。本节记录前置核查�
 
 ### 9.3 ExecPlan 已产出
 
-`docs/development/exec-plans/active/TASK-050-portfolio-list-household-blocks.md`（`Plan Review`）。Plan Review 时建议重点看四处：
+`docs/development/tasks/active/TASK-050-portfolio-list-household-blocks.md`（`Plan Review`）。Plan Review 时建议重点看四处：
 
 1. **§4.1 组件划分**：5 个组件取纯 props、数据由 `List.jsx` 取一次（不沿用 `TotalAssetsCard` 的自取模式）——理由是避免 5 个加载块/错误块。这是本计划最影响结构的决策。
 2. **§4.3.2 占比条宽度算法**：只在合计 >100% 时归一化（AC10 的硬约束落点）。
@@ -395,7 +395,7 @@ Reviewer 给的是双分支 `return`（两个 JSX 树各自写一遍说明）。
 | 状态流转 | `PLANNING`（2026-10-19 立项）→ `Plan Review`（2026-10-21，ExecPlan `Approved`）→ `Implementing` → `Reviewing`（2026-10-21 有条件通过，R-1）→ R-1 返修 → 独立复验通过 → `Integrating`（Human 合并 `main`）→ **`COMPLETED`（2026-10-26）** |
 | 结案依据 | Human 于 2026-10-26 声明「TASK-050 已经完成」并已自行提交分支、合并入 `main`。依 `EXECUTION_PLANS.md §7 Ownership`，最终验收属 Human，此为一次有效表达 |
 | 合并落点 | PR #35 → `main` = **`cafcc5d`**（含 `9baa4cd` + `a9fad6e`）。`main` 现同时含 `TASK-044` / `TASK-048` / `TASK-049` / `TASK-050`（PR #34 已合 048）。**堆叠分支时代结束** |
-| 归档位置 | 任务卡 `docs/development/tasks/completed/TASK-050-portfolio-list-household-blocks.md`；ExecPlan `docs/development/exec-plans/completed/TASK-050-portfolio-list-household-blocks.md`（均 `git mv`，保留历史） |
+| 归档位置 | 任务卡 `docs/development/tasks/completed/TASK-050-portfolio-list-household-blocks.md`；ExecPlan `docs/development/tasks/completed/TASK-050-portfolio-list-household-blocks-plan.md`（均 `git mv`，保留历史） |
 | 归档前复跑（在 `main` 上，不采信 2026-10-21 的自评） | `npm run build --workspace client` → **exit 0**，2408 modules，5.42s；`cd client && ../node_modules/.bin/eslint "src/**/*.{js,jsx}"` → **exit 0，输出 0 行**；`npm run test:server` → **152 pass / 0 fail**；`npm run test:worker` → **77 pass / 0 fail**（合计 **229 / 0**） |
 | AC 静态复查（本分支实测） | AC15：`grep -rn "pages/Family" client/src` **0 行**、`grep -rn "'/family'" client/src` **0 行**、`Sidebar.jsx` 顶层 navItems **5 项**；AC16：`grep -rn "ACTION_LABELS = {"` **0 行**、`grep -rn "Object.fromEntries(TRANSACTION_ACTIONS\b"` **恰 1 行**（`enums.js:29`）；OD-2：`grep -rn "{rec.status}"` **0 行**；AC19：`git status --short server shared cron-worker` **空**。`client/src/pages/Family.jsx` 确认已删除；`components/Household/` 5 个新组件在位 |
 | 用户可见结果 | 侧栏由 6 项变 **5 项**（「家庭视图」消失）；`/portfolios` 自上而下为「标题行 → 币种分桶 → 组合占比条 → 组合卡片 → 最近交易 5 条 → 最近再平衡 10 条 → 家庭汇率（默认收起）」；旧书签 `/family` 由 `*` 通配落 `/portfolios`（无显式重定向） |

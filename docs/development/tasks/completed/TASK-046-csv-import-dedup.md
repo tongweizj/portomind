@@ -28,11 +28,11 @@
 `None`
 
 **Execution Plan:**  
-[Draft：TASK-046-plan](../../exec-plans/completed/TASK-046-csv-import-dedup-plan.md)（2026-11-11 起草的小计划；`Draft → Approved` 归 Human）
+[Draft：TASK-046-plan](../../tasks/completed/TASK-046-csv-import-dedup-plan.md)（2026-11-11 起草的小计划；`Draft → Approved` 归 Human）
 待创建（须在本任务卡经 Human 确认后由 Planner 产出）
 
 **来源：**  
-TASK-044 真实浏览器走查副产品，记录于 `docs/development/exec-plans/completed/TASK-044-transaction-consolidation.md` §10.4 与 `docs/development/tasks/completed/TASK-044-transaction-consolidation.md` §8。TASK-044 判定其为既有缺口、未擅自修复。
+TASK-044 真实浏览器走查副产品，记录于 `docs/development/tasks/completed/TASK-044-transaction-consolidation-plan.md` §10.4 与 `docs/development/tasks/completed/TASK-044-transaction-consolidation.md` §8。TASK-044 判定其为既有缺口、未擅自修复。
 
 ---
 
@@ -262,7 +262,7 @@ rows in db for temp portfolio = 2                      ← AC1 期望 1
 ### 11.6 复核与修复（2026-11-11，ExecPlan Approved 后）
 
 > 上述 §11.4 的「不成立」结论已被本轮修复取代。本节为**修复后复核记录**，
-> 详细实施与红/绿输出见 `docs/development/exec-plans/active/TASK-046-csv-import-dedup-plan.md` §11。
+> 详细实施与红/绿输出见 `docs/development/tasks/active/TASK-046-csv-import-dedup-plan.md` §11。
 
 **修复**：`shared/services/transaction.service.js:235-237` 投影补 `portfolioId`
 （`select('portfolioId symbol action quantity price date fee')`）。未改 `dedupKey`、
@@ -307,8 +307,8 @@ IMPORT #3 (date 差一天) => {"imported":1,"skipped":0,"errors":[]}  ← AC4 �
 
 ## 12. Review Record（独立 Reviewer，2026-11-11）
 
-**结论：`Pass with issues`**（无 BLOCKER / 无 MAJOR；3 条 MINOR：AC3/AC4 无用例、真实 Mongo 证据不可复跑、行号漂移）→ 详见 [ExecPlan §12](../../exec-plans/completed/TASK-046-csv-import-dedup-plan.md#12-review-record)（@ `89ff420`，基线 `main` `e1730a0`）。
+**结论：`Pass with issues`**（无 BLOCKER / 无 MAJOR；3 条 MINOR：AC3/AC4 无用例、真实 Mongo 证据不可复跑、行号漂移）→ 详见 [ExecPlan §12](../../tasks/completed/TASK-046-csv-import-dedup-plan.md#12-review-record)（@ `89ff420`，基线 `main` `e1730a0`）。
 > 假阳性根因已由 Reviewer 独立证伪验证：缺陷存在 + 旧式无视投影的 mock → 14/14 全绿，证明 mock 保真度是本修复可信度的前提。
 
-> **复审（第二轮，2026-11-12）**：`Pass` @ `eb1975e` — 3 条 MINOR 全部闭环（F-046-2 已由 Reviewer 独立复跑 6/6 PASS + CLEAN）；`test:server` 252/252。详见 [ExecPlan §12.8](../../exec-plans/completed/TASK-046-csv-import-dedup-plan.md#128-复审记录第二轮2026-11-12)。判定不是合入许可，Merged 与关闭归 Human。
+> **复审（第二轮，2026-11-12）**：`Pass` @ `eb1975e` — 3 条 MINOR 全部闭环（F-046-2 已由 Reviewer 独立复跑 6/6 PASS + CLEAN）；`test:server` 252/252。详见 [ExecPlan §12.8](../../tasks/completed/TASK-046-csv-import-dedup-plan.md#128-复审记录第二轮2026-11-12)。判定不是合入许可，Merged 与关闭归 Human。
 

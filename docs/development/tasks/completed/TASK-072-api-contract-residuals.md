@@ -10,7 +10,7 @@
 | 所属 Story | 无（独立维护任务） |
 | 覆盖的验收条件 | 见 §3（AC-01～AC-06） |
 | Related | [API_CONTRACT.md](../../../handbook/technical/API_CONTRACT.md)、[TASK-071](./TASK-071-codebase-structure-cleanup.md)（结构清理，与本卡无冲突） |
-| Execution Plan | [Completed：TASK-072-plan](../../exec-plans/completed/TASK-072-api-contract-residuals-plan.md) |
+| Execution Plan | [Completed：TASK-072-plan](../../tasks/completed/TASK-072-api-contract-residuals-plan.md) |
 
 ## 1. 背景
 

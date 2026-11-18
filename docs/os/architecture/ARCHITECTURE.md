@@ -217,7 +217,7 @@ cron-worker/index.js
 | 1 | ~~认证与账号运营界面未完成~~（**已闭环：TASK-058 U1+U2+U3，2026-10-27**） | 后端：`User`/`Session` + `requireAuth`/`requireAdmin` + `/api/auth/*` + `/api/users/*` + 默认 admin seed + 登录限速 + CORS 白名单；前端：`/login`、`/account`、`/account/users` + 会话 Provider + 路由守卫 + 401 拦截 + 强制改密闸门 + 顶栏头像下拉，侧栏假「退出登录」已删除（独立真实浏览器验收 28/28 PASS） | 无未认证访问；**U1 与 U2 必须同批发布**（单独 U1 会全站 401） |
 | 2 | **CORS 已收敛为白名单**（TASK-058 U1 已实施） | `server/app.js` 使用白名单 + `credentials:true`；生产未配 `CORS_ORIGINS` 启动 fail-fast；开发态有本地默认来源 | 原「任意来源可跨域」风险已解除 |
 | 3 | **汇率方向反向**（TASK-051） | 采集端把「1 CNY = X 外币」当 `rateToCny` 入库 | 家庭层折算整体失真，USD/CAD 低估、HKD 高估 |
-| 4 | **`symbol` 写法不统一** | 无归一化层；`assets/prices` 用裸代码，部分 `transactions/targets` 带 `.cn` 后缀 | 跨表关联不能假设字符串可直接比较；再平衡可能查不到价 |
+| 4 | **`symbol` 写法不统一** | 无归一化层；`assets/prices` 用裸代码，部分 `transactions/targets` 带 `.cn` 后缀。**决策已定、待实施**：[ADR-003](./adr/ADR-003-symbol-suffix-contract.md) 定为「按 market 派生大写后缀 + 采集按表去除/保留」，由 TASK-073（服务端+迁移）/ TASK-075（客户端）落地 | 跨表关联不能假设字符串可直接比较；再平衡可能查不到价；**迁移完成前此债仍成立** |
 | 5 | **TaskRun 契约残缺** | 无 `result` 字段（`strict` 下静默丢弃）、`status` 无 `SKIPPED` | `SUCCEEDED` 只能读成「跑完没抛异常」，不能读成「有新数据」 |
 | 6 | **无 TTL / 无归档** | `taskruns`、`alertevents` 无限增长 | 长期运行后查询变慢，且没有清理口径 |
 | 7 | **无数据库事务** | 见 §6 | 多集合写入非原子，中断会留下半完成状态（靠幂等键兜底，但并非全覆盖） |
@@ -233,6 +233,7 @@ cron-worker/index.js
 
 | ADR | 主题 | 状态 |
 |---|---|---|
+| [ADR-003](./adr/ADR-003-symbol-suffix-contract.md) | symbol 统一契约：存储带大写后缀（按 market 派生），采集按市场去除/保留 | `Accepted`（2026-11-17，Human 正式批准） |
 | [ADR-002](./adr/ADR-002-single-scheduler.md) | 单一调度器：全部定时任务收敛到 `cron-worker` | `Accepted` |
 | [ADR-001](./adr/ADR-001-authentication.md) | 认证机制（服务端会话 + 角色） | `Accepted`（U1+U2+U3 均已实施，2026-10-27） |
 

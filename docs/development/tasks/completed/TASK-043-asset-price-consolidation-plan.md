@@ -6,7 +6,7 @@
 
 ## Status
 
-`Completed` — **2026-10-19**（Human 指令结案）。实现于 2026-10-18 提交 `891d0f7`；四轮独立复审以 `Pass with issues`、无硬阻塞收口（§10.8）。归档位置：`docs/development/exec-plans/completed/TASK-043-asset-price-consolidation.md`。
+`Completed` — **2026-10-19**（Human 指令结案）。实现于 2026-10-18 提交 `891d0f7`；四轮独立复审以 `Pass with issues`、无硬阻塞收口（§10.8）。归档位置：`docs/development/tasks/completed/TASK-043-asset-price-consolidation-plan.md`。
 
 Owner:
 

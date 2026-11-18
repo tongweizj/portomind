@@ -141,7 +141,7 @@ Portfolio 枚举：`type`（风险定位）为 `活钱 | 稳健 | 长期`；`acc
 | `GET /api/logs/tasks` | Query: `date?` (`YYYY-MM-DD`，默认市场当日), `level?`, `page,pageSize` | 任务日志条目数组 + 分页 | `200`; 查询参数无效 `400`; `500` |
 | `GET /api/cron/status` | Query: `detail?`（缺省＝主视图；`rebalance`＝再平衡逐组合明细；其它非空值 `400`）、`date?`（`YYYY-MM-DD`，**仅 detail 校验/使用**；detail 下非法 `400`，主视图忽略该参数）、`portfolioId?`（ObjectId，仅 detail；非法/不存在仍 `200` + 空 `rows` + `notes[].code`） | **只读**聚合快照：`{generatedAt,timezone,staleThresholdHours,tasks:[5]}`。每项含 `taskName/lastRun(无记录 null)/stale/contractReady/dataState/dataStateLevel(ok\|warn\|bad\|unknown)/notes[]`。价格数据态：`{targetMarketDate,calendarPrevOpenDay,expected,fetched,missing[],byMarket,notListed[],unsupportedMarkets[],dayPriceSymbolCount}`；完整性/提醒/汇率/再平衡的 `result` 派生值在缺失时为 `null`（`contractReady=false` + `CONTRACT_NOT_READY`）；TASK-057 落地后按冻结 `result` 归一化。detail 形态：`{date,contractReady,generatedAt,summary:{totalPortfolios,due,generated,failed,skipped},rows[],notes[]}` | `200`; `detail` 非法 `400`；detail 下 `date` 非法 `400`；`portfolioId` 非法/不存在不报错（`200` + 空结果）。**不触发任何任务、不写任何集合** |
 
-> `GET /api/cron/status` 是**只读聚合**端点（FS C-02 / TASK-054）：不注册 cron、不触发任务、不写库；字段全集与派生口径（含“有效目标日”）见 [TASK-054 ExecPlan](../../development/exec-plans/completed/TASK-054-cron-status-aggregate-api.md) §4.3/§4.4。
+> `GET /api/cron/status` 是**只读聚合**端点（FS C-02 / TASK-054）：不注册 cron、不触发任务、不写库；字段全集与派生口径（含“有效目标日”）见 [TASK-054 ExecPlan](../../development/tasks/completed/TASK-054-cron-status-aggregate-api-plan.md) §4.3/§4.4。
 
 > **TASK-064（读侧契约兼容，2026-11-05）**：
 > - 每个 task 条目新增**可选** `lastSkip: {taskName,runKey,reason,skippedAt,trigger} | null`，来源为 `taskskips` 最近一次事件；`lastSkip` 与 `lastRun` **分离**，不替换、不冒充成功，无集合/无记录时为 `null`。

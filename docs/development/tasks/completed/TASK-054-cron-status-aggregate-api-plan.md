@@ -1000,7 +1000,7 @@ node --check server/routes/cronStatus.routes.js
 3. 任务卡 §9.5 的「Reviewer 复检」勾选并注明第二轮 PASS；
 4. §5 Work Breakdown 的 W1–W11 / W13 全部勾选，并补记 W3 的真实红形态（`MODULE_NOT_FOUND` → 实现后 15/15 → 整改后 17/17）。
 
-> ~~未执行项：Human 合入 `main` 与归档 `complete/`。~~ **2026-10-27 更新**：归档已由 `Orchestrator` 完成（`git mv` → `development/exec-plans/completed/`）；**合入 `main` 仍未执行**（分支 `c7389d1`，`main`/`origin/main` = `1895530`），属 Human 职权，见 §13.3。
+> ~~未执行项：Human 合入 `main` 与归档 `complete/`。~~ **2026-10-27 更新**：归档已由 `Orchestrator` 完成（`git mv` → `development/tasks/completed/`）；**合入 `main` 仍未执行**（分支 `c7389d1`，`main`/`origin/main` = `1895530`），属 Human 职权，见 §13.3。
 
 ### 12.5 第四轮（回归复核，2026-10-27，Human 指令「审核 TASK-054 的代码」）
 
@@ -1075,7 +1075,7 @@ node --check server/routes/cronStatus.routes.js
 
 | 对象 | 动作 |
 |---|---|
-| 本 ExecPlan | `git mv` `development/exec-plans/active/` → `development/exec-plans/completed/`；Status → `Completed`；`Related task` 改指 `development/tasks/completed/`；`Branch / Base` 补合并状态；§12.4「未执行项」改写 |
+| 本 ExecPlan | `git mv` `development/tasks/active/` → `development/tasks/completed/`；Status → `Completed`；`Related task` 改指 `development/tasks/completed/`；`Branch / Base` 补合并状态；§12.4「未执行项」改写 |
 | 任务卡 | `git mv` `development/tasks/active/` → `development/tasks/completed/`；Status → `COMPLETED`；Owner 关闭；`Execution Plan` 指针改 `complete/`；§9.5 进度表补两行（归档 ✅ / 合入 ⏳）；补 **§11 Completion Record** |
 | `docs/BOARD.md` | Active 移除本卡（封面段改写为「在途 = TASK-058 + TASK-060」）；Done 新增 TASK-054 行；Blocked 的批次说明与「五卡均未开工」更新 |
 | `docs/readme.md` | 活跃任务行改指剩余在途；Done 补 TASK-054；执行计划归档段与活跃段更新 |

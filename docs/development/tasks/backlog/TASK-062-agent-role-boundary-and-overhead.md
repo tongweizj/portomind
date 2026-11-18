@@ -33,7 +33,7 @@
 
 | ID | 病灶 | 机制 |
 |---|---|---|
-| **P1** | **非编码角色越权** | 角色卡只写"允许/禁止"散文（[F4](#21-现状事实)），没有**路径级写入范围**。工具层也没有目录写入限制（B4），于是"禁止"只是自律，不是约束。已有一次实证：[TASK-043 plan §8](../../exec-plans/completed/TASK-043-asset-price-consolidation.md) 记录 Orchestrator 代行 Planner + Implementer + Reviewer 四个角色、四条禁令全部触发 |
+| **P1** | **非编码角色越权** | 角色卡只写"允许/禁止"散文（[F4](#21-现状事实)），没有**路径级写入范围**。工具层也没有目录写入限制（B4），于是"禁止"只是自律，不是约束。已有一次实证：[TASK-043 plan §8](../../tasks/completed/TASK-043-asset-price-consolidation-plan.md) 记录 Orchestrator 代行 Planner + Implementer + Reviewer 四个角色、四条禁令全部触发 |
 | **P2** | **状态登记被扩大为技术验收** | 根 `AGENTS.md` 旧 §14 把"标记 DONE"写成 8 项完成条件的**证明**，其中第 3 条是 `Relevant verification has passed`，但**没写谁证明、证据从哪来、没有验证能力的登记者怎么办**（[F2](#21-现状事实)）。结果：登记状态的动作被读成"我担保测试已过"。**部分已缓解**：052 的 D1 重写已把旧 §14 压成新 §9 `Completion and evidence`，去掉"标记 DONE ⇒ 已验证通过"的证明责任转嫁，加入"证据必须来自实跑、引用而非复述、基线未变不重跑"。**但"谁有权登记、登记者无验证能力时怎么写"仍未定义**——这正是本卡 `D-4` 要补的部分 |
 | **P3** | **重复读取与验证** | 规则要求"独立复跑、不采信自述"，但**没有证据复用规则**（[F15](#21-现状事实)）。同一代码基线被不同角色反复全量重跑；同一批文档被多轮审计重复通读 |
 | **P4** | **反复修改文档造成执行缓慢** | 索引与看板被高频改写（`docs/readme.md` 15 次提交、`docs/BOARD.md` 13 次），且状态/owner 在索引、看板、卡片三处各存一份（[TASK-052 D8/D10](../completed/TASK-052-agent-rules-update.md)）。改一次状态要动三处，漏一处就是新的漂移 |
@@ -42,7 +42,7 @@
 
 | 病灶 | 实证 |
 |---|---|
-| P1 | [TASK-043 plan §8](../../exec-plans/completed/TASK-043-asset-price-consolidation.md)：2026-10-18 由 Orchestrator 代行计划、实现、验证、自审、结案；根因之一明写"写代码的边际成本极低，角色边界最易在此刻被侵蚀" |
+| P1 | [TASK-043 plan §8](../../tasks/completed/TASK-043-asset-price-consolidation-plan.md)：2026-10-18 由 Orchestrator 代行计划、实现、验证、自审、结案；根因之一明写"写代码的边际成本极低，角色边界最易在此刻被侵蚀" |
 | P2 | 根 `AGENTS.md` §14（[F2](#21-现状事实)）；另见本卡自身的历史：上一会话在**卡文件不存在**的情况下已把"立项完成"写进索引（[§12](#12-本卡自身的登记)） |
 | P3 | TASK-058 结案轮：Reviewer 已对**同一提交** `dd388ac` 跑过 28/28 + 2 条负向对照，结案轮仍完整复跑 `211-0` / `77-0` / build / eslint（`.workbuddy/memory/2026-10-28.md`）。"不采信自述/独立复跑"全仓命中 **68** 处 |
 | P4 | 状态词三套并存（[F10](#21-现状事实)）；本次落卡即发现索引与看板对同一任务不一致（[§12](#12-本卡自身的登记)） |
@@ -71,7 +71,7 @@
 | **F12** | **没有轻量通道**：§2 有"usually not required"清单，但无配套的"谁审、审到哪一步、能否跳过 ExecPlan"；`轻量` 在 `docs/` 命中 2 处且均与流程无关 | `EXECUTION_PLANS.md` §2 |
 | **F13** | **没有机械校验环**：`.github/` 不存在；`.git/hooks/` 只有 `*.sample`；根 `package.json` scripts 无 `docs:check` | 仓库根 |
 | **F14** | `.workbuddy/` **未纳入版本库**（`git ls-files .workbuddy` = 0，`.gitignore` 含 `.workbuddy/*`），但跨会话事实（裁决、环境坑、教训）实际沉淀在这里 | `.workbuddy/memory/` |
-| **F15** | 验证证据**没有复用规则**，只有"不采信自述"的文化：`不采信` / `独立复跑` / `复跑` 全仓命中 **68** 处；TASK-058 结案轮对同一提交二次全量复跑 | `docs/development/tasks/completed/`、`docs/development/exec-plans/completed/` |
+| **F15** | 验证证据**没有复用规则**，只有"不采信自述"的文化：`不采信` / `独立复跑` / `复跑` 全仓命中 **68** 处；TASK-058 结案轮对同一提交二次全量复跑 | `docs/development/tasks/completed/`、`docs/development/tasks/completed/` |
 | **F16** | 仓库内**无任何 agent 运行配置**：`.claude` / `.cursor` / `.github` / `.codex` / `.gemini` / `.aider` 均不存在；`docs/os/roles/` 无会话约定 | 仓库根 |
 | **F17** | **看板当前陈述已过时**：`BOARD.md` 与 `docs/readme.md` 称 TASK-058 "未合入 `main`"，但实测 `git merge-base --is-ancestor dd388ac main` = **是**（PR #38），`main` = `2bde913`。**不在本卡修复范围**（见 §9 OQ-6） | `BOARD.md` §Active、`docs/readme.md` |
 
@@ -97,7 +97,7 @@
 | D14 workspace 入口漂移 | ✅ **仍成立**：`client/AGENTS.md` 仍指向 `../doc/API_CONTRACT.md`（实际在 `docs/handbook/technical/`）、仍写"交易方向仅 `buy \| sell`"（`enums.js` 实为 4 种：`buy`/`sell`/`div_cash`/`div_reinvest`） | 亲读 |
 | D15 无轻量通道 | ✅ **仍成立** | F12 |
 | D16 决策无队列 | ⚪ **本轮未复核** | — |
-| D17 归档层路径矛盾 | ✅ **仍成立**：`EXECUTION_PLANS.md` §3 仍写 `exec-plans/completed/`，实际是 `complete/`；`docs/development/exec-plans/active/` **目录当前不存在** | 亲跑 `Test-Path` |
+| D17 归档层路径矛盾 | ✅ **仍成立**：`EXECUTION_PLANS.md` §3 仍写 `tasks/completed/`，实际是 `complete/`；`docs/development/tasks/active/` **目录当前不存在** | 亲跑 `Test-Path` |
 | D18 元数据口径不一致 | ⚪ **本轮未复核** | — |
 | 052 §3「40 份 md / 链接 378 条」 | 🔴 **数字已过时**：实测 `docs/` **82** 份 md；含根 README 与各 workspace 共 **771** 条相对链接 | 亲跑校验脚本 |
 
@@ -318,11 +318,11 @@
 
 - **2026-10-28 13:00**：上一会话按 Human 要求核实"`TASK-052` 能否承载新范围"，结论为**不适合**、应建新卡；据 `.workbuddy/memory/2026-10-28.md` 记录，该轮已把 062 链接写入 `docs/readme.md`。
 - **2026-10-29 20:30**：据 `.workbuddy/memory/2026-10-29.md` 记录，Human 就 `OQ-1`~`OQ-4` 作出裁决并"折入卡内"。
-- ⚠️ **但卡文件从未落盘**：`docs/development/tasks/active/TASK-062-agent-role-boundary-and-overhead.md` 在磁盘上不存在，`git log --all -- "*TASK-062*"` 为空；`BOARD.md` 的 Backlog 表也没有 062 行（只留下一个空表格行）。**后果**：`docs/readme.md` 的 062 链接为失效链接，且上述两次记录中的"已完成"陈述与仓库事实不符 —— 这正是本卡 P2/P4 的自我实证。
+- ⚠️ **但卡文件从未落盘**：`docs/development/tasks/backlog/TASK-062-agent-role-boundary-and-overhead.md` 在磁盘上不存在，`git log --all -- "*TASK-062*"` 为空；`BOARD.md` 的 Backlog 表也没有 062 行（只留下一个空表格行）。**后果**：`docs/readme.md` 的 062 链接为失效链接，且上述两次记录中的"已完成"陈述与仓库事实不符 —— 这正是本卡 P2/P4 的自我实证。
 
 ### 12.2 本轮（2026-10-29 重建落卡）
 
-- [x] 重建本卡并落盘 `docs/development/tasks/active/TASK-062-agent-role-boundary-and-overhead.md`（同时修复 `docs/readme.md` 的失效链接，**未改 readme 文本**）。
+- [x] 重建本卡并落盘 `docs/development/tasks/backlog/TASK-062-agent-role-boundary-and-overhead.md`（同时修复 `docs/readme.md` 的失效链接，**未改 readme 文本**）。
 - [x] 在 [`BOARD.md`](../../../BOARD.md) Backlog 表补 062 行（替换上一会话遗留的空表格行）。
 - [x] 逐条复核 `TASK-052` 审计结论的时效（[§2.2](#22-旧审计task-052结论的时效核对)），过时项已标红。
 - [x] 记录四项"已裁决"事项的来源与待复核状态（[§9.1](#91-待裁决)）。

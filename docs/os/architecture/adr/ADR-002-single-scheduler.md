@@ -18,7 +18,7 @@ Related Task:
 
 Related ExecPlan:
 
-`docs/development/exec-plans/completed/TASK-005-unify-scheduler.md`
+`docs/development/tasks/completed/TASK-005-unify-scheduler-plan.md`
 
 Supersedes:
 
@@ -239,8 +239,8 @@ Unaffected areas:
 
 Related documentation:
 
-- `docs/development/exec-plans/completed/TASK-005-unify-scheduler.md` — 实施计划与分阶段方案
-- `docs/development/exec-plans/completed/DOCS-DEDUP-2026-10-15.md` §3 — Q10 缺口发现过程
+- `docs/development/tasks/completed/TASK-005-unify-scheduler-plan.md` — 实施计划与分阶段方案
+- `docs/development/tasks/completed/DOCS-DEDUP-2026-10-15.md` §3 — Q10 缺口发现过程
 - `docs/handbook/ops/CRON_WORKER_OPS.md` — 调度与数据质量运维
 - `docs/handbook/ops/DEPLOYMENT.md` §2 / §3 — 进程拓扑与环境变量
 - [`docs/handbook/product/lines/`](../../../handbook/product/lines) — 功能全景与能力边界（原 `docs/os/architecture/functions.md`，已归档于 `docs/archive/functions.md`）

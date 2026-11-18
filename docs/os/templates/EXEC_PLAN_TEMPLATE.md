@@ -9,7 +9,7 @@ Related Spec / ADR：<按需链接或 None>
 Branch / Base：<分支与基线版本>
 Approval：<未批准或 Human 决定引用；须覆盖当前设计>
 
-状态及权限见 [STATES.md](../process/STATES.md)。新Story计划命名 TASK-编号-plan.md，直接放 docs/development/delivery/US-编号/，与对应任务卡平铺存放；位置与收尾见 [DOCS.md §1.1](../standards/DOCS.md#11-story-交付目录与文档生命周期)。独立与既有计划沿用原位置。复制后按实际深度修正相对链接。章节编号固定，不适用项注明原因。
+状态及权限见 [STATES.md](../process/STATES.md)。计划命名 `TASK-<编号>-<描述>-plan.md`，与任务卡 `TASK-<编号>-<描述>.md` 成对、同目录平铺；同一编号有多个计划时用描述段区分，不可只用编号。新 Story 计划放 docs/development/delivery/US-编号/，独立维护任务计划放 development/tasks/ 对应子目录（active/、backlog/ 或 completed/），与任务卡一起移动，**不另设计划目录**。位置与收尾见 [DOCS.md §1.1](../standards/DOCS.md#11-story-交付目录与文档生命周期)。复制后按实际深度修正相对链接。章节编号固定，不适用项注明原因。
 
 ## 1. Intent
 

@@ -130,7 +130,9 @@ function tableValue(text, prefix) {
 }
 if (!linksOnly) for (const file of files.filter(f => f.endsWith('.md'))) {
   const rel = relative(file), text = fs.readFileSync(file, 'utf8');
-  const standaloneTask = /^docs\/development\/tasks\/(?:active|completed)\/TASK-\d+[^/]*\.md$/.test(rel);
+  // Task 卡与同编号 TASK-<编号>-plan.md 计划成对平铺；计划文件用 ExecPlan 四态，不按 Task 六态校验。
+  const standaloneTask = /^docs\/development\/tasks\/(?:active|backlog|completed)\/TASK-\d+[^/]*\.md$/.test(rel)
+    && !/-plan\.md$/.test(rel);
   const storyTask = /^docs\/development\/(?:delivery\/(?:completed\/)?|archive\/delivery\/)US-\d+\/TASK-\d+\.md$/.test(rel);
   if (standaloneTask || storyTask) {
     const pending = /^> 待 Orchestrator 正式登记的任务内容，当前不含 Status，不属于已登记任务或实施队列。/m.test(text);

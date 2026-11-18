@@ -33,7 +33,7 @@
 `None`（不新增架构决策；`server` 仍不注册 cron，ADR-002 不受影响）。⚠️ 但 `ARCHITECTURE.md:136` 的「禁止暴露调度/TaskRun 查询接口」在本卡落地后失效，需同步改写为「禁止触发/写操作，仅允许只读聚合查询」——**OD-6 已批准**（ExecPlan §4.8 D-10）。
 
 **Execution Plan:**  
-[`docs/development/exec-plans/completed/TASK-054-cron-status-aggregate-api.md`](../../exec-plans/completed/TASK-054-cron-status-aggregate-api.md)（`Approved` 2026-10-26 → **`Completed` 2026-10-27**，见其 §13）
+[`docs/development/tasks/completed/TASK-054-cron-status-aggregate-api-plan.md`](../../tasks/completed/TASK-054-cron-status-aggregate-api-plan.md)（`Approved` 2026-10-26 → **`Completed` 2026-10-27**，见其 §13）
 
 **来源：**  
 FS 卡片 `C-02`（PM 拆分，2026-10-26）
@@ -221,7 +221,7 @@ FS 卡片 `C-02`（PM 拆分，2026-10-26）
 
 ## 9. Plan Review 结论（2026-10-26，Human 已批准）
 
-ExecPlan：[`docs/development/exec-plans/completed/TASK-054-cron-status-aggregate-api.md`](../../exec-plans/completed/TASK-054-cron-status-aggregate-api.md)（`Approved` → `Completed`，归档后路径）
+ExecPlan：[`docs/development/tasks/completed/TASK-054-cron-status-aggregate-api-plan.md`](../../tasks/completed/TASK-054-cron-status-aggregate-api-plan.md)（`Approved` → `Completed`，归档后路径）
 
 ### 9.1 批准范围（Human 审批原文）
 
@@ -317,7 +317,7 @@ M-1 路由路径写成 `/api/cron`（应为 `/api/cron/status`）· M-2 AC5 `fxC
 |---|---|
 | Human 指令 | 2026-10-27「TASK-054 任务完成，请修改状态，搬迁文档」 |
 | 状态流转 | `PLANNING`（2026-10-26 立项）→ `PLAN_REVIEW`（同日产出 ExecPlan）→ `APPROVED`（2026-10-26 Human Plan Review，`OD-4/5/6` + `OD-8~OD-11` 全采纳）→ `Implementing` → `Verifying`（176/0、77/0）→ `Reviewing`（两轮独立复核）→ `REVIEWED`（2026-10-27，8 条 MINOR 全整改）→ 第四轮回归复核 **PASS** → **`COMPLETED`（2026-10-27 归档）** |
-| 归档位置 | 任务卡 `docs/development/tasks/completed/TASK-054-cron-status-aggregate-api.md`；ExecPlan `docs/development/exec-plans/completed/TASK-054-cron-status-aggregate-api.md`（均 `git mv`，保留历史） |
+| 归档位置 | 任务卡 `docs/development/tasks/completed/TASK-054-cron-status-aggregate-api.md`；ExecPlan `docs/development/tasks/completed/TASK-054-cron-status-aggregate-api-plan.md`（均 `git mv`，保留历史） |
 
 ### 11.2 归档前复跑（本分支实测，不采信前几轮台账）
 

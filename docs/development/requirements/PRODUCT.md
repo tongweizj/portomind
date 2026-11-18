@@ -510,9 +510,8 @@ Use consistent terminology across product specs, tasks, ExecPlans, and implement
 - Architecture: `/docs/os/architecture/ARCHITECTURE.md`
 - Product specifications: `docs/development/requirements/specs/`
 - Task index: `docs/BOARD.md`
-- Active tasks: `docs/development/tasks/active/`
+- Tasks: `docs/development/tasks/`（任务卡与同编号 `TASK-<编号>-plan.md` 计划同目录成对存放）
 - Execution Plan rules: `docs/os/process/EXECUTION_PLANS.md`
-- Active ExecPlans: `docs/development/exec-plans/active/`
 - ADRs: `docs/os/architecture/adr/`
 
 ---

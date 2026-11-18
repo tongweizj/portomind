@@ -24,7 +24,7 @@
 `None`
 
 **Execution Plan:**  
-`docs/development/exec-plans/completed/TASK-044-transaction-consolidation.md`（**✅ Approved 2026-10-18 → Completed 2026-10-19**）
+`docs/development/tasks/completed/TASK-044-transaction-consolidation-plan.md`（**✅ Approved 2026-10-18 → Completed 2026-10-19**）
 
 ---
 
@@ -83,7 +83,7 @@
 - 由 Orchestrator 于 2026-10-18 登记。**七项 Human 裁决**已固化于 FS §11：方案甲 / 二级导航 + `/portfolios/transactions` / 导入仅组合内 / 旧路由删除不重定向 / OQ1 拆出独立需求 / 写操作路由带组合 id / 展开态不持久化 / 旧列表页改造复用。
 - **2026-10-18 FS 获批**（Human 口头指令「请设置为已批准」）→ B1 解除，本任务进入 `PLANNING`，交接 Planner。
 - **范围已确定收敛为「仅前端」**：交易查询筛选拆至 TASK-045（Backlog），本任务不新增服务端参数（AC12 可验证）。
-- **2026-10-18 ExecPlan 已产出并获批**：`docs/development/exec-plans/completed/TASK-044-transaction-consolidation.md`（原在 `active/`，2026-10-19 归档）经 Human 完成 Plan Review，状态 `Plan Review` → **`Approved`**。批准范围 R1–R8（P0）+ Bug-1/2/3，零服务端改动不变；§6 声明无待决项，批准无遗留未决。
+- **2026-10-18 ExecPlan 已产出并获批**：`docs/development/tasks/completed/TASK-044-transaction-consolidation-plan.md`（原在 `active/`，2026-10-19 归档）经 Human 完成 Plan Review，状态 `Plan Review` → **`Approved`**。批准范围 R1–R8（P0）+ Bug-1/2/3，零服务端改动不变；§6 声明无待决项，批准无遗留未决。
 - 下一步：派 **Implementer** 按 ExecPlan §4 设计 / §5 拆解实施 → 自查构建与 lint → 交**独立 Reviewer** 审查（禁止 Implementer/Orchestrator 自判通过，见 TASK-043 四轮审查教训）→ 通过后 Integrator 收口。
 
 ---
@@ -150,7 +150,7 @@
 | 提交 | `30dc525` — `TASK-044 交易记录收拢进组合管理`（Human 执行） |
 | 提交后工作区 | `git status --short` 空输出 |
 | 最终验收 | Human 于 2026-10-19 声明已提交并指令置 `Completed`；依 `EXECUTION_PLANS.md §7 Ownership`，最终验收属 Human，此为一次有效表达 |
-| 归档位置 | 任务卡 `docs/development/tasks/completed/TASK-044-transaction-consolidation.md`；ExecPlan `docs/development/exec-plans/completed/TASK-044-transaction-consolidation.md` |
+| 归档位置 | 任务卡 `docs/development/tasks/completed/TASK-044-transaction-consolidation.md`；ExecPlan `docs/development/tasks/completed/TASK-044-transaction-consolidation-plan.md` |
 | 验收结果 | AC1–AC12 全部满足；AC12「零服务端改动」由 `git status server shared cron-worker` 空输出确认 |
 | 用户可见结果 | 侧边栏顶层 7 → 6 项（「组合管理」下挂「组合列表」/「全部交易」）；`/portfolios/transactions` 跨组合聚合；写操作走 `/portfolios/:id/transactions/{new,edit/:txId,import}`；旧 `/transactions` 族删除且无重定向；交易表格收敛为 `components/TransactionTable` 单一实现（1 定义 2 使用）；顺带修复分红显示为卖出、`$` 硬编码、`assetType` 显示英文三个既有缺陷 |
 | 遗留移交 | `TASK-046` CSV 幂等失效（P0 数据风险）· `TASK-047` M-1/M-2/M-5/M-6 · `TASK-048` M-3 分红标签 · `TASK-045` OQ1 筛选查询（Backlog） |

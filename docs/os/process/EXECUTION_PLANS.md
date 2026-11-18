@@ -16,11 +16,11 @@ ExecPlan 保存复杂 Task 的技术方案与实施证据，使工作可以跨�
 
 ## 3. 位置
 
-新 Story 的计划命名 TASK-<编号>-plan.md，与 TASK-<编号>.md 任务卡平铺在 docs/development/delivery/US-<编号>/；Human 关闭 Story 后随整个目录移到 delivery/completed/US-<编号>/，不因单张计划完成提前移走。独立维护及既有计划沿用原命名和目录；位置与生命周期唯一规则见 [DOCS.md §1.1](../standards/DOCS.md#11-story-交付目录与文档生命周期)。
+计划命名 `TASK-<编号>-<描述>-plan.md`，与任务卡 `TASK-<编号>-<描述>.md` 成对、同目录平铺；同一编号有多个计划时用描述段区分（如 `TASK-058-authentication-kernel-plan.md` / `TASK-058-authentication-client-plan.md`），不可只用编号。位置与生命周期唯一规则见 [DOCS.md §1.1](../standards/DOCS.md#11-story-交付目录与文档生命周期)：新 Story 放 docs/development/delivery/US-<编号>/，Human 关闭 Story 后随整个目录移到 delivery/completed/US-<编号>/，不因单张计划完成提前移走；**独立维护任务放 development/tasks/ 的同一个子目录**（未结案 active/ 或 backlog/、已结案 completed/），不另设 exec-plans/ 目录。
 
 ## 4. 文档关系
 
-Task 卡维护需求、Scope、AC、Status、Owner、Priority 与依赖；BOARD.md 只作调度投影。计划维护技术方案、发现、步骤、验证及记录。需共享的产品规则引用 Spec；无 Spec 不阻止计划或任务。
+Task 卡维护需求、Scope、AC、Status、Owner、Priority 与依赖；BOARD.md 只显示当前开发中 Story 的 n/m 进度与独立 Task，Story 详情与下挂 Task 明细归其过程目录的 readme.md。计划维护技术方案、发现、步骤、验证及记录。需共享的产品规则引用 Spec；无 Spec 不阻止计划或任务。
 
 ## 5. 需求与批准
 
