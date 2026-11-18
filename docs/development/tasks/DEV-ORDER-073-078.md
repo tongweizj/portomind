@@ -27,11 +27,10 @@
 - **前置**：计划 `Draft` 需批准（当前未批）；ADR-003 已 `Accepted`，口径冻结。
 - **出口**：`shared/` 派生/消费统一、D-d 数据态落地、新数据按 ADR-003 写入。
 
-### ② TASK-077 — 历史数据迁移（073 之后、075 之前）
+### ② TASK-077 — 历史数据迁移（已结案）
 
-- **为何第二**：075 的 44/44 命中需要历史数据先归一；且 077 是**不可逆迁移**，越早做，后续新增的脏数据越少。
-- **前置**：D-b / D-e-data 均已裁决；计划 `Draft` 需批准；执行前 `sync:db` 备份；先跑只读冲突探测脚本 + 使用手册（AC2 / AC8）。
-- **出口**：存量资产/价格/交易/目标按 ADR-003 改写，双键合并完成，精确匹配恢复。
+- TASK-073 的共享 symbol 派生实现提供迁移前置。获批隔离镜像已按 D-b 完成 symbol 归一、双键删价与重采，验收证据交给 TASK-075 和 TASK-078 继续使用。[TASK-077 任务卡](./completed/TASK-077-symbol-historical-data-migration.md)
+- 2026-11-18，Human 确认 `Completed`。AC5 的原始结果、获批例外和适用环境见[独立审查及结案记录](./completed/TASK-077-symbol-historical-data-migration-plan.md#12-review-record)。
 
 ### ③ TASK-075 — 客户端 Today.jsx 对齐（073+077 之后）
 
@@ -67,8 +66,8 @@
 
 ## 4. 关键门槛（开工前）
 
-1. **6 份计划全部 `Draft` 未批准**（077/078 已创建）→ 需 Human 逐份或一次性批准 `Draft → Approved`（STATES §4：`Draft → Approved` 仅 Human）。
-2. **Task Status 均为 `Planning`** → `Planning → Implementing` 需有效批准记录（STATES §4，Orchestrator 登记）。
+1. **计划批准以各 ExecPlan 的批准记录为准**。`Draft → Approved` 由 Human 登记（STATES §4）。
+2. **Task Status 以各任务卡为准**。`Planning → Implementing` 需有效批准记录，由 Orchestrator 登记（STATES §4）。
 3. **D-f（074 阈值）待裁决** — 不阻塞 073/077，但必须在 074 开工前定。
 4. **TASK-053 AC 修订**（076 R-1）— 不阻塞其他卡，但 076 验收前必须完成。
 

@@ -137,18 +137,34 @@ Approval：**已批准（2026-11-17，Human）**。本计划冻结任务卡 §6 
 
 ## 10. Implementer Handoff
 
-- 下一角色：Implementer（待指派）。
-- 输入：本计划 + 任务卡（AC1–AC4、§6 D-h=方案 A）、§3 Findings 行号、§4 设计、§5 步骤、§7 验证映射。
-- 范围与禁改：**不改** `client/src/pages/Prices/Today.jsx` 生产代码（§4.1）；**不改** server controller/service/schema（§4.3）；**不**新增 client 归一化 helper 或 client→shared 依赖（硬规则 #3）；**不**碰 073/074/076/077/078 范围。唯一允许的文件改动是 API_CONTRACT 的一行澄清。
-- 授权：计划为 Draft，**未获 Human 批准前不得开工**；`Draft → Approved` 由 Human 登记（STATES §4）。D-h=方案 A 已由 Human 选定，但本轮选定不等于本计划已批准。
-- 依赖：W1 硬闸门——073 AC1/AC2 + 077 AC1/AC2/AC5 完成且库已迁移；无其它新依赖。
-- 预期产出：W1 Gate 记录、W2 文档 diff、W3 E2E 证据（命中数/截图）、W4 build/lint 记录、可审对象。
-- 停止条件：W1 未通过、发现须改客户端归一化、或须改上游代码/数据 → 停止并报 Planner / Human（AGENTS §8）。
-- 验证入口：[DEPLOYMENT §7](../../../handbook/ops/DEPLOYMENT.md)；命令不在此重复。
+### 给开发 Agent 的提示词（2026-11-18）
+
+你是 PortoMind 的 Implementer。请按 Human 已批准的 TASK-075 方案 A 执行。先读 `AGENTS.md`、`client/AGENTS.md`、[任务卡 AC1–AC4 与 D-h](./TASK-075-today-symbol-case-mismatch.md) 和本计划 §4–§7。先检查工作树和基线，保留其它任务的改动。通过 W1 后，从最新 `main` 开 `feature/TASK-075-today-symbol-case-mismatch`。
+
+1. **先核对 W1。** 复核 TASK-073 AC1/AC2 的已合入实现、独立审查证据和任务卡状态，以及 TASK-077 的结案记录和所选验收库的迁移、重采证据。截至本交接，073 的实现已合入，独立审查覆盖 AC1/AC2，但任务卡仍为 `Implementing`。按 §4.2 向 Orchestrator 报告这个缺口，待 073 结案依据和验收库都核实后进入 W2/W3。TASK-077 已 `Completed`，验收限于获批隔离镜像。确认浏览器连接的 API 实际读取该镜像或有同等迁移证据的验收库。禁止重跑 077 迁移或复用其删除清单。[TASK-073 审查](./TASK-073-price-pipeline-p0-data-correctness-plan.md#12-review-record) · [TASK-077 结案](../completed/TASK-077-symbol-historical-data-migration-plan.md#13-completion-record)
+2. **按方案 A 对齐契约。** 在 `API_CONTRACT.md` 的资产和按日价格端点说明中，注明返回的 `symbol` 遵循 ADR-003 存储格式，并链接 ADR。客户端以 API 返回的原样键归并和查找。保持生产代码零改动，禁止客户端大小写或后缀兜底、引入 `shared` 或在服务端重复派生。
+3. **验证真实页面。** 用浏览器打开「今日行情」，核对资产与按日价格 API 的实际键、14 日窗口、29 个 CN-FUND 的价格及涨跌幅、缺口数和 `failedCount`。区分真实缺价和请求失败，并回归估值页面、价格同步卡片及日志。记录验收库、日期窗口、分子和分母、未命中标的和原因，附截图或可复核记录。按 DEPLOYMENT §7 运行 client build 与 lint。
+4. **保留 TASK-075 自己的 AC1 判定。** TASK-077 的隔离库实采今日行情为 42/44，`VBG.TO` 和 `VBU.TO` 因 Yahoo `NOT_FOUND` 经 Human 裁决仅在 077 的验收中排除，得到 42/42。含历史的最近价 44/44 和去重持仓 32/32 属于不同指标。若 075 浏览器实测仍为 42/44，保留原始分母和两只标的的缺价证据，向 Human 请求 TASK-075 自身的裁决，AC1 保持待验收。估值读取按 TASK-073 AC2 独立验收。
+5. **记录并交接。** 在本计划 §11 记录 W1 判定、文档 diff、版本、AC1–AC4 实测结果、失败和未验证项。把可审对象与证据交 Orchestrator，由其安排独立 Reviewer。发现需变更获批方案、产品代码或上游数据时，停止受影响的工作并上报。[DEPLOYMENT §7](../../../handbook/ops/DEPLOYMENT.md)
 
 ## 11. Implementation Record
 
-（实施后填写：实际改动文件与版本、基线、偏差及依据、验证结果、遗留事项。计划完成不等于已合入，Merged 由 Human 登记。）
+### 2026-11-18 · W1 前置复核
+
+**W1 未通过。** 本次在 `feature/TASK-077-symbol-historical-data-migration` @ `38368ce` 复核。`git ls-remote` 确认远端 `main` 同为 `38368ce`，本地 `main` 为 `fc1c728`。开工前已有开发顺序、075 交接提示词和 077 结案计划三处未提交改动。本轮只追加本节，保留原改动。075 分支尚未创建，API_CONTRACT 和生产代码 diff 均为空。
+
+- **TASK-073。** PR #58 的合入提交 `fc1c728` 已在远端基线中。`shared/utils/symbol.js` 定义 `toStorageSymbol` / `toProviderSymbol`，已核对资产建档、采集、价格存储、`getLatestPrices` 和完整性检查的调用。[独立复审](./TASK-073-price-pipeline-p0-data-correctness-plan.md#12-review-record)对 `42e5d8d` 的范围内判定为 `Pass with issues`，AC1/AC2 满足，剩余 F-05 为 MINOR。基线与审查记录提交 `926660b` 在四个 workspace 内无差异。任务卡仍为 `Implementing`，[结案节](./TASK-073-price-pipeline-p0-data-correctness-plan.md#13-completion-record)仍是占位。请 Orchestrator 协调 Human 确认关闭并登记结案依据。
+- **TASK-077 获批隔离镜像。** [结案记录](../completed/TASK-077-symbol-historical-data-migration-plan.md#13-completion-record)确认 `Completed`。核对本机私有恢复目录的 `migration-audit.json` 和 `post-collection-ac5.json`，目标均为 `portomind_task077_probe_dev`，11 月 17 日实采 42/44。今日行情原始口径 42/44，`VBG.TO`、`VBU.TO` 均为 Yahoo `NOT_FOUND`，077 按其 Human 裁决为 42/42。含历史的最近价 44/44，去重持仓 32/32。组合专用修正后，结案回读显示 53 个目标和 50 条交易均精确匹配资产。
+- **当前候选验收库。** 本机 6600 为 Vite，8080 为开发 API。客户端配置使用同源 `/api`，Vite 默认转至 8080。当前 `server/.env` 配置目标为另一已迁移库 `portomind_task077_restore_test`。只读实查确认四个集合 UUID 与索引指纹均匹配 `%LOCALAPPDATA%/PortoMind-TASK-077-20261118-DbMFmv/migration-audit.json`；资产、交易、组合的内容指纹也一致，44/44 资产为规范键，50 条交易、53 个组合目标均无悬挂。价格 32,332 条，与同目录 `post-collection.json` 的 11 月 18 日重采后计数相符；迁移后、重采前的审计价格指纹与当前值有差异。重采文件记载成功 42/44，同两只标的为 Yahoo `NOT_FOUND`。同目录的 `frontend-browser.json` 早于当前 API 进程启动，保留候选库的历史浏览器实测 42/44。当前进程实际读取该库仍待用当前浏览器的鉴权请求核实。以上核对仅读取数据与已有文件。
+
+| AC | 当前证据与待验证项 |
+|---|---|
+| AC1 | 待验收。075 未跑浏览器，历史 42/44 保留原始分母。075 若复现，提交两只未命中标的的证据并请 Human 独立裁决。 |
+| AC2 | 静态核对 `Today.jsx` 直接用 `row.symbol` 归并、`asset.symbol` 查找，`toLowerCase()` 仅用于搜索。客户端无共享派生函数引用或 `@portomind/shared` 依赖。契约文档待 W2。 |
+| AC3 | TASK-073 独立复审已覆盖 `getLatestPrices` 派生键及写入路径。075 的估值页面回归待 W3。 |
+| AC4 | 待 W3/W4。尚无 075 的 14 日窗口、29 个基金价格及涨跌幅、缺口与 `failedCount`、同步卡片、日志回归或 build/lint 实跑。 |
+
+Orchestrator 交接：先回收 TASK-073 的 Human 结案依据，并核实浏览器所连 API 的实际数据库。两项落实后，从最新 `main` 创建 075 分支，继续 W2–W4。独立审查待 W5 安排。
 
 ## 12. Review Record
 
