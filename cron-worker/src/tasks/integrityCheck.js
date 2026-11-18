@@ -29,6 +29,8 @@ const { isMarketOpenToday, normalizeMarket } = require('@portomind/shared/servic
 const { MARKETS } = require('@portomind/shared/config/markets');
 const { dateBounds, marketDate, todayString, MARKET_TIMEZONE } = require('@portomind/shared/utils/marketTime');
 const { runTrackedTask } = require('@portomind/shared/services/taskRunner');
+const { toStorageSymbol } = require('@portomind/shared/utils/symbol');
+const { allItemsSkipped } = require('@portomind/shared/utils/taskResult');
 const historySync = require('./historySync.cjs');
 
 const TASK_NAME = 'price-integrity-check';
@@ -97,7 +99,7 @@ async function countAsset(asset, from, to, dependencies = {}) {
 
   const [expectedDates, storedDates] = await Promise.all([
     expectedFn(market, from, to),
-    storedFn(asset.symbol, lower, to)
+    storedFn(toStorageSymbol(asset.symbol, market), lower, to)
   ]);
   const actualSet = new Set(storedDates);
   const missingDates = expectedDates.filter(dateStr =>
@@ -364,9 +366,11 @@ async function runIntegrityCheck(options = {}) {
     }
   }
 
-  report.completenessRatio = report.totals.expectedCount > 0
-    ? (report.totals.expectedCount - report.totals.missingCount) / report.totals.expectedCount
-    : 1;
+  report.allSkipped = allItemsSkipped(report);
+  const { expectedCount, missingCount } = report.totals;
+  report.completenessRatio = expectedCount > 0
+    ? (expectedCount - missingCount) / expectedCount
+    : (report.allSkipped ? null : 1);
 
   taskLogger.info('INTEGRITY_CHECK_END', {
     totalCount: report.totalCount,
@@ -377,6 +381,7 @@ async function runIntegrityCheck(options = {}) {
     expectedCount: report.totals.expectedCount,
     actualCount: report.totals.actualCount,
     missingCount: report.totals.missingCount,
+    allSkipped: report.allSkipped,
     completenessRatio: report.completenessRatio
   });
 
@@ -401,6 +406,7 @@ async function integrityCheck(options = {}) {
           totals: report.totals,
           checkedCount: report.checkedCount,
           skippedCount: report.skippedCount,
+          allSkipped: report.allSkipped,
           completenessRatio: report.completenessRatio,
           gapAssets: Array.isArray(report.assets)
             ? report.assets

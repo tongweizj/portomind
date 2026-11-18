@@ -215,6 +215,7 @@ async function runScenarios() {
   check('AC2 完整性卡显示 expected/actual/missing/跳过',
     Boolean(integrity) && integrity.innerText.includes('应采 / 实际')
       && integrity.innerText.includes('40 / 40')
+      && integrity.innerText.includes('数据齐全')
       && integrity.innerText.includes('跳过（无 launchDate）'), integrity ? integrity.innerText.slice(0, 120) : 'missing');
   const alert = card('提醒评估');
   check('AC2 提醒卡零命中不判失败', Boolean(alert)
@@ -256,6 +257,25 @@ async function runScenarios() {
   await sleep(1200);
   check('AC5 无自动轮询（静置后请求数不变）', calls.length === 2, `calls=${calls.length}`);
   normal.unmount();
+
+  const allSkippedSnapshot = makeSnapshot();
+  const unchecked = allSkippedSnapshot.tasks.find(item => item.taskName === 'price-integrity-check');
+  unchecked.dataStateLevel = 'unknown';
+  unchecked.dataState = {
+    allSkipped: true, expectedCount: 0, actualCount: 0, missingCount: 0,
+    completenessRatio: null, skippedNoLaunchDate: 3, gapAssets: []
+  };
+  const allSkipped = mount(allSkippedSnapshot);
+  await waitLoaded();
+  const uncheckedCard = card('价格完整性');
+  check('TASK-073 全部跳过显示未检查和跳过数', uncheckedCard?.getAttribute('data-level') === 'unknown'
+    && uncheckedCard.innerText.includes('本次未检查')
+    && uncheckedCard.innerText.includes('跳过（无 launchDate）')
+    && uncheckedCard.querySelector('[data-testid="task-detail-value"]')?.innerText === '3');
+  check('TASK-073 全部跳过不冒充零缺口', Boolean(uncheckedCard)
+    && !/数据齐全|缺口\s*0/.test(uncheckedCard.innerText)
+    && !text('[data-testid="overall-badge"]').includes('全部正常'));
+  allSkipped.unmount();
 
   // ── 缺失任务 / unknown / 契约未就绪 → 不得全部正常 ──
   const missingSnapshot = makeSnapshot();

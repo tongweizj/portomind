@@ -151,10 +151,12 @@ module.exports = { startXxxScheduler };
 | taskName | `result` 形状（冻结） |
 |---|---|
 | `daily-price-sync` | `{ skippedCount }`（休市跳过数） |
-| `price-integrity-check` | `{ totals:{expectedCount,actualCount,missingCount}, checkedCount, skippedCount, completenessRatio, gapAssets:[{symbol,missingCount}] }`（不存 `assets[]` / `missingRanges[]` / 堆栈） |
+| `price-integrity-check` | `{ totals:{expectedCount,actualCount,missingCount}, checkedCount, skippedCount, allSkipped, completenessRatio, gapAssets:[{symbol,missingCount}] }`（不存 `assets[]` / `missingRanges[]` / 堆栈） |
 | `alert-evaluate` | `{ evaluated, created, archived, failed }` |
 | `fx-rate-sync` | `{ fxCount, currencies:{ USD:{ok:true,rateToCny}, CAD:{…}, HKD:{…} } }`；`ok:true` 仅表示该币种本次真实写入完成，失败运行记 `FAILED` 且不补造成功标志 |
 | `rebalance-check` | `{ totalPortfolios, dueCount, skippedCount, perPortfolio:[{portfolioId,due,needsRebalance,suggestionsCount,recordId,status,failureReason?,skipReason?}] }` |
+
+价格完整性检查在资产总数大于零且全部跳过时记录 `allSkipped: true`、`checkedCount: 0` 和 `completenessRatio: null`。这些字段表示本次未检查，同样用于结束日志。TaskRun 运行状态沿用现有判定。
 
 `perPortfolio` 长度 = 未归档组合数（动态）；未到期 `due=false` 且 `needsRebalance=null`；未超阈 `needsRebalance=false`、`suggestionsCount=0`、`recordId=null`；生成建议则 `recordId` 非空且 `suggestionsCount>0`；失败保留阶段性事实；子任务被跳过的组合只能在读到同 key 的既有 `result` 时引用，否则 `needsRebalance=null` 并以 `skipReason` 标明原因。
 

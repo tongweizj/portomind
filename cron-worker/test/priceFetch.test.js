@@ -6,7 +6,8 @@ process.env.MARKET_DATA_TIMEOUT_MS = '50';
 
 const { test } = require('node:test');
 const assert = require('node:assert');
-const { resolveFetcher } = require('@portomind/shared/services/priceFetch.service');
+const { fetchLatest, fetchHistory, resolveFetcher } = require('@portomind/shared/services/priceFetch.service');
+const yahoo = require('@portomind/shared/fetchers/yahooFetcher');
 
 test('market=CN-FUND 路由到 Tiantian 并剥离 .cn 后缀', () => {
   const resolved = resolveFetcher({ symbol: '000191.cn', market: 'CN-FUND' });
@@ -50,10 +51,13 @@ test('Symbol 特征：.CN 路由到 Tiantian', () => {
 });
 
 test('Symbol 特征：.SS/.SZ 与 6 位数字码路由到 Eastmoney', () => {
-  for (const symbol of ['600519.SS', '000001.SZ', '510300']) {
+  for (const [symbol, expected, stored] of [
+    ['600519.SS', '600519', '600519.SS'], ['000001.SZ', '000001', '000001.SZ'], ['510300', '510300', '510300.SS']
+  ]) {
     const resolved = resolveFetcher(symbol);
     assert.equal(resolved.provider, 'EASTMONEY');
-    assert.equal(resolved.providerSymbol, symbol.replace(/\.(SS|SZ)$/i, ''));
+    assert.equal(resolved.providerSymbol, expected);
+    assert.equal(resolved.requestedSymbol, stored);
   }
 });
 
@@ -85,4 +89,16 @@ test('Symbol 特征：.HK 后缀路由到 Yahoo，不与场外基金 .CN 推断�
 
 test('空 symbol 抛 TypeError', () => {
   assert.throws(() => resolveFetcher({ symbol: '', market: 'CN-FUND' }), TypeError);
+});
+
+test('fetchLatest / fetchHistory 用 provider 键请求，以资产 market 和存储键回写', async (t) => {
+  const response = { symbol: 'VOO', market: 'CA', price: 500, timestamp: new Date('2026-08-24T14:00:00Z') };
+  const latest = t.mock.method(yahoo, 'fetchLatest', async () => response);
+  const history = t.mock.method(yahoo, 'fetchHistory', async () => [response]);
+  const expected = { ...response, symbol: 'VOO.US', market: 'US' };
+
+  assert.deepEqual(await fetchLatest({ symbol: 'voo.to', market: 'US' }), expected);
+  assert.deepEqual(await fetchHistory('voo.us', response.timestamp, response.timestamp), [expected]);
+  assert.deepEqual(latest.mock.calls[0].arguments, ['VOO']);
+  assert.deepEqual(history.mock.calls[0].arguments, ['VOO', response.timestamp, response.timestamp]);
 });

@@ -25,6 +25,9 @@ function normalizeFeeModel(feeModel = {}) {
 
 function estimateTradeCost(action, grossValue, feeModel = {}) {
   const model = normalizeFeeModel(feeModel);
+  if (grossValue === null) {
+    return { estimatedFee: null, estimatedTax: null, estimatedCost: null };
+  }
   const estimatedFee = grossValue > 0 ? model.fixedFee + grossValue * model.ratioFee : 0;
   // 第一版采用卖出成交额税率；买入不计交易税。
   const estimatedTax = action === 'sell' ? grossValue * model.taxRate : 0;
@@ -37,7 +40,10 @@ function estimateTradeCost(action, grossValue, feeModel = {}) {
 
 function estimateCost(suggestions, feeModel = {}) {
   return suggestions.map(suggestion => {
-    const grossValue = Number(suggestion.quantity) * Number(suggestion.price || 0);
+    const rawPrice = suggestion.price;
+    const hasPrice = typeof rawPrice === 'number' || (typeof rawPrice === 'string' && rawPrice.trim() !== '');
+    const price = hasPrice ? Number(rawPrice) : NaN;
+    const grossValue = Number.isFinite(price) ? Number(suggestion.quantity) * price : null;
     return {
       ...suggestion,
       grossValue,

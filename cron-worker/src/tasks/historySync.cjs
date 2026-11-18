@@ -16,13 +16,15 @@ const { getActiveAssets, getAssetsBySymbols } = require('@portomind/shared/servi
 const { fetchHistory } = require('@portomind/shared/services/priceFetch.service');
 const { saveHistory } = require('@portomind/shared/services/priceStorage.service');
 
+const { normalizeSymbol } = require('@portomind/shared/utils/symbol');
+
 const DEFAULT_CONCURRENCY = 3;
 
 // 符号列表解析：优先用 DB 资产对象（启用 market 路由，如 CN-FUND → 天天基金），
 // DB 中不存在的符号退化为原始 symbol 字符串（按 Symbol 特征推断路由）。
 async function resolveItems({ symbols, loadAssets, loadBySymbols }) {
   if (symbols && symbols.length) {
-    const rawSymbols = symbols.map(symbol => String(symbol).trim().toUpperCase());
+    const rawSymbols = symbols.map(normalizeSymbol);
     const assets = await loadBySymbols(rawSymbols);
     const bySymbol = new Map(assets.map(asset => [asset.symbol, asset]));
     return rawSymbols.map(symbol => bySymbol.get(symbol) || symbol);

@@ -97,9 +97,11 @@
 
 ## 8. 本卡未做的事
 
-未实施、ExecPlan **已创建但为 `Draft`（未批准，见 [计划](./TASK-073-price-pipeline-p0-data-correctness-plan.md)）**、**D-a～D-d 全部裁决完毕**（D-a 拆至 078 / D-b 拆至 077 / D-c 拆至 076 / D-d 见 §6）；Owner/Status 待 Orchestrator 登记（Planner 仅建卡内容）。
+历史数据迁移、采集时刻与归桶、上市日期抓取回填、今日行情客户端对齐及采集观测分别由 TASK-077、TASK-078、TASK-076、TASK-075 和 TASK-074 负责。实施证据与独立审查见[计划 §11–12](./TASK-073-price-pipeline-p0-data-correctness-plan.md#11-implementation-record)。
 
 ## 9. 记录
+
+2026-11-17，Reviewer：TASK-073 范围内 **Pass with issues**，剩任务索引说明待同步。见[实施计划 §12 按任务范围裁定](./TASK-073-price-pipeline-p0-data-correctness-plan.md#12-review-record)。
 
 2026-11-17，Planner：依据 Human 指令「根据 PRICE-PIPELINE-REVIEW 创建独立 task」建卡。审阅发现为唯一事实来源（其附录 B 修订记录已含错误结论撤回，以本版为准）；Planner 补充核对见 §2。初始 Status 待 Orchestrator 登记；优先级建议 High（P0 数据正确性，CNY 估值整体不可算），最终以 Human 为准。D-a～D-d 裁决 + ExecPlan 批准前不得开工。
 

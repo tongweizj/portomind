@@ -2,6 +2,9 @@ const test = require('node:test');
 const assert = require('node:assert/strict');
 
 const Price = require('@portomind/shared/models/price');
+const Asset = require('@portomind/shared/models/asset');
+const { getLatestPrices } = require('@portomind/shared/services/marketData.service');
+const { toStorageSymbol, toProviderSymbol } = require('@portomind/shared/utils/symbol');
 const storage = require('@portomind/shared/services/priceStorage.service');
 const priceService = require('@portomind/shared/services/price.service');
 const tiantianFetcher = require('@portomind/shared/fetchers/tiantianFetcher');
@@ -32,6 +35,70 @@ test('Price 定义 symbol + timestamp 唯一索引', () => {
   );
   assert.ok(index);
   assert.equal(index[1].unique, true);
+});
+
+test('手动新建和更新价格按派生键写入，估值读取可命中', async (t) => {
+  const timestamp = new Date('2026-08-24T19:12:34Z');
+  let stored;
+  t.mock.method(Price, 'create', async data => {
+    stored = new Price(data).toObject();
+    return stored;
+  });
+  t.mock.method(Price, 'findById', () => ({ select: () => ({ lean: async () => stored }) }));
+  t.mock.method(Price, 'findByIdAndUpdate', async (_id, data) => {
+    stored = new Price({ ...stored, ...data }).toObject();
+    return stored;
+  });
+  t.mock.method(Asset, 'aggregate', async () => [{ symbol: 'VOO.US', market: 'US' }]);
+  t.mock.method(Price, 'findOne', ({ symbol }) => ({
+    sort: () => ({ lean: async () => stored.symbol === symbol ? stored : null })
+  }));
+
+  const created = await priceService.createPrice({ symbol: ' voo ', market: 'US', price: 100, timestamp });
+  assert.equal(created.symbol, 'VOO.US');
+  assert.deepEqual(created.timestamp, timestamp);
+  assert.deepEqual(await getLatestPrices(['VOO.US']), { 'VOO.US': 100 });
+
+  const updated = await priceService.updatePrice(created._id, { symbol: 'voo.to', price: 101 });
+  assert.equal(updated.symbol, 'VOO.US');
+  assert.deepEqual(updated.timestamp, timestamp);
+  assert.deepEqual(await getLatestPrices(['VOO.US']), { 'VOO.US': 101 });
+
+  const moved = await priceService.updatePrice(created._id, { market: 'CA' });
+  assert.equal(moved.symbol, 'VOO.TO');
+  assert.equal(moved.market, 'CA');
+});
+
+test('手动新建可省略 market，采用标准后缀或唯一资产市场', async (t) => {
+  t.mock.method(Price, 'create', async data => new Price(data).toObject());
+  const markets = t.mock.method(Asset, 'distinct', async (_field, query) => {
+    const symbols = query.symbol.$in;
+    if (symbols.includes('VOO.US')) return ['US'];
+    if (symbols.includes('BND.US')) return ['US', 'CA'];
+    return [];
+  });
+
+  const fund = await priceService.createPrice({ symbol: '001180.cn', price: 1 });
+  assert.equal(fund.symbol, '001180.CN');
+  assert.equal(fund.market, 'CN-FUND');
+  assert.equal(markets.mock.callCount(), 0);
+  const voo = await priceService.createPrice({ symbol: 'voo', price: 100 });
+  assert.equal(voo.symbol, 'VOO.US');
+  assert.equal(voo.market, 'US');
+  for (const symbol of ['BND', 'UNKNOWN']) {
+    const price = await priceService.createPrice({ symbol, price: 90 });
+    assert.equal(price.symbol, symbol);
+    assert.equal(price.market, undefined);
+  }
+});
+
+test('手动更新仅改数值时保留旧键，部分身份更新对不存在的记录返回 null', async (t) => {
+  const read = t.mock.method(Price, 'findById', () => ({ select: () => ({ lean: async () => null }) }));
+  const update = t.mock.method(Price, 'findByIdAndUpdate', async (_id, data) => data);
+  assert.deepEqual(await priceService.updatePrice('legacy', { price: 25 }), { price: 25 });
+  assert.equal(read.mock.callCount(), 0);
+  assert.equal(await priceService.updatePrice('missing', { market: 'US' }), null);
+  assert.equal(update.mock.callCount(), 1);
 });
 
 test('市场日期边界遵循 America/Toronto 的夏令时', () => {
@@ -91,19 +158,19 @@ test('saveLatest 将同一市场日规范为相同唯一键', async () => {
     return filter;
   };
 
-  await storage.saveLatest({ symbol: 'vti', price: 300, timestamp: new Date('2026-08-24T14:00:00Z') });
-  await storage.saveLatest({ symbol: 'VTI', price: 301, timestamp: new Date('2026-08-24T19:00:00Z') });
+  await storage.saveLatest({ symbol: '001180.cn', market: 'CN-FUND', price: 300, timestamp: new Date('2026-08-24T14:00:00Z') });
+  await storage.saveLatest({ symbol: '001180', market: 'CN-FUND', price: 301, timestamp: new Date('2026-08-24T19:00:00Z') });
 
-  assert.equal(filters[0].symbol, 'VTI');
-  assert.equal(filters[0].timestamp.toISOString(), filters[1].timestamp.toISOString());
+  assert.equal(filters[0].symbol, '001180.CN');
+  assert.deepEqual(filters[1], filters[0]);
 });
 
 test('saveHistory 在 bulkWrite 前合并重复日记录', async () => {
   let operations;
   Price.bulkWrite = async value => { operations = value; return {}; };
   await storage.saveHistory([
-    { symbol: 'VTI', price: 300, timestamp: new Date('2026-08-24T12:00:00Z') },
-    { symbol: 'vti', price: 301, timestamp: new Date('2026-08-24T18:00:00Z') }
+    { symbol: 'VTI.US', market: 'US', price: 300, timestamp: new Date('2026-08-24T12:00:00Z') },
+    { symbol: 'vti.hk', market: 'US', price: 301, timestamp: new Date('2026-08-24T18:00:00Z') }
   ]);
   assert.equal(operations.length, 1);
   assert.equal(operations[0].updateOne.upsert, true);
@@ -128,4 +195,66 @@ test('外部行情超时和限流具有明确分类', async () => {
   const rateLimit = classifyMarketDataError({ response: { status: 429 } }, 'TEST');
   assert.equal(rateLimit.category, MARKET_DATA_ERROR.RATE_LIMIT);
   assert.equal(rateLimit.retryable, true);
+});
+
+test('symbol 单一派生覆盖六个市场、错误后缀、港股位数和未知 market', () => {
+  const cases = [
+    ['US', 'voo', 'VOO.US', 'VOO'],
+    ['CA', 'bnd', 'BND.TO', 'BND.TO'],
+    ['HK', '0700', '0700.HK', '0700.HK'],
+    ['CN-FUND', '001180', '001180.CN', '001180'],
+    ['CN-SH', '600519', '600519.SS', '600519'],
+    ['CN-SZ', '000001', '000001.SZ', '000001']
+  ];
+  for (const [market, bare, stored, provider] of cases) {
+    for (const input of [bare, stored, stored.toLowerCase(), ` ${bare}.HK `]) {
+      assert.equal(toStorageSymbol(input, market), stored);
+      assert.equal(toProviderSymbol(input, market), provider);
+    }
+  }
+  assert.equal(toStorageSymbol('700', 'HK'), '700.HK');
+  assert.equal(toStorageSymbol('brk.b', 'US'), 'BRK.B.US');
+  assert.equal(toStorageSymbol(' voo ', undefined), 'VOO');
+  assert.equal(toStorageSymbol(' voo.hk ', 'unknown'), 'VOO.HK');
+  assert.equal(toStorageSymbol(' voo ', 'toString'), 'VOO');
+  assert.equal(toStorageSymbol('  ', 'US'), '');
+});
+
+test('getLatestPrices 批量读取原始资产键并以 market 派生，保留输入映射与缺价 null', async (t) => {
+  const lookup = t.mock.method(Asset, 'aggregate', async () => [
+    { symbol: '001180.cn', market: 'CN-FUND' }, { symbol: 'VTI', market: 'US' }
+  ]);
+  const price = t.mock.method(Price, 'findOne', ({ symbol }) => ({
+    sort: () => ({ lean: async () => symbol === '001180.CN' ? { price: 1.23 } : null })
+  }));
+
+  assert.deepEqual(await getLatestPrices(['001180.cn', 'vti', 'unknown']), {
+    '001180.cn': 1.23, vti: null, unknown: null
+  });
+  assert.equal(lookup.mock.callCount(), 1);
+  assert.deepEqual(lookup.mock.calls[0].arguments[0][0].$match.symbol.$in,
+    ['001180.cn', 'vti', 'unknown', '001180.CN', 'VTI', 'UNKNOWN']);
+  assert.deepEqual(price.mock.calls.map(call => call.arguments[0].symbol), ['001180.CN', 'VTI.US', 'UNKNOWN']);
+});
+
+test('getLatestPrices 资产查询失败时保留所有缺价键为 null', async (t) => {
+  t.mock.method(Asset, 'aggregate', async () => { throw new Error('offline'); });
+  const price = t.mock.method(Price, 'findOne', () => assert.fail('market lookup failed'));
+  assert.deepEqual(await getLatestPrices(['VOO']), { VOO: null });
+  assert.equal(price.mock.callCount(), 0);
+});
+
+test('saveLatest 并发唯一键冲突后以同一派生键更新', async (t) => {
+  const update = t.mock.method(Price, 'findOneAndUpdate', async (filter, payload, options) => {
+    if (options.upsert) throw Object.assign(new Error('duplicate'), { code: 11000 });
+    return payload.$set;
+  });
+
+  const record = await storage.saveLatest({
+    symbol: 'voo.to', market: 'US', price: 301, timestamp: new Date('2026-08-24T19:00:00Z')
+  });
+  assert.equal(record.symbol, 'VOO.US');
+  assert.equal(record.price, 301);
+  assert.equal(update.mock.callCount(), 2);
+  assert.deepEqual(update.mock.calls[0].arguments[0], update.mock.calls[1].arguments[0]);
 });

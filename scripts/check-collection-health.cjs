@@ -14,6 +14,7 @@
 
 require('dotenv').config({ path: 'server/.env' });
 const { MongoClient } = require('mongodb');
+const { marketFromSuffix, normalizeSymbol, toStorageSymbol } = require('@portomind/shared/utils/symbol');
 
 const DB = process.env.PROD_DB || 'portomind';
 const STALE_DAYS = Number(process.env.STALE_DAYS || 3);
@@ -61,7 +62,7 @@ const add = (level, code, msg) => findings.push({ level, code, msg });
   const perSym = await prices.aggregate([
     { $group: { _id: '$symbol', n: { $sum: 1 }, last: { $max: '$timestamp' } } }
   ]).toArray();
-  const bySym = new Map(perSym.map(p => [String(p._id).toUpperCase(), p]));
+  const bySym = new Map(perSym.map(p => [normalizeSymbol(p._id), p]));
 
   const latestPrice = perSym.reduce((m, p) => (p.last > m ? p.last : m), new Date(0));
   console.log(`\n-- 2. 价格 --`);
@@ -81,7 +82,7 @@ const add = (level, code, msg) => findings.push({ level, code, msg });
   // 否则全市场同时停更时会把 44 个资产全部重复报一遍（相对基准法测不出「集体停更」，故两者必须都有）。
   const globalLag = lagDays(latestPrice);
   const stale = assets.map((a) => {
-    const s = String(a.symbol || '').toUpperCase();
+    const s = normalizeSymbol(a.symbol);
     const p = bySym.get(s);
     return { symbol: a.symbol, n: p?.n || 0, last: p?.last || null, lag: p ? lagDays(p.last) : null };
   }).filter(r => r.n === 0 || r.lag > globalLag);
@@ -106,8 +107,13 @@ const add = (level, code, msg) => findings.push({ level, code, msg });
     console.log('  OK：交易中的 symbol 均存在于 assets');
   } else {
     for (const s of mismatch) {
-      const alt = s.replace(/\.(CN|SH|SZ)$/i, '');
-      console.log(`  ⚠ 交易用 ${pad(s, 14)} 但 assets 无此写法${assetSyms.has(alt) ? `（疑似同一标的写作 ${alt}）` : ''}`);
+      const market = marketFromSuffix(s);
+      const matches = assets.filter(asset =>
+        (!market || asset.market === market) &&
+        toStorageSymbol(asset.symbol, asset.market) === toStorageSymbol(s, asset.market)
+      );
+      const alternative = matches.length === 1 ? `（疑似同一标的写作 ${matches[0].symbol}）` : '';
+      console.log(`  ⚠ 交易用 ${pad(s, 14)} 但 assets 无此写法${alternative}`);
     }
     add('CRITICAL', 'SYMBOL_MISMATCH', `${mismatch.length} 个交易 symbol 在 assets 中不存在 → 相关组合的估值/再平衡会失败: ${mismatch.join(', ')}`);
   }

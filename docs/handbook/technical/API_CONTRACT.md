@@ -31,6 +31,10 @@ API 前缀为 `/api`。客户端只通过 `VITE_API_URL` 配置此前缀；变�
 
 Asset 枚举：`type` 为 `stock | etf | fund | bond | cash`，`market` 为 `US | CA | CN-SH | CN-SZ | CN-FUND | HK`，`currency` 为 `USD | CAD | CNY | HKD`（港股 AS-08：market=HK，Yahoo 代码形如 `0700.HK`），`assetClass` 为 `equity | bond | gold | cash | null`（AS-09：大类与 type 正交，null=未分类）。`active` 控制资产能否进入交易选择、行情同步等业务流程；`watchlist` 仅表示用户关注偏好，二者互不替代。
 
+资产建档时，`symbol` 按请求中的 `market` 派生为标准大写存储键，已知后缀可以省略或写错，服务端在查重前按市场纠正。编辑时 `symbol` 与 `market` 均不可变，回传等价键允许保留，修改返回 `400`。后缀表见 [ADR-003](../../os/architecture/adr/ADR-003-symbol-suffix-contract.md)。
+
+手动写价时，提供 `market` 即按该市场派生 symbol。新建可省略 market，此时使用标准后缀或资产主数据中唯一匹配的市场。缺少确定市场时保留清洗后的原键。更新 symbol 或 market 时，省略的字段沿用该价格记录的值；仅更新价格等字段时保留原键。手动写价沿用请求时间戳。
+
 Portfolio 枚举：`type`（风险定位）为 `活钱 | 稳健 | 长期`；`accountType`（账户载体）为 `tiantian | xueqiu | tfsa | rrsp | resp | taxable | other`，二者正交。`accountType` 缺省为 `other`；存量组合未写入该字段时读取侧按 `other` 兜底。
 
 交易方向统一使用小写 `buy | sell`。持仓采用移动平均成本：买入增加数量和 `quantity * price` 的账面成本；卖出按卖出前的平均成本减少账面成本，已实现盈亏为 `(卖出价 - 卖出前平均成本) * 卖出数量`。系统不允许做空，任何新增、修改或删除导致交易时点可用数量不足的操作都返回 `400`。交易查询统一按 `date DESC, _id DESC` 排序；计算持仓时则按相反顺序重放账本。

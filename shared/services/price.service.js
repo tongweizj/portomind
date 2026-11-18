@@ -1,4 +1,7 @@
 const Price = require('../models/price');
+const Asset = require('../models/asset');
+const { ASSET_MARKETS } = require('../constants/asset.constants');
+const { marketFromSuffix, normalizeSymbol, toStorageSymbol } = require('../utils/symbol');
 const { dateBounds, monthBounds, todayString } = require('../utils/marketTime');
 
 function pagedFind(query, { page, pageSize, sort = { timestamp: -1, symbol: 1 } }) {
@@ -63,7 +66,7 @@ function historyTimestampQuery({ year, month, from, to }) {
 
 async function getPriceHistory(symbol, options = {}) {
   const { page = 1, pageSize = 20 } = options;
-  const query = { symbol: symbol.trim().toUpperCase() };
+  const query = { symbol: normalizeSymbol(symbol) };
   const { start, end } = historyTimestampQuery(options);
   if (start || end) {
     query.timestamp = {};
@@ -74,12 +77,46 @@ async function getPriceHistory(symbol, options = {}) {
 }
 
 const getPriceById = id => Price.findById(id);
-const createPrice = data => Price.create(data);
-const updatePrice = (id, data) => Price.findByIdAndUpdate(id, data, {
-  new: true,
-  runValidators: true,
-  context: 'query'
-});
+async function normalizeManualPrice(data) {
+  if (data.symbol == null) return data;
+
+  const symbol = normalizeSymbol(data.symbol);
+  let market = normalizeSymbol(data.market) || marketFromSuffix(symbol);
+  if (symbol && !market) {
+    // market 可省略。裸码只有在资产主数据给出唯一市场时才派生。
+    const candidates = [symbol, ...ASSET_MARKETS.map(item => toStorageSymbol(symbol, item))];
+    const markets = await Asset.distinct('market', { symbol: { $in: candidates }, market: { $in: ASSET_MARKETS } });
+    if (markets.length === 1) market = markets[0];
+  }
+
+  return {
+    ...data,
+    symbol: toStorageSymbol(symbol, market),
+    ...(market ? { market } : {})
+  };
+}
+
+async function createPrice(data) {
+  return Price.create(await normalizeManualPrice(data));
+}
+
+async function updatePrice(id, data) {
+  let update = data;
+  if (data.symbol !== undefined || data.market !== undefined) {
+    if (data.symbol === undefined || data.market === undefined) {
+      const current = await Price.findById(id).select('symbol market').lean();
+      if (!current) return null;
+      update = { symbol: current.symbol, market: current.market, ...data };
+    }
+    update = await normalizeManualPrice(update);
+  }
+
+  return Price.findByIdAndUpdate(id, update, {
+    new: true,
+    runValidators: true,
+    context: 'query'
+  });
+}
 const deletePrice = id => Price.findByIdAndDelete(id);
 
 module.exports = {
