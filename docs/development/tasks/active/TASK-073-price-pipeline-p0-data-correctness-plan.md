@@ -2,7 +2,7 @@
 
 ## Status
 
-Status：Approved（2026-11-17，Human 批准「073～078 计划」；`Draft → Approved` 归 Human）
+Status：Implementing（2026-11-17，Implementer 开始实施；Human 于同日批准「073～078 计划」）
 
 Owner：Planner（起草）；Implementer（待指派）
 
@@ -202,7 +202,27 @@ F-03：三个调用方只传 symbol 数组、无 market，而派生函数需要 
 
 ## 11. Implementation Record
 
-（实施后填写：实际改动文件与版本、基线、读侧方案所选与理由、AC6 数据态字段命名、偏差及依据、验证结果、遗留事项。计划完成不等于已合入，Merged 由 Human 登记。）
+2026-11-17，Implementer。基线 `a333ba768d661cca2eb75434f8d4225cd8fee42c`，开工时本地 `main` 与刚抓取的 `origin/main` 一致。按 Human 指定分支 `feature/TASK-073-price-pipeline-p0` 实施。代码与测试版本为 `65d6ad423faac2b60601c7d29a021fd8f21fdf27`；本节记录随独立提交交付。
+
+- AC1/AC2：`shared/utils/symbol.js` 统一两张后缀表及派生函数；`asset.service.js` 按最终键查重并冻结建档后的 market 与 symbol；`priceFetch.service.js` 分开请求键和存储键，`eastmoneyFetcher.js` 暴露既有 secid 的交易所判定供旧 CLI 裸码回退。日价与历史价共用 `priceStorage.service.js` 的键派生，同日 upsert 及并发重试继续使用原有时间与索引。
+- AC2 读取采用 §4.3 推荐方案。`marketData.service.js` 增加一次 Asset 批量读取，使用聚合保留旧键大小写，保留调用方的输入键和签名；查不到 Asset 时按原符号大写精确查价，不猜 market。查不到价格返回 `null`。
+- AC5/AC6：`integrityCheck.js` 按派生键查价；`result.allSkipped` 为真时完整率为 `null`。`shared/utils/taskResult.js` 提供共享判断供 TASK-074 复用。`cronStatus.service.js` 的完整性适配器使用既有 `unknown` 数据等级与说明，并识别计数齐全的旧记录；价格同步统计沿用 D-20 的大小写清洗后精确匹配。`historySync.cjs` 复用符号清洗。
+- Human 追加批准修复两处基线命中。`scripts/check-collection-health.cjs` 用共享派生比较候选资产，只有唯一候选时才给提示，后缀按 ADR-003 识别。`shared/services/rebalance/costEstimator.js` 在价格缺失或非数值时返回 `null` 成交额、费用、税和总成本，保留有效价格的计算。
+- 新增 11 项用例。服务端 8 项覆盖建档四种输入等价、更新键不可变、六市场与异常入参、批量读价及缺价、Asset 读取失败、并发 upsert、看板全跳过、交易成本缺价。Worker 3 项覆盖 provider 请求与两个回写路径、有上市日期检出缺口、全跳过及空集合对照。已有同日合并与重复建档用例改用标准键。
+
+验证入口见 §7。完整日志保存在本机临时目录 `portomind-TASK-073-a333ba7`，文件名前缀分别为 `baseline-` 与 `final-`。此前候选的输出保留为 `candidate-`。
+
+| 验证 | 基线实跑 | 交付实跑 |
+|---|---|---|
+| 服务端测试 | 268 通过，0 失败 | 276 通过，0 失败 |
+| Worker 测试 | 78 通过，0 失败 | 81 通过，0 失败 |
+| Client build | 成功（4.48s），有分块大小警告 | 成功（2.82s），同一警告 |
+| Client lint | 0 errors，5 warnings | 0 errors，仍为 5 条 Fast Refresh 警告 |
+| 文档检查 | 159 份，1686 条链接，ERROR 0，WARN 0 | 159 份，1686 条链接，ERROR 0，WARN 0 |
+
+静态证据见 `final-static.log`。全仓代码扫描仅在 `shared/utils/symbol.js` 命中后缀定义，无缺价归零模式命中。Client、TaskRun 状态机、唯一索引、调度器和时间工具的 diff 为空。巡检脚本语法、外部行情调用包装及空白检查均通过。
+
+未连接真实库运行巡检或验收价格链路，未调用实际外部 provider，未执行历史数据迁移、采集时刻或归桶更改及客户端更改。存量命中率待 TASK-077，实际 launchDate 覆盖待 TASK-076，合并 TASK-078 后复跑价格存储测试。独立 Reviewer 待交接。
 
 ## 12. Review Record
 
