@@ -101,6 +101,8 @@
 
 ## 9. 记录
 
+2026-11-17，Reviewer：TASK-073 范围内 **Pass with issues**，剩任务索引说明待同步。见[实施计划 §12 按任务范围裁定](./TASK-073-price-pipeline-p0-data-correctness-plan.md#12-review-record)。
+
 2026-11-17，Planner：依据 Human 指令「根据 PRICE-PIPELINE-REVIEW 创建独立 task」建卡。审阅发现为唯一事实来源（其附录 B 修订记录已含错误结论撤回，以本版为准）；Planner 补充核对见 §2。初始 Status 待 Orchestrator 登记；优先级建议 High（P0 数据正确性，CNY 估值整体不可算），最终以 Human 为准。D-a～D-d 裁决 + ExecPlan 批准前不得开工。
 
 2026-11-17（同日追加）：Human 与 Reviewer 讨论后决定将归一化目标由「strip → 裸码」反转为「按 market 派生大写后缀」，产出 ADR-003（Accepted）。本卡 AC1 / AC2 / Scope / §2 / §6 / Coordination 已按 ADR-003 更新。原审阅文档 P0-1 建议段中「strip `.cn/.SS/.SZ` + upper」的表述为历史建议，已被 ADR-003 取代。
