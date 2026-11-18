@@ -1,5 +1,152 @@
 # TASK-077 历史 symbol 工具
 
+## 从线上镜像到前端验收
+
+本流程使用 PowerShell 7，从仓库根目录运行。使用包含 TASK-077 审查修复的代码，先按[部署手册安装依赖](../docs/handbook/ops/DEPLOYMENT.md#3-安装依赖)并配置 MongoDB Database Tools。示例将线上 `portomind` 镜像到开发库 `portomind_dev`，所有修复和行情采集在开发库执行。若线上已执行过 TASK-077，先核对既有审计与这次的只读预览。
+
+### 1. 把线上库同步到开发库
+
+先停掉连接开发库的 API、worker、手工采集和导入。镜像会覆盖开发库的同名集合，并默认清理源库没有的非认证集合。若要留存当前开发库的数据，先保留能恢复的备份。示例用只读线上账号，并排除 `users` 和 `sessions`，保留开发环境的登录数据。 [部署手册 `5.5](../docs/handbook/ops/DEPLOYMENT.md#55-用真实数据验收整库镜像到开发库)
+
+```powershell
+$task077Source = 'portomind'
+$task077Target = 'portomind_dev'
+$task077Restore = 'portomind_task077_restore_test'
+$env:TASK077_SOURCE_URI = Read-Host '线上只读 URI，路径应为 /portomind'
+$env:TASK077_DEV_URI = Read-Host '开发库 URI，路径应为 /portomind_dev'
+$env:TASK077_RESTORE_URI = Read-Host '同一开发实例中新建试还原库的 URI'
+$task077Mirror = @(
+  '--from', $task077Source, '--to', $task077Target,
+  '--from-uri', $env:TASK077_SOURCE_URI, '--to-uri', $env:TASK077_DEV_URI,
+  '--exclude', 'users,sessions'
+)
+npm --silent run sync:db -- @task077Mirror --dry-run
+```
+
+在预览输出核对实际源库、实际目标库和集合范围。确认可覆盖开发库后运行下面的命令。
+
+```powershell
+npm --silent run sync:db -- @task077Mirror
+```
+
+看到「同步完成」且退出码为 `0` 后继续。镜像脚本会校验集合、条数、索引和适用集合的 ID 哈希；它在结束时会清理用于镜像的临时归档。
+
+
+
+```
+set -o pipefail
+
+mongodump \
+  --host=127.0.0.1 \
+  --port=27017 \
+  --username="tongweizj" \
+  --authenticationDatabase="admin" \
+  --db="portomind" \
+  --archive \
+  | mongorestore \
+      --host=127.0.0.1 \
+      --port=27017 \
+      --username="tongweizj" \
+      --authenticationDatabase="admin" \
+      --archive \
+      --nsFrom="portomind.*" \
+      --nsTo="portomind_task077_restore_test.*"
+
+
+mongodump \
+  --host=127.0.0.1 \
+  --port=27017 \
+  --username=tongweizj \
+  --authenticationDatabase=admin \
+  --db=portomind \
+  --archive="$HOME/portomind_backup.archive"
+
+  mongorestore \
+  --host=127.0.0.1 \
+  --port=27017 \
+  --username=tongweizj \
+  --authenticationDatabase=admin \
+  --archive="$HOME/portomind_backup.archive" \
+  --nsFrom="portomind.*" \
+  --nsTo="portomind_task077_restore_test.*"
+```
+### 2. 运行脚本修复开发库
+
+保持开发库停写。先建一个仅供本次操作人员访问的目录，运行只读探测并冻结本次清单。
+
+```powershell
+$task077Dir = Join-Path $env:LOCALAPPDATA ('PortoMind-TASK-077-' + (Get-Date -Format 'yyyyMMdd-HHmmss'))
+New-Item -ItemType Directory -Path $task077Dir -ErrorAction Stop
+$task077Plan = Join-Path $task077Dir 'plan.json'
+$task077Archive = Join-Path $task077Dir 'before.archive'
+$task077Approval = Join-Path $task077Dir 'approval.json'
+
+node scripts/probe-symbol-data-quality.cjs --uri $env:TASK077_DEV_URI --out (Join-Path $task077Dir 'probe-before.md')
+node scripts/migrate-symbol-data.cjs --uri $env:TASK077_DEV_URI --dry-run |
+  Set-Content -LiteralPath $task077Plan -Encoding utf8NoBOM
+
+
+export TASK077_DEV_URI='mongodb://tongweizj:tw273634@localhost:27017/portomind_task077_restore_test?authSource=admin'
+```
+
+检查每条命令的退出码。探测失败或 `blockers` 非空时先调查。打开报告与 `plan.json`，核对 `target.database`、`mapping`、`deletions`、`unresolved` 和 `stranded`。重点确认每个双键资产的两个精确键、条数和日期范围。迁移会删除获批清单中两套键下的历史价格，之后由采集写入最新键。记录仅存旧键的历史影响和未解析引用。以当前预览生成的清单为准。
+
+从开发库留存持久归档，并实际试还原到同一开发实例的新库。先核对 `TASK077_RESTORE_URI` 的库名与 `$task077Restore` 一致，且试还原库为空。工具若未加入 PATH，使用它们的绝对路径。
+
+```powershell
+mongodump "--uri=$env:TASK077_DEV_URI" --gzip "--archive=$task077Archive"
+mongorestore "--uri=$env:TASK077_RESTORE_URI" --gzip "--archive=$task077Archive" `
+  "--nsInclude=$task077Target.*" "--nsFrom=$task077Target.*" "--nsTo=$task077Restore.*"
+npm --silent run sync:db -- --verify-only --from $task077Target --to $task077Restore `
+  --from-uri $env:TASK077_DEV_URI --to-uri $env:TASK077_RESTORE_URI
+```
+
+每条成功后再运行下一条。试还原核对通过且 Human 已批准本次精确删除清单后，记录真实批准人和批准时间，生成批准文件，再执行写入。迁移脚本会在写入前重新核对归档、四个写入集合的内容与索引、目标身份和冻结清单。
+
+```powershell
+$task077Approver = Read-Host '填写已批准本次清单的 Human 标识'
+$task077ApprovedAt = Read-Host '填写实际批准时间，ISO 8601 格式，例如 2026-11-18T15:00:00-05:00'
+[ordered]@{
+  approvedBy = $task077Approver
+  approvedAt = $task077ApprovedAt
+  writersStopped = $true
+  plan = 'plan.json'
+  planSha256 = (Get-FileHash -LiteralPath $task077Plan -Algorithm SHA256).Hash.ToLowerInvariant()
+  backupDb = $task077Restore
+  archive = 'before.archive'
+  archiveSha256 = (Get-FileHash -LiteralPath $task077Archive -Algorithm SHA256).Hash.ToLowerInvariant()
+} | ConvertTo-Json | Set-Content -LiteralPath $task077Approval -Encoding utf8NoBOM
+
+node scripts/migrate-symbol-data.cjs --uri $env:TASK077_DEV_URI --force --approval $task077Approval |
+  Set-Content -LiteralPath (Join-Path $task077Dir 'migration-audit.json') -Encoding utf8NoBOM
+```
+
+迁移退出码为 `0` 后，核对审计 JSON 的逐键删除数与原清单，并保留备份、清单、标记、审计和执行日志。运行下面的只读探测，核对资产格式及悬挂引用。缺省 `level` 的历史目标也按资产级检查。
+
+    node scripts/probe-symbol-data-quality.cjs --uri $env:TASK077_DEV_URI --out (Join-Path $task077Dir 'probe-after.md')
+
+出现清单漂移或中断时，按[中断和回滚](#中断和回滚)处理。已迁移并重采的库应沿用原执行记录。新生成的全量清单可能把刚重采的新键与保留的旧历史识别为双键。
+
+### 3. 在开发前端验收
+
+选相关市场开市日，在迁移完成后用项目的手动入口对同一个开发库做一次真实采集。此时保持定时 worker 暂停。
+
+```powershell
+$env:MONGO_URI = $env:TASK077_DEV_URI
+npm run sync:prices
+```
+
+核对采集日志中的请求、成功、跳过和失败数。`PARTIAL` 会返回退出码 `1`，按日志区分已批准的 Yahoo 缺失项与其他错误。确认采集写入后，在同一终端运行 `npm run dev:server`；在另一个仓库终端运行 `npm run dev:client`。使用开发库账号登录 Vite 启动输出给出的地址。当前配置默认为 `http://localhost:6600`，`/api` 代理到本机 `8080`；若配置了自定义 API 地址或代理目标，确认它指向这个开发 API。 [部署手册 `5.3](../docs/handbook/ops/DEPLOYMENT.md#53-启动三个终端)
+
+| 前端入口 | 检查内容 |
+|---|---|
+| **今日行情**（`/prices`） | 清空搜索和筛选，确认本次验收标的能看到最近价，打开 `001180.CN` 等原双键标的核对新 symbol 和最新记录。此页从近 14 天窗口取价，结合最新日期与采集日志确认本次确实有写入。只有一条新价时，涨跌幅可能显示 `—`。 |
+| **组合管理 → 组合列表 → 持仓概览** | 逐组合核对最新价、当前市值与缺价情况。再打开组合的**编辑 → 目标配置**，抽查旧资产级目标能匹配到规范键，目标比例与迁移前一致。大类目标抽查原有类别和比例。 |
+| **组合管理 → 全部交易** | 抽查属于本次映射的交易已显示新 symbol，核对交易日期、方向和数量。 |
+| **日志 → 任务运行看板 → 价格同步**（`/logs?tab=board`） | 先看卡片的「目标市场日」，再看「应采 / 已采」和缺失标的。若卡片还在统计前一个目标日，等目标日切换到这次采集对应的日期再核对。 |
+
+记录此次镜像实际分母、未命中标的、行情日期、持仓缺价数和看板计数。归档验收样本中，`VBG.TO` 与 `VBU.TO` 是 Human 批准的 Yahoo 缺失例外。该次今日行情和对应目标日均为 **42/44**，按例外口径为 **42/42**，全量 **32 个去重持仓标的零缺价**。新镜像按当次数据记录结果。 [归档验收记录](../docs/development/tasks/completed/TASK-077-symbol-historical-data-migration-plan.md#12-review-record)
+
 ## 只读探测
 
 从仓库根目录运行，先按 [部署手册 §3–4](../docs/handbook/ops/DEPLOYMENT.md#3-安装依赖) 安装依赖并配置连接。建议使用有目标库读取权限的专用账号。连接优先级为命令行、进程的 MONGO_URI、server/.env 的 MONGO_URI。URI 必须显式包含库名。
@@ -8,7 +155,7 @@
     node scripts/probe-symbol-data-quality.cjs
     node scripts/probe-symbol-data-quality.cjs --uri "<隔离开发库 URI>" --out "<报告路径>"
 
-默认输出 [TASK-077 分类报告](../docs/development/tasks/active/TASK-077-data-quality-report.md)。自定义输出的父目录须已存在，相对路径从当前目录解析。同名报告会被替换。报告含资产和文档标识，应按数据库信息的访问权限保存。
+默认输出路径为 `docs/development/tasks/active/TASK-077-data-quality-report.md`。[TASK-077 已归档的分类报告](../docs/development/tasks/completed/TASK-077-data-quality-report.md)保留了迁移前基线。自定义输出的父目录须已存在，相对路径从当前目录解析。同名报告会被替换。报告含资产和文档标识，应按数据库信息的访问权限保存。
 
 脚本使用 MongoDB 原生驱动，探测接口仅开放读取和无写出的聚合。脚本不会建立业务索引、修复数据或注册调度。现有的隔离库可直接用于探测。需要镜像时，参照 [部署手册 §5](../docs/handbook/ops/DEPLOYMENT.md#5-本地开发搭建) 选择源和独立目标，先预览方向和集合。sync:db 会覆盖目标集合并清理临时归档，执行前先保全目标上需要保留的数据。尽量在镜像和应用停写期间探测。
 

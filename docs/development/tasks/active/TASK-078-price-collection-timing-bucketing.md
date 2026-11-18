@@ -88,7 +88,7 @@ D-a 改成按市场分组调度后，同一天会出现 CN 组（ET 12:00）与 
 ## 7. Coordination Notes
 
 - 与 [TASK-073](../active/TASK-073-price-pipeline-p0-data-correctness.md)：本卡承接其 P0-3/P2-8 与 D-a；073 保留 symbol 归一代码逻辑与"全跳过"语义（D-d）。两卡分别验收。**AC4 前置**：本卡覆盖日志的 symbol 用 073 的 `toStorageSymbol` 统一格式；073 未落地前同基金落双键而非同一 `(symbol, 日)` 键，AC4 所述「覆盖」与可追溯日志不成立。两卡同改 `priceStorage.service.js`（073 改第 8 行归一化、本卡改 `saveLatest` 主体加日志），合并分工见 [078 计划 §4.3](./TASK-078-price-collection-timing-bucketing-plan.md)。
-- 与 [TASK-077](../active/TASK-077-symbol-historical-data-migration.md)：本卡改**新采集的归桶规则**，077 处理**已有历史数据**；排期上建议 077 先迁移（清掉双键/旧桶），本卡再切换口径，避免新旧数据二次错位。
+- 与 [TASK-077](../completed/TASK-077-symbol-historical-data-migration.md)：本卡改**新采集的归桶规则**，077 处理**已有历史数据**；排期上建议 077 先迁移（清掉双键/旧桶），本卡再切换口径，避免新旧数据二次错位。
 - 与 [TASK-074](../active/TASK-074-price-pipeline-observability-and-robustness.md)：R-1 的熔断属 074 范围，本卡只保留既有 `fetchWithRetry`。
 
 ## 8. 本卡未做的事

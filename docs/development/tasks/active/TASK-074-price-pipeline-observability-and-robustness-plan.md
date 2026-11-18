@@ -87,7 +87,7 @@ Approval：**已批准（2026-11-17，Human）**。卡 §6 D-e 已收敛（与 0
 ### 4.5 AC5 — NOT_FOUND 连续失败用户可见提示
 
 1. 复用 `classifyMarketDataError` 的 `NOT_FOUND` 分类（已有，`errors.js:7,38-43`），按资产统计连续 `NOT_FOUND` 天数；达阈值（D-f，建议 3）产生用户可见提示，**复用既有提醒/看板异常通道**（`alertEngine` / `cronStatus` 数据态），不新建子系统。
-2. 与 [TASK-077 AC7](./TASK-077-symbol-historical-data-migration.md) 的一次性只读探测、[TASK-076](./TASK-076-asset-information-completeness-check.md) 的升级入口保持边界：074 负责**持续告警**，077 负责**一次性报告**（卡 §7 其它重叠项未处理，实施时以"不重复造检测逻辑"为最低要求，复用同一分类实现）。
+2. 与 [TASK-077 AC7](../completed/TASK-077-symbol-historical-data-migration.md) 的一次性只读探测、[TASK-076](./TASK-076-asset-information-completeness-check.md) 的升级入口保持边界：074 负责**持续告警**，077 负责**一次性报告**（卡 §7 其它重叠项未处理，实施时以"不重复造检测逻辑"为最低要求，复用同一分类实现）。
 
 ### 4.6 兼容性 / 关键取舍
 

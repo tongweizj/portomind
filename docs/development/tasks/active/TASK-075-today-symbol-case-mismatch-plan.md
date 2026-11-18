@@ -21,7 +21,7 @@ Approval：**已批准（2026-11-17，Human）**。本计划冻结任务卡 §6 
 按 **方案 A** 实施（不改需求、不改产品行为）：
 
 - **客户端零后缀派生 / strip 逻辑**（硬规则 #3、AC2）：`Today.jsx` 继续用服务端返回值的原始 `symbol` 做归并与查找，**不新增** `toUpperCase()` / `replace(/\.CN$/…)` 等任何内联处理。
-- **一处定义**：symbol 存储格式由 [ADR-003](../../../os/architecture/adr/ADR-003-symbol-suffix-contract.md) 唯一定义（按 `market` 派生大写后缀：`001180.CN` / `VOO.US` / `600519.SS`），由 [TASK-073 AC1/AC2](./TASK-073-price-pipeline-p0-data-correctness.md) 的 `shared/` 单一实现保证新数据，由 [TASK-077 AC1/AC2/AC5](./TASK-077-symbol-historical-data-migration.md) 迁移保证存量数据。
+- **一处定义**：symbol 存储格式由 [ADR-003](../../../os/architecture/adr/ADR-003-symbol-suffix-contract.md) 唯一定义（按 `market` 派生大写后缀：`001180.CN` / `VOO.US` / `600519.SS`），由 [TASK-073 AC1/AC2](./TASK-073-price-pipeline-p0-data-correctness.md) 的 `shared/` 单一实现保证新数据，由 [TASK-077 AC1/AC2/AC5](../completed/TASK-077-symbol-historical-data-migration.md) 迁移保证存量数据。
 - 本卡的**真实工作**是：①前置依赖闸门（确认 073+077 已落地且**库已迁移**）；②API_CONTRACT 的 symbol 语义澄清（只引用 ADR-003，不复写后缀规则）；③真实数据 / 浏览器 E2E 验证 44/44 命中与零回归。**不写生产代码**即为方案 A 的正确实施结果。
 
 覆盖 AC1–AC4；范围外事项见任务卡 §4（服务端 `shared/` 归一化层与迁移属 073/077，观测/熔断/新鲜度属 074，估值/再平衡规则不碰）。
@@ -70,7 +70,7 @@ Approval：**已批准（2026-11-17，Human）**。本计划冻结任务卡 §6 
 开工验证前必须确认（任一不满足 → 停止，不得用客户端补丁绕过）：
 
 1. [TASK-073 AC1/AC2](./TASK-073-price-pipeline-p0-data-correctness.md)：`shared/` 存在唯一 `toStorageSymbol` / `toProviderSymbol`，档案建档/采集/`priceStorage`/`getLatestPrices` 四处接线；`grep` 无第二份后缀实现。
-2. [TASK-077 AC1/AC2/AC5](./TASK-077-symbol-historical-data-migration.md)：迁移脚本已按 D-b 执行，**真实库**已归一——`assets` 44/44 存储格式、`prices` 双键资产已删并重采、`transactions`/`portfolio.targets` 无悬挂引用；077 AC5「32 持仓缺价 17→0、今日行情 44/44 命中」已有证据。
+2. [TASK-077 AC1/AC2/AC5](../completed/TASK-077-symbol-historical-data-migration.md)：获批隔离镜像已按 D-b 迁移和重采，资产 44/44 符合存储格式，交易和组合目标无悬挂引用。077 验收记录为最近价 44/44、持仓 32/32 有最近价，今日行情全量 42/44，按 Human 裁决排除两只上游无数据标的后为 42/42。见 [077 结案记录](../completed/TASK-077-symbol-historical-data-migration-plan.md#13-completion-record)。
 3. 两者 Status 由 Orchestrator 登记为已完成（卡片记录为准，非口传）。
 
 ### 4.3 API_CONTRACT 语义澄清（只引用，不复写）
@@ -132,7 +132,7 @@ Approval：**已批准（2026-11-17，Human）**。本计划冻结任务卡 §6 
 ## 9. Rollback
 
 - 代码：客户端生产代码零改动（§4.1），**无可回退代码**；W2 仅文档 diff，回退即还原 API_CONTRACT 该行。
-- 数据：本卡不写任何数据；迁移与回退责任属 [TASK-077 §9](./TASK-077-symbol-historical-data-migration.md)（备份/`sync:db` 还原点），本卡不介入。
+- 数据：本卡不写任何数据；迁移与回退责任属 [TASK-077 §9](../completed/TASK-077-symbol-historical-data-migration.md)（备份/`sync:db` 还原点），本卡不介入。
 - 不可逆影响：无。若 E2E 失败，根因必在上游 073/077 或环境，回退本卡文档即可，不得在客户端打补丁掩盖。
 
 ## 10. Implementer Handoff

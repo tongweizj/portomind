@@ -1,12 +1,12 @@
 # TASK-077 — 历史数据 symbol 归一迁移（按 ADR-003 改写全部存量数据）
 
-> **Status：Implementing**（2026-11-17，Human 批准计划后 Orchestrator 登记）。按 [DEV-ORDER-073-078](../DEV-ORDER-073-078.md) 顺序实施。
+> **Status：Completed**（2026-11-18，Human 确认结案）。见[结案记录](./TASK-077-symbol-historical-data-migration-plan.md#13-completion-record)。
 
 ## Metadata
 
 | 字段 | 内容 |
 |---|---|
-| Status | **Implementing**（2026-11-17，Human 批准计划后 Orchestrator 登记；按开发顺序实施） |
+| Status | **Completed**（2026-11-18，Human 确认结案） |
 | 所属 Story | 无（独立维护任务；数据迁移范围原属 [TASK-073](../active/TASK-073-price-pipeline-p0-data-correctness.md)，2026-11-17 由 Human 指令独立成卡） |
 | 覆盖的验收条件 | 本卡 §3 AC（契约来源：[ADR-003](../../../os/architecture/adr/ADR-003-symbol-suffix-contract.md) Accepted + [PRICE-PIPELINE-REVIEW P0-1](../../../os/architecture/PRICE-PIPELINE-REVIEW.md)） |
 | Priority | High（建议；不改历史数据则 P0-1/P0-4 的显示与估值修复无法闭环，待 Human 确认） |
@@ -14,7 +14,7 @@
 | Created | 2026-11-17 |
 | Type | 数据迁移（不可逆操作，需备份 + 可重复执行脚本） |
 | 来源 | Human 2026-11-17 指令「把历史数据更新独立成一个 task，放 active 目录下」 |
-| Execution Plan | 已创建：[TASK-077 实施计划](./TASK-077-symbol-historical-data-migration-plan.md)（`Approved`，已批准）。不可逆迁移必写；D-b 裁决后细化 |
+| Execution Plan | [TASK-077 实施计划](./TASK-077-symbol-historical-data-migration-plan.md)（`Completed`） |
 
 ## 1. 问题
 
@@ -36,7 +36,7 @@
 | ADR-003 已 Accepted，明确"存量全量迁移 + 双轨合并 + 备份 + 幂等" | [ADR-003 §5/§8](../../../os/architecture/adr/ADR-003-symbol-suffix-contract.md) |
 | 44/44 资产有 `market`（派生后缀的前提成立） | ADR-003 风险表；审阅实测 |
 | `assets`/`prices`/`transactions`/`portfolio.targets` 四集合需全量改写；`prices` 8 万+ 文档 | ADR-003 §5 |
-| D-b（104 冲突日合并口径）**仍待 Human 裁决** | [TASK-073 §6 D-b](../active/TASK-073-price-pipeline-p0-data-correctness.md) |
+| D-b 已由 Human 裁决，双键资产的两套价格均删除，按标准键重采 | 本卡 §6 |
 | TASK-073 已把迁移列为 In Scope，本卡独立后须同步从其 Scope/AC 中移除（避免两卡重复实施） | TASK-073 §4 |
 
 证据边界：本轮只读文档，未连库、未执行迁移；所有数字来自审阅与 ADR-003 记录。
@@ -53,6 +53,8 @@
 | AC6 | 迁移前已有测试全绿、迁移后仍全绿（`test:server`/`test:worker`，入口 [DEPLOYMENT §7](../../../handbook/ops/DEPLOYMENT.md)）；独立 Reviewer 通过 | — |
 | AC7 | **其它历史数据问题只读探测 + 生成分类报告**（Human 2026-11-17 裁决）：运行探测脚本（一次性/临时工具，**不注册 cron、不自动运行**），扫描：① `NOT_FOUND` 资产（审阅实测 `VBG.TO`/`VBU.TO`/`VCR` 连续 3 周每天失败）→ 资产/provider/失败天数/币种桶；② 僵尸 `RUNNING`（`daily-price-sync`, `runKey=manual:2026-08-25…`）→ taskName/runKey/startedAt；③ `transactions`/`portfolio.targets` 中**指向不存在资产**的悬挂 symbol → 所在文档与值；④ 双键资产（AC2 探测对象）与 symbol 格式不合规项。输出一份 **Markdown 分类报告**：按错误类型分节，每节以表格罗列具体条目（标识、值、数量、日期范围、建议严重度），并写明探测基线（日期/库/脚本版本）。**只探测、不修改任何数据**——报告供 Human 判断"哪些类型严重到要升级进数据完整性检查（TASK-076）" | 审阅 P2-7 / §2.3 / D-e-data |
 | AC8 | **使用手册**：随探测脚本交付一份文档，写清：脚本位置与命令入口（含 `--help`）、前置条件（连哪个库、是否需先 `sync:db`、只读保证）、各探测项含义、参数与输出位置（报告路径）、报告各字段解释、误报排查、以及"报告如何用于升级到数据完整性检查"的说明。脚本不靠口传使用 | D-e-data |
+
+> **AC5 验收口径（2026-11-18，Human）**：`VBG.TO` 和 `VBU.TO` 因 Yahoo 返回 `NOT_FOUND` 从本卡测试分母排除。实测和原始分母见[实施计划 §12](./TASK-077-symbol-historical-data-migration-plan.md#12-review-record)。
 
 ## 4. Scope
 
@@ -91,7 +93,7 @@
 ## 7. Coordination Notes
 
 - 与 [TASK-073](../active/TASK-073-price-pipeline-p0-data-correctness.md)：**边界已按 Human 2026-11-17 规则冻结——073 处理代码逻辑（派生函数与消费接线），本卡处理数据库（历史数据）**；073 的 Scope/AC2/AC3 已剥离迁移内容并指向本卡。
-- 与 [TASK-078](./TASK-078-price-collection-timing-bucketing.md)：078 改**新采集的归桶规则**，本卡处理**已有历史数据**；排期上建议本卡先迁移（清掉双键/旧桶），078 再切换口径。
+- 与 [TASK-078](../active/TASK-078-price-collection-timing-bucketing.md)：078 改**新采集的归桶规则**，本卡处理**已有历史数据**；排期上建议本卡先迁移（清掉双键/旧桶），078 再切换口径。
 - 与 [TASK-075](../active/TASK-075-today-symbol-case-mismatch.md)：075 修客户端显示，本卡提供归一后的数据；075 AC1（44/44 命中）以本卡迁移完成为前提之一。
 - 与 [TASK-076](../active/TASK-076-asset-information-completeness-check.md)：076 发现并报告 symbol 不合规（不自动改），本卡执行统一迁移；迁移完成后 076 的 symbol 检查不再报警。
 - 硬规则：迁移规则属业务规则，**只在 `shared/`**；不新建第二份后缀派生实现（ADR-003 两张表为唯一来源）。
@@ -101,6 +103,10 @@
 计划批准、隔离库执行和返工证据见[实施计划 §11](./TASK-077-symbol-historical-data-migration-plan.md#11-implementation-record)。独立审查结论见[实施计划 §12](./TASK-077-symbol-historical-data-migration-plan.md#12-review-record)。D-b 与 D-e-data 的裁决见本卡 §6。
 
 ## 9. 记录
+
+2026-11-18，Human：「确认 TASK-077 结案」。见[完成记录](./TASK-077-symbol-historical-data-migration-plan.md#13-completion-record)。
+
+2026-11-18，Reviewer：**Pass with issues**。AC3 在获批隔离镜像执行并回读通过，AC5 按 Human 裁决通过。见[实施计划 §12 审查记录](./TASK-077-symbol-historical-data-migration-plan.md#12-review-record)。
 
 2026-11-17，Planner：依据 Human 指令「把历史数据更新独立成一个 task，放 active 目录下」建卡。迁移方案的唯一契约来源是 [ADR-003](../../../os/architecture/adr/ADR-003-symbol-suffix-contract.md)（Accepted）；从 TASK-073 剥离的范围须由 Orchestrator 在登记时同步（§7）。初始 Status 待 Orchestrator 登记；优先级建议 High，最终以 Human 为准。
 

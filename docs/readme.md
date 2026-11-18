@@ -69,7 +69,7 @@ docs/
 - 交付：[BOARD.md](./BOARD.md) 只显示当前开发中 Story 的 n/m 进度与独立 Task；各 Story 的详情、下挂 Task 明细与开发进度说明见其过程目录的 `readme.md`（当前无开发中 Story；已归档见 [US-004 readme](./development/delivery/completed/US-004/readme.md)、[US-001 readme](./development/delivery/completed/US-001/readme.md)）；任务卡 TASK-编号.md、计划 TASK-编号-plan.md、按序号命名的交接记录直接平铺。Human 关闭后整体移入 [completed/](./development/delivery/completed)，具体规则见 DOCS.md §1.1。
 - 独立与既有记录：[任务卡与计划](./development/tasks)（计划与同编号任务卡同目录成对存放）、[独立 Task 计数与清单](./development/tasks/readme.md)、[问题记录](./development/issues.md)。共享资料通过链接复用。独立提案：[TASK-070 DSH Agent Teams 工作流适配提案](./development/tasks/backlog/TASK-070-dsh-agent-teams-workflow-proposal.md)（待 Human 审阅，未生效）。
 
-- TASK-077 历史 symbol 工具：[使用手册](../scripts/PROBE-SYMBOL-DATA-QUALITY.md)、[隔离库探测报告](./development/tasks/active/TASK-077-data-quality-report.md)、[核对用迁移清单](./development/tasks/active/TASK-077-migration-dry-run.json)。
+- TASK-077 历史 symbol 工具：[使用手册](../scripts/PROBE-SYMBOL-DATA-QUALITY.md)、[隔离库探测报告](./development/tasks/completed/TASK-077-data-quality-report.md)、[核对用迁移清单](./development/tasks/completed/TASK-077-migration-dry-run.json)。
 
 ## 资料入口（handbook）
 

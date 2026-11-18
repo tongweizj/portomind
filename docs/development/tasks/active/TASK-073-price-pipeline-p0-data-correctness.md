@@ -2,7 +2,7 @@
 
 > **Status：Implementing**（2026-11-17，Human 批准计划后 Orchestrator 登记）。按 [DEV-ORDER-073-078](../DEV-ORDER-073-078.md) 顺序实施。
 >
-> ✅ **2026-11-17 范围再拆分（Human 指令）**：按"**073 处理代码逻辑、077 处理数据库、078 处理采集程序**"规则——原 P0-3/P2-8（采集时刻/归桶）拆至 [TASK-078](../active/TASK-078-price-collection-timing-bucketing.md)；历史数据迁移（原 AC2/AC3 的迁移部分）拆至 [TASK-077](../active/TASK-077-symbol-historical-data-migration.md)。本卡只保留**代码层**：symbol 派生/消费统一 + 价格完整性检查的"全跳过"语义。归一化目标以 [ADR-003](../../../os/architecture/adr/ADR-003-symbol-suffix-contract.md)（Accepted）为准。
+> ✅ **2026-11-17 范围再拆分（Human 指令）**：按"**073 处理代码逻辑、077 处理数据库、078 处理采集程序**"规则——原 P0-3/P2-8（采集时刻/归桶）拆至 [TASK-078](../active/TASK-078-price-collection-timing-bucketing.md)；历史数据迁移（原 AC2/AC3 的迁移部分）拆至 [TASK-077](../completed/TASK-077-symbol-historical-data-migration.md)。本卡只保留**代码层**：symbol 派生/消费统一 + 价格完整性检查的"全跳过"语义。归一化目标以 [ADR-003](../../../os/architecture/adr/ADR-003-symbol-suffix-contract.md)（Accepted）为准。
 
 ## Metadata
 
@@ -25,7 +25,7 @@
 1. **P0-1（代码层）symbol 归一/派生无统一实现**：29 个场外基金 27 个查不到价——写入侧与读取侧各自实现一半归一化，历史数据因键不匹配查不到（**存量数据修复归 TASK-077；客户端查找归 TASK-075**）；本卡只交付 ADR-003 口径的**单一实现与四处消费接线**。
 2. **P0-2（检查语义）完整性检查空转**：`launchDate` 全空导致全部跳过却记 `SUCCEEDED`（**launchDate 抓取/回填/前台编辑/资产信息检查归 TASK-076**）；本卡只保留价格完整性检查的"全跳过 ≠ 完好"语义（D-d）。
 
-> 已拆出：P0-3/P2-8（采集时刻/归桶）→ [TASK-078](../active/TASK-078-price-collection-timing-bucketing.md)；历史数据迁移/D-b → [TASK-077](../active/TASK-077-symbol-historical-data-migration.md)。
+> 已拆出：P0-3/P2-8（采集时刻/归桶）→ [TASK-078](../active/TASK-078-price-collection-timing-bucketing.md)；历史数据迁移/D-b → [TASK-077](../completed/TASK-077-symbol-historical-data-migration.md)。
 
 ## 2. 已核实的事实
 
@@ -46,8 +46,8 @@
 | # | 验收标准 | 来源 |
 |---|---|---|
 | AC1 | 统一 symbol 归一/派生层**单一实现**于 `shared/`：**按 `market` 派生大写后缀**（`STORAGE_SUFFIX` + `PROVIDER_SUFFIX` 两张表，`001180.cn`→`001180.CN`、`VOO`→`VOO.US`、`600519`→`600519.SS`；创建时由 market 自动派生，用户填不填/填错后缀结果一致；采集时按表去除或保留后缀）。资产建档 / `priceStorage` 写入 / `getLatestPrices` 读取 / `integrityCheck` 对比四处**消费同一实现**；检测式：`grep` 确认无第二份后缀派生/strip 实现（硬规则 #1/#8）。口径以 [ADR-003](../../../os/architecture/adr/ADR-003-symbol-suffix-contract.md) 为唯一依据 | P0-1 / ADR-003 |
-| AC2 | `getLatestPrices` 读取侧消费统一派生实现（AC1），新数据（建档/采集）按 ADR-003 存储键写入；**代码层断言**：同一 market 下用户填裸码/小写/大写/错后缀，落库 symbol 一致。存量数据的 44/44 命中与 32 持仓缺价 17→0 由 [TASK-077 AC5](../active/TASK-077-symbol-historical-data-migration.md) 验收，本卡不声称完成 | P0-1 代码层 / ADR-003 §10 |
-| AC3 | **已拆至 [TASK-077 AC2/AC4](../active/TASK-077-symbol-historical-data-migration.md)**（历史序列删除/迁移与 D-b 口径），本卡不再验收数据迁移 | — |
+| AC2 | `getLatestPrices` 读取侧消费统一派生实现（AC1），新数据（建档/采集）按 ADR-003 存储键写入；**代码层断言**：同一 market 下用户填裸码/小写/大写/错后缀，落库 symbol 一致。存量数据的 44/44 命中与 32 持仓缺价 17→0 由 [TASK-077 AC5](../completed/TASK-077-symbol-historical-data-migration.md) 验收，本卡不声称完成 | P0-1 代码层 / ADR-003 §10 |
+| AC3 | **已拆至 [TASK-077 AC2/AC4](../completed/TASK-077-symbol-historical-data-migration.md)**（历史序列删除/迁移与 D-b 口径），本卡不再验收数据迁移 | — |
 | AC4 | **已拆至 [TASK-078](../active/TASK-078-price-collection-timing-bucketing.md)**（采集时刻/归桶时序与 P3-9c 同日覆盖），本卡不再验收采集程序 | — |
 | AC5 | 完整性检查在 launchDate 可用时（由 [TASK-076](../active/TASK-076-asset-information-completeness-check.md) 提供，本卡**不**抓取/回填）`checkedCount > 0`（不再是 0/44 跳过）；**正向**：人为制造缺价样例能被检出（P0-1 类问题不再静默）。两卡分别验收，不得互相顶替 | P0-2 |
 | AC6 | 全部跳过（`skippedCount === totalCount`）不得再呈现为"数据完好"；按 D-d 已裁决口径实现：作为**中间态**在 `result` 数据态中如实反映"全部跳过/未检查"，**不加入状态机、不新增状态值**，沿用 [TASK-057](../../delivery/completed/US-001/TASK-057.md) 四态（负向对照：全跳过时不得新增 `SKIPPED` 状态、不得改唯一索引、不得把 `status` 判成"完好"来掩盖未检查） | P0-2 / D-d |
@@ -63,7 +63,7 @@
 
 **Out of Scope**
 
-- 历史数据迁移（双键删价、`assets`/`transactions`/`portfolio.targets` 归一）→ [TASK-077](../active/TASK-077-symbol-historical-data-migration.md)
+- 历史数据迁移（双键删价、`assets`/`transactions`/`portfolio.targets` 归一）→ [TASK-077](../completed/TASK-077-symbol-historical-data-migration.md)
 - 采集时刻/归桶（P0-3/P2-8）→ [TASK-078](../active/TASK-078-price-collection-timing-bucketing.md)
 - P1/P2 观测与健壮性（`SUCCEEDED` 语义细分核对、result 部署核对、新鲜度告警、熔断、NOT_FOUND 提示）→ [TASK-074](./TASK-074-price-pipeline-observability-and-robustness.md)
 - 客户端展示（TASK-075）、资产信息检查（TASK-076）；估值/提醒/再平衡业务规则本身；不重开已结案任务与 US-001
@@ -89,7 +89,7 @@
 
 - 与 [TASK-074](./TASK-074-price-pipeline-observability-and-robustness.md) 边界：本卡 = 代码层（口径统一 + 检查语义）；074 = 观测与健壮性。
 - **「无数据/全部跳过」表达为共享单点，074 复用本卡 D-d**：本卡 AC6 / D-d 定义的「`skippedCount === totalCount` / `checkedCount=0` → `result` 数据态中间态（沿用 TASK-057 四态、不新增状态值、不改唯一索引）」是本语义的**唯一实现**（`shared/` 与 US-001 看板各一份，硬规则 #1）。074 的零采集 `SUCCEEDED`（P1-3）是同一语义的另一实例，已按 Human 2026-11-17 指令统一到本卡，不在 `shared/` 或看板另建第二套表达；074 仅额外交付「连续 N 天无新数据可见」。若该单点需加字段/改契约，须由本卡侧统一改并回报，074 不私自分叉。
-- 与 [TASK-077](../active/TASK-077-symbol-historical-data-migration.md)：本卡只改代码（新数据按 ADR-003 写入/读取），077 处理历史数据库；**两卡零数据写入重叠**。
+- 与 [TASK-077](../completed/TASK-077-symbol-historical-data-migration.md)：本卡只改代码（新数据按 ADR-003 写入/读取），077 处理历史数据库；**两卡零数据写入重叠**。
 - 与 [TASK-078](../active/TASK-078-price-collection-timing-bucketing.md)：本卡不含采集时刻/归桶，D-a 归 078。**`saveLatest` 合并分工**：本卡只改 `priceStorage.service.js:8`（`normalizeDailyRecord` 的 symbol → `toStorageSymbol`），078 不碰该行、只在 `saveLatest` 主体前后加覆盖日志；两卡改同一文件不同行，合并后须跑 `priceStorage` 相关单测确认互不覆盖。**前置关系**：本卡是 078 AC4 日志正确性的前置——symbol 未归一前，同基金价格落 `001180` / `001180.CN` 双键而非同一 `(symbol, 日)` 键，078 所述「覆盖」事件与日志中的标准 symbol 均无从成立。
 - 与 TASK-075：本卡负责服务端派生实现，TASK-075 负责客户端 `Today.jsx` 消费同一存储格式；client 零派生逻辑（硬规则 #3）。
 - 与 [TASK-076](../active/TASK-076-asset-information-completeness-check.md)：D-c 归 076 D-i；两卡分别验收。

@@ -12,7 +12,7 @@ Related Spec / ADR：[ADR-003 symbol 统一契约](../../../os/architecture/adr/
 
 Branch / Base：起草时 `main` @ `d6e1413`（审阅基线）；实施从最新 `main` 开 `feature/TASK-073-price-pipeline-p0-data-correctness`
 
-Approval：**已批准（2026-11-17，Human）**。本计划覆盖任务卡 AC1 / AC2 / AC5 / AC6 / AC7（AC3、AC4 已拆至 077 / 078）与已裁决 D-d（"全部跳过"为数据态中间态、不加入状态机），以及 ADR-003 的单一实现与四处消费接线。`Draft → Approved` 须 Human 明确批准当前设计。本卡是 [TASK-077](./TASK-077-symbol-historical-data-migration.md) W0 与 [TASK-078](./TASK-078-price-collection-timing-bucketing.md) AC4 的前置，须先落地。
+Approval：**已批准（2026-11-17，Human）**。本计划覆盖任务卡 AC1 / AC2 / AC5 / AC6 / AC7（AC3、AC4 已拆至 077 / 078）与已裁决 D-d（"全部跳过"为数据态中间态、不加入状态机），以及 ADR-003 的单一实现与四处消费接线。`Draft → Approved` 须 Human 明确批准当前设计。本卡是 [TASK-077](../completed/TASK-077-symbol-historical-data-migration.md) W0 与 [TASK-078](./TASK-078-price-collection-timing-bucketing.md) AC4 的前置，须先落地。
 
 ---
 

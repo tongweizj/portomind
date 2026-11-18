@@ -46,7 +46,7 @@
 
 | # | 验收标准 | 来源 |
 |---|---|---|
-| AC1 | **仅验收客户端显示层**（前提：服务端/数据层由 [TASK-073 AC1/AC2](./TASK-073-price-pipeline-p0-data-correctness.md) 归一实现 + [TASK-077 AC5](./TASK-077-symbol-historical-data-migration.md) 历史迁移完成后，本卡才断言显示结果；服务端 27/29 无价另按 [AC3](#3-acceptance-criteria) 独立验收，本卡不与 077 AC5 的"键命中"重复断言）：今日行情列表 44 个资产中 **29 个 CN-FUND 正常显示价格与涨跌幅**（命中 44/44）；「无数据/缺口」只在真实缺价或请求失败时出现 | P0-4 |
+| AC1 | **仅验收客户端显示层**（前提：服务端/数据层由 [TASK-073 AC1/AC2](./TASK-073-price-pipeline-p0-data-correctness.md) 归一实现 + [TASK-077 AC5](../completed/TASK-077-symbol-historical-data-migration.md) 历史迁移完成后，本卡才断言显示结果；服务端 27/29 无价另按 [AC3](#3-acceptance-criteria) 独立验收，本卡不与 077 AC5 的"键命中"重复断言）：今日行情列表 44 个资产中 **29 个 CN-FUND 正常显示价格与涨跌幅**（命中 44/44）；「无数据/缺口」只在真实缺价或请求失败时出现 | P0-4 |
 | AC2 | symbol 归一口径**只有一处定义**：归并端与查找端消费同一服务端返回的存储格式 symbol（口径见 [ADR-003](../../../os/architecture/adr/ADR-003-symbol-suffix-contract.md)，由服务端 TASK-073 保证）；**客户端零后缀派生/strip 逻辑**——检测式：`Today.jsx` 中不出现 `toUpperCase()` / `replace(/\.CN$/...)` 等内联后缀处理，client 全局无第二份归一化实现（硬规则 #1/#3） | P0-4 / 硬规则 #1/#3 / ADR-003 |
 | AC3 | 修复**不掩盖**服务端缺陷：`getLatestPrices` 的 27/29 无价仍按 [TASK-073 AC2](./TASK-073-price-pipeline-p0-data-correctness.md) 独立验收，列表修复不得被视为估值链路已修 | 边界 |
 | AC4 | 真实数据/浏览器验证：29 个基金在价格窗口内显示价格；未命中数的统计（`failedCount`/缺口条数）正确；其它页面（估值、价格同步卡片、原日志）零回归；`npm run build --workspace client` + eslint 通过（入口 [DEPLOYMENT §7](../../../handbook/ops/DEPLOYMENT.md)） | — |
@@ -70,7 +70,7 @@
 |---|---|---|
 | R-1 | 客户端另起一份归一化逻辑，与服务端口径漂移（后缀派生范围、upper 规则） | [ADR-003](../../../os/architecture/adr/ADR-003-symbol-suffix-contract.md) 已定口径（服务端按 market 派生大写后缀）；client 零业务归一化，只消费存储格式 symbol |
 | R-2 | 单行 uppercase 修好了列表，但估值仍坏，被误认为全部修复 | AC3 明示边界；与 TASK-073 分别验收 |
-| R-3 | 29 个基金"有价"但涨跌幅按日序列口径错误（大小写归一后两套序列合并问题） | 与 [TASK-077 D-b](./TASK-077-symbol-historical-data-migration.md) 双轨删价口径对齐（历史迁移已拆至 077，非 073）；AC4 检查涨跌幅合理性 |
+| R-3 | 29 个基金"有价"但涨跌幅按日序列口径错误（大小写归一后两套序列合并问题） | 与 [TASK-077 D-b](../completed/TASK-077-symbol-historical-data-migration.md) 双轨删价口径对齐（历史迁移已拆至 077，非 073）；AC4 检查涨跌幅合理性 |
 
 ## 6. Human 裁决记录（D-h）
 
@@ -84,7 +84,7 @@
 
 ## 7. Coordination Notes
 
-- 与 [TASK-073](./TASK-073-price-pipeline-p0-data-correctness.md) 同根不同端：073 = 服务端归一化代码逻辑；本卡 = 客户端显示。影响本卡 R-3 的决策均已按 2026-11-17 拆分归位：**D-a（归桶）→ [TASK-078](./TASK-078-price-collection-timing-bucketing.md)**、**D-b（冲突口径）与历史数据迁移 → [TASK-077](./TASK-077-symbol-historical-data-migration.md)**，不再指向 073。
+- 与 [TASK-073](./TASK-073-price-pipeline-p0-data-correctness.md) 同根不同端：073 = 服务端归一化代码逻辑；本卡 = 客户端显示。影响本卡 R-3 的决策均已按 2026-11-17 拆分归位：**D-a（归桶）→ [TASK-078](./TASK-078-price-collection-timing-bucketing.md)**、**D-b（冲突口径）与历史数据迁移 → [TASK-077](../completed/TASK-077-symbol-historical-data-migration.md)**，不再指向 073。
 - **依赖与验收顺序**：本卡 AC1（44/44 命中）以前置修复为前提——服务端归一化实现（TASK-073 AC1/AC2）与历史数据迁移（TASK-077 AC5）须先完成，本卡仅断言客户端列表**显示**结果（[AC1](#3-acceptance-criteria)）；077 的 D-b 为"删光重采"，迁移期短期可能更缺价，故本卡验收排在 073 + 077 之后，不与 077 AC5 的"键命中"互相顶替。
 - 审阅文档 [P0-4 / 附录 C](../../../os/architecture/PRICE-PIPELINE-REVIEW.md) 为本卡发现的唯一事实来源，根因更正以那里为准；**归一化目标格式以 [ADR-003](../../../os/architecture/adr/ADR-003-symbol-suffix-contract.md) 为准**（带大写后缀，非 strip→裸码）。
 - 硬规则 #3/#1 的边界是本卡设计约束，不是可选项；D-h 已裁决 = 方案 A（客户端零改动），执行计划批准前不得开工。
