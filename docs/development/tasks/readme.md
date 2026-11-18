@@ -18,7 +18,7 @@
 ## active 清单（9）
 
 > 状态按卡片原文投影；`BACKLOG` 等旧写法按 STATES.md §7.1 读取映射。
-> **本轮迭代目标：完成 TASK-073～078（6 张，位于 `active/`）**。这 6 张卡已由 Orchestrator 于 2026-11-17 登记 `Planning`，计划均为 `Draft` 未批准；须按 [STATES.md §4](../../os/process/STATES.md#4-谁可以改变状态) 先登记状态、批准计划，再进入实施。
+> **本轮迭代目标：完成 TASK-073～078（6 张，位于 `active/`）**。这 6 张卡已由 Orchestrator 于 2026-11-17 登记 `Planning`，计划均已批准（`Approved`）；按 [STATES.md §4](../../os/process/STATES.md#4-谁可以改变状态) 先登记状态、批准计划，再进入实施。
 
 ### backlog（3，待排期）
 
@@ -32,12 +32,12 @@
 
 | Task | 工作 | Status | Priority | 备注 |
 |---|---|---|---|---|
-| [TASK-073](./active/TASK-073-price-pipeline-p0-data-correctness.md) | 价格链路 P0 代码层修复（symbol 派生与消费统一 / 完整性检查语义） | Planning | High（建议） | 计划 `Draft` 未批准；D-a～D-d 已裁决；依赖 ADR-003（`Accepted`） |
-| [TASK-074](./active/TASK-074-price-pipeline-observability-and-robustness.md) | 价格链路观测与健壮性（SUCCEEDED 语义 / 新鲜度 / 熔断 / NOT_FOUND 提示） | Planning | Medium（建议） | 计划 `Draft` 未批准；D-e 已收敛到 073 D-d、D-f 待裁决 |
-| [TASK-075](./active/TASK-075-today-symbol-case-mismatch.md) | 今日行情 29 基金「无数据」：客户端 symbol 未归一化 | Planning | High（建议） | 计划 `Draft` 未批准；D-h 已裁决（方案 A）；客户端消费端对齐 |
-| [TASK-076](./active/TASK-076-asset-information-completeness-check.md) | 资产信息完整性检查（launchDate 抓取 / 前台可编辑 / 手动检查 / 看板卡片与详情） | Planning | High（建议） | 计划 `Draft` 未批准；跨 shared / cron-worker / server / client |
-| [TASK-077](./active/TASK-077-symbol-historical-data-migration.md) | 历史数据 symbol 归一迁移（按 ADR-003 改写存量） | Planning | High（建议） | 计划 `Draft` 未批准；D-b 待裁决；不可逆迁移，需备份 + 幂等脚本 |
-| [TASK-078](./active/TASK-078-price-collection-timing-bucketing.md) | 价格采集时刻与归桶修正（P0-3 / P2-8） | Planning | High（建议） | 计划 `Draft` 未批准；D-a 已裁决（CN 组 ET 12:00） |
+| [TASK-073](./active/TASK-073-price-pipeline-p0-data-correctness.md) | 价格链路 P0 代码层修复（symbol 派生与消费统一 / 完整性检查语义） | Implementing | High（建议） | 计划 `Draft` 未批准；D-a～D-d 已裁决；依赖 ADR-003（`Accepted`） |
+| [TASK-074](./active/TASK-074-price-pipeline-observability-and-robustness.md) | 价格链路观测与健壮性（SUCCEEDED 语义 / 新鲜度 / 熔断 / NOT_FOUND 提示） | Implementing | Medium（建议） | 计划 `Draft` 未批准；D-e 已收敛到 073 D-d、D-f 待裁决 |
+| [TASK-075](./active/TASK-075-today-symbol-case-mismatch.md) | 今日行情 29 基金「无数据」：客户端 symbol 未归一化 | Implementing | High（建议） | 计划 `Draft` 未批准；D-h 已裁决（方案 A）；客户端消费端对齐 |
+| [TASK-076](./active/TASK-076-asset-information-completeness-check.md) | 资产信息完整性检查（launchDate 抓取 / 前台可编辑 / 手动检查 / 看板卡片与详情） | Implementing | High（建议） | 计划 `Draft` 未批准；跨 shared / cron-worker / server / client |
+| [TASK-077](./active/TASK-077-symbol-historical-data-migration.md) | 历史数据 symbol 归一迁移（按 ADR-003 改写存量） | Implementing | High（建议） | 计划 `Draft` 未批准；D-b 待裁决；不可逆迁移，需备份 + 幂等脚本 |
+| [TASK-078](./active/TASK-078-price-collection-timing-bucketing.md) | 价格采集时刻与归桶修正（P0-3 / P2-8） | Implementing | High（建议） | 计划 `Draft` 未批准；D-a 已裁决（CN 组 ET 12:00） |
 
 ## completed
 

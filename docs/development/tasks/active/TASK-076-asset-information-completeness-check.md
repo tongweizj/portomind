@@ -1,12 +1,12 @@
 # TASK-076 — 资产信息完整性检查（launchDate 抓取 / 前台可编辑 / 手动检查 / 看板卡片与详情）
 
-> **Status：Planning**（2026-11-17，Orchestrator 按 Human 指令登记）。优先级与范围仍为建议值，待 Human 最终确认；计划为 `Draft` 未批准，批准前不得进入实施。
+> **Status：Implementing**（2026-11-17，Human 批准计划后 Orchestrator 登记）。按 [DEV-ORDER-073-078](../DEV-ORDER-073-078.md) 顺序实施。
 
 ## Metadata
 
 | 字段 | 内容 |
 |---|---|
-| Status | **Planning**（2026-11-17，Orchestrator 按 Human 指令登记；计划未批准，不进入实施） |
+| Status | **Implementing**（2026-11-17，Human 批准计划后 Orchestrator 登记；按开发顺序实施） |
 | 所属 Story | 无（独立维护任务；与已结案 US-001 的任务运行看板有接口依赖，见 §7） |
 | 覆盖的验收条件 | 本卡 §3 AC（来源：Human 2026-11-17 指令 + [PRICE-PIPELINE-REVIEW](../../../os/architecture/PRICE-PIPELINE-REVIEW.md) P0-2 / D-c） |
 | Priority | High（建议；用户可见数据质量 + 监控闸门，待 Human 确认） |
@@ -14,7 +14,7 @@
 | Created | 2026-11-17 |
 | Type | Feature（跨 shared / cron-worker / server / client + 新 API 字段） |
 | 来源 | Human 本轮明确指令：①launchDate 网页抓取 + 前台可看可改；②新增资产信息完整性检查（**看板按钮手动触发** + 看板卡片 + 详情页 + 编辑按钮）；③按钮落在「资产信息完整度」卡片**下方位置**；④新增检查策略「最近 3 个市场日价格全为空 → 不完整并报告」（市场日口径见续 6 / D-o） |
-| Execution Plan | 已创建（2026-11-17，Planner 起草，Status `Draft` **未批准**）：[TASK-076 执行计划](./TASK-076-asset-information-completeness-check-plan.md)。跨模块/复杂依赖按 [EXECUTION_PLANS §2](../../../os/process/EXECUTION_PLANS.md) 必写；计划 §6 列待 Human 裁决事项，批准前不得实施 |
+| Execution Plan | 已创建（2026-11-17，Planner 起草，Status `Approved` **已批准**）：[TASK-076 执行计划](./TASK-076-asset-information-completeness-check-plan.md)。跨模块/复杂依赖按 [EXECUTION_PLANS §2](../../../os/process/EXECUTION_PLANS.md) 必写；计划 §6 列待 Human 裁决事项，批准前不得实施 |
 
 ## 1. 问题
 

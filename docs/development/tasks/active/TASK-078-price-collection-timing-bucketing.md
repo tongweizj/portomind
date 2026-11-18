@@ -1,12 +1,12 @@
 # TASK-078 — 价格采集时刻与归桶修正（P0-3 / P2-8：采集程序问题）
 
-> **Status：Planning**（2026-11-17，Orchestrator 按 Human 指令登记）。优先级与范围仍为建议值，待 Human 最终确认；计划为 `Draft` 未批准，批准前不得进入实施。
+> **Status：Implementing**（2026-11-17，Human 批准计划后 Orchestrator 登记）。按 [DEV-ORDER-073-078](../DEV-ORDER-073-078.md) 顺序实施。
 
 ## Metadata
 
 | 字段 | 内容 |
 |---|---|
-| Status | **Planning**（2026-11-17，Orchestrator 按 Human 指令登记；计划未批准，不进入实施） |
+| Status | **Implementing**（2026-11-17，Human 批准计划后 Orchestrator 登记；按开发顺序实施） |
 | 所属 Story | 无（独立维护任务；从 [TASK-073](../active/TASK-073-price-pipeline-p0-data-correctness.md) 剥离的采集程序问题，2026-11-17 Human 指令独立成卡） |
 | 覆盖的验收条件 | 本卡 §3 AC（来源：[PRICE-PIPELINE-REVIEW P0-3 / P2-8](../../../os/architecture/PRICE-PIPELINE-REVIEW.md)） |
 | Priority | High（建议；采集日期错位导致价格覆盖 + 场外基金恒定滞后一天，待 Human 确认） |
@@ -14,7 +14,7 @@
 | Created | 2026-11-17 |
 | Type | Bugfix（cron-worker 调度 + shared 归桶逻辑） |
 | 来源 | Human 2026-11-17 指令「P0-3 是价格采集程序的问题，请独立成新的 task」 |
-| Execution Plan | 已创建：[TASK-078 实施计划](./TASK-078-price-collection-timing-bucketing-plan.md)（`Draft`，未批准）。时区/归桶语义变更必写；D-a 已裁决 |
+| Execution Plan | 已创建：[TASK-078 实施计划](./TASK-078-price-collection-timing-bucketing-plan.md)（`Approved`，已批准）。时区/归桶语义变更必写；D-a 已裁决 |
 
 ## 1. 问题
 

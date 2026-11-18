@@ -1,6 +1,6 @@
 # TASK-073 — 价格链路 P0 代码层修复（symbol 派生与消费统一 / 完整性检查语义）
 
-> **Status：Planning**（2026-11-17，Orchestrator 按 Human 指令登记）。优先级与范围仍为建议值，待 Human 最终确认；计划为 `Draft` 未批准，批准前不得进入实施。
+> **Status：Implementing**（2026-11-17，Human 批准计划后 Orchestrator 登记）。按 [DEV-ORDER-073-078](../DEV-ORDER-073-078.md) 顺序实施。
 >
 > ✅ **2026-11-17 范围再拆分（Human 指令）**：按"**073 处理代码逻辑、077 处理数据库、078 处理采集程序**"规则——原 P0-3/P2-8（采集时刻/归桶）拆至 [TASK-078](../active/TASK-078-price-collection-timing-bucketing.md)；历史数据迁移（原 AC2/AC3 的迁移部分）拆至 [TASK-077](../active/TASK-077-symbol-historical-data-migration.md)。本卡只保留**代码层**：symbol 派生/消费统一 + 价格完整性检查的"全跳过"语义。归一化目标以 [ADR-003](../../../os/architecture/adr/ADR-003-symbol-suffix-contract.md)（Accepted）为准。
 
@@ -8,7 +8,7 @@
 
 | 字段 | 内容 |
 |---|---|
-| Status | **Planning**（2026-11-17，Orchestrator 按 Human 指令登记；计划未批准，不进入实施） |
+| Status | **Implementing**（2026-11-17，Human 批准计划后 Orchestrator 登记；按开发顺序实施） |
 | 所属 Story | 无（独立维护任务） |
 | 覆盖的验收条件 | 本卡 §3 AC（来源：[PRICE-PIPELINE-REVIEW](../../../os/architecture/PRICE-PIPELINE-REVIEW.md) P0-1 代码层 / P0-2 检查语义；P0-3/P2-8 已拆至 TASK-078，历史迁移已拆至 TASK-077） |
 | Priority | High（建议；按审阅 P0 分级，待 Human 确认） |
@@ -16,7 +16,7 @@
 | Created | 2026-11-17 |
 | Type | Bugfix（shared 代码层：口径统一 + 检查语义；无数据迁移） |
 | 来源 | [PRICE-PIPELINE-REVIEW](../../../os/architecture/PRICE-PIPELINE-REVIEW.md)（2026-11-15 独立审阅，基线 `main@d6e1413` = 当前 HEAD；发现的唯一事实来源，本卡不复制其细节） |
-| Execution Plan | 已创建：[TASK-073 实施计划](./TASK-073-price-pipeline-p0-data-correctness-plan.md)（`Draft`，未批准，见计划 §Status）；跨模块代码改动按 [EXECUTION_PLANS §2](../../../os/process/EXECUTION_PLANS.md) 必写；口径以 ADR-003 为准，D-d 裁决见 §6 |
+| Execution Plan | 已创建：[TASK-073 实施计划](./TASK-073-price-pipeline-p0-data-correctness-plan.md)（`Approved`，已批准，见计划 §Status）；跨模块代码改动按 [EXECUTION_PLANS §2](../../../os/process/EXECUTION_PLANS.md) 必写；口径以 ADR-003 为准，D-d 裁决见 §6 |
 
 ## 1. 问题
 

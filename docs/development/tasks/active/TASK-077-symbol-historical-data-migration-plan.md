@@ -2,7 +2,7 @@
 
 ## Status
 
-Status：Draft（待 Human 评审；`Draft → Approved` 归 Human，见 [STATES.md](../../../os/process/STATES.md)）
+Status：Approved（2026-11-17，Human 批准「073～078 计划」；`Draft → Approved` 归 Human）
 
 Owner：Planner（起草）；Implementer（待指派）
 
@@ -12,7 +12,7 @@ Related Spec / ADR：[ADR-003 symbol 统一契约](../../../os/architecture/adr/
 
 Branch / Base：起草时 `main` @ `d6e1413`；实施从最新 `main` 开 `feature/TASK-077-symbol-historical-data-migration`；脚本落 `scripts/` 或 `shared/scripts/`（由 §4 冻结），与任务卡同目录平铺本计划
 
-Approval：**未批准**。本计划覆盖任务卡 AC1–AC8 与已裁决 D-b（双键资产删光重采、知情接受历史丢失）、D-e-data（临时探测脚本 + 使用手册 + Markdown 分类报告，只探测不修改）；`Draft → Approved` 须 Human 明确批准当前设计。W0 前置（TASK-073 派生函数落地）未满足不得开工。
+Approval：**已批准（2026-11-17，Human）**。本计划覆盖任务卡 AC1–AC8 与已裁决 D-b（双键资产删光重采、知情接受历史丢失）、D-e-data（临时探测脚本 + 使用手册 + Markdown 分类报告，只探测不修改）；`Draft → Approved` 须 Human 明确批准当前设计。W0 前置（TASK-073 派生函数落地）未满足不得开工。
 
 ## 1. Intent
 

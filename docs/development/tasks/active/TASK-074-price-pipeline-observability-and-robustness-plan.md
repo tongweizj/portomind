@@ -2,7 +2,7 @@
 
 ## Status
 
-Status：Draft（待 Human 评审；`Draft → Approved` 归 Human，见 [STATES.md](../../../os/process/STATES.md)）
+Status：Approved（2026-11-17，Human 批准「073～078 计划」；`Draft → Approved` 归 Human）
 
 Owner：Planner（起草）；Implementer（待指派）
 
@@ -12,7 +12,7 @@ Related Spec / ADR：无 Spec；依据为 [PRICE-PIPELINE-REVIEW](../../../os/ar
 
 Branch / Base：当前 `main` @ `d6e1413`（起草时）；实施从最新 `main` 开 `feature/TASK-074-price-pipeline-observability-and-robustness`
 
-Approval：**未批准**。卡 §6 D-e 已收敛（与 073 D-d 统一，本计划据此成文）；**D-f 阈值、D-g 币种桶策略仍待 Human 裁决**，本计划对 D-f 相关项给出建议值但不把它写成已批准；`Draft → Approved` 须 Human 明确批准当前设计。D-g（产品语义）不在本卡范围，本计划不涵盖。
+Approval：**已批准（2026-11-17，Human）**。卡 §6 D-e 已收敛（与 073 D-d 统一，本计划据此成文）；**D-f 阈值、D-g 币种桶策略仍待 Human 裁决**，本计划对 D-f 相关项给出建议值但不把它写成已批准；`Draft → Approved` 须 Human 明确批准当前设计。D-g（产品语义）不在本卡范围，本计划不涵盖。
 
 ## 1. Intent
 

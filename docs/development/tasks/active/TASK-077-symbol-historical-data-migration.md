@@ -1,12 +1,12 @@
 # TASK-077 — 历史数据 symbol 归一迁移（按 ADR-003 改写全部存量数据）
 
-> **Status：Planning**（2026-11-17，Orchestrator 按 Human 指令登记）。优先级与范围仍为建议值，待 Human 最终确认；计划为 `Draft` 未批准，批准前不得进入实施。
+> **Status：Implementing**（2026-11-17，Human 批准计划后 Orchestrator 登记）。按 [DEV-ORDER-073-078](../DEV-ORDER-073-078.md) 顺序实施。
 
 ## Metadata
 
 | 字段 | 内容 |
 |---|---|
-| Status | **Planning**（2026-11-17，Orchestrator 按 Human 指令登记；计划未批准，不进入实施） |
+| Status | **Implementing**（2026-11-17，Human 批准计划后 Orchestrator 登记；按开发顺序实施） |
 | 所属 Story | 无（独立维护任务；数据迁移范围原属 [TASK-073](../active/TASK-073-price-pipeline-p0-data-correctness.md)，2026-11-17 由 Human 指令独立成卡） |
 | 覆盖的验收条件 | 本卡 §3 AC（契约来源：[ADR-003](../../../os/architecture/adr/ADR-003-symbol-suffix-contract.md) Accepted + [PRICE-PIPELINE-REVIEW P0-1](../../../os/architecture/PRICE-PIPELINE-REVIEW.md)） |
 | Priority | High（建议；不改历史数据则 P0-1/P0-4 的显示与估值修复无法闭环，待 Human 确认） |
@@ -14,7 +14,7 @@
 | Created | 2026-11-17 |
 | Type | 数据迁移（不可逆操作，需备份 + 可重复执行脚本） |
 | 来源 | Human 2026-11-17 指令「把历史数据更新独立成一个 task，放 active 目录下」 |
-| Execution Plan | 已创建：[TASK-077 实施计划](./TASK-077-symbol-historical-data-migration-plan.md)（`Draft`，未批准）。不可逆迁移必写；D-b 裁决后细化 |
+| Execution Plan | 已创建：[TASK-077 实施计划](./TASK-077-symbol-historical-data-migration-plan.md)（`Approved`，已批准）。不可逆迁移必写；D-b 裁决后细化 |
 
 ## 1. 问题
 

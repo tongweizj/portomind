@@ -2,7 +2,7 @@
 
 ## Status
 
-Status：`Draft`
+Status：Approved（2026-11-17，Human 批准「073～078 计划」；`Draft → Approved` 归 Human）
 
 Owner：`Planner`（2026-11-17 起草）
 
@@ -18,7 +18,7 @@ Related Spec / ADR：
 
 Branch / Base：待 Orchestrator 登记时从最新 `main` 建 `feature/TASK-076-asset-information-completeness-check`；本计划起草时基线 = 当前工作树（`main`，含未提交文档改动，见 §3.1）。
 
-Approval：**未批准**。本计划含多项需 Human 裁决事项（§6）；在 Human 明确批准当前设计前不得进入 `Implementing`。任务卡明确本卡为跨模块 Feature，按 [EXECUTION_PLANS §2](../../../os/process/EXECUTION_PLANS.md) 必写计划。
+Approval：**已批准（2026-11-17，Human）**。本计划含多项需 Human 裁决事项（§6）；在 Human 明确批准当前设计前不得进入 `Implementing`。任务卡明确本卡为跨模块 Feature，按 [EXECUTION_PLANS §2](../../../os/process/EXECUTION_PLANS.md) 必写计划。
 
 > 状态及权限见 [STATES.md](../../../os/process/STATES.md)：仅 Human 可将 Draft → Approved。任务卡 Status 待 Orchestrator 登记，本计划不改变任务状态。
 

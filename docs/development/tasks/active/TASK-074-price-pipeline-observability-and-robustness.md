@@ -1,12 +1,12 @@
 # TASK-074 — 价格链路观测与健壮性（SUCCEEDED 语义 / result 部署核对 / 新鲜度 / 熔断 / NOT_FOUND 提示）
 
-> **Status：Planning**（2026-11-17，Orchestrator 按 Human 指令登记）。优先级与范围仍为建议值，待 Human 最终确认；计划为 `Draft` 未批准，批准前不得进入实施。
+> **Status：Implementing**（2026-11-17，Human 批准计划后 Orchestrator 登记）。按 [DEV-ORDER-073-078](../DEV-ORDER-073-078.md) 顺序实施。
 
 ## Metadata
 
 | 字段 | 内容 |
 |---|---|
-| Status | **Planning**（2026-11-17，Orchestrator 按 Human 指令登记；计划未批准，不进入实施） |
+| Status | **Implementing**（2026-11-17，Human 批准计划后 Orchestrator 登记；按开发顺序实施） |
 | 所属 Story | 无（独立维护任务） |
 | 覆盖的验收条件 | 本卡 §3 AC（来源：[PRICE-PIPELINE-REVIEW](../../../os/architecture/PRICE-PIPELINE-REVIEW.md) P1-3 / P1-4 / P1-5 / P2-6 / P2-7） |
 | Priority | Medium（建议；观测与健壮性，排在 [TASK-073](./TASK-073-price-pipeline-p0-data-correctness.md) P0 之后，待 Human 确认） |
@@ -14,7 +14,7 @@
 | Created | 2026-11-17 |
 | Type | Feature / Bugfix（shared / cron-worker，少量 client 提示） |
 | 来源 | [PRICE-PIPELINE-REVIEW](../../../os/architecture/PRICE-PIPELINE-REVIEW.md)（2026-11-15 独立审阅，基线 `main@d6e1413`；发现的唯一事实来源） |
-| Execution Plan | 已创建（2026-11-17，Planner 起草，Status `Draft` **未批准**）：[TASK-074 执行计划](./TASK-074-price-pipeline-observability-and-robustness-plan.md)。跨模块/契约变化/复杂依赖按 [EXECUTION_PLANS §2](../../../os/process/EXECUTION_PLANS.md) 必写；计划 §6 列 D-f/D-g（D-e 已收敛，D-g 超出本卡），批准前不得实施 |
+| Execution Plan | 已创建（2026-11-17，Planner 起草，Status `Approved` **已批准**）：[TASK-074 执行计划](./TASK-074-price-pipeline-observability-and-robustness-plan.md)。跨模块/契约变化/复杂依赖按 [EXECUTION_PLANS §2](../../../os/process/EXECUTION_PLANS.md) 必写；计划 §6 列 D-f/D-g（D-e 已收敛，D-g 超出本卡），批准前不得实施 |
 
 ## 1. 问题
 

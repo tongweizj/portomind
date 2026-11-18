@@ -2,7 +2,7 @@
 
 ## Status
 
-Status：Draft（待 Human 评审；`Draft → Approved` 归 Human，见 [STATES.md §4](../../../os/process/STATES.md)）
+Status：Approved（2026-11-17，Human 批准「073～078 计划」；`Draft → Approved` 归 Human）
 
 Owner：Planner（起草）；Implementer（待指派）
 
@@ -12,7 +12,7 @@ Related Spec / ADR：无 Spec；设计依据见 [PRICE-PIPELINE-REVIEW](../../..
 
 Branch / Base：当前 `main` @ `d6e1413`（起草时）；实施从最新 `main` 开 `feature/TASK-078-price-collection-timing-bucketing`
 
-Approval：**未批准**。本计划覆盖任务卡 §6 已裁决的 D-a（CN 组 ET 12:00 / US-CA 组 ET 03:00 分组调度）与 D-a-附带（同日多批次接受后写覆盖先写 + 写入日志留痕），以及 AC1–AC5。`Draft → Approved` 须 Human 明确批准当前设计。
+Approval：**已批准（2026-11-17，Human）**。本计划覆盖任务卡 §6 已裁决的 D-a（CN 组 ET 12:00 / US-CA 组 ET 03:00 分组调度）与 D-a-附带（同日多批次接受后写覆盖先写 + 写入日志留痕），以及 AC1–AC5。`Draft → Approved` 须 Human 明确批准当前设计。
 
 ## 1. Intent
 

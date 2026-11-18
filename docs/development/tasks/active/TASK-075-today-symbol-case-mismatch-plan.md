@@ -2,7 +2,7 @@
 
 ## Status
 
-Status：Draft（待 Human 评审；`Draft → Approved` 归 Human，见 [STATES.md §4](../../../os/process/STATES.md)）
+Status：Approved（2026-11-17，Human 批准「073～078 计划」；`Draft → Approved` 归 Human）
 
 Owner：Planner（起草）；Implementer（待指派）
 
@@ -12,7 +12,7 @@ Related Spec / ADR：[ADR-003 symbol 后缀契约](../../../os/architecture/adr/
 
 Branch / Base：当前 `main`（起草时与 TASK-073/077/078 同批；实施前以 `git branch --show-current` / `git rev-parse` 复核，见 [AGENTS §4](../../../../AGENTS.md)）；从最新 `main` 开 `feature/TASK-075-today-symbol-case-mismatch`
 
-Approval：**未批准**。本计划冻结任务卡 §6 的 **D-h = 方案 A**（由 Human 在 2026-11-17 本轮问答中选定：服务端/数据层返回 ADR-003 存储格式 symbol，客户端纯消费、零归一化逻辑），覆盖 AC1–AC4。方案 A 的实质是「**客户端零生产代码改动**」，依赖 TASK-073 + TASK-077 先落地；此取舍已获选定，`Draft → Approved` 仍须 Human 按 STATES §4 登记。
+Approval：**已批准（2026-11-17，Human）**。本计划冻结任务卡 §6 的 **D-h = 方案 A**（由 Human 在 2026-11-17 本轮问答中选定：服务端/数据层返回 ADR-003 存储格式 symbol，客户端纯消费、零归一化逻辑），覆盖 AC1–AC4。方案 A 的实质是「**客户端零生产代码改动**」，依赖 TASK-073 + TASK-077 先落地；此取舍已获选定，`Draft → Approved` 仍须 Human 按 STATES §4 登记。
 
 ## 1. Intent
 

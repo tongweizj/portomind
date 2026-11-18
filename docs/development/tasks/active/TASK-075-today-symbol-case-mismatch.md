@@ -1,6 +1,6 @@
 # TASK-075 — 今日行情列表 29 个基金「无数据」：客户端 symbol 未归一化
 
-> **Status：Planning**（2026-11-17，Orchestrator 按 Human 指令登记）。优先级与范围仍为建议值，待 Human 最终确认；计划为 `Draft` 未批准，批准前不得进入实施。
+> **Status：Implementing**（2026-11-17，Human 批准计划后 Orchestrator 登记）。按 [DEV-ORDER-073-078](../DEV-ORDER-073-078.md) 顺序实施。
 >
 > ✅ **2026-11-17 归一化目标更新（ADR-003 已正式批准）**：[ADR-003](../../../os/architecture/adr/ADR-003-symbol-suffix-contract.md) **提案**建议 symbol 统一契约采用「**按 `market` 派生大写后缀**」（`001180.CN` / `VOO.US` / `600519.SS`）。**ADR-003 已于 2026-11-17 由 Human 正式批准（`Accepted`）**。客户端侧只消费服务端返回的存储格式 symbol，不做任何后缀派生/strip（硬规则 #3）；原先「等待 073 strip→裸码契约」的表述作废。
 
@@ -8,7 +8,7 @@
 
 | 字段 | 内容 |
 |---|---|
-| Status | **Planning**（2026-11-17，Orchestrator 按 Human 指令登记；计划未批准，不进入实施） |
+| Status | **Implementing**（2026-11-17，Human 批准计划后 Orchestrator 登记；按开发顺序实施） |
 | 所属 Story | 无（独立维护任务） |
 | 覆盖的验收条件 | 本卡 §3 AC（来源：[PRICE-PIPELINE-REVIEW 附录 C / P0-4](../../../os/architecture/PRICE-PIPELINE-REVIEW.md#附录-c2026-11-17-补充--p0-4-今日行情客户端查找端未归一化)） |
 | Priority | High（建议；用户可见 P0——29 个基金在列表里"没有价格"，待 Human 确认） |
@@ -16,7 +16,7 @@
 | Created | 2026-11-17 |
 | Type | Bugfix（client，少量契约对齐） |
 | 来源 | Human 2026-11-17 观察 + Planner 亲读源码校正（根因见 §2） |
-| Execution Plan | 已创建（2026-11-17，Planner 起草，Status `Draft` **未批准**）：[TASK-075 执行计划](./TASK-075-today-symbol-case-mismatch-plan.md)。D-h 已由 Human 选定 = 方案 A（服务端/数据层返回 ADR-003 存储格式 symbol，客户端零改动、零归一化）；因涉及跨端契约与前置依赖闸门，按 [EXECUTION_PLANS §2](../../../os/process/EXECUTION_PLANS.md) 建计划，批准前不得实施 |
+| Execution Plan | 已创建（2026-11-17，Planner 起草，Status `Approved` **已批准**）：[TASK-075 执行计划](./TASK-075-today-symbol-case-mismatch-plan.md)。D-h 已由 Human 选定 = 方案 A（服务端/数据层返回 ADR-003 存储格式 symbol，客户端零改动、零归一化）；因涉及跨端契约与前置依赖闸门，按 [EXECUTION_PLANS §2](../../../os/process/EXECUTION_PLANS.md) 建计划，批准前不得实施 |
 
 ## 1. 问题
 
