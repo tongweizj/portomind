@@ -28,17 +28,17 @@ test('createAsset 规范化 symbol 和 tags', async () => {
     tags: [' core ', 'core', '']
   });
 
-  assert.equal(created.symbol, 'VTI');
+  assert.equal(created.symbol, 'VTI.US');
   assert.equal(created.name, 'Vanguard');
   assert.deepEqual(created.tags, ['core']);
 });
 
 test('createAsset 在写入前识别重复 symbol', async () => {
-  Asset.exists = async query => query.symbol === 'VTI';
+  Asset.exists = async query => query.symbol === 'VTI.US';
   Asset.create = async () => assert.fail('duplicate asset must not be inserted');
 
   await assert.rejects(
-    assetService.createAsset({ symbol: 'vti' }),
+    assetService.createAsset({ symbol: 'vti.to', market: 'US' }),
     error => error.status === 409 && /VTI.*already exists/.test(error.message)
   );
 });
@@ -163,4 +163,26 @@ test('asset 模型：assetClass 枚举校验（真实 validateSync）', () => {
   const invalid = new Asset({ symbol: 'BAD', name: '错', market: 'US', currency: 'USD', type: 'stock', assetClass: 'realestate' });
   const error = invalid.validateSync();
   assert.ok(error && error.errors.assetClass, '非法 assetClass 应触发枚举校验');
+});
+
+test('createAsset 裸码、大小写和冲突后缀都使用最终存储键', async (t) => {
+  const exists = t.mock.method(Asset, 'exists', async () => false);
+  t.mock.method(Asset, 'create', async data => data);
+  for (const symbol of ['001180', '001180.cn', '001180.CN', '001180.SZ']) {
+    const asset = await assetService.createAsset({ symbol, market: 'CN-FUND' });
+    assert.equal(asset.symbol, '001180.CN');
+  }
+  assert.deepEqual(exists.mock.calls.map(call => call.arguments[0]), Array(4).fill({ symbol: '001180.CN' }));
+});
+
+test('updateAsset 冻结 market 和 symbol，并允许表单回传同键', async (t) => {
+  t.mock.method(Asset, 'findById', async () => ({ symbol: '001180.cn', market: 'CN-FUND' }));
+  const update = t.mock.method(Asset, 'findByIdAndUpdate', async (_id, data) => data);
+
+  await assert.rejects(assetService.updateAsset('asset', { market: 'US' }), { status: 400 });
+  await assert.rejects(assetService.updateAsset('asset', { symbol: '001181' }), { status: 400 });
+  assert.equal(update.mock.callCount(), 0);
+
+  const updated = await assetService.updateAsset('asset', { name: '基金', symbol: '001180', market: 'CN-FUND' });
+  assert.deepEqual(updated, { name: '基金' });
 });

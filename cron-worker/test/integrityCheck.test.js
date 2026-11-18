@@ -1,6 +1,7 @@
 "use strict";
 const { test } = require('node:test');
 const assert = require('node:assert');
+const integrityCheck = require('../src/tasks/integrityCheck');
 const {
   runIntegrityCheck,
   countAsset,
@@ -8,7 +9,7 @@ const {
   expectedBucketCandidates,
   groupMissingRanges,
   clipRepairRanges
-} = require('../src/tasks/integrityCheck');
+} = integrityCheck;
 
 test('expectedTradingDates：US 八月无节假日，工作日全开', () => {
   const dates = expectedTradingDates('US', '2024-08-01', '2024-08-31');
@@ -236,4 +237,41 @@ test('runIntegrityCheck：全部完整时 successCount 正确', async () => {
   assert.equal(report.successCount, 2);
   assert.equal(report.failureCount, 0);
   assert.equal(report.completenessRatio, 1);
+});
+
+test('TASK-073：有 launchDate 的旧键资产按派生键查价并报告 GAP', async () => {
+  const keys = [];
+  const report = await integrityCheck.runIntegrityCheck({
+    getActiveAssets: async () => [{ symbol: '001180.cn', market: 'CN-FUND', launchDate: new Date('2026-08-24T12:00:00Z') }],
+    expectedTradingDates: () => ['2026-08-24'],
+    storedBucketDates: (symbol) => { keys.push(symbol); return []; },
+    to: '2026-08-24',
+    dryRun: true
+  });
+
+  assert.deepEqual(keys, ['001180.CN']);
+  assert.equal(report.checkedCount, 1);
+  assert.equal(report.totals.missingCount, 1);
+  assert.equal(report.assets[0].status, 'GAP');
+});
+
+test('TASK-073：全部跳过持久化为 result 数据态，运行态仍为 SUCCEEDED', async (t) => {
+  const TaskRun = require('@portomind/shared/models/taskRun');
+  t.mock.method(TaskRun, 'create', async () => ({ _id: 'integrity-run' }));
+  const update = t.mock.method(TaskRun, 'updateOne', async () => {});
+  const run = await integrityCheck({
+    trigger: 'MANUAL',
+    getActiveAssets: async () => [{ symbol: '001180.CN', market: 'CN-FUND' }],
+    storedBucketDates: () => assert.fail('missing launchDate must skip price query')
+  });
+
+  assert.equal(run.status, 'SUCCEEDED');
+  assert.equal(run.result.allSkipped, true);
+  assert.equal(run.result.checkedCount, 0);
+  assert.equal(run.result.skippedCount, 1);
+  assert.equal(run.result.completenessRatio, null);
+  assert.equal(update.mock.calls[0].arguments[1].$set.result.allSkipped, true);
+
+  const empty = await integrityCheck({ trigger: 'MANUAL', getActiveAssets: async () => [] });
+  assert.equal(empty.result.allSkipped, false);
 });

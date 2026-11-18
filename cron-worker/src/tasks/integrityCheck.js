@@ -29,6 +29,8 @@ const { isMarketOpenToday, normalizeMarket } = require('@portomind/shared/servic
 const { MARKETS } = require('@portomind/shared/config/markets');
 const { dateBounds, marketDate, todayString, MARKET_TIMEZONE } = require('@portomind/shared/utils/marketTime');
 const { runTrackedTask } = require('@portomind/shared/services/taskRunner');
+const { toStorageSymbol } = require('@portomind/shared/utils/symbol');
+const { allItemsSkipped } = require('@portomind/shared/utils/taskResult');
 const historySync = require('./historySync.cjs');
 
 const TASK_NAME = 'price-integrity-check';
@@ -97,7 +99,7 @@ async function countAsset(asset, from, to, dependencies = {}) {
 
   const [expectedDates, storedDates] = await Promise.all([
     expectedFn(market, from, to),
-    storedFn(asset.symbol, lower, to)
+    storedFn(toStorageSymbol(asset.symbol, market), lower, to)
   ]);
   const actualSet = new Set(storedDates);
   const missingDates = expectedDates.filter(dateStr =>
@@ -395,13 +397,15 @@ async function integrityCheck(options = {}) {
     trigger,
     execute: async () => {
       const report = await runIntegrityCheck(options);
+      const allSkipped = allItemsSkipped(report);
       return {
         ...report,
         result: {
           totals: report.totals,
           checkedCount: report.checkedCount,
           skippedCount: report.skippedCount,
-          completenessRatio: report.completenessRatio,
+          allSkipped,
+          completenessRatio: allSkipped ? null : report.completenessRatio,
           gapAssets: Array.isArray(report.assets)
             ? report.assets
               .filter((asset) => Number(asset.missingCount) > 0)

@@ -132,4 +132,8 @@ async function fetchHistory(symbol, from, to, http = axios) {
   });
 }
 
-module.exports = { fetchLatest, fetchHistory };
+function marketForCode(code) {
+  return marketForSecid(Number(secidForCode(code)[0]));
+}
+
+module.exports = { fetchLatest, fetchHistory, marketForCode };

@@ -22,6 +22,8 @@ const Portfolio = require('../models/portfolio');
 const FxRate = require('../models/fxRate');
 const TaskSkip = require('../models/taskSkip');
 const { SUPPORTED_CURRENCIES } = require('./fxRate.service');
+const { normalizeSymbol } = require('../utils/symbol');
+const { allItemsSkipped } = require('../utils/taskResult');
 
 const { isMarketOpenToday } = require('./calendar.service');
 const { MARKET_TIMEZONE, dateBounds, marketDate } = require('../utils/marketTime');
@@ -44,6 +46,7 @@ dayjs.extend(timezone);
 
 const NOTE_PRIORITY = [
   'CONTRACT_NOT_READY',
+  'ALL_SKIPPED',
   'CURRENCY_MISSING',
   'CURRENCY_INVALID',
   'NUMERIC_OBSERVATION_ONLY',
@@ -251,7 +254,7 @@ async function buildPriceDataState({ now, tz, assets }) {
         (item) => ts >= item.start.getTime() && ts < item.end.getTime()
       );
       if (bucket) {
-        symbolsByDate.get(bucket.date).add(String(row.symbol || '').trim().toUpperCase());
+        symbolsByDate.get(bucket.date).add(normalizeSymbol(row.symbol));
       }
     }
   }
@@ -292,7 +295,7 @@ async function buildPriceDataState({ now, tz, assets }) {
       const priceSymbols = symbolsByDate.get(targetMarketDate) || new Set();
       expected = listed.length;
       for (const asset of listed) {
-        const symbol = String(asset.symbol || '').trim().toUpperCase();
+        const symbol = normalizeSymbol(asset.symbol);
         if (priceSymbols.has(symbol)) {
           fetched += 1;
         } else {
@@ -411,6 +414,9 @@ function buildIntegrityDataState(doc) {
     ? actualCount / expectedCount
     : null;
   const skippedNoLaunchDate = numOrNull(result.skippedCount ?? result.skippedNoLaunchDate);
+  const allSkipped = result.allSkipped ?? (
+    result.checkedCount === 0 && allItemsSkipped({ totalCount: doc.totalCount, skippedCount: skippedNoLaunchDate })
+  );
 
   let gapAssets = [];
   if (Array.isArray(result.gapAssets)) {
@@ -429,7 +435,7 @@ function buildIntegrityDataState(doc) {
 
   const contractReady = expectedCount !== null && actualCount !== null && missingCount !== null;
   let dataStateLevel = 'unknown';
-  if (contractReady) {
+  if (contractReady && !allSkipped) {
     if (missingCount === 0) dataStateLevel = 'ok';
     else if (expectedCount > 0 && missingCount >= expectedCount) dataStateLevel = 'bad';
     else dataStateLevel = 'warn';
@@ -438,13 +444,16 @@ function buildIntegrityDataState(doc) {
   return {
     contractReady,
     dataStateLevel,
-    notes: contractReady ? [] : [note('CONTRACT_NOT_READY', 'taskruns.result 缺少完整性计数字段')],
+    notes: allSkipped
+      ? [note('ALL_SKIPPED', '全部资产已跳过，本次未检查价格完整性')]
+      : contractReady ? [] : [note('CONTRACT_NOT_READY', 'taskruns.result 缺少完整性计数字段')],
     dataState: {
       expectedCount,
       actualCount,
       missingCount,
       completenessRatio,
       skippedNoLaunchDate,
+      allSkipped,
       gapAssets
     }
   };

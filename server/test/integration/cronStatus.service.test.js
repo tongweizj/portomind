@@ -722,3 +722,23 @@ test('AC5 查询预算：主视图新增单次 TaskSkip 批量聚合；detail �
   await service.getStatus({ detail: 'rebalance', date: '2026-10-26' });
   assert.equal(getCapturedPipelines().filter((item) => item.model === 'TaskSkip').length, 0);
 });
+
+test('TASK-073：完整性全部跳过时看板显示未知，运行态保留 SUCCEEDED', async () => {
+  useWorld({ latestRuns: [latest('price-integrity-check', {
+    status: 'SUCCEEDED',
+    totalCount: 1,
+    successCount: 0,
+    result: {
+      allSkipped: true,
+      checkedCount: 0,
+      skippedCount: 1,
+      totals: { expectedCount: 0, actualCount: 0, missingCount: 0 }
+    }
+  })] });
+  const data = await service.getStatus({ now: new Date('2026-10-23T14:00:00Z') });
+  const integrity = taskEntry(data, 1);
+  assert.equal(integrity.dataStateLevel, 'unknown');
+  assert.equal(integrity.dataState.allSkipped, true);
+  assert.equal(integrity.dataState.completenessRatio, null);
+  assert.ok(integrity.notes.some(item => item.code === 'ALL_SKIPPED'));
+});

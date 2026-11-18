@@ -6,12 +6,27 @@ const transactionService = require('@portomind/shared/services/transaction.servi
 const recorder = require('@portomind/shared/services/rebalance/recorder');
 const { evaluateThresholds } = require('@portomind/shared/services/rebalance/thresholdChecker');
 const { buildSuggestions } = require('@portomind/shared/services/rebalance/suggestionGenerator');
+const { estimateCost } = require('@portomind/shared/services/rebalance/costEstimator');
 const { calculatePositions } = require('@portomind/shared/services/transaction/positionCalculator');
 const {
   executeRebalance,
   revokeExecution,
   prepareReexecution
 } = require('@portomind/shared/services/rebalance/executeRebalance');
+
+test('交易成本估算传播缺价 null，并保留有价记录的原计算', () => {
+  const prices = [undefined, null, '', ' ', 'unknown', NaN, 0, '10'];
+  const results = estimateCost(prices.map(price => ({ action: 'SELL', quantity: 2, price })), {
+    fixedFee: 1, ratioFee: 0.01, taxRate: 0.02
+  });
+  const amounts = results.map(({ grossValue, estimatedFee, estimatedTax, estimatedCost }) =>
+    [grossValue, estimatedFee, estimatedTax, estimatedCost]
+  );
+  assert.deepEqual(amounts.slice(0, 6), Array(6).fill([null, null, null, null]));
+  assert.deepEqual(amounts[6], [0, 0, 0, 0]);
+  assert.deepEqual(amounts[7].slice(0, 3), [20, 1.2, 0.4]);
+  assert.equal(amounts[7][3], 1.6);
+});
 
 test('阈值检查包含零持仓目标并返回可解释偏离明细', () => {
   const result = evaluateThresholds({

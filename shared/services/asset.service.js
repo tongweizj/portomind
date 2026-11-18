@@ -1,4 +1,5 @@
 const Asset = require('../models/asset');
+const { normalizeSymbol, toStorageSymbol } = require('../utils/symbol');
 const { ASSET_SORT_FIELDS, ASSET_CLASSES } = require('../constants/asset.constants');
 
 const WRITABLE_FIELDS = [
@@ -36,7 +37,7 @@ function normalizeInput(input) {
       throw badRequest(`${field} must be a string`);
     }
   }
-  if (data.symbol !== undefined) data.symbol = data.symbol.trim().toUpperCase();
+
   if (data.name !== undefined) data.name = data.name.trim();
   if (data.tags !== undefined) {
     if (!Array.isArray(data.tags)) throw badRequest('tags must be an array of strings');
@@ -104,7 +105,7 @@ async function getActiveAssets() {
 // 按符号列表取 active 资产（顺序保持与传入符号一致）；不存在的符号会被忽略。
 // 供历史回补 / 完整性检查等按符号运行的任务使用（由 cron-worker 侧实现合并而来）。
 async function getAssetsBySymbols(symbols = []) {
-  const uniqueSymbols = [...new Set(symbols.map(s => String(s).trim().toUpperCase()).filter(Boolean))];
+  const uniqueSymbols = [...new Set(symbols.map(normalizeSymbol).filter(Boolean))];
   if (uniqueSymbols.length === 0) return [];
   const assets = await Asset.find({ active: true, symbol: { $in: uniqueSymbols } });
   const bySymbol = new Map(assets.map(asset => [asset.symbol, asset]));
@@ -115,6 +116,7 @@ async function getAssetsBySymbols(symbols = []) {
 
 async function createAsset(input) {
   const data = normalizeInput(input);
+  if (data.symbol !== undefined) data.symbol = toStorageSymbol(data.symbol, data.market);
   if (data.symbol && await Asset.exists({ symbol: data.symbol })) {
     throw duplicateSymbol(data.symbol);
   }
@@ -128,8 +130,19 @@ async function createAsset(input) {
 
 async function updateAsset(id, input) {
   const data = normalizeInput(input);
-  if (data.symbol && await Asset.exists({ symbol: data.symbol, _id: { $ne: id } })) {
-    throw duplicateSymbol(data.symbol);
+  if (data.market !== undefined || data.symbol !== undefined) {
+    const current = await getAssetById(id);
+    if (!current) return null;
+    if (data.market !== undefined && data.market !== current.market) {
+      throw badRequest('market cannot be changed');
+    }
+    if (data.symbol !== undefined &&
+        toStorageSymbol(data.symbol, current.market) !== toStorageSymbol(current.symbol, current.market)) {
+      throw badRequest('symbol cannot be changed');
+    }
+    // 允许表单回传同一个键，旧资产的实际存储键留给 TASK-077。
+    delete data.market;
+    delete data.symbol;
   }
   try {
     return await Asset.findByIdAndUpdate(id, data, {

@@ -1,11 +1,12 @@
 const Price = require('../models/price');
+const { toStorageSymbol } = require('../utils/symbol');
 const { canonicalDayTimestamp } = require('../utils/marketTime');
 
 function normalizeDailyRecord(record) {
   if (!record || typeof record !== 'object') throw new Error('Price record is required');
   return {
     ...record,
-    symbol: String(record.symbol || '').trim().toUpperCase(),
+    symbol: toStorageSymbol(record.symbol, record.market),
     timestamp: canonicalDayTimestamp(record.timestamp || new Date())
   };
 }
