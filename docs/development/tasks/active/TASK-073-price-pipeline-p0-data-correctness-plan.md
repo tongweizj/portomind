@@ -224,6 +224,18 @@ F-03：三个调用方只传 symbol 数组、无 market，而派生函数需要 
 
 未连接真实库运行巡检或验收价格链路，未调用实际外部 provider，未执行历史数据迁移、采集时刻或归桶更改及客户端更改。存量命中率待 TASK-077，实际 launchDate 覆盖待 TASK-076，合并 TASK-078 后复跑价格存储测试。独立 Reviewer 待交接。
 
+### 2026-11-17 Reviewer findings 返工
+
+返工基于 `9b8962409d0e43dda5c02121e79fe71495f07231`。代码、测试和契约文档版本为 `96d08a5b52f74840e59d9dbaf79a8bdd1ab0a757`，待独立复审。
+
+- F-01：Worker 只计算一次 `allSkipped` 与完整率，由结束日志、报告和 `result` 共同消费。看板读取 API 的 `allSkipped`，显示「本次未检查」和跳过数。浏览器夹具覆盖全跳过和实查无缺口。
+- F-02：公开手动建价、更新接入共享派生。省略 market 时使用已有价格字段、标准后缀或唯一匹配的资产市场。无确定市场时保留清洗后的键。仅更新数值与非键字段时不重写存量键，手动时间戳规则不变。三项新增用例覆盖真实 Price 模型转换后的写后读、market 省略及按字段更新。
+- F-03：同步 Worker result、REST API、架构债第 4 项、任务卡 §8 和 BOARD 阶段说明。Task 状态仍为 `Implementing`。
+
+重新实跑服务端 279/279、Worker 81/81，TASK-063 浏览器验收 43/43，client build 成功并仍有分块警告，lint 0 errors / 5 warnings，文档检查 0 ERROR / 0 WARN，Git 空白检查通过。原始输出见本机 `portomind-TASK-073-a333ba7` 目录中的 `review-*.log`。
+
+浏览器使用隔离 API 夹具，写后读使用模型与存储夹具。未连真实 MongoDB 或行情源。客户端变更限于完整性卡展示与其验收夹具。TaskRun 状态机、唯一索引、历史数据、采集时刻和归桶保持原样。
+
 ## 12. Review Record
 
 （由独立 Reviewer 按 [REVIEWER.md §7](../../../os/roles/REVIEWER.md) 填写：verdict、AC 对照、findings 与严重度、实跑/引用证据、残余风险与独立性声明。Implementer 不为自己的改动出具独立审查结论。）

@@ -97,7 +97,7 @@
 
 ## 8. 本卡未做的事
 
-未实施、ExecPlan **已创建但为 `Draft`（未批准，见 [计划](./TASK-073-price-pipeline-p0-data-correctness-plan.md)）**、**D-a～D-d 全部裁决完毕**（D-a 拆至 078 / D-b 拆至 077 / D-c 拆至 076 / D-d 见 §6）；Owner/Status 待 Orchestrator 登记（Planner 仅建卡内容）。
+历史数据迁移、采集时刻与归桶、上市日期抓取回填、今日行情客户端对齐及采集观测分别由 TASK-077、TASK-078、TASK-076、TASK-075 和 TASK-074 负责。实施证据与独立审查见[计划 §11–12](./TASK-073-price-pipeline-p0-data-correctness-plan.md#11-implementation-record)。
 
 ## 9. 记录
 
