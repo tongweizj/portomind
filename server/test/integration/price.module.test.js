@@ -37,6 +37,70 @@ test('Price 定义 symbol + timestamp 唯一索引', () => {
   assert.equal(index[1].unique, true);
 });
 
+test('手动新建和更新价格按派生键写入，估值读取可命中', async (t) => {
+  const timestamp = new Date('2026-08-24T19:12:34Z');
+  let stored;
+  t.mock.method(Price, 'create', async data => {
+    stored = new Price(data).toObject();
+    return stored;
+  });
+  t.mock.method(Price, 'findById', () => ({ select: () => ({ lean: async () => stored }) }));
+  t.mock.method(Price, 'findByIdAndUpdate', async (_id, data) => {
+    stored = new Price({ ...stored, ...data }).toObject();
+    return stored;
+  });
+  t.mock.method(Asset, 'aggregate', async () => [{ symbol: 'VOO.US', market: 'US' }]);
+  t.mock.method(Price, 'findOne', ({ symbol }) => ({
+    sort: () => ({ lean: async () => stored.symbol === symbol ? stored : null })
+  }));
+
+  const created = await priceService.createPrice({ symbol: ' voo ', market: 'US', price: 100, timestamp });
+  assert.equal(created.symbol, 'VOO.US');
+  assert.deepEqual(created.timestamp, timestamp);
+  assert.deepEqual(await getLatestPrices(['VOO.US']), { 'VOO.US': 100 });
+
+  const updated = await priceService.updatePrice(created._id, { symbol: 'voo.to', price: 101 });
+  assert.equal(updated.symbol, 'VOO.US');
+  assert.deepEqual(updated.timestamp, timestamp);
+  assert.deepEqual(await getLatestPrices(['VOO.US']), { 'VOO.US': 101 });
+
+  const moved = await priceService.updatePrice(created._id, { market: 'CA' });
+  assert.equal(moved.symbol, 'VOO.TO');
+  assert.equal(moved.market, 'CA');
+});
+
+test('手动新建可省略 market，采用标准后缀或唯一资产市场', async (t) => {
+  t.mock.method(Price, 'create', async data => new Price(data).toObject());
+  const markets = t.mock.method(Asset, 'distinct', async (_field, query) => {
+    const symbols = query.symbol.$in;
+    if (symbols.includes('VOO.US')) return ['US'];
+    if (symbols.includes('BND.US')) return ['US', 'CA'];
+    return [];
+  });
+
+  const fund = await priceService.createPrice({ symbol: '001180.cn', price: 1 });
+  assert.equal(fund.symbol, '001180.CN');
+  assert.equal(fund.market, 'CN-FUND');
+  assert.equal(markets.mock.callCount(), 0);
+  const voo = await priceService.createPrice({ symbol: 'voo', price: 100 });
+  assert.equal(voo.symbol, 'VOO.US');
+  assert.equal(voo.market, 'US');
+  for (const symbol of ['BND', 'UNKNOWN']) {
+    const price = await priceService.createPrice({ symbol, price: 90 });
+    assert.equal(price.symbol, symbol);
+    assert.equal(price.market, undefined);
+  }
+});
+
+test('手动更新仅改数值时保留旧键，部分身份更新对不存在的记录返回 null', async (t) => {
+  const read = t.mock.method(Price, 'findById', () => ({ select: () => ({ lean: async () => null }) }));
+  const update = t.mock.method(Price, 'findByIdAndUpdate', async (_id, data) => data);
+  assert.deepEqual(await priceService.updatePrice('legacy', { price: 25 }), { price: 25 });
+  assert.equal(read.mock.callCount(), 0);
+  assert.equal(await priceService.updatePrice('missing', { market: 'US' }), null);
+  assert.equal(update.mock.callCount(), 1);
+});
+
 test('市场日期边界遵循 America/Toronto 的夏令时', () => {
   const spring = dateBounds('2026-03-08');
   const autumn = dateBounds('2026-11-01');

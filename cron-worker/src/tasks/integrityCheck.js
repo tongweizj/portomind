@@ -366,9 +366,11 @@ async function runIntegrityCheck(options = {}) {
     }
   }
 
-  report.completenessRatio = report.totals.expectedCount > 0
-    ? (report.totals.expectedCount - report.totals.missingCount) / report.totals.expectedCount
-    : 1;
+  report.allSkipped = allItemsSkipped(report);
+  const { expectedCount, missingCount } = report.totals;
+  report.completenessRatio = expectedCount > 0
+    ? (expectedCount - missingCount) / expectedCount
+    : (report.allSkipped ? null : 1);
 
   taskLogger.info('INTEGRITY_CHECK_END', {
     totalCount: report.totalCount,
@@ -379,6 +381,7 @@ async function runIntegrityCheck(options = {}) {
     expectedCount: report.totals.expectedCount,
     actualCount: report.totals.actualCount,
     missingCount: report.totals.missingCount,
+    allSkipped: report.allSkipped,
     completenessRatio: report.completenessRatio
   });
 
@@ -397,15 +400,14 @@ async function integrityCheck(options = {}) {
     trigger,
     execute: async () => {
       const report = await runIntegrityCheck(options);
-      const allSkipped = allItemsSkipped(report);
       return {
         ...report,
         result: {
           totals: report.totals,
           checkedCount: report.checkedCount,
           skippedCount: report.skippedCount,
-          allSkipped,
-          completenessRatio: allSkipped ? null : report.completenessRatio,
+          allSkipped: report.allSkipped,
+          completenessRatio: report.completenessRatio,
           gapAssets: Array.isArray(report.assets)
             ? report.assets
               .filter((asset) => Number(asset.missingCount) > 0)

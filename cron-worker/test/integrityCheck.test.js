@@ -237,6 +237,7 @@ test('runIntegrityCheck：全部完整时 successCount 正确', async () => {
   assert.equal(report.successCount, 2);
   assert.equal(report.failureCount, 0);
   assert.equal(report.completenessRatio, 1);
+  assert.equal(report.allSkipped, false);
 });
 
 test('TASK-073：有 launchDate 的旧键资产按派生键查价并报告 GAP', async () => {
@@ -259,6 +260,8 @@ test('TASK-073：全部跳过持久化为 result 数据态，运行态仍为 SUC
   const TaskRun = require('@portomind/shared/models/taskRun');
   t.mock.method(TaskRun, 'create', async () => ({ _id: 'integrity-run' }));
   const update = t.mock.method(TaskRun, 'updateOne', async () => {});
+  const { taskLogger } = require('@portomind/shared/config/logger');
+  const info = t.mock.method(taskLogger, 'info', () => {});
   const run = await integrityCheck({
     trigger: 'MANUAL',
     getActiveAssets: async () => [{ symbol: '001180.CN', market: 'CN-FUND' }],
@@ -271,6 +274,9 @@ test('TASK-073：全部跳过持久化为 result 数据态，运行态仍为 SUC
   assert.equal(run.result.skippedCount, 1);
   assert.equal(run.result.completenessRatio, null);
   assert.equal(update.mock.calls[0].arguments[1].$set.result.allSkipped, true);
+  const end = info.mock.calls.find(call => call.arguments[0] === 'INTEGRITY_CHECK_END').arguments[1];
+  assert.equal(end.allSkipped, true);
+  assert.equal(end.completenessRatio, null);
 
   const empty = await integrityCheck({ trigger: 'MANUAL', getActiveAssets: async () => [] });
   assert.equal(empty.result.allSkipped, false);

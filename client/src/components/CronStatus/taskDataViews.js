@@ -168,6 +168,14 @@ export function buildIntegrityView(task) {
   const actual = nonNegativeNumber(data.actualCount);
   const missing = nonNegativeNumber(data.missingCount);
   const skipped = nonNegativeNumber(data.skippedNoLaunchDate);
+  if (data.allSkipped === true) {
+    return {
+      ...base,
+      level: 'unknown',
+      statusMessage: '本次未检查',
+      details: [{ label: '跳过（无 launchDate）', value: displayNumber(skipped) }]
+    };
+  }
   if (expected === null || actual === null || missing === null) return invalidView(base);
   const gapAssets = Array.isArray(data.gapAssets)
     ? data.gapAssets.filter((item) => item && typeof item === 'object')
