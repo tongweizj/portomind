@@ -1,0 +1,1090 @@
+{
+  "version": 1,
+  "target": {
+    "database": "portomind_task077_probe_dev",
+    "collections": {
+      "assets": "af591df5-9141-4510-aa95-05344acae8b9",
+      "transactions": "5c82713e-0c0b-4c67-a05e-ef4526d7a364",
+      "portfolios": "21fcc5ec-40d8-46e2-83b0-0284b6a03a5f",
+      "prices": "89e71180-9a16-4247-a0c1-d8bf0fdaaf6b"
+    }
+  },
+  "before": {
+    "assets": {
+      "count": 44,
+      "sha256": "e683c5fc1519f39ae367330a0884a90a0afd106b4f1783a268594ebcfa6c7949",
+      "indexSha256": "1c34ef823175af4357c23b8f0611af5c285be2c42417807d85327166695277d7"
+    },
+    "transactions": {
+      "count": 50,
+      "sha256": "a0dda9085663af6bd66a6f8a19f95f65c9707e389675a2fb4749540df8c8d4ee",
+      "indexSha256": "ab6996c56f57a13dce4562cd5cc566eb91ff6b2b22e90b985a7c6b5e2f2f6f5f"
+    },
+    "portfolios": {
+      "count": 4,
+      "sha256": "2d822a155ec17becfefd3036d370da58310536fc513213a2abadb9a9417bedf6",
+      "indexSha256": "2d381374e526df72ce84737f4d37dcd5fda93545db2c3e156cefac21c57da754"
+    },
+    "prices": {
+      "count": 80579,
+      "sha256": "f5bfdf6861fda4373d388903095e505280b542c7b2d2b2884723a31c8746001d",
+      "indexSha256": "128a88acb81be360719933c3dc1b02c2c099c8d9ca363d3c7f0ce05b964baff8"
+    }
+  },
+  "mapping": [
+    {
+      "collection": "assets",
+      "id": "6814d6943fe4113c492df4a4",
+      "from": "015532.cn",
+      "to": "015532.CN"
+    },
+    {
+      "collection": "assets",
+      "id": "6814d6d03fe4113c492df4a7",
+      "from": "110020.cn",
+      "to": "110020.CN"
+    },
+    {
+      "collection": "assets",
+      "id": "6814d6fa3fe4113c492df4aa",
+      "from": "011309.cn",
+      "to": "011309.CN"
+    },
+    {
+      "collection": "assets",
+      "id": "6814d7293fe4113c492df4ad",
+      "from": "100038.cn",
+      "to": "100038.CN"
+    },
+    {
+      "collection": "assets",
+      "id": "6814d74e3fe4113c492df4b0",
+      "from": "002982.cn",
+      "to": "002982.CN"
+    },
+    {
+      "collection": "assets",
+      "id": "6814d7783fe4113c492df4b3",
+      "from": "016630.cn",
+      "to": "016630.CN"
+    },
+    {
+      "collection": "assets",
+      "id": "6814d7a33fe4113c492df4b7",
+      "from": "110026.cn",
+      "to": "110026.CN"
+    },
+    {
+      "collection": "assets",
+      "id": "6814d7d43fe4113c492df4bb",
+      "from": "161017.cn",
+      "to": "161017.CN"
+    },
+    {
+      "collection": "assets",
+      "id": "6814d7f53fe4113c492df4bf",
+      "from": "009051.cn",
+      "to": "009051.CN"
+    },
+    {
+      "collection": "assets",
+      "id": "6814d8393fe4113c492df4c3",
+      "from": "110003.cn",
+      "to": "110003.CN"
+    },
+    {
+      "collection": "assets",
+      "id": "6814d8953fe4113c492df4c9",
+      "from": "000191",
+      "to": "000191.CN"
+    },
+    {
+      "collection": "assets",
+      "id": "6814d8c93fe4113c492df4cc",
+      "from": "003358.cn",
+      "to": "003358.CN"
+    },
+    {
+      "collection": "assets",
+      "id": "6814d8ff3fe4113c492df4d0",
+      "from": "014424.cn",
+      "to": "014424.CN"
+    },
+    {
+      "collection": "assets",
+      "id": "6814d9293fe4113c492df4d3",
+      "from": "001180.cn",
+      "to": "001180.CN"
+    },
+    {
+      "collection": "assets",
+      "id": "6814d9553fe4113c492df4d6",
+      "from": "000942",
+      "to": "000942.CN"
+    },
+    {
+      "collection": "assets",
+      "id": "6814d9803fe4113c492df4d9",
+      "from": "519915.cn",
+      "to": "519915.CN"
+    },
+    {
+      "collection": "assets",
+      "id": "6814d9bd3fe4113c492df4dd",
+      "from": "012348.cn",
+      "to": "012348.CN"
+    },
+    {
+      "collection": "assets",
+      "id": "6814dc763fe4113c492df4e4",
+      "from": "003156.cn",
+      "to": "003156.CN"
+    },
+    {
+      "collection": "assets",
+      "id": "6814dccd3fe4113c492df4e7",
+      "from": "003949.cn",
+      "to": "003949.CN"
+    },
+    {
+      "collection": "assets",
+      "id": "6814dce33fe4113c492df4ea",
+      "from": "007169.cn",
+      "to": "007169.CN"
+    },
+    {
+      "collection": "assets",
+      "id": "6814dd8c3fe4113c492df4f2",
+      "from": "009510.cn",
+      "to": "009510.CN"
+    },
+    {
+      "collection": "assets",
+      "id": "6814ddd03fe4113c492df4f5",
+      "from": "001512.cn",
+      "to": "001512.CN"
+    },
+    {
+      "collection": "assets",
+      "id": "6814ddec3fe4113c492df4f8",
+      "from": "270048.cn",
+      "to": "270048.CN"
+    },
+    {
+      "collection": "assets",
+      "id": "6814de033fe4113c492df4fb",
+      "from": "008060.cn",
+      "to": "008060.CN"
+    },
+    {
+      "collection": "assets",
+      "id": "6814de293fe4113c492df4fe",
+      "from": "013776.cn",
+      "to": "013776.CN"
+    },
+    {
+      "collection": "assets",
+      "id": "6814de6b3fe4113c492df504",
+      "from": "011649.cn",
+      "to": "011649.CN"
+    },
+    {
+      "collection": "assets",
+      "id": "6814de833fe4113c492df507",
+      "from": "519782.cn",
+      "to": "519782.CN"
+    },
+    {
+      "collection": "assets",
+      "id": "6814dea33fe4113c492df50a",
+      "from": "002656.cn",
+      "to": "002656.CN"
+    },
+    {
+      "collection": "assets",
+      "id": "6814debf3fe4113c492df50d",
+      "from": "016096.cn",
+      "to": "016096.CN"
+    },
+    {
+      "collection": "assets",
+      "id": "6814dfe33fe4113c492df51a",
+      "from": "VCR",
+      "to": "VCR.US"
+    },
+    {
+      "collection": "assets",
+      "id": "6814e2483fe4113c492df548",
+      "from": "TLT",
+      "to": "TLT.US"
+    },
+    {
+      "collection": "assets",
+      "id": "6814e2753fe4113c492df54b",
+      "from": "CQQQ",
+      "to": "CQQQ.US"
+    },
+    {
+      "collection": "assets",
+      "id": "6814e2923fe4113c492df54e",
+      "from": "ARKK",
+      "to": "ARKK.US"
+    },
+    {
+      "collection": "transactions",
+      "id": "6818d16e764ca704b3dbfbc5",
+      "from": "015532.cn",
+      "to": "015532.CN"
+    },
+    {
+      "collection": "transactions",
+      "id": "6818d1ee764ca704b3dbfbcb",
+      "from": "110020.cn",
+      "to": "110020.CN"
+    },
+    {
+      "collection": "transactions",
+      "id": "6818d232764ca704b3dbfbd6",
+      "from": "011309.cn",
+      "to": "011309.CN"
+    },
+    {
+      "collection": "transactions",
+      "id": "6818d252764ca704b3dbfbdc",
+      "from": "100038.cn",
+      "to": "100038.CN"
+    },
+    {
+      "collection": "transactions",
+      "id": "6818d2b4764ca704b3dbfbe2",
+      "from": "002982.cn",
+      "to": "002982.CN"
+    },
+    {
+      "collection": "transactions",
+      "id": "6818d2dd764ca704b3dbfbe8",
+      "from": "016630.cn",
+      "to": "016630.CN"
+    },
+    {
+      "collection": "transactions",
+      "id": "6818d30a764ca704b3dbfbee",
+      "from": "110026.cn",
+      "to": "110026.CN"
+    },
+    {
+      "collection": "transactions",
+      "id": "6818d32a764ca704b3dbfbf4",
+      "from": "161017.cn",
+      "to": "161017.CN"
+    },
+    {
+      "collection": "transactions",
+      "id": "6818d34e764ca704b3dbfbfa",
+      "from": "009051.cn",
+      "to": "009051.CN"
+    },
+    {
+      "collection": "transactions",
+      "id": "6818fda8764ca704b3dbfc00",
+      "from": "110003.cn",
+      "to": "110003.CN"
+    },
+    {
+      "collection": "transactions",
+      "id": "6818fdf2764ca704b3dbfc0c",
+      "from": "000191.cn",
+      "to": "000191.CN"
+    },
+    {
+      "collection": "transactions",
+      "id": "6818fe18764ca704b3dbfc12",
+      "from": "003358.cn",
+      "to": "003358.CN"
+    },
+    {
+      "collection": "transactions",
+      "id": "6818fe56764ca704b3dbfc18",
+      "from": "014424.cn",
+      "to": "014424.CN"
+    },
+    {
+      "collection": "transactions",
+      "id": "6818fe7b764ca704b3dbfc1e",
+      "from": "001180.cn",
+      "to": "001180.CN"
+    },
+    {
+      "collection": "transactions",
+      "id": "6818fe9d764ca704b3dbfc24",
+      "from": "000942.cn",
+      "to": "000942.CN"
+    },
+    {
+      "collection": "transactions",
+      "id": "6818feba764ca704b3dbfc2a",
+      "from": "519915.cn",
+      "to": "519915.CN"
+    },
+    {
+      "collection": "transactions",
+      "id": "6818fee3764ca704b3dbfc30",
+      "from": "012348.cn",
+      "to": "012348.CN"
+    },
+    {
+      "collection": "transactions",
+      "id": "686c930c3c955900e97b039d",
+      "from": "VCR",
+      "to": "VCR.US"
+    },
+    {
+      "collection": "transactions",
+      "id": "686c93633c955900e97b03af",
+      "from": "TLT",
+      "to": "TLT.US"
+    },
+    {
+      "collection": "transactions",
+      "id": "686c93773c955900e97b03b5",
+      "from": "CQQQ",
+      "to": "CQQQ.US"
+    },
+    {
+      "collection": "transactions",
+      "id": "686c93893c955900e97b03bb",
+      "from": "ARKK",
+      "to": "ARKK.US"
+    },
+    {
+      "collection": "transactions",
+      "id": "688a35cf6cb0fb006951cefe",
+      "from": "VCR",
+      "to": "VCR.US"
+    },
+    {
+      "collection": "transactions",
+      "id": "688a38b56cb0fb006951d00d",
+      "from": "VCR",
+      "to": "VCR.US"
+    }
+  ],
+  "deletions": [
+    {
+      "id": "6814d6943fe4113c492df4a4",
+      "previous": "015532.cn",
+      "market": "CN-FUND",
+      "canonical": "015532.CN",
+      "prices": [
+        {
+          "symbol": "015532",
+          "count": 698,
+          "first": "2022-11-01T04:00:00.000Z",
+          "last": "2026-07-06T19:00:00.000Z",
+          "sha256": "d754a1d787da218d502034591839cf7c7e5b6e9e0f3e5fac29080fb993148909"
+        },
+        {
+          "symbol": "015532.CN",
+          "count": 662,
+          "first": "2024-01-02T05:00:00.000Z",
+          "last": "2026-11-12T05:00:00.000Z",
+          "sha256": "7afb69954ad730d2def3c414600f7c981ef0fc0fa450e1562191e985907528f5"
+        }
+      ],
+      "blocked": false
+    },
+    {
+      "id": "6814d6d03fe4113c492df4a7",
+      "previous": "110020.cn",
+      "market": "CN-FUND",
+      "canonical": "110020.CN",
+      "prices": [
+        {
+          "symbol": "110020",
+          "count": 1177,
+          "first": "2021-01-04T05:00:00.000Z",
+          "last": "2026-07-06T19:00:00.000Z",
+          "sha256": "015defddd9872862835d5f7345a30001c57734c72e6191a812c74a790783f324"
+        },
+        {
+          "symbol": "110020.CN",
+          "count": 662,
+          "first": "2024-01-02T05:00:00.000Z",
+          "last": "2026-11-12T05:00:00.000Z",
+          "sha256": "c0d8aaf82c15912ffec55660d3b6c7f138ddc73f045acf9b40ee076eb386e340"
+        }
+      ],
+      "blocked": false
+    },
+    {
+      "id": "6814d6fa3fe4113c492df4aa",
+      "previous": "011309.cn",
+      "market": "CN-FUND",
+      "canonical": "011309.CN",
+      "prices": [
+        {
+          "symbol": "011309",
+          "count": 1167,
+          "first": "2021-01-18T05:00:00.000Z",
+          "last": "2026-07-06T19:00:00.000Z",
+          "sha256": "a2c5c99dc8dc2ec5b3a0ba5dbc8d7dfd8e9372588294a4185218f3e3519f4579"
+        },
+        {
+          "symbol": "011309.CN",
+          "count": 662,
+          "first": "2024-01-02T05:00:00.000Z",
+          "last": "2026-11-12T05:00:00.000Z",
+          "sha256": "fecde1e845ff1520b912fa95b1455a11d98e1f2b397108fdd70eacfaa88eaaef"
+        }
+      ],
+      "blocked": false
+    },
+    {
+      "id": "6814d7293fe4113c492df4ad",
+      "previous": "100038.cn",
+      "market": "CN-FUND",
+      "canonical": "100038.CN",
+      "prices": [
+        {
+          "symbol": "100038",
+          "count": 1177,
+          "first": "2021-01-04T05:00:00.000Z",
+          "last": "2026-07-06T19:00:00.000Z",
+          "sha256": "847848da0e637851e36bdb7e973a3ced4d3f5fd6ec957624ea25164240971b7c"
+        },
+        {
+          "symbol": "100038.CN",
+          "count": 662,
+          "first": "2024-01-02T05:00:00.000Z",
+          "last": "2026-11-12T05:00:00.000Z",
+          "sha256": "6573152d735b8f45a7c54f6f6d367b9994dda171c2f8d7da2d9701e1850dc983"
+        }
+      ],
+      "blocked": false
+    },
+    {
+      "id": "6814d74e3fe4113c492df4b0",
+      "previous": "002982.cn",
+      "market": "CN-FUND",
+      "canonical": "002982.CN",
+      "prices": [
+        {
+          "symbol": "002982",
+          "count": 1177,
+          "first": "2021-01-04T05:00:00.000Z",
+          "last": "2026-07-06T19:00:00.000Z",
+          "sha256": "71eda2306628011316d3364860a33bdecf883159388357d5c2d45153b215d3bd"
+        },
+        {
+          "symbol": "002982.CN",
+          "count": 662,
+          "first": "2024-01-02T05:00:00.000Z",
+          "last": "2026-11-12T05:00:00.000Z",
+          "sha256": "4c16bc18ee03fab2d889a76195568da97da161b1e0908cb766d1ab9bdc67905e"
+        }
+      ],
+      "blocked": false
+    },
+    {
+      "id": "6814d7783fe4113c492df4b3",
+      "previous": "016630.cn",
+      "market": "CN-FUND",
+      "canonical": "016630.CN",
+      "prices": [
+        {
+          "symbol": "016630",
+          "count": 672,
+          "first": "2023-01-18T05:00:00.000Z",
+          "last": "2026-07-06T19:00:00.000Z",
+          "sha256": "e17fc25bc44631afefafa4e231b4e9937ad5a84734f9fdc3ed3490b8ce3db9df"
+        },
+        {
+          "symbol": "016630.CN",
+          "count": 662,
+          "first": "2024-01-02T05:00:00.000Z",
+          "last": "2026-11-12T05:00:00.000Z",
+          "sha256": "d23c1ba9ac663abdf0ab4fcf8b990f7785d63ee274fb16f36937eb659e2d532c"
+        }
+      ],
+      "blocked": false
+    },
+    {
+      "id": "6814d7a33fe4113c492df4b7",
+      "previous": "110026.cn",
+      "market": "CN-FUND",
+      "canonical": "110026.CN",
+      "prices": [
+        {
+          "symbol": "110026",
+          "count": 1177,
+          "first": "2021-01-04T05:00:00.000Z",
+          "last": "2026-07-06T19:00:00.000Z",
+          "sha256": "98f6a975505b6f6690dc09a292b37ee3be295492fec281397e27e62a2a9fb2f4"
+        },
+        {
+          "symbol": "110026.CN",
+          "count": 662,
+          "first": "2024-01-02T05:00:00.000Z",
+          "last": "2026-11-12T05:00:00.000Z",
+          "sha256": "8079b8d575adced737262e45d418a0247ec2bfed09a27ba2e783a1463bcf646c"
+        }
+      ],
+      "blocked": false
+    },
+    {
+      "id": "6814d7d43fe4113c492df4bb",
+      "previous": "161017.cn",
+      "market": "CN-FUND",
+      "canonical": "161017.CN",
+      "prices": [
+        {
+          "symbol": "161017",
+          "count": 1177,
+          "first": "2021-01-04T05:00:00.000Z",
+          "last": "2026-07-06T19:00:00.000Z",
+          "sha256": "14107e4685bb53d71084e6294d292e7311c682a08d94b119b75ef3b7319c3cdb"
+        },
+        {
+          "symbol": "161017.CN",
+          "count": 662,
+          "first": "2024-01-02T05:00:00.000Z",
+          "last": "2026-11-12T05:00:00.000Z",
+          "sha256": "69765d9db7c1cee463b520f9dc567f9724a7899b53c9b143a98f55855a799ab5"
+        }
+      ],
+      "blocked": false
+    },
+    {
+      "id": "6814d7f53fe4113c492df4bf",
+      "previous": "009051.cn",
+      "market": "CN-FUND",
+      "canonical": "009051.CN",
+      "prices": [
+        {
+          "symbol": "009051",
+          "count": 1177,
+          "first": "2021-01-04T05:00:00.000Z",
+          "last": "2026-07-06T19:00:00.000Z",
+          "sha256": "a5f36ba6ca4261f0c3de168ed339526bc7116c119eada425044f3a50c23a1379"
+        },
+        {
+          "symbol": "009051.CN",
+          "count": 662,
+          "first": "2024-01-02T05:00:00.000Z",
+          "last": "2026-11-12T05:00:00.000Z",
+          "sha256": "f3b62fa4f5b5c22650c66e72fcb3c25ba9666b230bd98f3eb3b1efb3b04e6c62"
+        }
+      ],
+      "blocked": false
+    },
+    {
+      "id": "6814d8393fe4113c492df4c3",
+      "previous": "110003.cn",
+      "market": "CN-FUND",
+      "canonical": "110003.CN",
+      "prices": [
+        {
+          "symbol": "110003",
+          "count": 1177,
+          "first": "2021-01-04T05:00:00.000Z",
+          "last": "2026-07-06T19:00:00.000Z",
+          "sha256": "0b612556de497d34b148cfd7567cb6353ba97f5c223525fee26c9f4232174464"
+        },
+        {
+          "symbol": "110003.CN",
+          "count": 662,
+          "first": "2024-01-02T05:00:00.000Z",
+          "last": "2026-11-12T05:00:00.000Z",
+          "sha256": "a8ff231b2a07b1fdaeba121be91211e4feb18ca8b5c97ea43a1c9480c9b08689"
+        }
+      ],
+      "blocked": false
+    },
+    {
+      "id": "6814d8c93fe4113c492df4cc",
+      "previous": "003358.cn",
+      "market": "CN-FUND",
+      "canonical": "003358.CN",
+      "prices": [
+        {
+          "symbol": "003358",
+          "count": 1177,
+          "first": "2021-01-04T05:00:00.000Z",
+          "last": "2026-07-06T19:00:00.000Z",
+          "sha256": "0d870ff0af1ad6c5f05f342fd99835bce2d259f66b3c751659954d9cf5ecc7f9"
+        },
+        {
+          "symbol": "003358.CN",
+          "count": 662,
+          "first": "2024-01-02T05:00:00.000Z",
+          "last": "2026-11-12T05:00:00.000Z",
+          "sha256": "273a5ddfc2599aa4898e4944ead280203038c94c017a79b7d30dc5b53cd2bd5a"
+        }
+      ],
+      "blocked": false
+    },
+    {
+      "id": "6814d8ff3fe4113c492df4d0",
+      "previous": "014424.cn",
+      "market": "CN-FUND",
+      "canonical": "014424.CN",
+      "prices": [
+        {
+          "symbol": "014424",
+          "count": 926,
+          "first": "2021-12-28T05:00:00.000Z",
+          "last": "2026-07-06T20:00:00.000Z",
+          "sha256": "5b2619744adea08a294a89aa08966fc579ac62dc5855ae1d6a6c38d0bbdb8131"
+        },
+        {
+          "symbol": "014424.CN",
+          "count": 662,
+          "first": "2024-01-02T05:00:00.000Z",
+          "last": "2026-11-12T05:00:00.000Z",
+          "sha256": "e90012b37f33fc661c1412505b0477e4dc67c87e474ed135f3abba48da0291f2"
+        }
+      ],
+      "blocked": false
+    },
+    {
+      "id": "6814d9293fe4113c492df4d3",
+      "previous": "001180.cn",
+      "market": "CN-FUND",
+      "canonical": "001180.CN",
+      "prices": [
+        {
+          "symbol": "001180",
+          "count": 1177,
+          "first": "2021-01-04T05:00:00.000Z",
+          "last": "2026-07-06T19:00:00.000Z",
+          "sha256": "585ce1f2b40aec1c6bc38768389fa6854cfae1a7d756a50f9af5045acac6485a"
+        },
+        {
+          "symbol": "001180.CN",
+          "count": 662,
+          "first": "2024-01-02T05:00:00.000Z",
+          "last": "2026-11-12T05:00:00.000Z",
+          "sha256": "908bf34689a6352fdc141042368a80ed018f35c4abb2d315d7a36c2f5cf5e904"
+        }
+      ],
+      "blocked": false
+    },
+    {
+      "id": "6814d9803fe4113c492df4d9",
+      "previous": "519915.cn",
+      "market": "CN-FUND",
+      "canonical": "519915.CN",
+      "prices": [
+        {
+          "symbol": "519915",
+          "count": 1177,
+          "first": "2021-01-04T05:00:00.000Z",
+          "last": "2026-07-06T19:00:00.000Z",
+          "sha256": "9adf070d52e424d31ea91d58f0f2281b1b6998ff2e7ca2e6f911dba693bb38fe"
+        },
+        {
+          "symbol": "519915.CN",
+          "count": 662,
+          "first": "2024-01-02T05:00:00.000Z",
+          "last": "2026-11-12T05:00:00.000Z",
+          "sha256": "e62f13157ec4dbfece99061cd381bf1463cc65518bd8f276e54c5b21407d6982"
+        }
+      ],
+      "blocked": false
+    },
+    {
+      "id": "6814d9bd3fe4113c492df4dd",
+      "previous": "012348.cn",
+      "market": "CN-FUND",
+      "canonical": "012348.CN",
+      "prices": [
+        {
+          "symbol": "012348",
+          "count": 1049,
+          "first": "2021-07-06T04:00:00.000Z",
+          "last": "2026-07-06T20:00:00.000Z",
+          "sha256": "35d89ce92ab944db5f01bbef4cd601ccf7752666ccb8ed55fed7790cb73b0a16"
+        },
+        {
+          "symbol": "012348.CN",
+          "count": 662,
+          "first": "2024-01-02T05:00:00.000Z",
+          "last": "2026-11-12T05:00:00.000Z",
+          "sha256": "ef8ffee0e7235bf4d9e909ca02006e39bd32eac101dea59e5bc349ee29ebf93b"
+        }
+      ],
+      "blocked": false
+    },
+    {
+      "id": "6814dc763fe4113c492df4e4",
+      "previous": "003156.cn",
+      "market": "CN-FUND",
+      "canonical": "003156.CN",
+      "prices": [
+        {
+          "symbol": "003156",
+          "count": 1177,
+          "first": "2021-01-04T05:00:00.000Z",
+          "last": "2026-07-06T19:00:00.000Z",
+          "sha256": "99c1bc68902017a74cf5d958a506875aa19726e992079bfa04fdd25b754588f6"
+        },
+        {
+          "symbol": "003156.CN",
+          "count": 662,
+          "first": "2024-01-02T05:00:00.000Z",
+          "last": "2026-11-12T05:00:00.000Z",
+          "sha256": "96cd1a1f93feddccb5e223d09ceb43a2f80fcbb1b7d3f70ae91f84a67add2340"
+        }
+      ],
+      "blocked": false
+    },
+    {
+      "id": "6814dccd3fe4113c492df4e7",
+      "previous": "003949.cn",
+      "market": "CN-FUND",
+      "canonical": "003949.CN",
+      "prices": [
+        {
+          "symbol": "003949",
+          "count": 1177,
+          "first": "2021-01-04T05:00:00.000Z",
+          "last": "2026-07-06T19:00:00.000Z",
+          "sha256": "cca0776cb108345633f883d516d0a6ea5ff44ed9e7461f7bd4c11ab5005d33a7"
+        },
+        {
+          "symbol": "003949.CN",
+          "count": 662,
+          "first": "2024-01-02T05:00:00.000Z",
+          "last": "2026-11-12T05:00:00.000Z",
+          "sha256": "4ff0c555f592b40a180a5e444eff81b6046a6bf4f3f50c0ace49a69268c2921a"
+        }
+      ],
+      "blocked": false
+    },
+    {
+      "id": "6814dce33fe4113c492df4ea",
+      "previous": "007169.cn",
+      "market": "CN-FUND",
+      "canonical": "007169.CN",
+      "prices": [
+        {
+          "symbol": "007169",
+          "count": 1177,
+          "first": "2021-01-04T05:00:00.000Z",
+          "last": "2026-07-06T19:00:00.000Z",
+          "sha256": "4a22a8af16539dba3df8c965d4056c3ec048929e8c2fed8a757ca8ed88e33c26"
+        },
+        {
+          "symbol": "007169.CN",
+          "count": 662,
+          "first": "2024-01-02T05:00:00.000Z",
+          "last": "2026-11-12T05:00:00.000Z",
+          "sha256": "4f7c09db10fac18c643a0a3f5a994d80afe29418c5107af8d691d82d812dc8d9"
+        }
+      ],
+      "blocked": false
+    },
+    {
+      "id": "6814dd8c3fe4113c492df4f2",
+      "previous": "009510.cn",
+      "market": "CN-FUND",
+      "canonical": "009510.CN",
+      "prices": [
+        {
+          "symbol": "009510",
+          "count": 1177,
+          "first": "2021-01-04T05:00:00.000Z",
+          "last": "2026-07-06T19:00:00.000Z",
+          "sha256": "785eb779d6bf77ac7d5ed505c4a06eb0bcf7f337b47e79aa69ec80932eb600b6"
+        },
+        {
+          "symbol": "009510.CN",
+          "count": 662,
+          "first": "2024-01-02T05:00:00.000Z",
+          "last": "2026-11-12T05:00:00.000Z",
+          "sha256": "4504c8dfdb28fe4286e3d861a4403b1a160f93f8ecfb5e15a17b6d8fed696da2"
+        }
+      ],
+      "blocked": false
+    },
+    {
+      "id": "6814ddd03fe4113c492df4f5",
+      "previous": "001512.cn",
+      "market": "CN-FUND",
+      "canonical": "001512.CN",
+      "prices": [
+        {
+          "symbol": "001512",
+          "count": 1420,
+          "first": "2020-01-02T05:00:00.000Z",
+          "last": "2026-07-06T19:00:00.000Z",
+          "sha256": "7b53b32d5758c3b58e01ad3be1b6b686eb0a40e7d3b961a53f73204b9eacf721"
+        },
+        {
+          "symbol": "001512.CN",
+          "count": 662,
+          "first": "2024-01-02T05:00:00.000Z",
+          "last": "2026-11-12T05:00:00.000Z",
+          "sha256": "58ab3122212f8e9f92face3ca6b2689cea7e3e1b5244464e0f44f3c296bad646"
+        }
+      ],
+      "blocked": false
+    },
+    {
+      "id": "6814ddec3fe4113c492df4f8",
+      "previous": "270048.cn",
+      "market": "CN-FUND",
+      "canonical": "270048.CN",
+      "prices": [
+        {
+          "symbol": "270048",
+          "count": 1177,
+          "first": "2021-01-04T05:00:00.000Z",
+          "last": "2026-07-06T19:00:00.000Z",
+          "sha256": "120dcd08ff9c740bc96447eb2a066d9aff13af16bed2e892c81354a1560e6bcd"
+        },
+        {
+          "symbol": "270048.CN",
+          "count": 662,
+          "first": "2024-01-02T05:00:00.000Z",
+          "last": "2026-11-12T05:00:00.000Z",
+          "sha256": "f924725e68c12cf8a4c1c6756840f4fcc2c7492b35c3461ead367a72f56bddf1"
+        }
+      ],
+      "blocked": false
+    },
+    {
+      "id": "6814de033fe4113c492df4fb",
+      "previous": "008060.cn",
+      "market": "CN-FUND",
+      "canonical": "008060.CN",
+      "prices": [
+        {
+          "symbol": "008060",
+          "count": 1177,
+          "first": "2021-01-04T05:00:00.000Z",
+          "last": "2026-07-06T19:00:00.000Z",
+          "sha256": "b8cb260eb5753a264e6e723cc0f9b1160bb0b4a292954a20928e05dcf6cbcca1"
+        },
+        {
+          "symbol": "008060.CN",
+          "count": 662,
+          "first": "2024-01-02T05:00:00.000Z",
+          "last": "2026-11-12T05:00:00.000Z",
+          "sha256": "30019f1e03201500d614dcbebf9bb4cfc059a415e2c5442717fb5eca650535c5"
+        }
+      ],
+      "blocked": false
+    },
+    {
+      "id": "6814de293fe4113c492df4fe",
+      "previous": "013776.cn",
+      "market": "CN-FUND",
+      "canonical": "013776.CN",
+      "prices": [
+        {
+          "symbol": "013776",
+          "count": 886,
+          "first": "2022-01-18T05:00:00.000Z",
+          "last": "2026-07-06T19:00:00.000Z",
+          "sha256": "5faf2b42a7d7a3e5ab9427fbfe30fbe58a74d440ba0a775b368562748160b31d"
+        },
+        {
+          "symbol": "013776.CN",
+          "count": 662,
+          "first": "2024-01-02T05:00:00.000Z",
+          "last": "2026-11-12T05:00:00.000Z",
+          "sha256": "df7198e9eb1903018598f1887932a67174fea86e474c4917a562b8a7bf9e0cc9"
+        }
+      ],
+      "blocked": false
+    },
+    {
+      "id": "6814de6b3fe4113c492df504",
+      "previous": "011649.cn",
+      "market": "CN-FUND",
+      "canonical": "011649.CN",
+      "prices": [
+        {
+          "symbol": "011649",
+          "count": 1087,
+          "first": "2021-04-01T04:00:00.000Z",
+          "last": "2026-07-06T19:00:00.000Z",
+          "sha256": "b709ff9e334964f155484c4c13929d6a401e7b8e527ffff504e67393c1c50d2b"
+        },
+        {
+          "symbol": "011649.CN",
+          "count": 662,
+          "first": "2024-01-02T05:00:00.000Z",
+          "last": "2026-11-12T05:00:00.000Z",
+          "sha256": "977adca5f75bdd5cdeb55cff08dca65a38d4ba453b232b6fed5c42c833491b07"
+        }
+      ],
+      "blocked": false
+    },
+    {
+      "id": "6814de833fe4113c492df507",
+      "previous": "519782.cn",
+      "market": "CN-FUND",
+      "canonical": "519782.CN",
+      "prices": [
+        {
+          "symbol": "519782",
+          "count": 1177,
+          "first": "2021-01-04T05:00:00.000Z",
+          "last": "2026-07-06T19:00:00.000Z",
+          "sha256": "67d750df0a0cbb4eeaace292412e681095593a1705c31d05f7f5883837997c14"
+        },
+        {
+          "symbol": "519782.CN",
+          "count": 662,
+          "first": "2024-01-02T05:00:00.000Z",
+          "last": "2026-11-12T05:00:00.000Z",
+          "sha256": "3148c48892d0cb3bd5ad3986d4fd2b53efc8f6ceb722ea2303ac81ab8010172b"
+        }
+      ],
+      "blocked": false
+    },
+    {
+      "id": "6814dea33fe4113c492df50a",
+      "previous": "002656.cn",
+      "market": "CN-FUND",
+      "canonical": "002656.CN",
+      "prices": [
+        {
+          "symbol": "002656",
+          "count": 1177,
+          "first": "2021-01-04T05:00:00.000Z",
+          "last": "2026-07-06T19:00:00.000Z",
+          "sha256": "e183e617bd2791cbec36e111c708ec8d9ba75e92c01fb74c92977589480937c3"
+        },
+        {
+          "symbol": "002656.CN",
+          "count": 662,
+          "first": "2024-01-02T05:00:00.000Z",
+          "last": "2026-11-12T05:00:00.000Z",
+          "sha256": "bc97ca6d7c5b66cda8a00f09d0ba9405c6ea7b9a3036c6b4541f4f3453d369b4"
+        }
+      ],
+      "blocked": false
+    },
+    {
+      "id": "6814debf3fe4113c492df50d",
+      "previous": "016096.cn",
+      "market": "CN-FUND",
+      "canonical": "016096.CN",
+      "prices": [
+        {
+          "symbol": "016096",
+          "count": 1041,
+          "first": "2022-06-27T04:00:00.000Z",
+          "last": "2025-07-22T04:00:00.000Z",
+          "sha256": "771c6b1a5689eee3ff2c0c1af802892d0dae6441427de2fe0a9fe3fd757a297a"
+        },
+        {
+          "symbol": "016096.CN",
+          "count": 988,
+          "first": "2024-01-01T05:00:00.000Z",
+          "last": "2026-11-12T05:00:00.000Z",
+          "sha256": "be1089429f793523c7659700de72a699e44cdcb3519a40d37442a4b83ce250a9"
+        }
+      ],
+      "blocked": false
+    }
+  ],
+  "ambiguous": [],
+  "stranded": [
+    {
+      "id": "6814d8953fe4113c492df4c9",
+      "previous": "000191",
+      "market": "CN-FUND",
+      "canonical": "000191.CN",
+      "prices": [
+        {
+          "symbol": "000191",
+          "count": 1505,
+          "first": "2021-01-04T05:00:00.000Z",
+          "last": "2026-11-12T05:00:00.000Z"
+        }
+      ],
+      "active": true
+    },
+    {
+      "id": "6814d9553fe4113c492df4d6",
+      "previous": "000942",
+      "market": "CN-FUND",
+      "canonical": "000942.CN",
+      "prices": [
+        {
+          "symbol": "000942",
+          "count": 1510,
+          "first": "2021-01-04T05:00:00.000Z",
+          "last": "2026-11-12T05:00:00.000Z"
+        }
+      ],
+      "active": true
+    },
+    {
+      "id": "6814dfe33fe4113c492df51a",
+      "previous": "VCR",
+      "market": "US",
+      "canonical": "VCR.US",
+      "prices": [
+        {
+          "symbol": "VCR",
+          "count": 1950,
+          "first": "2021-01-04T14:30:00.000Z",
+          "last": "2026-11-12T05:00:00.000Z"
+        }
+      ],
+      "active": true
+    },
+    {
+      "id": "6814e2483fe4113c492df548",
+      "previous": "TLT",
+      "market": "US",
+      "canonical": "TLT.US",
+      "prices": [
+        {
+          "symbol": "TLT",
+          "count": 1950,
+          "first": "2021-01-04T14:30:00.000Z",
+          "last": "2026-11-12T05:00:00.000Z"
+        }
+      ],
+      "active": true
+    },
+    {
+      "id": "6814e2753fe4113c492df54b",
+      "previous": "CQQQ",
+      "market": "US",
+      "canonical": "CQQQ.US",
+      "prices": [
+        {
+          "symbol": "CQQQ",
+          "count": 1950,
+          "first": "2021-01-04T14:30:00.000Z",
+          "last": "2026-11-12T05:00:00.000Z"
+        }
+      ],
+      "active": true
+    },
+    {
+      "id": "6814e2923fe4113c492df54e",
+      "previous": "ARKK",
+      "market": "US",
+      "canonical": "ARKK.US",
+      "prices": [
+        {
+          "symbol": "ARKK",
+          "count": 1950,
+          "first": "2021-01-04T14:30:00.000Z",
+          "last": "2026-11-12T05:00:00.000Z"
+        }
+      ],
+      "active": true
+    }
+  ],
+  "unresolved": [],
+  "blockers": []
+}
