@@ -79,6 +79,17 @@ function App() {
         />
       </Scenario>
 
+      <Scenario name="mixed-targets">
+        <PriceTaskCard dataState={{
+          ...baseData,
+          targetMarketDate: '2026-11-18',
+          byMarket: {
+            'CN-FUND': { targetMarketDate: '2026-11-18' },
+            US: { targetMarketDate: '2026-11-17' }
+          }
+        }} />
+      </Scenario>
+
       <Scenario name="all-missing">
         <PriceTaskCard
           dataState={{
@@ -198,6 +209,12 @@ function runChecks() {
   const ok = query('ok', 'price-card');
   const okText = ok ? ok.innerText : '';
   check('AC1 渲染目标市场日字符串', okText.includes('目标市场日') && okText.includes(TARGET), okText.slice(0, 100));
+  const mixedTarget = query('mixed-targets', 'price-target-date')?.textContent || '';
+  const mixedMarkets = query('mixed-targets', 'price-market-targets')?.textContent || '';
+  check('TASK-078 混合目标日显示最新日期与各市场日期',
+    mixedTarget.includes('目标市场日（最晚）：2026-11-18') &&
+    mixedMarkets.includes('CN-FUND 2026-11-18') && mixedMarkets.includes('US 2026-11-17'), mixedMarkets);
+  check('TASK-078 单一目标日省略市场日期行', !query('ok', 'price-market-targets'));
   check('AC1 不用“今天”表述', !okText.includes('今天'), okText.includes('今天') ? 'contains 今天' : 'ok');
   check('AC1 显示应采 / 已采 40 / 40', okText.includes('40 / 40'), okText.slice(0, 120));
   check('AC1 显示完成度 100%', okText.includes('100%') && Boolean(query('ok', 'price-percent')));

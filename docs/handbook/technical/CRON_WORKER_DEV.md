@@ -21,7 +21,7 @@ cron-worker/
     │   ├── database.js          # MongoDB 连接
     │   └── env.js               # 加载 cron-worker/.env（区别于 server/.env）
     ├── tasks/
-    │   ├── scheduler.js         # 注册全部 5 个调度器（jobs 数组）
+    │   ├── scheduler.js         # 注册 5 类任务，共 6 个 cron
     │   ├── dailySync.js         # 价格同步（CLI 入口，trigger=MANUAL）
     │   ├── historySync.cjs      # 历史回补（--from/--to/--symbols/--concurrency）
     │   └── integrityCheck.js    # 完整性检查（本进程独有，非 shared）
@@ -118,11 +118,16 @@ module.exports = { startXxxScheduler };
 
 | 触发 | runKey 形态 |
 |---|---|
-| 价格同步 / 完整性检查 自动 | 市场日期（`marketDate()`，如 `2026-10-17`） |
+| 价格同步 自动 | `<调度时区日期>:<市场组>`，例如 `2026-10-17:CN`、`2026-10-17:US_CA`；历史全量批次使用不带后缀的日期 |
+| 完整性检查 自动 | 市场日期（`marketDate()`，如 `2026-10-17`） |
 | 价格同步 / 完整性检查 手动 | `manual:<ISO 时间>` |
 | 提醒评估 / 汇率同步 自动 | `daily:<调度时区当日日期>` |
 | 再平衡 自动（逐组合子任务） | `<schedule>:<当日日期>`（如 `monthly:2026-10-01`） |
 | 再平衡 自动（父任务 `rebalance-check`） | `marketDate(now, timezone)`（如 `2026-10-01`） |
+
+价格同步的两个定时批次沿用 `daily-price-sync`，在同一进程顺序进入任务锁。分组日期按触发时点确定。CN 批次以该日期查询亚洲市场交易日历，避免 ET 中午已跨亚洲午夜时采用次日的开市状态。两组 cron 配置见 [运维手册 §2](../ops/CRON_WORKER_OPS.md#2-配置环境变量)。
+
+CN 定时批次只写入日期与批次目标日相符的场外基金净值。日期不符时，保留已存价格，将该标的记入 `failures`，并在消息中记录目标日和返回日。手动同步继续按上游净值日期入桶。
 
 ### 5.3 状态四态
 
@@ -150,13 +155,15 @@ module.exports = { startXxxScheduler };
 
 | taskName | `result` 形状（冻结） |
 |---|---|
-| `daily-price-sync` | `{ skippedCount }`（休市跳过数） |
+| `daily-price-sync` | `{ skippedCount, marketGroup? }`（市场组 `CN` / `US_CA`；手动及历史全量批次可省略） |
 | `price-integrity-check` | `{ totals:{expectedCount,actualCount,missingCount}, checkedCount, skippedCount, allSkipped, completenessRatio, gapAssets:[{symbol,missingCount}] }`（不存 `assets[]` / `missingRanges[]` / 堆栈） |
 | `alert-evaluate` | `{ evaluated, created, archived, failed }` |
 | `fx-rate-sync` | `{ fxCount, currencies:{ USD:{ok:true,rateToCny}, CAD:{…}, HKD:{…} } }`；`ok:true` 仅表示该币种本次真实写入完成，失败运行记 `FAILED` 且不补造成功标志 |
 | `rebalance-check` | `{ totalPortfolios, dueCount, skippedCount, perPortfolio:[{portfolioId,due,needsRebalance,suggestionsCount,recordId,status,failureReason?,skipReason?}] }` |
 
 价格完整性检查在资产总数大于零且全部跳过时记录 `allSkipped: true`、`checkedCount: 0` 和 `completenessRatio: null`。这些字段表示本次未检查，同样用于结束日志。TaskRun 运行状态沿用现有判定。
+
+日价写入成功后发出 `PRICE_UPSERT_PREVIOUS` 与 `PRICE_UPSERTED`，共享标准键、日桶时间戳、来源、批次和写入时刻。前一条含 `existing`（首次为空），后一条含 `price` 和 `overwritten`。并发改价时重新读取并条件更新，日志记录本次生效的前值。
 
 `perPortfolio` 长度 = 未归档组合数（动态）；未到期 `due=false` 且 `needsRebalance=null`；未超阈 `needsRebalance=false`、`suggestionsCount=0`、`recordId=null`；生成建议则 `recordId` 非空且 `suggestionsCount>0`；失败保留阶段性事实；子任务被跳过的组合只能在读到同 key 的既有 `result` 时引用，否则 `needsRebalance=null` 并以 `skipReason` 标明原因。
 

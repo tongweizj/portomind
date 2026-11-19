@@ -45,7 +45,7 @@
 
 | # | 任务 | 默认时间 | 调度器文件 | 做什么（一句话） |
 |---|---|---|---|---|
-| 1 | 价格同步 | 03:00 | `schedulers/priceScheduler.js` | 拉取全部激活资产的最新价入库 |
+| 1 | 价格同步 | [按市场组调度](./CRON_WORKER_OPS.md#2-配置环境变量) | `schedulers/priceScheduler.js` | 拉取对应市场组的激活资产最新价入库 |
 | 2 | 完整性检查 | 03:30 | `schedulers/healthScheduler.js` | 核对价格缺口，必要时自动补全 |
 | 3 | 提醒评估 | 04:00 | `schedulers/alertScheduler.js` | 评估提醒规则、产生提醒事件 |
 | 4 | 汇率同步 | 09:30 | `schedulers/fxScheduler.js` | 采集 USD / CAD / HKD → CNY 汇率 |
@@ -55,7 +55,7 @@
 
 ```text
 每日 00:00  再平衡分发 → 按各组合 rebalanceSchedule 判断是否到期，执行阈值检查 → 建议 → 提醒
-每日 03:00  价格同步 → dailySync 拉取激活资产最新价入库
+分组时刻    价格同步 → dailySync 拉取对应市场组的激活资产最新价入库
 每日 03:30  完整性检查 → 缺口自动调 historySync 补全
 每日 04:00  提醒评估 → 提醒规则评估
 每日 09:30  汇率同步 → 汇率采集

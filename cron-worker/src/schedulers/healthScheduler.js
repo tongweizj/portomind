@@ -4,7 +4,7 @@
 
 const { createCronScheduler } = require('./cronScheduler');
 
-// 默认 03:30，晚于 PRICE_SYNC_CRON（03:00）半小时，确保当日价格已入库后再校验。
+// 默认 03:30，晚于 US/CA 价格批次的触发时刻。CN 当日批次另在 12:00 触发。
 const DEFAULT_HEALTH_CHECK_CRON = '30 3 * * *';
 
 const startHealthScheduler = createCronScheduler({

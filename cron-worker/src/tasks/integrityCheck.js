@@ -9,9 +9,8 @@
 //      （INTEGRITY_REPAIR_DEFERRED），避免首次运行时 launchDate 很旧、DB 无历史触发超大规模回补；
 //      可用 --dry-run 只出预览报告不执行补全。
 //
-// 说明：价格按 MARKET_TIMEZONE 单一全局时区归桶（继承自 server 的行为）。US/CA 的桶日期与
-// 交易日历完全一致；CN 白天价可能落入前一/当日 ET 桶（见 expectedBucketCandidates），因此 CN 的
-// 缺失判定按「任一候选桶存在记录」近似，完整率会略好于逐日精确值。
+// 价格仍按 MARKET_TIMEZONE 归桶。CN 定时批次晚于当地收盘，当日已发布净值可落当日桶。
+// 检查也覆盖历史和手动采集，仍接受 CN 的前一日桶；接受候选桶可能高估逐日完整率。
 
 require('../config/env');
 

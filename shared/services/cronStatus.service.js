@@ -5,8 +5,7 @@
 // 契约：ExecPlan §4.3（冻结）。要点：
 //   - 只读：本文件不含任何写操作（不创建、不更新、不删除、不批量写）
 //   - null ≠ 0：result 缺失时数据态数值一律 null（占位 display 由前端决定）
-//   - D-16 有效目标日：目标日 = 最近一个「同步时点已过且开市」交易日之前的最近开市日，
-//     周末/休市日/每日 03:00 前不把「尚未到采集时点」的交易日算作缺口
+//   - 有效目标日取决于市场组最近一个已到点开市日。CN/HK 检查该日，US/CA 检查它的前一开市日。
 //   - D-20 符号匹配一律精确（asset.symbol === Price.symbol，写入时均已 uppercase）
 //   - OD-5 dataStateLevel 只由数据态决定，运行态 status 不参与
 
@@ -24,14 +23,13 @@ const TaskSkip = require('../models/taskSkip');
 const { SUPPORTED_CURRENCIES } = require('./fxRate.service');
 const { normalizeSymbol } = require('../utils/symbol');
 const { allItemsSkipped } = require('../utils/taskResult');
+const { PRICE_SYNC_GROUPS, priceSyncGroupOf } = require('../config/priceSync');
 
 const { isMarketOpenToday } = require('./calendar.service');
 const { MARKET_TIMEZONE, dateBounds, marketDate } = require('../utils/marketTime');
 const {
   CRON_TASK_NAMES,
   PRICE_TARGET_MAX_LOOKBACK_DAYS,
-  PRICE_SYNC_DUE_HOUR,
-  PRICE_SYNC_DUE_MINUTE,
   REBALANCE_PARENT_TASK,
   REBALANCE_CHILD_PREFIX,
   staleThresholdHours
@@ -104,9 +102,9 @@ function isMarketOpenOn(market, dateStr) {
   return isMarketOpenToday(market, new Date(`${dateStr}T12:00:00.000Z`));
 }
 
-function syncInstantOf(dateStr, tz) {
-  const hour = String(PRICE_SYNC_DUE_HOUR).padStart(2, '0');
-  const minute = String(PRICE_SYNC_DUE_MINUTE).padStart(2, '0');
+function syncInstantOf(dateStr, tz, schedule) {
+  const hour = String(schedule.hour).padStart(2, '0');
+  const minute = String(schedule.minute).padStart(2, '0');
   return dayjs.tz(`${dateStr} ${hour}:${minute}:00`, tz);
 }
 
@@ -122,11 +120,10 @@ function lastOpenDayBefore(market, dateStr, tz) {
 }
 
 /**
- * D-16：某市场本次同步「应已覆盖」的交易日。
- * dEff = 最近一个「开市 且 今日 03:00 同步时点已过」的交易日；
- * target = dEff 之前最近的交易日（因为 03:00 的同步写入的是前一交易日的数据）。
+ * CN/HK 中午采当日价。US/CA 保留 D-16 的前一开市日口径。
  */
 function pickTargetInfo(market, now, tz) {
+  const group = priceSyncGroupOf(market) || 'US_CA';
   const todayStr = marketDate(now, tz);
   const calendarPrevOpenDay = lastOpenDayBefore(market, todayStr, tz);
   let todayOpen = false;
@@ -135,11 +132,11 @@ function pickTargetInfo(market, now, tz) {
   } catch (error) {
     todayOpen = false;
   }
-  const syncPassed = !dayjs(now).isBefore(syncInstantOf(todayStr, tz));
+  const syncPassed = !dayjs(now).isBefore(syncInstantOf(todayStr, tz, PRICE_SYNC_GROUPS[group]));
   const effectiveSyncDay = todayOpen && syncPassed ? todayStr : calendarPrevOpenDay;
-  const targetMarketDate = effectiveSyncDay
-    ? lastOpenDayBefore(market, effectiveSyncDay, tz)
-    : null;
+  const targetMarketDate = group === 'CN' || !effectiveSyncDay
+    ? effectiveSyncDay
+    : lastOpenDayBefore(market, effectiveSyncDay, tz);
   return { todayStr, effectiveSyncDay, targetMarketDate, calendarPrevOpenDay };
 }
 
@@ -322,13 +319,13 @@ async function buildPriceDataState({ now, tz, assets }) {
 
   const lagged = infos.filter(
     (info) => info.targetMarketDate && info.calendarPrevOpenDay
-      && info.targetMarketDate !== info.calendarPrevOpenDay
+      && info.targetMarketDate < info.calendarPrevOpenDay
   );
   if (lagged.length > 0) {
     const pairs = lagged
       .map((info) => `${info.market}: 目标 ${info.targetMarketDate} / 日历上一开市日 ${info.calendarPrevOpenDay}`)
       .join('；');
-    notes.push(note('TARGET_LAGGED', `${pairs}（日历上一开市日的价将在下次 03:00 同步采集）`));
+    notes.push(note('TARGET_LAGGED', `${pairs}（日历上一开市日的价将在下次同步采集）`));
   }
   if (unsupportedMarkets.length > 0) {
     notes.push(note('UNSUPPORTED_MARKET', `无法识别市场的资产已排除：${unsupportedMarkets.join(', ')}`));

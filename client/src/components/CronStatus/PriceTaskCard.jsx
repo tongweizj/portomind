@@ -120,8 +120,13 @@ export default function PriceTaskCard({
       {hasDataRows && (
         <>
           <div data-testid="price-target-date" style={secondaryStyle}>
-            目标市场日（上一开市日）：{view.targetText}
+            目标市场日{view.marketTargetText ? '（最晚）' : ''}：{view.targetText}
           </div>
+          {view.marketTargetText && (
+            <div data-testid="price-market-targets" style={mutedStyle}>
+              {view.marketTargetText}
+            </div>
+          )}
           <div data-testid="price-counts" style={secondaryStyle}>
             应采 / 已采：{view.countsText}
           </div>

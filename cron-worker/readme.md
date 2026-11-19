@@ -117,5 +117,5 @@
 ## 运维提示（无需改代码，但建议列入巡检）
 
 - CN 节假日表 `shared/config/markets.js` 需逐年按交易所公告核对（2027+ 未维护，见 P0）。
-- `SCHEDULER_ENABLED` 与全部 `*_CRON` 只存在于 `cron-worker/.env`；启动后确认日志出现 `SCHEDULERS_STARTED {"count":5,"owner":"cron-worker"}`，且 `server` 侧**不出现**任何调度日志。
+- 调度配置及启动日志见[调度运维手册](../docs/handbook/ops/CRON_WORKER_OPS.md)。
 - `MARKET_TIMEZONE` 变更会改变日期归桶，改动前评估对既有数据的影响。

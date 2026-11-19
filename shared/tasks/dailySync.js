@@ -9,20 +9,31 @@
 //    加载 .env 与建连，再调用本模块）
 
 const { taskLogger } = require('../config/logger');
-const { marketDate } = require('../utils/marketTime');
+const { PRICE_SYNC_GROUPS, priceSyncGroupOf } = require('../config/priceSync');
+const { marketDate, todayString } = require('../utils/marketTime');
 const { getActiveAssets } = require('../services/asset.service');
-const { fetchLatest } = require('../services/priceFetch.service');
+const { fetchLatest, resolveFetcher } = require('../services/priceFetch.service');
 const { saveLatest } = require('../services/priceStorage.service');
 const { runTrackedTask } = require('../services/taskRunner');
 const { isMarketOpenToday } = require('../services/calendar.service');
+const { MARKET_DATA_ERROR, MarketDataError } = require('../fetchers/errors');
 
-async function syncActiveAssetPrices(dependencies = {}) {
+let scheduledBatch = Promise.resolve();
+
+async function syncActiveAssetPrices(dependencies = {}, context = {}) {
   const loadAssets = dependencies.getActiveAssets || getActiveAssets;
   const loadPrice = dependencies.fetchLatest || fetchLatest;
   const persistPrice = dependencies.saveLatest || saveLatest;
   const marketOpen = dependencies.isMarketOpenToday || isMarketOpenToday;
 
-  const assets = await loadAssets();
+  const activeAssets = await loadAssets();
+  const assets = context.marketGroup
+    ? activeAssets.filter(asset => priceSyncGroupOf(asset.market) === context.marketGroup)
+    : activeAssets;
+  // ET 中午时亚洲已跨日。用批次的目标日判断该市场是否开市。
+  const calendarDate = context.marketGroup && context.scheduledDay
+    ? new Date(`${context.scheduledDay}T12:00:00Z`)
+    : undefined;
   const summary = {
     totalCount: assets.length,
     successCount: 0,
@@ -31,20 +42,31 @@ async function syncActiveAssetPrices(dependencies = {}) {
     failures: []
   };
 
-  taskLogger.info('PRICE_SYNC_ASSETS_LOADED', { totalCount: assets.length });
+  taskLogger.info('PRICE_SYNC_ASSETS_LOADED', { totalCount: assets.length, marketGroup: context.marketGroup });
   for (const asset of assets) {
     try {
-      if (!marketOpen(asset.market)) {
+      if (!marketOpen(asset.market, calendarDate)) {
         summary.skippedCount += 1;
         taskLogger.info('PRICE_SYNC_ASSET_SKIPPED_MARKET_CLOSED', {
           symbol: asset.symbol,
           market: asset.market,
-          marketDate: marketDate()
+          marketDate: context.scheduledDay || marketDate()
         });
         continue;
       }
       const priceData = await loadPrice(asset);
-      await persistPrice(priceData);
+      if (context.marketGroup === 'CN' && context.scheduledDay && priceData.market === 'CN-FUND') {
+        const navDay = todayString(priceData.timestamp);
+        if (navDay !== context.scheduledDay) {
+          throw new MarketDataError(
+            MARKET_DATA_ERROR.UPSTREAM,
+            resolveFetcher(asset).provider,
+            `Expected NAV for ${context.scheduledDay}, received NAV for ${navDay}`,
+            { retryable: false }
+          );
+        }
+      }
+      await persistPrice(priceData, context);
       summary.successCount += 1;
       taskLogger.info('PRICE_SYNC_ASSET_SUCCEEDED', {
         symbol: asset.symbol,
@@ -69,19 +91,33 @@ async function syncActiveAssetPrices(dependencies = {}) {
 
 async function dailySync(options = {}) {
   const trigger = options.trigger || 'SCHEDULED';
+  const { marketGroup } = options;
+  if (marketGroup !== undefined && !Object.hasOwn(PRICE_SYNC_GROUPS, marketGroup)) {
+    throw new RangeError(`Unknown price sync market group: ${marketGroup}`);
+  }
+  const now = options.now || new Date();
+  const scheduledDay = trigger === 'SCHEDULED' ? marketDate(now) : undefined;
   const runKey = options.runKey || (trigger === 'SCHEDULED'
-    ? marketDate()
-    : `manual:${new Date().toISOString()}`);
+    ? (marketGroup ? `${scheduledDay}:${marketGroup}` : scheduledDay)
+    : `manual:${now.toISOString()}`);
 
-  return runTrackedTask({
+  const run = () => runTrackedTask({
     taskName: 'daily-price-sync',
     runKey,
     trigger,
     execute: async () => {
-      const summary = await syncActiveAssetPrices(options.dependencies);
-      return { ...summary, result: { skippedCount: summary.skippedCount } };
+      const summary = await syncActiveAssetPrices(options.dependencies, { trigger, runKey, marketGroup, scheduledDay });
+      const result = { skippedCount: summary.skippedCount };
+      if (marketGroup) result.marketGroup = marketGroup;
+      return { ...summary, result };
     }
   });
+  if (!scheduledDay || !marketGroup) return run();
+
+  // TaskRun 看板依赖原任务名，两个定时批次顺序进入同名任务的进程内锁。
+  const batch = scheduledBatch.then(run);
+  scheduledBatch = batch.catch(() => {});
+  return batch;
 }
 
 module.exports = dailySync;

@@ -114,7 +114,7 @@ curl 'http://localhost:8080/api/cron/status?detail=rebalance&date=2026-10-26'
 
 > 估值分位（`valuation_percentile` 规则）必须先有数据，家庭视图没有录入入口，只能走本 API。
 
-> `GET /api/cron/status` 的「目标市场日」按每日 **03:00** 的价格同步时点计算：日历上的“上一开市日”若尚未到采集时点，会自动回退到最近一次已到点采集覆盖的交易日（避免周末/假日假缺口）。若修改 cron-worker 的 `PRICE_SYNC_CRON`，必须同步修改 `shared/constants/cronStatus.constants.js` 的 `PRICE_SYNC_DUE_HOUR` / `PRICE_SYNC_DUE_MINUTE`。
+> `GET /api/cron/status` 的「目标市场日」按市场组计算。规则见 [API 契约](../technical/API_CONTRACT.md#接口清单)。看板与 Worker 共用 `shared/config/priceSync.js` 的默认时点。若自定义 Worker 的价格 cron，同步核对这份配置中的看板时点。分组调度配置见[调度运维手册 §2](./CRON_WORKER_OPS.md#2-配置环境变量)。
 
 完整的请求/响应契约见 [API 契约](../technical/API_CONTRACT.md)。
 
