@@ -96,7 +96,7 @@ test('U2 节假日回退：CN 国庆长假期间目标日早于 10-01', async ()
   const data = await service.getStatus({ now: new Date('2026-10-05T14:00:00.000Z') });
   const ds = taskEntry(data, 0).dataState;
 
-  assert.equal(ds.targetMarketDate, '2026-09-29');
+  assert.equal(ds.targetMarketDate, '2026-09-30');
   assert.ok(ds.targetMarketDate < '2026-10-01');
   assert.equal(ds.calendarPrevOpenDay, '2026-09-30');
   assert.equal(ds.expected, 1);
@@ -134,6 +134,38 @@ test('U4 多市场不同目标日：byMarket 逐市场、顶层求和、顶层�
   assert.equal(ds.expected, 2); // = 各市场之和
   assert.equal(ds.fetched, 2);
   assert.equal(taskEntry(data, 0).dataStateLevel, 'ok');
+});
+
+test('CN/HK 到中午切换至当天桶，US/CA 保留前一交易日', async () => {
+  useWorld({
+    assets: [asset('001180.CN', 'CN-FUND'), asset('0700.HK', 'HK'), asset('VOO.US', 'US'), asset('VFV.TO', 'CA')],
+    prices: [priceAt('001180.CN', '2026-11-17'), priceAt('001180.CN', '2026-11-18'),
+      priceAt('0700.HK', '2026-11-17'), priceAt('VOO.US', '2026-11-17'), priceAt('VFV.TO', '2026-11-17')]
+  });
+
+  const before = taskEntry(await service.getStatus({ now: new Date('2026-11-18T16:59:59Z') }), 0);
+  assert.equal(before.dataState.byMarket['CN-FUND'].targetMarketDate, '2026-11-17');
+  assert.equal(before.dataState.byMarket.HK.targetMarketDate, '2026-11-17');
+  assert.equal(before.dataState.fetched, 4);
+
+  const after = taskEntry(await service.getStatus({ now: new Date('2026-11-18T17:00:00Z') }), 0);
+  const { byMarket, targetMarketDate, missing, fetched } = after.dataState;
+  assert.equal(byMarket['CN-FUND'].targetMarketDate, '2026-11-18');
+  assert.equal(byMarket.HK.targetMarketDate, '2026-11-18');
+  assert.equal(byMarket.US.targetMarketDate, '2026-11-17');
+  assert.equal(byMarket.CA.targetMarketDate, '2026-11-17');
+  assert.equal(targetMarketDate, '2026-11-18');
+  assert.equal(fetched, 3);
+  assert.deepEqual(missing.map(item => item.symbol), ['0700.HK']);
+  assert.ok(!after.notes.some(note => note.code === 'TARGET_LAGGED'));
+});
+
+test('周末 CN/HK 保留周五目标，US 按此前覆盖的周四核查', async () => {
+  useWorld({ assets: [asset('001180.CN', 'CN-FUND'), asset('0700.HK', 'HK'), asset('VOO.US', 'US')] });
+  const entry = taskEntry(await service.getStatus({ now: new Date('2026-08-22T18:00:00Z') }), 0);
+  assert.equal(entry.dataState.byMarket['CN-FUND'].targetMarketDate, '2026-08-21');
+  assert.equal(entry.dataState.byMarket.HK.targetMarketDate, '2026-08-21');
+  assert.equal(entry.dataState.byMarket.US.targetMarketDate, '2026-08-20');
 });
 
 // ---------------------------------------------------------------------------

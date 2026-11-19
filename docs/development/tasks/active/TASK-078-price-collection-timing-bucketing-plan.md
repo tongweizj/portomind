@@ -2,7 +2,7 @@
 
 ## Status
 
-Status：Approved（2026-11-17，Human 批准「073～078 计划」；`Draft → Approved` 归 Human）
+Status：Implementing（2026-11-18，Human 指示开工；2026-11-17 批准「073～078 计划」）
 
 Owner：Planner（起草）；Implementer（待指派）
 
@@ -140,14 +140,14 @@ const startUsCaScheduler = createCronScheduler({
 
 ## 5. Work Breakdown
 
-- [ ] W1（前置确认 Q1）核对 `runTrackedTask` 防重粒度（taskName+runKey），确定两个分组任务的 `taskName`/`runKey` 策略 → 产出：决定记录（§6 Q1）
-- [ ] W2 在 `shared/tasks/dailySync.js` 增加 `marketGroup` 过滤（向后兼容）→ 产出：代码 + `dailySync.test.js` 分组用例
-- [ ] W3 在 `cron-worker/src/schedulers/priceScheduler.js` 注册 CN（ET 12:00）与 US-CA（ET 03:00）两个 cron，保留兼容别名；在 `cron-worker/src/tasks/scheduler.js` 登记第 6 个 job（F-14）；更新 `cron-worker/test/scheduler.test.js` 断言 5→6（F-15）；更新 `cron-worker/.env{,.example}` 新 env 变量 → 产出：代码 + cron 注册/enroll 单测 + env 模板
-- [ ] W4 在 `shared/services/priceStorage.service.js:saveLatest` 增加覆盖前/后日志 → 产出：代码 + 覆盖日志单测（AC4）
-- [ ] W5 复核 `integrityCheck` CN 补偿（AC3）：实测/推演后按 4.4 两分支处理 → 产出：代码或注释 + 对应单测
-- [ ] W6 补跨日时序单测（ET/SH 边界、T 日净值不覆盖 T-1）→ 产出：测试文件（AC1/AC2）
-- [ ] W7 更新文档与注释：`CRON_WORKER_DEV.md` / `CRON_WORKER_OPS.md` 环境变量与双 cron 说明、`cron-worker/.env.example` 新变量、`scheduler.js:3-10` 头部注释（5→6 类任务）；按 AGENTS §3「单源归属」只改 owning 文档、其它处加链接 → 产出：文档/注释 diff
-- [ ] W8 运行验证（`npm test` / `cd cron-worker && npm test`，见 DEPLOYMENT §7），提交 self-test 证据 → 产出：验证记录（§11）
+- [x] W1 核对防重粒度和分组策略（§6 Q1）。
+- [x] W2 增加 `dailySync` 市场组过滤及手动全量入口的兼容验证。
+- [x] W3 注册 CN ET 12:00 与 US/CA ET 03:00，验证 6 个 cron 及旧变量回退，并更新环境变量模板。
+- [x] W4 增加 `saveLatest` 覆盖前后值审计及并发回归。
+- [x] W5 复核 `integrityCheck` 的 CN 补偿，记录保留依据及回归。
+- [x] W6 验证 ET/上海跨日和 T 日净值入桶。
+- [x] W7 更新调度契约、运维配置及引用。
+- [x] W8 运行全量 workspace 回归并记录证据（§11）。
 - [ ] W9 交接 Reviewer 独立审查 → 产出：Review Record（§12）
 
 依赖顺序：W1 → W2/W3（可并行，但 W3 依赖 W2 的参数契约）；W4 独立；W5 依赖 W3 的分组调度生效结论（可先用推演，最终实测）；W6 依赖 W2/W4；W7 依赖 W2–W5 定稿；W8 依赖全部代码；W9 依赖 W8。
@@ -159,8 +159,9 @@ const startUsCaScheduler = createCronScheduler({
 | D-a | 按市场分组多次调度（CN ET 12:00 / US-CA ET 03:00） | ✅ 已裁决，任务卡 §6（Human 2026-11-17）。本计划 §4.1–4.2 落实 |
 | D-a-附带 | 同日多批次接受后写覆盖先写 + 写入日志留痕 | ✅ 已裁决，任务卡 §6 / §9。本计划 §4.3 落实。不扩 schema、不迁移 |
 | 归桶时区 | 不改 `MARKET_TIMEZONE` / `canonicalDayTimestamp` | ✅ 已裁决，D-a 明确「改采集时刻而非归桶时区」 |
-| Q1 | 两个分组 cron 的 `taskName` / `runKey` 防重策略 | ⏳ 实施前由 Implementer 核对 `shared/services/taskRunner.js` 的 `runTrackedTask` 去重键后决定；若为 `taskName+runKey` 且 CN/US-CA 同日 `marketDate()` 相同，则用不同 `taskName`（`price-sync-cn` / `price-sync-us-ca`，本计划 §4.2 已采用）即可区分，属范围内实施细节，无需再报 Human |
-| Q2 | 原 `PRICE_SYNC_CRON` env 的兼容方式 | 建议保留为 US-CA 组的回退（§4.2）；若 Human 要求删旧 env 再另议。属部署兼容细节 |
+| Q1 | 两个分组 cron 的 `taskName` / `runKey` 防重策略 | 已核对 `runTrackedTask`。两组共享看板使用的 `daily-price-sync`，数据库键用 `<日期>:CN` 与 `<日期>:US_CA` 区分；同进程的分组定时运行按序进入原 `taskName` 锁。cron 注册日志以各自名称区分。见 §11。 |
+| Q2 | 原 `PRICE_SYNC_CRON` env 的兼容方式 | US/CA 使用 `PRICE_SYNC_US_CA_CRON`，缺省时回退旧 `PRICE_SYNC_CRON`。CN 单独使用 `PRICE_SYNC_CN_CRON`。 |
+| R2 配套 | 按分组对齐价格看板目标日 | 2026-11-18 Human 确认纳入 TASK-078。默认 ET 12:00 起，开市的 CN/HK 市场检查当天，未到点或休市时检查此前最近开市日。US/CA 沿用原规则。允许调整服务端目标日计算、共享默认采集配置、价格卡日期文案和对应验证。API 既有字段结构保留。 |
 
 范围、AC、产品行为均无变更；若实施中发现须改归桶语义或扩 schema/迁移，按 [EXECUTION_PLANS §5](../../../os/process/EXECUTION_PLANS.md) 与 [STATES §4](../../../os/process/STATES.md) 提交 Human，回 Draft 重批。
 
@@ -198,8 +199,8 @@ const startUsCaScheduler = createCronScheduler({
 
 - 下一角色：Implementer（待指派）。
 - 输入：本计划 + 任务卡（AC1–AC5、§6 裁决 D-a / D-a-附带）、§3 Findings 的行号、§4 设计、§5 步骤、§7 验证映射。
-- 范围与禁改：只在 §4 列出的文件内改动；**不改** `shared/utils/marketTime.js` 的 `MARKET_TIMEZONE` / `canonicalDayTimestamp`、**不改** `Price` schema / 唯一索引、不做历史迁移、不在 server 注册 timer、不扩到 TASK-074/075/076/077 范围。
-- 授权：计划为 Draft，**未获 Human 批准前不得开工**；`Draft → Approved` 由 Human 登记（STATES §4）。
+- 范围与禁改：按 §4 和 §6 的 R2 配套范围实施；**不改** `shared/utils/marketTime.js` 的 `MARKET_TIMEZONE` / `canonicalDayTimestamp`、**不改** `Price` schema / 唯一索引、不做历史迁移、不在 server 注册 timer、不扩到 TASK-074/075/076/077 范围。
+- 授权依据见 §Status。
 - 依赖：W1 的 Q1 结论；**TASK-073 AC1 的 `toStorageSymbol` 接线（§4.3 前置：073 未落地则同基金落双键，AC4 的「覆盖」事件与标准 symbol 日志不成立）**——属跨卡时序前置，非本卡范围内工作；无其它新依赖。
 - 预期产出：代码 diff、单测、文档更新、验证记录（§11）、可审对象。
 - 停止条件：若发现须改归桶语义、扩 schema/迁移、或 Q1 无法在范围内解决 → 停止并报 Planner / Human（AGENTS §8）。
@@ -207,11 +208,70 @@ const startUsCaScheduler = createCronScheduler({
 
 ## 11. Implementation Record
 
-（实施后填写：实际改动文件与版本、基线、偏差及依据、验证结果、遗留事项。计划完成不等于已合入，Merged 由 Human 登记。）
+### 2026-11-18 · 实施与自测
+
+- 从最新 `main` @ `f7ef68a` 开 `feature/TASK-078-price-collection-timing-bucketing`，工作树初始干净。复核 TASK-073 的 `toStorageSymbol` 写入接线已在基线。分组调度与运行键见 §6；保留原 `TaskRun` 状态和索引。CN 批次用调度时区的目标日期查询亚洲日历，避免周五 ET 中午因上海已进入周六而跳过。手动 CLI 继续覆盖全部激活资产。
+- `saveLatest` 按同键条件更新，遇并发写入或唯一键冲突重新读取。确认写入后连发前值和后值日志，以免把失败的写入尝试记成覆盖。日志含标准键、归桶日期、批次、触发来源和写入时刻，批次字段不写入 Price。保持 `canonicalDayTimestamp`、`MARKET_TIMEZONE`、Price schema 和唯一索引。
+- 保留完整性检查的 CN 候选桶。新定时批次的当日净值可以命中 T 桶，检查也读取历史与手动采集，仍需兼容已存在的 T-1 桶。用例分别验证两桶命中。
+
+| AC | 实施验证 |
+|---|---|
+| AC1 | Worker 用例验证 ET 12:00 / 03:00 表达式、时区、注册及组回调。定向时序用例用天天基金解析函数和模拟响应覆盖夏令时、冬令时的周五中午，T 日 `FSRQ` 入 T 桶，T-1 价格保持。2026-11-18 21:48 ET 只读实查 `001180.CN`、`003949.CN` 均返回 11-18 `FSRQ` 并归 11-18 ET 桶。尚未在实际 ET 12:00 跑定时批次或验证届时的净值发布覆盖。 |
+| AC2 | 市场日边界、同日仅一键、TASK-073 派生和并发 upsert 的回归通过。归桶、Price 与 TaskRun 模型无 diff。 |
+| AC3 | 实跑新 T 桶与历史 T-1 候选对照，均按既有规则命中。保留补偿并更新说明。 |
+| AC4 | 模拟同日定时价 300、手动价 301，确认同键最终值 301，日志关联前值 300 与两次批次。另模拟并发插入冲突，确认重读竞争者的价格后再覆盖并留痕。 |
+| AC5 | 全 workspace 回归通过，服务端 279/279、Worker 85/85。文档和差异空白检查通过。独立 Reviewer 尚待安排。 |
+
+未启动新 Worker、未写实际行情库、未修改本机或部署 `.env`。全量测试原始输出为本机 `%TEMP%/portomind-TASK-078-workspaces-20261118-215047.log`。将当前分支工作区及定时样本边界交 Orchestrator 安排独立复审。
+
+### 2026-11-18 · 首轮审查返工
+
+- **R1 / AC1。** 先加入评审的延迟净值对照，修复前实跑红例确认 11-12 桶从 `1.10` 被覆盖为 `1.25`。定时 CN 的场外基金采集现在在写入前比较净值的归桶日与批次目标日。日期不符走既有逐资产 `UPSTREAM` 失败路径，保留目标日、净值返回日和数据源。未发布当日净值的单标的批次记录 `PARTIAL`、成功 0、失败 1，保留 11-12 的 `1.10`，11-13 仍缺价。对照验证手动同步继续按净值日期入桶，正常 T 日净值和夏冬令样本仍通过。没有增加状态值或改变归桶。
+- **R2 归属待裁决。** 看板按全市场 ET 03:00 取有效同步日，再以其前一开市日为目标。对 CN/HK 采用分组后的当天目标，会改变现有 API 派生和卡片「上一开市日」含义。TASK-074 已列范围为连续无数据、估值新鲜度及观测，未明确接管分组目标日。建议作为 TASK-078 调度变更的配套，范围及规则由 Human 确认；本轮保留独立审查的只读证据，未改看板。
+- **返工验证。** 全 workspace 实跑通过，服务端 279/279、Worker 86/86。原始输出 `%TEMP%/portomind-TASK-078-rework-20261118-230417.log`。文档与差异空白检查通过。未启动实际定时作业或向真实行情库写入，实际 ET 12:00 的净值发布覆盖仍待观测。
+
+### 2026-11-18 · R2 纳入本卡后的实现与复验
+
+- Human 确认分组目标日归 TASK-078（§6）。Worker 注册与看板通过 `shared/config/priceSync.js` 共用默认时点与市场分组。默认时间下，CN/HK 到点且开市时核查当日，未到点或休市时核查此前最近开市日。US/CA 保留原规则。按市场核查并汇总，价格卡在目标日不同时列出各市场日期。任意自定义 Worker cron 不由 API 解析，运维手册说明需同步核对看板时点。
+- 独立审查所用的 `portomind_task077_restore_test` 再次只读运行实际看板服务，注入 2026-11-18 的 ET 11:59、12:00、15:00。CN-FUND 的目标从 11-17 切到 11-18，12:00 和 15:00 均为 29/29；US/CA 三次均保留 11-17，全部市场合计 42/44。时钟注入只用于验证目标日，并非当时实际运行定时批次。
+- R2 用例施修前实跑红例，修复后中午边界、周末和国庆长假对照通过。最终 workspace 测试通过，服务端 281/281、Worker 86/86，原始输出 `%TEMP%/portomind-TASK-078-final-rework-20261118-230834.log`。价格卡浏览器夹具 47/47 通过，包含混合市场目标日及同日省略明细的验证。Client build 成功（既有分块大小告警），lint 0 错误、5 条既有警告。文档和差异空白检查通过。R1/R2 交回独立 Reviewer 复审。尚未在实际 ET 12:00 观测整批基金净值发布覆盖。
 
 ## 12. Review Record
 
-（由独立 Reviewer 按 [REVIEWER.md §7](../../../os/roles/REVIEWER.md) 填写：verdict、AC 对照、findings 与严重度、实跑/引用证据、残余风险与独立性声明。Implementer 不为自己的改动出具独立审查结论。）
+### 2026-11-18 · 独立审查
+
+**判定：Fail。** 对象为 `feature/TASK-078-price-collection-timing-bucketing` @ `f7ef68a` 的当前工作区实施快照。审查覆盖分组调度、日期、存储及下游目标日。Reviewer 未参与实现或交付验收脚本编写。
+
+| AC | 结论 | 证据 |
+|---|---|---|
+| AC1 | 不满足 | 两组 cron 的默认 ET 时刻和分组回调有测试。当返回当天净值时确实入当天桶。当天净值延迟时仍复现原 P0-3 模式，见 R1。 |
+| AC2 | 满足 | 夏令时、冬令时跨日及同日存储用例通过；`marketTime.js`、Price 和 TaskRun 模型及唯一索引与基线一致。 |
+| AC3 | 满足 | §11 的新当天桶与旧前一天桶对照通过。保留补偿以支持存量价格和手动采集，理由已经记录。 |
+| AC4 | 满足 | 同日条件更新及并发冲突用例验证最终值和覆盖日志。保留既有存储键、索引与模型。 |
+| AC5 | 不满足 | 已核对同一快照的全量日志，服务端 279/279、Worker 85/85，独立审查未通过。 |
+
+| 编号 | 严重度 | 现象与处置 |
+|---|---|---|
+| R1 | BLOCKER | [CN 定时采集](../../../../shared/tasks/dailySync.js#L60) 取到任何有效净值就保存并计成功。以 ET 11-13 12:00 运行实际任务、行情适配器与存储逻辑，替代上游 HTTP 与数据库写读。预置 11-12 桶价格 1.1。上游返回 11-13 的 `FSRQ` 时，11-13 为 1.25、11-12 仍为 1.1。上游仍返回 11-12 时，任务却为 `SUCCEEDED`、成功数 1，11-13 无数据，11-12 被改为 1.25。请明确处理返回日期与定时 CN-FUND 目标日不符的分支，保留原归桶与同日覆盖口径，并补延迟发布对照。 |
+| R2 | MAJOR | [价格看板的目标日](../../../../shared/services/cronStatus.service.js#L129) 仍对所有市场使用 ET 03:00 并取前一开市日。独立只读调用实际 `getStatus`，以 11-18 15:00 ET 为时钟参数：验收库已存在 29 只基金的 11-18 桶，CN-FUND 看板仍检查 11-17。US/CA 的前一开市日语义与 CN 中午写当日价的语义已经不同。请由 Orchestrator 确认按分组对齐目标日的归属；现有看板结果无法验证 CN 中午批次的当日覆盖。 |
+
+复用 §11 的全量测试与上游样本记录。本轮实跑一次性 stdin 时序探针、验收库只读看板对照、差异与文档检查。未启动定时 Worker、未向实际行情库写入，也未观测真实 ET 12:00 的上游发布覆盖。交 Orchestrator 协调 R1 返工及 R2 的归属。
+
+### 2026-11-19 · 返工独立复审
+
+**判定：Pass。R1、R2 均关闭。** 对象为 `feature/TASK-078-price-collection-timing-bucketing` @ `f7ef68a` 的返工工作区快照，含当前未跟踪的 `shared/config/priceSync.js`。看板目标日修改已获 Human 授权纳入本卡（§6）。Reviewer 未参与本轮实现或实施验收脚本编写。
+
+| AC | 复审结果 | 证据 |
+|---|---|---|
+| AC1 | 满足 | 复用默认 12:00 / 03:00 ET 注册及分组用例。独立运行实际任务、行情适配器与存储逻辑，夏令时和冬令时均复现相同结果：T 日净值写入 T 桶，T-1 保留；上游仅返回 T-1 时，实测写入 0 次，原价保持，成功 0、失败 1、状态 `PARTIAL`，记录 `TIANTIAN / UPSTREAM`。手动采集仍按净值日期写入。 |
+| AC2 | 满足 | 夏冬令跨日对照通过；`MARKET_TIMEZONE`、归桶函数、Price 与 TaskRun 模型和索引无差异；同日幂等引用返工版回归。 |
+| AC3 | 满足 | 复用同版本的 T 日桶和旧 T-1 候选对照；保留兼容补偿的理由见 §11。 |
+| AC4 | 满足 | 复用同版本的条件更新、并发冲突和覆盖日志测试；存储与日志实现相对首轮无新增差异。 |
+| AC5 | 满足 | 核对返工版本的全量原始日志，服务端 281/281、Worker 86/86；模拟时序及独立复审通过。浏览器夹具和 build/lint 引用 §11。 |
+
+R2 独立复验：对 `portomind_task077_restore_test` 只读调用实际看板服务，注入 11-18 ET 11:59:59、12:00:00 和 15:00:00。CN-FUND 由 11-17 切至 11-18，当日覆盖 29/29；US、CA 三次均保持 11-17，API 保留 5 类卡片条目。混合日期展示引用 §11 的浏览器夹具。
+
+本轮仅执行一次性模拟和只读看板核查，文档及空白检查通过。真实 ET 12:00 定时批次的上游发布覆盖未观测。采用自定义采集 cron 时，看板时点需按已记录的运维口径同步核对。未启动或切换实际 Worker，未写入验收行情库。由 Human 决定结案。
 
 ## 13. Completion Record
 

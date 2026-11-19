@@ -13,7 +13,7 @@ const CRON_TASK_NAMES = Object.freeze([
   'rebalance-check'
 ]);
 
-// 逐任务周期（小时）。当前 5 个 cron 全为「每天一次」，故全 24；
+// 逐任务周期（小时）。当前按日调度，运行告警沿用 24 小时周期；
 // 结构上支持逐任务不同值，避免将来改周期时改逻辑。
 const TASK_PERIOD_HOURS = Object.freeze({
   'daily-price-sync': 24,
@@ -28,11 +28,6 @@ const STALE_FACTOR = 2;
 
 // 目标日回退上限：CN 春节/国庆长假 ≤ 9 天，留余量防死循环
 const PRICE_TARGET_MAX_LOOKBACK_DAYS = 15;
-
-// 价格同步的每日同步时点（与 PRICE_SYNC_CRON 默认 '0 3 * * *' 对齐）。
-// ⚠️ 运维若修改 PRICE_SYNC_CRON，必须同步修改这两个常量（ExecPlan §4.6 / SERVER.md）。
-const PRICE_SYNC_DUE_HOUR = 3;
-const PRICE_SYNC_DUE_MINUTE = 0;
 
 // 再平衡：父任务（TASK-057 才会产生）与逐组合子任务前缀
 const REBALANCE_PARENT_TASK = 'rebalance-check';
@@ -49,8 +44,6 @@ module.exports = {
   TASK_PERIOD_HOURS,
   STALE_FACTOR,
   PRICE_TARGET_MAX_LOOKBACK_DAYS,
-  PRICE_SYNC_DUE_HOUR,
-  PRICE_SYNC_DUE_MINUTE,
   REBALANCE_PARENT_TASK,
   REBALANCE_CHILD_PREFIX,
   staleThresholdHours

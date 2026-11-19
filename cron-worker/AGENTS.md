@@ -5,17 +5,17 @@ PortoMind **唯一的调度进程**（CommonJS、纯 Node、无 Web 框架）。
 
 ## 当前状态：5 类调度全部由本进程注册
 
-`npm start` → `index.js` → `src/tasks/scheduler.js` 注册 5 个调度器：
+`npm start` → `index.js` → `src/tasks/scheduler.js` 注册 5 类任务，共 6 个 cron。
 
 | 调度器 | 默认 cron | 环境变量 | 触发的任务 |
 |---|---|---|---|
-| `src/schedulers/priceScheduler.js` | `0 3 * * *` | `PRICE_SYNC_CRON` | 价格同步 |
+| `src/schedulers/priceScheduler.js` | 见[运维配置](../docs/handbook/ops/CRON_WORKER_OPS.md#2-配置环境变量) | `PRICE_SYNC_US_CA_CRON` / `PRICE_SYNC_CN_CRON` | 两组价格同步 |
 | `src/schedulers/healthScheduler.js` | `30 3 * * *` | `HEALTH_CHECK_CRON` | 完整性检查 |
 | `src/schedulers/alertScheduler.js` | `0 4 * * *` | `ALERT_EVAL_CRON` | 提醒评估 |
 | `src/schedulers/fxScheduler.js` | `30 9 * * *` | `FX_SYNC_CRON` | 汇率采集 |
 | `src/schedulers/rebalanceScheduler.js` | `0 0 * * *` | `REBALANCE_CHECK_CRON` | 再平衡**单日分发** |
 
-启动自检：日志出现 `SCHEDULERS_STARTED {"owner":"cron-worker","count":5}`。`count` 不是 5 说明有调度器注册失败或被 `SCHEDULER_ENABLED=false` 关停。
+启动自检见[调度运维手册](../docs/handbook/ops/CRON_WORKER_OPS.md#7-监控与巡检)。
 
 `src/schedulers/cronScheduler.js` 提供通用工厂 `createCronScheduler({ envKey, defaultCron, taskName, run })`，并导出 `resolveTimezone` / `logCode`。**新增调度器一律复用它**，不要手写 node-cron 样板。
 

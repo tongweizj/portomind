@@ -93,7 +93,8 @@ MONGO_URI=mongodb://127.0.0.1:27017/portomind      # 与 server 同一库（必�
 SCHEDULER_ENABLED=true           # 唯一定时任务所有者（ADR-002）
 SCHEDULER_TIMEZONE=America/Toronto
 MARKET_TIMEZONE=America/Toronto
-PRICE_SYNC_CRON=0 3 * * *        # 价格同步
+PRICE_SYNC_US_CA_CRON=0 3 * * *  # US/CA 价格同步
+PRICE_SYNC_CN_CRON=0 12 * * *    # CN/HK 价格同步
 HEALTH_CHECK_CRON=30 3 * * *     # 完整性检查
 ALERT_EVAL_CRON=0 4 * * *        # 提醒评估
 FX_SYNC_CRON=30 9 * * *          # 汇率同步
@@ -227,7 +228,7 @@ pm2 save
 
 ```bash
 pm2 logs portomind-worker --lines 50 | grep SCHEDULERS_STARTED
-# 期望：SCHEDULERS_STARTED {"owner":"cron-worker","count":5}
+# 期望：SCHEDULERS_STARTED {"owner":"cron-worker","count":6}
 
 pm2 logs portomind-api --lines 50 | grep SCHEDULERS_STARTED
 # 期望：无输出（server 不持有调度）
@@ -263,7 +264,7 @@ TLS 证书配置因环境而异，示例未包含证书路径。
 ### 6.4 上线检查
 
 - [ ] `npm test`、`npm run --workspace server verify`、前端 `lint` / `build` 全部通过（见 §8）。
-- [ ] `cron-worker` 日志有 `SCHEDULERS_STARTED {"count":5}`，`server` 日志**无** `SCHEDULERS_STARTED`（§6.2）。
+- [ ] `cron-worker` 调度启动日志符合 §6.2，`server` 日志无 `SCHEDULERS_STARTED`。
 - [ ] `server` 与 `cron-worker` 使用**同一** `MONGO_URI` 与**同一** `logs/` 目录。
 - [ ] API 未暴露到公网；`/api/logs` 仅在可信网络可访问。
 - [ ] MongoDB 和日志目录有备份、容量与保留策略（见 §10）。
@@ -357,7 +358,7 @@ cd cron-worker && npm test
 | 前端产物 | `client/dist/` | 静态构建产物，可随时重新构建，不必备份 |
 
 迁移服务器时直接拷贝数据库即可；前端重新 `npm run --workspace client build` 生成。
-恢复后确认 `cron-worker` 日志出现 `SCHEDULERS_STARTED {"count":5}`（§6.2）。
+恢复后按 §6.2 检查 `cron-worker` 调度启动日志。
 
 ---
 

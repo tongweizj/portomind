@@ -100,6 +100,8 @@ export function getPriceView({ dataState = null, dataStateLevel = null, requestE
   const tone = getStatusTone(level);
   const percent = computePercentage(fetched, expected);
   const missing = Array.isArray(dataState.missing) ? dataState.missing : [];
+  const marketTargets = Object.entries(dataState.byMarket ?? {}).filter(([, info]) => isTargetDate(info?.targetMarketDate));
+  const mixedTargets = new Set(marketTargets.map(([, info]) => info.targetMarketDate)).size > 1;
 
   let mode = 'complete';
   let statusMessage = '数据齐全';
@@ -119,6 +121,9 @@ export function getPriceView({ dataState = null, dataStateLevel = null, requestE
     level,
     tone,
     targetText: isTargetDate(dataState.targetMarketDate) ? dataState.targetMarketDate : '—',
+    marketTargetText: mixedTargets
+      ? marketTargets.map(([market, info]) => `${market} ${info.targetMarketDate}`).join(' · ')
+      : null,
     countsText: `${fetched} / ${expected}`,
     percent,
     percentText: percent === null ? '—' : `${Math.round(percent)}%`,

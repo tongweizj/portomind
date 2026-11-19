@@ -30,7 +30,8 @@ cron-worker 通过 `src/config/env.js` 加载 **`cron-worker/.env`**（不是 `s
 | `SCHEDULER_ENABLED` | `true` | 本进程是否启用调度；仅 cron-worker 读取（`server` 已无此变量） |
 | `SCHEDULER_TIMEZONE` | `America/Toronto` | 所有 `*_CRON` 表达式的解释时区 |
 | `MARKET_TIMEZONE` | `America/Toronto` | 价格日期归桶时区。**改动会改变历史数据日期边界**，务必评估 |
-| `PRICE_SYNC_CRON` | `0 3 * * *` | 价格同步，每天 03:00 |
+| `PRICE_SYNC_US_CA_CRON` | `0 3 * * *` | US/CA 价格同步，默认 ET 03:00。未设置时读取旧变量 `PRICE_SYNC_CRON` |
+| `PRICE_SYNC_CN_CRON` | `0 12 * * *` | CN-SH/CN-SZ/CN-FUND/HK 价格同步，默认 ET 12:00 |
 | `HEALTH_CHECK_CRON` | `30 3 * * *` | 完整性检查，每天 03:30 |
 | `ALERT_EVAL_CRON` | `0 4 * * *` | 提醒评估，每天 04:00 |
 | `FX_SYNC_CRON` | `30 9 * * *` | 汇率同步，每天 09:30 |
@@ -58,7 +59,7 @@ pm2 startup                   # 按提示启用开机自启（仅需一次）
 ```
 
 进程启动链路：`index.js` → 加载 `.env` → 连接 MongoDB → `startSchedulers()`
-（`src/tasks/scheduler.js` 注册 5 个调度器）。生产保活与 Nginx / 上线检查见 [系统部署手册](./DEPLOYMENT.md)。
+（`src/tasks/scheduler.js` 注册 5 类任务，共 6 个 cron）。生产保活与 Nginx / 上线检查见 [系统部署手册](./DEPLOYMENT.md)。
 
 ---
 
@@ -74,7 +75,7 @@ pm2 startup                   # 按提示启用开机自启（仅需一次）
 启动成功时日志出现（结构化 JSON，字段 `owner` / `count`）：
 
 ```text
-SCHEDULERS_STARTED {"owner":"cron-worker","count":5}
+SCHEDULERS_STARTED {"owner":"cron-worker","count":6}
 ```
 
 - `count` 不是 5 → 有调度器注册失败，或被 `SCHEDULER_ENABLED=false` 关停。
@@ -162,7 +163,7 @@ mongosh 'mongodb://127.0.0.1:27017/portomind_dev' \
 
 - `taskruns` 出现 `FAILED`，或 `daily-price-sync` / `price-integrity-check` 持续 `PARTIAL` 且 `failures[]` 中为不可重试错误（`retryable:false`，如上游 404 / 参数错误）；
 - 某资产长期 `DATA_GAP` 且 `repair` 未收敛——多为上游缺数据或 `launchDate` 填错，需人工核对该资产；
-- **worker 进程存活**：先确认日志有 `SCHEDULERS_STARTED {"count":5}`。worker 停摆会让**全部** 5 类任务停跑（`server` 停止不影响定时任务）。
+- **worker 进程存活**：先确认日志有 `SCHEDULERS_STARTED {"count":6}`。worker 停摆会让**全部** 5 类任务停跑（`server` 停止不影响定时任务）。
 - **CLI 退出码**（用于告警脚本判断）：`dailySync` 与 `integrityCheck` 在 `PARTIAL` / `FAILED` 时退出码为 `1`；`historySync` 在存在失败资产时退出码为 `1`。退出码契约见 [开发文档 §5.4](../technical/CRON_WORKER_DEV.md#54-退出码约定)。
 
 ---

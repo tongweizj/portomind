@@ -66,7 +66,7 @@
 
 | 编号 | 功能点 | 功能描述 | 入口 |
 |---|---|---|---|
-| AS-06 | 每日价格同步 | 默认 **03:00**（`PRICE_SYNC_CRON`）：逐资产「**开市校验 → fetcher 路由 → 幂等入库**」，休市记 `skip`，**逐资产故障隔离** | 定时（cron-worker） |
+| AS-06 | 每日价格同步 | [按市场组定时](../../ops/CRON_WORKER_OPS.md#2-配置环境变量)，逐资产「**开市校验 → fetcher 路由 → 幂等入库**」，休市记 `skip`，**逐资产故障隔离** | 定时（cron-worker） |
 | AS-07 | 完整性检查 | 默认 **03:30**（`HEALTH_CHECK_CRON`）：按 `launchDate` 推断应有交易日数，比对实际采集，缺口**可选自动补全**（`INTEGRITY_AUTO_REPAIR` 默认开） | 定时 + CLI |
 | AS-08 | 港股支持 | `market=HK` / `currency=HKD` / 路由 Yahoo（`0700.HK`）/ 交易日历含 HK 节假日 | 资产配置 + 抓取路由 |
 | AS-10 | A 股个股日线 | 东方财富 fetcher 按 `secid` 路由：`5/6/9` 开头 → 上海 `1.x`，其余 → 深圳 `0.x` | `eastmoneyFetcher` |
@@ -115,7 +115,7 @@
 
 | 功能 | 说明 |
 |---|---|
-| AS-06 每日同步 | 默认 **03:00**（`PRICE_SYNC_CRON`）：逐资产「**开市校验 → fetcher 路由 → 幂等入库**」，休市记 `skip`，逐资产**故障隔离** |
+| AS-06 每日同步 | 按市场组调度，逐资产检查开市、采集和入库。时刻与配置见[调度运维手册 §2](../../ops/CRON_WORKER_OPS.md#2-配置环境变量)。 |
 | AS-07 完整性检查 | 默认 **03:30**（`HEALTH_CHECK_CRON`）：按 `launchDate` 推断应有交易日数，比对实际采集，缺口**可选自动补全**（`INTEGRITY_AUTO_REPAIR` 默认开） |
 | AS-08 港股支持 | `market=HK`、`currency=HKD`、路由 Yahoo（`0700.HK`）、交易日历含 HK 节假日 |
 | AS-10 A 股个股 | 东方财富 fetcher 按 `secid` 路由：`5/6/9` 开头 → 上海 `1.x`，其余 → 深圳 `0.x` |

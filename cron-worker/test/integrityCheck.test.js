@@ -36,9 +36,7 @@ test('expectedTradingDates：CN 与 CN-SH 归一化后一致', () => {
 test('expectedBucketCandidates：US/CA 当日；CN 可能跨前一日', () => {
   assert.deepEqual(expectedBucketCandidates('US', '2024-08-26'), ['2024-08-26']);
   assert.deepEqual(expectedBucketCandidates('CA', '2024-08-26'), ['2024-08-26']);
-  const candidates = expectedBucketCandidates('CN-SH', '2026-08-24');
-  assert.ok(candidates.includes('2026-08-24'));
-  assert.ok(candidates.length >= 1);
+  assert.deepEqual(expectedBucketCandidates('CN-SH', '2026-08-24'), ['2026-08-23', '2026-08-24']);
 });
 
 test('countAsset：对比理论交易日与实际落库桶', async () => {
@@ -58,19 +56,21 @@ test('countAsset：对比理论交易日与实际落库桶', async () => {
   assert.equal(counted.completenessRatio, 2 / 3);
 });
 
-test('countAsset：CN 候选桶命中即视为完整', async () => {
+test('countAsset：同时兼容历史前一日桶和当日净值桶', async () => {
   const asset = { symbol: '510300', market: 'CN-SH' };
-  const counted = await countAsset(
-    asset,
-    '2026-08-24',
-    '2026-08-24',
-    {
-      expectedTradingDates: () => ['2026-08-24'],
-      storedBucketDates: () => ['2026-08-24'] // 候选桶 {08-23, 08-24} 之一命中
-    }
-  );
-  assert.equal(counted.missingCount, 0);
-  assert.equal(counted.completenessRatio, 1);
+  for (const storedDate of ['2026-08-23', '2026-08-24']) {
+    const counted = await countAsset(
+      asset,
+      '2026-08-24',
+      '2026-08-24',
+      {
+        expectedTradingDates: () => ['2026-08-24'],
+        storedBucketDates: () => [storedDate]
+      }
+    );
+    assert.equal(counted.missingCount, 0);
+    assert.equal(counted.completenessRatio, 1);
+  }
 });
 
 test('groupMissingRanges：按 mergeDays 合并缺失日期', () => {

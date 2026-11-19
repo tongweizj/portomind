@@ -12,6 +12,7 @@ const priceFetch = require('@portomind/shared/services/priceFetch.service');
 const { dateBounds } = require('@portomind/shared/utils/marketTime');
 const { withMarketDataTimeout } = require('@portomind/shared/fetchers/timeout');
 const { MARKET_DATA_ERROR, classifyMarketDataError } = require('@portomind/shared/fetchers/errors');
+const { taskLogger } = require('@portomind/shared/config/logger');
 
 const originalFindOneAndUpdate = Price.findOneAndUpdate;
 const originalBulkWrite = Price.bulkWrite;
@@ -151,18 +152,36 @@ test('当日最新价格先按 symbol 聚合再分页', async () => {
   assert.equal(result.date, '2026-08-24');
 });
 
-test('saveLatest 将同一市场日规范为相同唯一键', async () => {
+test('saveLatest 同一市场日覆盖同一键并记录前值、后值和批次', async (t) => {
   const filters = [];
-  Price.findOneAndUpdate = async filter => {
+  let saved;
+  t.mock.method(Price, 'findOne', () => ({ lean: async () => saved }));
+  t.mock.method(Price, 'findOneAndUpdate', async (filter, update) => {
     filters.push(filter);
-    return filter;
-  };
-
-  await storage.saveLatest({ symbol: '001180.cn', market: 'CN-FUND', price: 300, timestamp: new Date('2026-08-24T14:00:00Z') });
-  await storage.saveLatest({ symbol: '001180', market: 'CN-FUND', price: 301, timestamp: new Date('2026-08-24T19:00:00Z') });
+    saved = { ...update.$set, _id: 'existing-price' };
+    return saved;
+  });
+  const logger = t.mock.method(taskLogger, 'info', () => {});
+  const scheduled = { trigger: 'SCHEDULED', marketGroup: 'CN', runKey: '2026-08-24:CN' };
+  const manual = { trigger: 'MANUAL', runKey: 'manual:2026-08-24T19:00:00.000Z' };
+  await storage.saveLatest({ symbol: '001180.cn', market: 'CN-FUND', price: 300, timestamp: new Date('2026-08-24T14:00:00Z') }, scheduled);
+  await storage.saveLatest({ symbol: '001180', market: 'CN-FUND', price: 301, timestamp: new Date('2026-08-24T19:00:00Z') }, manual);
 
   assert.equal(filters[0].symbol, '001180.CN');
-  assert.deepEqual(filters[1], filters[0]);
+  assert.equal(filters[1].symbol, filters[0].symbol);
+  assert.deepEqual(filters[1].timestamp, filters[0].timestamp);
+  assert.equal(filters[1].price, 300);
+  assert.equal(saved.price, 301);
+  const [[firstEvent, first], [firstSaved, inserted], [secondEvent, second], [secondSaved, updated]] =
+    logger.mock.calls.map(call => call.arguments);
+  assert.deepEqual([firstEvent, firstSaved, secondEvent, secondSaved], [
+    'PRICE_UPSERT_PREVIOUS', 'PRICE_UPSERTED', 'PRICE_UPSERT_PREVIOUS', 'PRICE_UPSERTED'
+  ]);
+  assert.deepEqual([first.existing, inserted.overwritten, second.existing, updated.overwritten], [null, false, 300, true]);
+  assert.deepEqual([inserted.batch, inserted.marketGroup, updated.batch, updated.trigger, updated.price],
+    [scheduled.runKey, 'CN', manual.runKey, 'MANUAL', 301]);
+  assert.equal(updated.timestamp, filters[0].timestamp.toISOString());
+  assert.ok(Number.isFinite(Date.parse(updated.writtenAt)));
 });
 
 test('saveHistory 在 bulkWrite 前合并重复日记录', async () => {
@@ -245,6 +264,9 @@ test('getLatestPrices 资产查询失败时保留所有缺价键为 null', async
 });
 
 test('saveLatest 并发唯一键冲突后以同一派生键更新', async (t) => {
+  let reads = 0;
+  t.mock.method(Price, 'findOne', () => ({ lean: async () => ++reads === 1 ? null : { _id: 'winner', price: 299 } }));
+  const logger = t.mock.method(taskLogger, 'info', () => {});
   const update = t.mock.method(Price, 'findOneAndUpdate', async (filter, payload, options) => {
     if (options.upsert) throw Object.assign(new Error('duplicate'), { code: 11000 });
     return payload.$set;
@@ -256,5 +278,11 @@ test('saveLatest 并发唯一键冲突后以同一派生键更新', async (t) =>
   assert.equal(record.symbol, 'VOO.US');
   assert.equal(record.price, 301);
   assert.equal(update.mock.callCount(), 2);
-  assert.deepEqual(update.mock.calls[0].arguments[0], update.mock.calls[1].arguments[0]);
+  const [insertFilter, updateFilter] = update.mock.calls.map(call => call.arguments[0]);
+  assert.equal(insertFilter.symbol, updateFilter.symbol);
+  assert.deepEqual(insertFilter.timestamp, updateFilter.timestamp);
+  assert.deepEqual(insertFilter.price, { $exists: false });
+  assert.equal(updateFilter._id, 'winner');
+  assert.equal(updateFilter.price, 299);
+  assert.equal(logger.mock.calls[0].arguments[1].existing, 299);
 });

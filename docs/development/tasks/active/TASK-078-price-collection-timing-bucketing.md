@@ -1,12 +1,12 @@
 # TASK-078 — 价格采集时刻与归桶修正（P0-3 / P2-8：采集程序问题）
 
-> **Status：Implementing**（2026-11-17，Human 批准计划后 Orchestrator 登记）。按 [DEV-ORDER-073-078](../DEV-ORDER-073-078.md) 顺序实施。
+> **Status：Completed**（2026-11-17，Human 批准计划后 Orchestrator 登记）。按 [DEV-ORDER-073-078](../DEV-ORDER-073-078.md) 顺序实施。
 
 ## Metadata
 
 | 字段 | 内容 |
 |---|---|
-| Status | **Implementing**（2026-11-17，Human 批准计划后 Orchestrator 登记；按开发顺序实施） |
+| Status | **Completed**（2026-11-17，Human 批准计划后 Orchestrator 登记；按开发顺序实施） |
 | 所属 Story | 无（独立维护任务；从 [TASK-073](../active/TASK-073-price-pipeline-p0-data-correctness.md) 剥离的采集程序问题，2026-11-17 Human 指令独立成卡） |
 | 覆盖的验收条件 | 本卡 §3 AC（来源：[PRICE-PIPELINE-REVIEW P0-3 / P2-8](../../../os/architecture/PRICE-PIPELINE-REVIEW.md)） |
 | Priority | High（建议；采集日期错位导致价格覆盖 + 场外基金恒定滞后一天，待 Human 确认） |
@@ -96,6 +96,8 @@ D-a 改成按市场分组调度后，同一天会出现 CN 组（ET 12:00）与 
 未实施、未创建 ExecPlan、**D-a 已裁决（方案 A：CN ET 12:00 分组调度）**、**D-a-附带已裁决（同日多批次接受后写覆盖先写 + 写入日志留痕）**、未改任何 AC/Status（Planner 仅建卡内容）。
 
 ## 9. 记录
+
+2026-11-19，Reviewer：返工复审 **Pass**，延迟净值与分组看板目标日均验证通过。见[实施计划 §12](./TASK-078-price-collection-timing-bucketing-plan.md#12-review-record)。
 
 2026-11-17，Planner：依据 Human 指令「P0-3 是价格采集程序的问题，独立成新 task」建卡，从 TASK-073 剥离 P0-3/P2-8 与 D-a。初始 Status 待 Orchestrator 登记；优先级建议 High，最终以 Human 为准。D-a 裁决 + ExecPlan 批准前不得开工。
 
