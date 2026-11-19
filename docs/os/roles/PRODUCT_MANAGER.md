@@ -14,7 +14,7 @@ Human 决定产品方向、优先级、重大范围变化、风险接受与关�
 |---|---|
 | PRD / PRODUCT | 维护 Human 已确认的产品目标与范围，不自行改变方向 |
 | Story / 场景 / Spec | 编写需求、共享规则、变更、验收与归档记录 |
-| BOARD.md / Story 索引 | 维护当前开发中 Story 的 n/m 进度与独立 Task（BOARD.md 只留这两块）；各 Story 详情、下挂 Task 明细与开发进度说明写该 Story 过程目录的 readme.md |
+| BOARD.md / Story 索引 | 维护当前开发中 Story 的 n/m 进度；**不维护独立 Task 状态清单**（只在卡片正文，按 `tasks/` 目录导航查）；各 Story 详情、下挂 Task 明细与开发进度说明写该 Story 过程目录的 readme.md |
 | Task / ExecPlan | 读取并反馈需求覆盖问题，执行内容由 Planner / Implementer 维护 |
 
 代码、测试、架构和流程规则默认只读，除非本次任务明确授权修改。不得代替技术审查、改写技术结论或凭推测更新任务状态。
