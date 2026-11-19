@@ -83,6 +83,7 @@ function buildCards(tasksByKey, { requestError, generatedAt, onRetry }) {
     label: '价格同步',
     dataState: priceTask ? priceTask.dataState : null,
     dataStateLevel: priceTask ? priceTask.dataStateLevel : null,
+    notes: priceTask?.notes,
     lastRunAt: priceTask && priceTask.lastRun ? priceTask.lastRun.startedAt : null,
     runState: priceTask && priceTask.stale
       ? '超时未完成'

@@ -1,7 +1,7 @@
 // shared/services/cronStatus.service.js
 //
 // TASK-054（FS C-02）：`GET /api/cron/status` 的**唯一派生实现**（ExecPlan D-9）。
-// 分层：controller 只做参数校验与响应封装；本文件负责 7 次只读查询 + 全部派生（TASK-064 新增 1 次 TaskSkip 批量聚合）。
+// 分层：controller 负责参数和响应封装，本文件负责只读查询与看板派生。
 // 契约：ExecPlan §4.3（冻结）。要点：
 //   - 只读：本文件不含任何写操作（不创建、不更新、不删除、不批量写）
 //   - null ≠ 0：result 缺失时数据态数值一律 null（占位 display 由前端决定）
@@ -24,6 +24,8 @@ const { SUPPORTED_CURRENCIES } = require('./fxRate.service');
 const { normalizeSymbol } = require('../utils/symbol');
 const { allItemsSkipped } = require('../utils/taskResult');
 const { PRICE_SYNC_GROUPS, priceSyncGroupOf } = require('../config/priceSync');
+const { getLatestPriceDetails, STALE_AFTER_TRADING_DAYS } = require('./marketData.service');
+const { MARKET_DATA_ERROR } = require('../fetchers/errors');
 
 const { isMarketOpenToday } = require('./calendar.service');
 const { MARKET_TIMEZONE, dateBounds, marketDate } = require('../utils/marketTime');
@@ -37,6 +39,9 @@ const {
 
 dayjs.extend(utc);
 dayjs.extend(timezone);
+
+const NO_PRICE_DAYS = 2;
+const NOT_FOUND_DAYS = 3;
 
 // ---------------------------------------------------------------------------
 // 通用工具
@@ -57,6 +62,9 @@ const NOTE_PRIORITY = [
   'NO_OPEN_DAY',
   'EXPECTED_ZERO',
   'TARGET_LAGGED',
+  'PRICE_NO_NEW_DATA',
+  'PRICE_STALE',
+  'PRICE_NOT_FOUND_STREAK',
   'SYMBOL_FORMAT_MISMATCH',
   'UNSUPPORTED_MARKET',
   'DETAIL_NOT_REBALANCE',
@@ -213,11 +221,56 @@ function buildSkipSummary(doc) {
   };
 }
 
+async function buildPriceObservations(now, tz, infos, assets) {
+  if (!infos.length) return [];
+  const markets = new Map(assets.map(asset => [asset.symbol, marketOf(asset)]));
+  const cutoff = dayjs(now).tz(tz).subtract(NOT_FOUND_DAYS * PRICE_TARGET_MAX_LOOKBACK_DAYS, 'day').toDate();
+  const [runs, prices] = await Promise.all([
+    TaskRun.find({ taskName: 'daily-price-sync', trigger: 'SCHEDULED', startedAt: { $gte: cutoff }, endedAt: { $lte: now } })
+      .select('runKey status successCount totalCount result.skippedCount failures.item failures.category').lean(),
+    getLatestPriceDetails([...markets.keys()], { now, markets })
+  ]);
+  const byKey = new Map(runs.map(run => [run.runKey, run]));
+  const noData = [];
+  const notFound = [];
+  const stale = [...markets.keys()].filter(symbol => prices[symbol]?.stale === true);
+
+  for (const { market, effectiveSyncDay } of infos) {
+    const group = priceSyncGroupOf(market);
+    const scheduled = [];
+    let day = effectiveSyncDay;
+    while (day && scheduled.length < NOT_FOUND_DAYS) {
+      const run = byKey.get(`${day}:${group}`) || byKey.get(day);
+      if (!run || !['SUCCEEDED', 'PARTIAL'].includes(run.status)) break;
+      scheduled.push(run);
+      day = lastOpenDayBefore(market, day, tz);
+    }
+    const recent = scheduled.slice(0, NO_PRICE_DAYS);
+    if (recent.length === NO_PRICE_DAYS && recent.every(run =>
+      Number.isInteger(run.result?.skippedCount) && run.totalCount > 0 && run.successCount === 0)) {
+      noData.push(market);
+    }
+    if (scheduled.length !== NOT_FOUND_DAYS) continue;
+    const misses = scheduled.map(run => new Set((run.failures || [])
+      .filter(failure => failure?.category === MARKET_DATA_ERROR.NOT_FOUND)
+      .map(failure => normalizeSymbol(failure.item))));
+    for (const [symbol, assetMarket] of markets) {
+      if (assetMarket === market && misses.every(items => items.has(normalizeSymbol(symbol)))) notFound.push(symbol);
+    }
+  }
+
+  const notes = [];
+  if (noData.length) notes.push(note('PRICE_NO_NEW_DATA', `连续 ${NO_PRICE_DAYS} 个应采交易日未采到新数据：${noData.join('、')}`));
+  if (stale.length) notes.push(note('PRICE_STALE', `最近价已超过 ${STALE_AFTER_TRADING_DAYS} 个交易日：${stale.join('、')}`));
+  if (notFound.length) notes.push(note('PRICE_NOT_FOUND_STREAK', `连续 ${NOT_FOUND_DAYS} 个应采交易日未找到行情：${notFound.join('、')}`));
+  return notes;
+}
+
 // ---------------------------------------------------------------------------
 // ① 价格同步数据态（AC2 / D-16 / D-17 / D-20）
 // ---------------------------------------------------------------------------
 
-async function buildPriceDataState({ now, tz, assets }) {
+async function buildPriceDataState({ now, tz, assets, lastRun }) {
   const marketNames = [...new Set(assets.map(marketOf))].filter(Boolean);
   const supportedMarkets = [];
   const unsupportedMarkets = [];
@@ -327,6 +380,7 @@ async function buildPriceDataState({ now, tz, assets }) {
       .join('；');
     notes.push(note('TARGET_LAGGED', `${pairs}（日历上一开市日的价将在下次同步采集）`));
   }
+  notes.push(...await buildPriceObservations(now, tz, infos, assets));
   if (unsupportedMarkets.length > 0) {
     notes.push(note('UNSUPPORTED_MARKET', `无法识别市场的资产已排除：${unsupportedMarkets.join(', ')}`));
   }
@@ -348,15 +402,19 @@ async function buildPriceDataState({ now, tz, assets }) {
     }
   }
 
+  const allSkipped = lastRun?.status === 'SUCCEEDED' && lastRun.successCount === 0
+    && allItemsSkipped({ totalCount: lastRun.totalCount, skippedCount: lastRun.result?.skippedCount });
+  if (allSkipped) notes.push(note('ALL_SKIPPED', '最近批次适用的资产全部休市，本次未采集价格'));
+
   let dataStateLevel = 'unknown';
-  if (targetMarketDate && totalExpected > 0) {
+  if (!allSkipped && targetMarketDate && totalExpected > 0) {
     if (totalFetched === 0) dataStateLevel = 'bad';
     else if (totalFetched < totalExpected) dataStateLevel = 'warn';
     else dataStateLevel = 'ok';
   }
 
   return {
-    contractReady: true, // 价格数据态不依赖 taskruns.result，恒可得
+    contractReady: true, // 目标日覆盖仍可从 prices 独立核对。
     dataStateLevel,
     notes: sortNotes(notes),
     dataState: {
@@ -988,13 +1046,14 @@ async function getStatus({ now = new Date(), detail = null, date = null, portfol
     .select('symbol name market launchDate')
     .lean();
 
-  const priceState = await buildPriceDataState({ now: current, tz, assets: assets || [] });
+  const latestPriceRun = runByTask.get('daily-price-sync') || null;
+  const priceState = await buildPriceDataState({ now: current, tz, assets: assets || [], lastRun: latestPriceRun });
   const fxCount = await loadFxCount(tz);
 
   const priceEntry = {
     taskName: 'daily-price-sync',
     lastSkip: buildSkipSummary(skipByTask.get('daily-price-sync')),
-    ...buildRunSummary(runByTask.get('daily-price-sync') || null, 'daily-price-sync', current),
+    ...buildRunSummary(latestPriceRun, 'daily-price-sync', current),
     contractReady: priceState.contractReady,
     dataState: priceState.dataState,
     dataStateLevel: priceState.dataStateLevel,

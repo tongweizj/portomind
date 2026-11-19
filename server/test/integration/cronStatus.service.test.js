@@ -168,6 +168,66 @@ test('周末 CN/HK 保留周五目标，US 按此前覆盖的周四核查', asyn
   assert.equal(entry.dataState.byMarket.US.targetMarketDate, '2026-08-20');
 });
 
+test('TASK-074：最近批次全部跳过显示未知，保留同一目标日的已有报价覆盖', async () => {
+  const now = new Date('2026-11-14T20:00:00Z');
+  const coverage = {
+    assets: [asset('001180.CN', 'CN-FUND')],
+    prices: [priceAt('001180.CN', '2026-11-13')]
+  };
+  useWorld({ ...coverage, latestRuns: [latest('daily-price-sync', {
+    runKey: '2026-11-13:CN', result: { skippedCount: 0 }
+  })] });
+  const collected = taskEntry(await service.getStatus({ now }), 0);
+  useWorld({ ...coverage, latestRuns: [latest('daily-price-sync', {
+    runKey: '2026-11-14:CN', successCount: 0, result: { skippedCount: 1 }
+  })] });
+  const skipped = taskEntry(await service.getStatus({ now }), 0);
+
+  assert.equal(collected.dataStateLevel, 'ok');
+  assert.equal(skipped.dataStateLevel, 'unknown');
+  assert.equal(skipped.lastRun.status, 'SUCCEEDED');
+  assert.deepEqual(skipped.dataState, collected.dataState);
+  assert.equal(skipped.dataState.fetched, 1);
+  assert.ok(skipped.notes.some(note => note.code === 'ALL_SKIPPED' && /未采集/.test(note.message)));
+  assert.ok(!collected.notes.some(note => note.code === 'ALL_SKIPPED'));
+  assert.ok(!skipped.notes.some(note => note.code === 'PRICE_NO_NEW_DATA'));
+});
+
+test('TASK-074：连续开市日按市场批次匹配，周末不打断，旧价与缺价分开', async () => {
+  const scheduled = (runKey, overrides = {}) => priceRun({ runKey, result: { skippedCount: 0 }, ...overrides });
+  const missingQuote = { item: 'VBG.TO', category: 'NOT_FOUND' };
+  useWorld({
+    assets: [asset('001180.CN', 'CN-FUND'), asset('VBG.TO', 'CA'), asset('VBU.TO', 'CA')],
+    latestPrices: [{ _id: '001180.CN', price: 1.23, timestamp: priceAt('001180.CN', '2026-11-18').timestamp }],
+    priceRuns: [
+      scheduled('2026-11-23:CN', { successCount: 0 }),
+      scheduled('2026-11-20:CN', { successCount: 0 }),
+      scheduled('2026-11-23:US_CA', { failures: [missingQuote, { item: 'VBU.TO', category: 'CIRCUIT_OPEN' }] }),
+      scheduled('2026-11-20:US_CA', { failures: [missingQuote, { item: 'VBU.TO', category: 'NOT_FOUND' }] }),
+      scheduled('2026-11-19', { failures: [missingQuote, { item: 'VBU.TO', category: 'NOT_FOUND' }] })
+    ]
+  });
+  const entry = taskEntry(await service.getStatus({ now: new Date('2026-11-23T20:00:00Z') }), 0);
+  const notes = new Map(entry.notes.map(note => [note.code, note.message]));
+  assert.match(notes.get('PRICE_NO_NEW_DATA'), /CN-FUND$/);
+  assert.match(notes.get('PRICE_STALE'), /001180\.CN$/);
+  assert.match(notes.get('PRICE_NOT_FOUND_STREAK'), /VBG\.TO$/);
+  assert.doesNotMatch(notes.get('PRICE_NOT_FOUND_STREAK'), /VBU/);
+});
+
+test('TASK-074：应采日缺 TaskRun 或 result 未就绪时不会凑连续无数据', async () => {
+  useWorld({
+    assets: [asset('001180.CN', 'CN-FUND')],
+    priceRuns: [
+      priceRun({ runKey: '2026-11-23:CN', successCount: 0 }),
+      priceRun({ runKey: '2026-11-20:CN', successCount: 0, result: { skippedCount: 0 } }),
+      priceRun({ runKey: '2026-11-18:CN', successCount: 0, result: { skippedCount: 0 } })
+    ]
+  });
+  const entry = taskEntry(await service.getStatus({ now: new Date('2026-11-23T20:00:00Z') }), 0);
+  assert.ok(!entry.notes.some(note => note.code === 'PRICE_NO_NEW_DATA'));
+});
+
 // ---------------------------------------------------------------------------
 // AC7：僵尸 RUNNING 只对"最新一条"判定
 // ---------------------------------------------------------------------------

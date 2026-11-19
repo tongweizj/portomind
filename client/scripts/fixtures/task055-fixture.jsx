@@ -70,6 +70,11 @@ function App() {
         />
       </Scenario>
 
+      <Scenario name="all-skipped">
+        <PriceTaskCard dataState={baseData} dataStateLevel="unknown" runState="SUCCEEDED"
+          notes={[{ code: 'ALL_SKIPPED', message: '最近批次适用的资产全部休市，本次未采集价格' }]} />
+      </Scenario>
+
       <Scenario name="partial">
         <PriceTaskCard
           dataState={{ ...baseData, fetched: 38, missing: MISSING }}
@@ -87,7 +92,12 @@ function App() {
             'CN-FUND': { targetMarketDate: '2026-11-18' },
             US: { targetMarketDate: '2026-11-17' }
           }
-        }} />
+        }} notes={[
+          { code: 'PRICE_NO_NEW_DATA', message: '连续 2 个应采交易日未采到新数据：CN-FUND' },
+          { code: 'PRICE_STALE', message: '最近价已超过 2 个交易日：001180.CN' },
+          { code: 'PRICE_NOT_FOUND_STREAK', message: '连续 3 个应采交易日未找到行情：VBG.TO' },
+          { code: 'TARGET_LAGGED', message: '历史内部提示' }
+        ]} />
       </Scenario>
 
       <Scenario name="all-missing">
@@ -215,6 +225,15 @@ function runChecks() {
     mixedTarget.includes('目标市场日（最晚）：2026-11-18') &&
     mixedMarkets.includes('CN-FUND 2026-11-18') && mixedMarkets.includes('US 2026-11-17'), mixedMarkets);
   check('TASK-078 单一目标日省略市场日期行', !query('ok', 'price-market-targets'));
+  check('TASK-074 全跳过用未知数据态显示未采集，保留覆盖和运行状态',
+    query('all-skipped', 'price-card')?.dataset.level === 'unknown'
+      && query('all-skipped', 'price-status-message')?.textContent.includes('本次未采集价格')
+      && query('all-skipped', 'price-run-state')?.textContent.includes('SUCCEEDED')
+      && query('all-skipped', 'price-counts')?.textContent === query('ok', 'price-counts')?.textContent);
+
+  const observations = query('mixed-targets', 'price-observations')?.textContent || '';
+  check('TASK-074 价格卡展示服务端观测消息', ['未采到新数据', '001180.CN', 'VBG.TO'].every(value => observations.includes(value)), observations);
+  check('TASK-074 价格卡不会把其它提示混入行情观测', !observations.includes('历史内部提示'));
   check('AC1 不用“今天”表述', !okText.includes('今天'), okText.includes('今天') ? 'contains 今天' : 'ok');
   check('AC1 显示应采 / 已采 40 / 40', okText.includes('40 / 40'), okText.slice(0, 120));
   check('AC1 显示完成度 100%', okText.includes('100%') && Boolean(query('ok', 'price-percent')));

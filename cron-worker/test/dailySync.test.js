@@ -6,6 +6,9 @@ const { syncActiveAssetPrices, marketDate } = dailySync;
 const TaskRun = require('@portomind/shared/models/taskRun');
 const { dateBounds, canonicalDayTimestamp } = require('@portomind/shared/utils/marketTime');
 const tiantian = require('@portomind/shared/fetchers/tiantianFetcher');
+const { classifyMarketDataError } = require('@portomind/shared/fetchers/errors');
+const { fetchWithRetry } = require('@portomind/shared/utils/retry');
+const { taskLogger } = require('@portomind/shared/config/logger');
 
 test('syncActiveAssetPrices 区分开市/休市/失败三类资产', async () => {
   const assets = [
@@ -125,4 +128,94 @@ test('CN 定时批次收到前一日净值时保留旧桶并记录资产失败',
   const manual = await dailySync({ trigger: 'MANUAL', now, dependencies });
   assert.equal(manual.successCount, 1);
   assert.deepEqual([...prices], [[priorBucket, 1.25]]);
+});
+
+test('同源连续 3 次耗尽重试后熔断，保留有限脱敏报文且其它源继续', async () => {
+  const assets = Array.from({ length: 44 }, (_, i) => ({ symbol: `US${i}.US`, market: 'US' }));
+  assets.push({ symbol: '001180.CN', market: 'CN-FUND' });
+  let requests = 0;
+  const result = await syncActiveAssetPrices({
+    getActiveAssets: async () => assets,
+    isMarketOpenToday: () => true,
+    fetchLatest: asset => asset.market === 'CN-FUND'
+      ? Promise.resolve({ ...asset, price: 1.25 })
+      : fetchWithRetry(async () => {
+        requests += 1;
+        throw classifyMarketDataError({ response: { status: 503, data: { message: 'outage', token: 'private' } } }, 'YAHOO');
+      }, { baseDelayMs: 0 }),
+    saveLatest: async () => {}
+  });
+  assert.equal(requests, 12); // 3 个标的各 4 次，原链路全失败将请求 44 × 4 次。
+  assert.equal(result.successCount, 1);
+  assert.equal(result.failureCount, 44);
+  assert.deepEqual(result.circuitOpened, ['YAHOO']);
+  const persisted = new TaskRun({ failures: result.failures }).toObject();
+  assert.equal(persisted.failures[0].status, 503);
+  assert.deepEqual(JSON.parse(persisted.failures[0].responseBody), { message: 'outage', token: '[REDACTED]' });
+  assert.equal(persisted.failures[3].category, 'CIRCUIT_OPEN');
+  assert.equal(persisted.failures[3].responseBody, undefined);
+});
+
+test('NOT_FOUND 与已恢复的请求打断熔断计数，写入失败不会熔断行情源', async () => {
+  const statuses = [503, 503, 404, 503, 503, 200, 503, 503, 200];
+  let requests = 0;
+  const result = await syncActiveAssetPrices({
+    getActiveAssets: async () => statuses.map((_, i) => ({ symbol: `US${i}.US`, market: 'US' })),
+    isMarketOpenToday: () => true,
+    fetchLatest: async asset => {
+      const status = statuses[requests++];
+      if (status !== 200) throw classifyMarketDataError({ response: { status } }, 'YAHOO');
+      return asset;
+    },
+    saveLatest: async () => { throw Object.assign(new Error('storage failure'), { retryable: true }); }
+  });
+  assert.equal(requests, statuses.length);
+  assert.equal(result.circuitOpened, undefined);
+  assert.equal(result.failures[2].category, 'NOT_FOUND');
+});
+
+async function assertDiagnosticsRedacted(t, bodies) {
+  t.mock.method(TaskRun, 'create', async () => ({ _id: 'redaction-test' }));
+  const update = t.mock.method(TaskRun, 'updateOne', async () => ({}));
+  const info = t.mock.method(taskLogger, 'info', () => {});
+  const error = t.mock.method(taskLogger, 'error', () => {});
+  await dailySync({ trigger: 'MANUAL', dependencies: {
+    getActiveAssets: async () => bodies.map((_, i) => ({ symbol: `US${i}.US`, market: 'US' })),
+    isMarketOpenToday: () => true,
+    fetchLatest: async asset => {
+      const index = Number(asset.symbol[2]);
+      throw classifyMarketDataError({ response: { status: 503, data: bodies[index] } }, 'YAHOO');
+    }
+  } });
+  const stored = update.mock.calls[0].arguments[1].$set.failures;
+  assert.equal(stored.length, bodies.length);
+  const logged = info.mock.calls.find(call => call.arguments[0] === 'TASK_END').arguments[1].failures;
+  assert.deepEqual(logged, stored);
+  assert.deepEqual(error.mock.calls.map(call => call.arguments[1]), stored);
+  for (const failure of stored) {
+    assert.equal(failure.status, 503);
+    assert.match(failure.responseBody, /\[REDACTED\]/);
+  }
+  assert.ok(stored.every(({ responseBody }) => !responseBody.includes('FAKE_')), 'Credential canaries must be absent');
+  return stored;
+}
+
+test('TASK-074：上游嵌套描述和原始文本中的 URL 查询值不会进入任务记录或任务日志', async (t) => {
+  const stored = await assertDiagnosticsRedacted(t, [
+    { description: 'Quote unavailable at https://feed.example/quotes?key=FAKE_QUERY',
+      details: ['Try /status?%61ccess_token=FAKE_ENCODED&key=FAKE_DUPLICATE'] },
+    'Quote unavailable: (https://feed.example/status?signature=FAKE_SIGNATURE#details)'
+  ]);
+  for (const { responseBody } of stored) assert.match(responseBody, /Quote unavailable/);
+});
+
+test('TASK-074：普通上游文本中的令牌赋值不会进入任务记录或任务日志', async (t) => {
+  const stored = await assertDiagnosticsRedacted(t, [
+    'Quote unavailable: access_token=FAKE_ACCESS',
+    { description: 'Quote unavailable: "refresh_token": "FAKE_REFRESH with spaces"', code: 'QUOTES_UNAVAILABLE' },
+    { details: ["Quote unavailable: 'Refresh-Token' = 'FAKE_HYPHENATED'", 'Quote unavailable: AccessToken=FAKE_CAMEL'] }
+  ]);
+  assert.equal(stored[0].responseBody, '[REDACTED]');
+  assert.deepEqual(JSON.parse(stored[1].responseBody), { description: '[REDACTED]', code: 'QUOTES_UNAVAILABLE' });
+  assert.deepEqual(JSON.parse(stored[2].responseBody), { details: ['[REDACTED]', '[REDACTED]'] });
 });

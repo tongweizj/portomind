@@ -62,8 +62,10 @@ function applyWorld(world = {}) {
     // service 里 rebalance 查询的 $match 含 'rebalance-suggestions' 正则
     return text.includes('rebalance-suggestions') ? rebalanceRuns : latestRuns;
   };
+  TaskRun.find = () => chainable(world.priceRuns || []);
   Asset.find = () => chainable(world.assets || []);
   Price.find = () => chainable(world.prices || []);
+  Price.aggregate = async () => world.latestPrices || [];
   Price.distinct = async () => world.distinctPriceSymbols || [];
   Portfolio.find = () => chainable(world.portfolios || []);
   FxRate.aggregate = async (pipeline) => {
