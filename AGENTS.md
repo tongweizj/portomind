@@ -67,7 +67,7 @@ Docs are grouped by purpose: `docs/os/` for rules and engineering constraints, `
 | Using the UI, business calculation rules | [handbook/manual/CLIENT.md](./docs/handbook/manual/CLIENT.md) §3 / §5 |
 | The API process itself, manual endpoints, its own troubleshooting | [handbook/ops/SERVER.md](./docs/handbook/ops/SERVER.md) |
 | The scheduler from an operator's view | [handbook/ops/CRON_WORKER.md](./docs/handbook/ops/CRON_WORKER.md) + [CRON_WORKER_OPS.md](./docs/handbook/ops/CRON_WORKER_OPS.md) |
-| Task board: current in-development Story (n/m) + standalone tasks only; per-Story details live in each Story folder's `readme.md` | [BOARD.md](./docs/BOARD.md) |
+| Task board: current in-development Story (n/m) + standalone-task directory navigation only; standalone-task status lives in each card, not synced here; per-Story details live in each Story folder's `readme.md` | [BOARD.md](./docs/BOARD.md) |
 | What one task requires and where its process files live | Follow its link in BOARD; new Story files sit directly in `docs/development/delivery/US-xxx/` as `TASK-xxx.md` and `TASK-xxx-plan.md`. Location/lifecycle authority: [DOCS.md §1.1](./docs/os/standards/DOCS.md#11-story-交付目录与文档生命周期); existing/shared records stay linked in place |
 | Whether an ExecPlan is required, and how to write one | [os/process/EXECUTION_PLANS.md](./docs/os/process/EXECUTION_PLANS.md) |
 | **Status values** (Story / task / ExecPlan states, `Merged`, aliases) | [os/process/STATES.md](./docs/os/process/STATES.md) — the only owner; do not invent or redefine a status word anywhere else |
