@@ -31,12 +31,14 @@ const cardStyle = {
 
 const mutedStyle = { color: colors.textMuted };
 const secondaryStyle = { color: colors.textSecondary };
+const PRICE_OBSERVATION_CODES = new Set(['PRICE_NO_NEW_DATA', 'PRICE_STALE', 'PRICE_NOT_FOUND_STREAK']);
 
 /**
  * @param {{
  *   label?: string,
  *   dataState?: object|null,
  *   dataStateLevel?: 'ok'|'warn'|'bad'|'unknown'|null,
+ *   notes?: Array<{code:string,message:string}>,
  *   lastRunAt?: any,
  *   runState?: any,
  *   requestError?: any,
@@ -48,6 +50,7 @@ export default function PriceTaskCard({
   label = '价格同步',
   dataState = null,
   dataStateLevel = null,
+  notes = [],
   lastRunAt = null,
   runState = null,
   requestError = null,
@@ -56,6 +59,8 @@ export default function PriceTaskCard({
 } = {}) {
   const view = getPriceView({ dataState, dataStateLevel, requestError });
   const hasDataRows = view.mode !== 'request-error' && view.mode !== 'invalid';
+  const skippedNote = Array.isArray(notes) ? notes.find(note => note?.code === 'ALL_SKIPPED') : null;
+  const observations = Array.isArray(notes) ? notes.filter(note => PRICE_OBSERVATION_CODES.has(note?.code)) : [];
 
   return (
     <article
@@ -112,7 +117,7 @@ export default function PriceTaskCard({
         </span>
         {hasDataRows && (
           <span data-testid="price-status-message" style={secondaryStyle}>
-            {view.statusMessage}
+            {skippedNote?.message ?? view.statusMessage}
           </span>
         )}
       </div>
@@ -160,6 +165,12 @@ export default function PriceTaskCard({
             />
           </div>
         </>
+      )}
+
+      {hasDataRows && observations.length > 0 && (
+        <ul data-testid="price-observations" style={{ ...mutedStyle, margin: 0, paddingLeft: 18 }}>
+          {observations.map(note => <li key={note.code}>{note.message}</li>)}
+        </ul>
       )}
 
       {view.mode === 'request-error' && (

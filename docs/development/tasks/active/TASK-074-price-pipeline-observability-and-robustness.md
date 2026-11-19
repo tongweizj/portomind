@@ -93,6 +93,8 @@
 
 ## 9. 记录
 
+2026-11-19，Reviewer 复审结论为 **Pass**。AC1 按 Human 裁决依据现有证据验收，原异常未复现，根因未确认。裁决和完整结论见[实施计划 §12](./TASK-074-price-pipeline-observability-and-robustness-plan.md#12-review-record)。
+
 2026-11-17，Planner：依据 Human 指令「根据 PRICE-PIPELINE-REVIEW 创建独立 task」建卡，与 TASK-073 按审阅优先级分层拆分（P0 数据正确性 / P1-P2 观测健壮性）。P1-4 已按 Planner 核对修正定位（先核对部署，不重做 057）。初始 Status 待 Orchestrator 登记；优先级建议 Medium，最终以 Human 为准。D-f/D-g 裁决前 AC3/AC5 的口径未冻结，不得按推荐值擅自实现。
 
 2026-11-17（Planner 协调修订，仅重叠 A）：按 Human 指令，将本卡 AC2「零采集/全部跳过 = SUCCEEDED」统一到 [TASK-073 AC6 / D-d](./TASK-073-price-pipeline-p0-data-correctness.md)——「无新数据/全部跳过」仅作 `result` 数据态表达（复用 073/057 单点实现，沿用四态、不新增状态值、不改唯一索引），本卡只保留「连续 N 天无新数据可见」的观测增量。同步更新 AC2 / D-e / R-2 / §7 Coordination Notes / §8；未改任何 AC 实质意图、其它重叠项（B–F）或 Status。

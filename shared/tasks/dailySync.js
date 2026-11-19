@@ -19,6 +19,7 @@ const { isMarketOpenToday } = require('../services/calendar.service');
 const { MARKET_DATA_ERROR, MarketDataError } = require('../fetchers/errors');
 
 let scheduledBatch = Promise.resolve();
+const PROVIDER_FAILURE_LIMIT = 3;
 
 async function syncActiveAssetPrices(dependencies = {}, context = {}) {
   const loadAssets = dependencies.getActiveAssets || getActiveAssets;
@@ -41,9 +42,13 @@ async function syncActiveAssetPrices(dependencies = {}, context = {}) {
     failureCount: 0,
     failures: []
   };
+  const outageCounts = new Map();
+  const openedProviders = new Set();
 
   taskLogger.info('PRICE_SYNC_ASSETS_LOADED', { totalCount: assets.length, marketGroup: context.marketGroup });
   for (const asset of assets) {
+    let provider;
+    let fetching = false;
     try {
       if (!marketOpen(asset.market, calendarDate)) {
         summary.skippedCount += 1;
@@ -54,13 +59,20 @@ async function syncActiveAssetPrices(dependencies = {}, context = {}) {
         });
         continue;
       }
+      provider = resolveFetcher(asset).provider;
+      if (openedProviders.has(provider)) {
+        throw new MarketDataError(MARKET_DATA_ERROR.CIRCUIT_OPEN, provider, `Price fetch skipped after ${PROVIDER_FAILURE_LIMIT} provider failures`);
+      }
+      fetching = true;
       const priceData = await loadPrice(asset);
+      fetching = false;
+      outageCounts.delete(provider);
       if (context.marketGroup === 'CN' && context.scheduledDay && priceData.market === 'CN-FUND') {
         const navDay = todayString(priceData.timestamp);
         if (navDay !== context.scheduledDay) {
           throw new MarketDataError(
             MARKET_DATA_ERROR.UPSTREAM,
-            resolveFetcher(asset).provider,
+            provider,
             `Expected NAV for ${context.scheduledDay}, received NAV for ${navDay}`,
             { retryable: false }
           );
@@ -74,18 +86,31 @@ async function syncActiveAssetPrices(dependencies = {}, context = {}) {
         price: priceData.price
       });
     } catch (error) {
+      if (fetching) {
+        if (error.retryable) {
+          const count = (outageCounts.get(provider) || 0) + 1;
+          outageCounts.set(provider, count);
+          if (count >= PROVIDER_FAILURE_LIMIT) openedProviders.add(provider);
+        } else {
+          // 标的不存在等资产级响应表明行情源仍可用。
+          outageCounts.delete(provider);
+        }
+      }
       summary.failureCount += 1;
       const failure = {
         item: asset.symbol,
         category: error.category || 'INTERNAL',
-        provider: error.provider,
+        provider: error.provider || (fetching ? provider : undefined),
         retryable: Boolean(error.retryable),
         message: error.message
       };
+      if (Number.isInteger(error.status)) failure.status = error.status;
+      if (error.responseBody !== undefined) failure.responseBody = error.responseBody;
       summary.failures.push(failure);
       taskLogger.error('PRICE_SYNC_ASSET_FAILED', failure);
     }
   }
+  if (openedProviders.size) summary.circuitOpened = [...openedProviders];
   return summary;
 }
 
@@ -109,6 +134,7 @@ async function dailySync(options = {}) {
       const summary = await syncActiveAssetPrices(options.dependencies, { trigger, runKey, marketGroup, scheduledDay });
       const result = { skippedCount: summary.skippedCount };
       if (marketGroup) result.marketGroup = marketGroup;
+      if (summary.circuitOpened) result.circuitOpened = summary.circuitOpened;
       return { ...summary, result };
     }
   });

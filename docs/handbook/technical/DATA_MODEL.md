@@ -280,7 +280,7 @@ AlertRule ──_id──> AlertEvent.ruleId（**可空**：再平衡通知没�
 | `endedAt` | Date |
 | `durationMs` | Number |
 | `totalCount` / `successCount` / `failureCount` | Number，= `0` |
-| `failures[]` | `{item, category, provider, retryable, message}`，`_id: false` |
+| `failures[]` | `{item, category, provider, retryable, message, status?, responseBody?}`，`_id: false`。行情请求有 HTTP 响应时可记录状态及最多 4096 字符的脱敏正文摘要。 |
 | `createdAt` / `updatedAt` | `timestamps: true` |
 
 - 索引：`{taskName: 1, runKey: 1}` **unique**（两层防重的第二层）；`{startedAt: -1, taskName: 1}`（按时间倒序巡检）。

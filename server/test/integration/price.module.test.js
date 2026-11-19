@@ -3,7 +3,7 @@ const assert = require('node:assert/strict');
 
 const Price = require('@portomind/shared/models/price');
 const Asset = require('@portomind/shared/models/asset');
-const { getLatestPrices } = require('@portomind/shared/services/marketData.service');
+const { getLatestPrices, getLatestPriceDetails } = require('@portomind/shared/services/marketData.service');
 const { toStorageSymbol, toProviderSymbol } = require('@portomind/shared/utils/symbol');
 const storage = require('@portomind/shared/services/priceStorage.service');
 const priceService = require('@portomind/shared/services/price.service');
@@ -261,6 +261,28 @@ test('getLatestPrices 资产查询失败时保留所有缺价键为 null', async
   const price = t.mock.method(Price, 'findOne', () => assert.fail('market lookup failed'));
   assert.deepEqual(await getLatestPrices(['VOO']), { VOO: null });
   assert.equal(price.mock.callCount(), 0);
+});
+
+test('最近价详情使用交易日判断旧价，原入口仍返回数值或 null', async (t) => {
+  const old = new Date('2026-11-13T05:00:00Z');
+  const atThreshold = new Date('2026-11-16T05:00:00Z');
+  const records = new Map([
+    ['A.US', { price: 12, timestamp: old }],
+    ['B.US', { price: 15, timestamp: atThreshold }],
+    ['C.US', { price: 17 }]
+  ]);
+  const symbols = ['A.US', 'B.US', 'C.US', 'MISSING.US'];
+  t.mock.method(Asset, 'aggregate', async () => symbols.map(symbol => ({ symbol, market: 'US' })));
+  t.mock.method(Price, 'findOne', ({ symbol }) => ({ sort: () => ({ lean: async () => records.get(symbol) }) }));
+
+  assert.deepEqual(await getLatestPriceDetails(symbols, { now: new Date('2026-11-18T20:00:00Z') }), {
+    'A.US': { price: 12, timestamp: old, stale: true },
+    'B.US': { price: 15, timestamp: atThreshold, stale: false },
+    'C.US': { price: 17, timestamp: null, stale: null },
+    'MISSING.US': null
+  });
+  assert.deepEqual(await getLatestPrices(symbols), { 'A.US': 12, 'B.US': 15, 'C.US': 17, 'MISSING.US': null });
+  assert.equal((await getLatestPriceDetails(['A.US'], { now: new Date('2026-11-16T20:00:00Z') }))['A.US'].stale, false);
 });
 
 test('saveLatest 并发唯一键冲突后以同一派生键更新', async (t) => {

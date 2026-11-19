@@ -25,7 +25,9 @@ const TaskRunSchema = new mongoose.Schema({
     category: String,
     provider: String,
     retryable: Boolean,
-    message: String
+    message: String,
+    status: Number,
+    responseBody: String
   }],
   result: { type: mongoose.Schema.Types.Mixed }
 }, { versionKey: false });
