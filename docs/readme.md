@@ -8,8 +8,8 @@
 
 | 我想找 | 入口 |
 |---|---|
-| 当前开发中 Story 的 n/m 进度、独立 Task | [BOARD.md](./BOARD.md) |
-| 独立 Task 的 active / completed 计数与清单 | [tasks/readme.md](./development/tasks/readme.md) |
+| 当前开发中 Story 的 n/m 进度、独立 Task 目录导航 | [BOARD.md](./BOARD.md) |
+| 独立 Task 的目录说明与命名规则（**状态只在卡片查**） | [tasks/readme.md](./development/tasks/readme.md) |
 | Story 的价值、范围与验收条件 | [STORIES.md](./development/requirements/stories/STORIES.md) |
 | 各 Story 的详情、下挂 Task 明细与开发进度说明 | [US-001 readme](./development/delivery/completed/US-001/readme.md)、[US-004 readme](./development/delivery/completed/US-004/readme.md)（各 Story 过程目录的 `readme.md`）；已归档 Story 的任务卡与计划见各自交付目录 |
 | 产品方向、需求规格、用户研究 | [PRODUCT.md](./development/requirements/PRODUCT.md)、[PRD.md](./development/requirements/PRD.md)、[specs/](./development/requirements/specs)、[USER_RESEARCH.md](./development/requirements/USER_RESEARCH.md) |
@@ -66,8 +66,8 @@ docs/
 
 - 需求：[产品总览](./development/requirements/PRODUCT.md)、[PRD](./development/requirements/PRD.md)、[用户研究](./development/requirements/USER_RESEARCH.md)、[Spec](./development/requirements/specs)、[场景索引](./development/requirements/scenarios/SCENARIOS.md)、[Story 索引](./development/requirements/stories/STORIES.md)。
 - 原型与设计：[HTML 原型、设计稿与截图](./development/prototypes/README.md)。
-- 交付：[BOARD.md](./BOARD.md) 只显示当前开发中 Story 的 n/m 进度与独立 Task；各 Story 的详情、下挂 Task 明细与开发进度说明见其过程目录的 `readme.md`（当前无开发中 Story；已归档见 [US-004 readme](./development/delivery/completed/US-004/readme.md)、[US-001 readme](./development/delivery/completed/US-001/readme.md)）；任务卡 TASK-编号.md、计划 TASK-编号-plan.md、按序号命名的交接记录直接平铺。Human 关闭后整体移入 [completed/](./development/delivery/completed)，具体规则见 DOCS.md §1.1。
-- 独立与既有记录：[任务卡与计划](./development/tasks)（计划与同编号任务卡同目录成对存放）、[独立 Task 计数与清单](./development/tasks/readme.md)、[问题记录](./development/issues.md)。共享资料通过链接复用。独立提案：[TASK-070 DSH Agent Teams 工作流适配提案](./development/tasks/backlog/TASK-070-dsh-agent-teams-workflow-proposal.md)（待 Human 审阅，未生效）。
+- 交付：[BOARD.md](./BOARD.md) 只显示当前开发中 Story 的 n/m 进度与独立 Task 的**目录导航**，**不维护独立 Task 状态清单**；各 Story 的详情、下挂 Task 明细与开发进度说明见其过程目录的 `readme.md`（当前无开发中 Story；已归档见 [US-004 readme](./development/delivery/completed/US-004/readme.md)、[US-001 readme](./development/delivery/completed/US-001/readme.md)）；任务卡 TASK-编号.md、计划 TASK-编号-plan.md、按序号命名的交接记录直接平铺。Human 关闭后整体移入 [completed/](./development/delivery/completed)，具体规则见 DOCS.md §1.1。
+- 独立与既有记录：[任务卡与计划](./development/tasks)（计划与同编号任务卡同目录成对存放）、[目录导航与命名规则](./development/tasks/readme.md)（**状态只在卡片正文查，不看板/索引不同步**）、[问题记录](./development/issues.md)。共享资料通过链接复用。独立提案：[TASK-070 DSH Agent Teams 工作流适配提案](./development/tasks/backlog/TASK-070-dsh-agent-teams-workflow-proposal.md)（待 Human 审阅，未生效）。
 
 - TASK-077 历史 symbol 工具：[使用手册](../scripts/PROBE-SYMBOL-DATA-QUALITY.md)、[隔离库探测报告](./development/tasks/completed/TASK-077-data-quality-report.md)、[核对用迁移清单](./development/tasks/completed/TASK-077-migration-dry-run.json)。
 

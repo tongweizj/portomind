@@ -96,7 +96,7 @@ Draft · Approved · Implementing · Completed
 
 ## 6. 看板与归档
 
-[BOARD.md](../../BOARD.md) 只显示当前开发中的 Story（一行「US-xxx · n/m」，n=已完成 Task 数、m=总 Task 数）与独立 Task；不列 Backlog 队列、已完成/退出 Story 索引、历史完成 Task 或进度汇总。每个 Story 的详情、下挂 Task 明细与开发进度说明归该 Story 过程目录的 `readme.md`（归档后随目录移到 `delivery/completed/US-<编号>/`），存放规则见 [DOCS.md §1.1](../standards/DOCS.md#11-story-交付目录与文档生命周期)。按编号去重，未知填待确认，不适用填 —。
+[BOARD.md](../../BOARD.md) 只显示当前开发中的 Story（一行「US-xxx · n/m」，n=已完成 Task 数、m=总 Task 数）与独立 Task 的目录导航；**不维护独立 Task 的状态清单**，各卡 Status 只在卡片正文。不列 Backlog 队列、已完成/退出 Story 索引、历史完成 Task 或进度汇总。每个 Story 的详情、下挂 Task 明细与开发进度说明归该 Story 过程目录的 `readme.md`（归档后随目录移到 `delivery/completed/US-<编号>/`），存放规则见 [DOCS.md §1.1](../standards/DOCS.md#11-story-交付目录与文档生命周期)。按编号去重，未知填待确认，不适用填 —。
 
 卡片 Status 为状态权威，目录只组织文件；改变目录不等于改变状态。新 Story 的过程目录在 Human 关闭 Story 后整体归档，单个 Task/计划完成不单独迁出；独立与既有记录沿用原位置。存放与收尾步骤唯一依据 [DOCS.md §1.1](../standards/DOCS.md#11-story-交付目录与文档生命周期)。移动文件保持编号并修复链接；取消项按 §2.3 排除统计。
 

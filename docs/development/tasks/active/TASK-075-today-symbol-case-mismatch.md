@@ -1,6 +1,6 @@
 # TASK-075 — 今日行情列表 29 个基金「无数据」：客户端 symbol 未归一化
 
-> **Status：Implementing**（2026-11-17，Human 批准计划后 Orchestrator 登记）。按 [DEV-ORDER-073-078](../DEV-ORDER-073-078.md) 顺序实施。
+> **Status：Completed**（2026-11-17，Human 批准计划后 Orchestrator 登记）。按 [DEV-ORDER-073-078](../DEV-ORDER-073-078.md) 顺序实施。
 >
 > ✅ **2026-11-17 归一化目标更新（ADR-003 已正式批准）**：[ADR-003](../../../os/architecture/adr/ADR-003-symbol-suffix-contract.md) **提案**建议 symbol 统一契约采用「**按 `market` 派生大写后缀**」（`001180.CN` / `VOO.US` / `600519.SS`）。**ADR-003 已于 2026-11-17 由 Human 正式批准（`Accepted`）**。客户端侧只消费服务端返回的存储格式 symbol，不做任何后缀派生/strip（硬规则 #3）；原先「等待 073 strip→裸码契约」的表述作废。
 
@@ -8,7 +8,7 @@
 
 | 字段 | 内容 |
 |---|---|
-| Status | **Implementing**（2026-11-17，Human 批准计划后 Orchestrator 登记；按开发顺序实施） |
+| Status | **Completed**（2026-11-17，Human 批准计划后 Orchestrator 登记；按开发顺序实施） |
 | 所属 Story | 无（独立维护任务） |
 | 覆盖的验收条件 | 本卡 §3 AC（来源：[PRICE-PIPELINE-REVIEW 附录 C / P0-4](../../../os/architecture/PRICE-PIPELINE-REVIEW.md#附录-c2026-11-17-补充--p0-4-今日行情客户端查找端未归一化)） |
 | Priority | High（建议；用户可见 P0——29 个基金在列表里"没有价格"，待 Human 确认） |
@@ -94,6 +94,8 @@
 未实施、已创建 ExecPlan（Draft 未批准）、D-h 已裁决 = 方案 A、未改任何 AC/Status（Planner 仅建卡内容）。
 
 ## 9. 记录
+
+2026-11-18，Reviewer：裸码清理后独立复审 **Pass**，AC1–AC4 均通过。见[实施计划 §12](./TASK-075-today-symbol-case-mismatch-plan.md#12-review-record)。
 
 2026-11-17，Planner：依据 Human 指令「根据这个问题，创建新的 task」建卡；同步把 P0-4 补入审阅文档附录 C（唯一事实来源）。Planner 亲读发现 Human 描述的"存时 uppercase"与代码不符（实为两端均未归一化），已在 §2 与附录 C 如实更正，未改变 29 个资产无价的现象。初始 Status 待 Orchestrator 登记；优先级建议 High，最终以 Human 为准。D-h 裁决前不得开工。
 
