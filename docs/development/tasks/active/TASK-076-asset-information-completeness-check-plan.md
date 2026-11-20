@@ -2,7 +2,7 @@
 
 ## Status
 
-Status：Approved（2026-11-17，Human 批准「073～078 计划」；`Draft → Approved` 归 Human）
+Status：Implementing（2026-11-19，Human 指示开工。2026-11-17 批准「073～078 计划」）
 
 Owner：`Planner`（2026-11-17 起草）
 
@@ -66,7 +66,7 @@ AC1 launchDate 抓取并写入 / AC2 前台可看可改 / AC3 手动触发检查
 | 关系 | 对象 | 说明 |
 |---|---|---|
 | 前置（已满足） | [TASK-053 AC 修订附录](../../delivery/completed/US-001/TASK-053.md)（D-j=A，2026-11-17） | 已把「恰好 5 灯/5 卡」日期附录修订为 6，原 AC 正文与验收证据不动；实施按 6 槽位并复跑结构回归 |
-| 前置（**阻塞按钮上线**） | NG6 定向修订附录（D-m） | 尚未登记；须 PM/Human 以日期附录方式修订 [FS P0 NG6](../../requirements/specs/FS-cron-worker-status-board.md)，否则「运行资产信息检查」按钮不得上线 |
+| 前置（已满足） | NG6 定向修订附录（D-m） | Human 已批准，见 [FS NG6/R12 定向修订](../../requirements/specs/FS-cron-worker-status-board.md#appendix-b--2026-11-19-ng6--r12-定向修订) |
 | 复用 | [TASK-054 `GET /api/cron/status`](../completed/TASK-054-cron-status-aggregate-api.md) | 只读快照；`tasks[]` 长度恒为 5（已冻结）。本卡以**新增顶层字段**方式扩展（OD-1） |
 | 复用 | `cron-worker/src/tasks/integrityCheck.js`（`price-integrity-check`） | 既有价格完整性任务；本卡市场日判定复用同一日历口径，但用途不同（见 §4.4） |
 | 相关 | [TASK-073](./../active/TASK-073-price-pipeline-p0-data-correctness.md) | symbol 后缀/价格采集修复归它；本卡不接手 |
@@ -173,11 +173,12 @@ shared/services/assetIntegrity.service.js   ← 完整性判定唯一实现（�
    ├─ Price 查询（最近3市场日桶）→ 价格连续性判定
    └─ calendar.service / marketTime（市场日计算）
    ▼
-cron-worker  tasks/assetIntegrityCheck.js（手动任务壳：runTrackedTask, trigger=MANUAL）
+shared/tasks/assetIntegrityCheck.js（API 与 CLI 共用：runTrackedTask, trigger=MANUAL）
+cron-worker  tasks/assetIntegrityCheck.js（手动 CLI 入口）
              tasks/launchDateFetch.js（抓取写入，独立授权 AC1；withMarketDataTimeout+fetchWithRetry）
 ```
 
-**关键取舍**：判定逻辑放 `shared/`（硬规则 #1 + 可注入 `now` 便于测试）；触发壳在 `cron-worker/`（ADR-002，server 不注册 cron、也不直接 new 任务逻辑）；server 只编排。**市场日计算必须从 `cronStatus.service.js` 抽出为 `shared` 公共能力**（否则会出现第二份日历口径，违反硬规则 #1）——见 OD-2。
+判定与手动任务共用 `shared/` 实现，API 和 CLI 只负责入口编排。价格同步看板与本检查共用 TASK-078 的目标日算法，历史价格完整性任务与本检查共用 CN 桶候选算法。
 
 ### 4.2 判定规则（§3.1 冻结）
 
@@ -190,7 +191,7 @@ cron-worker  tasks/assetIntegrityCheck.js（手动任务壳：runTrackedTask, tr
 | `market` | ∈ `ASSET_MARKETS` | `MARKET_INVALID` |
 | `currency` | ∈ `ASSET_CURRENCIES` 且与 market 预期一致（映射表在 §4.2.1 冻结） | `CURRENCY_INVALID` / `CURRENCY_MISMATCH` |
 | `launchDate` | 合法 Date、非未来 | `LAUNCH_DATE_MISSING` / `LAUNCH_DATE_INVALID` / `LAUNCH_DATE_FUTURE` |
-| 价格连续性 | 最近 3 个市场日**每天**都有非空 Price | `PRICE_EMPTY_3_MARKET_DAYS` |
+| 价格连续性 | 完整窗口中至少有一个有效价格 | 三个开市日全空 `PRICE_EMPTY_3_MARKET_DAYS`，窗口不足 `INSUFFICIENT_MARKET_DAYS` |
 
 > 完整度 = 六项全合格的资产数 / active 资产总数；任一项不合格即计入不完整，并给出全部命中理由码（数组）。其它资产字段（type/assetClass/tags/active/watchlist/createdAt）不检查、不出理由、不进详情页。
 
@@ -200,21 +201,10 @@ cron-worker  tasks/assetIntegrityCheck.js（手动任务壳：runTrackedTask, tr
 
 #### 4.2.2 市场日算法（最近 3 个市场日）
 
-```
-function lastNMarketDays(market, n, { now, tz }):
-  days = []
-  cursor = dayjs(now).tz(marketTimezone(market))   // 该市场本地「今天」
-  guard = 0
-  while days.length < n and guard++ < MAX_LOOKBACK_DAYS(15):
-    dateStr = cursor.format('YYYY-MM-DD')
-    if isMarketOpenToday(market, new Date(`${dateStr}T12:00:00.000Z`)):
-      days.unshift(dateStr)          // 收集最近 n 个开市日
-    cursor = cursor.subtract(1, 'day')
-  return days                         // 不足 n 个时返回实际天数 + 说明
-```
+第一天为 TASK-078 分组规则所算目标日，再取前两个开市日。窗口从目标日最多回看 15 个自然日，休市日不计入。
 - 复用 `isMarketOpenToday` + 各市场时区（`config/markets.js`）；候选日构造沿用 `${dateStr}T12:00:00Z`（`cronStatus.service.js:99` 既有做法）。
 - 对某资产：这 3 天逐日查 `Price(symbol, timestamp ∈ dateBounds(day))`，**3 天均无记录** → `PRICE_EMPTY_3_MARKET_DAYS`。
-- CN 的 ET 桶偏差：`integrityCheck.js:expectedBucketCandidates` 已就 CN 处理「市场日可能落入前/当日 ET 桶」；本判定直接复用该 helper 的逻辑（抽取为共享函数，见 OD-2），避免判定与既有完整性任务互相矛盾。
+- CN 的旧桶复用共享候选函数。窗口内开市日直接查价，窗外旧桶候选仅在该市场休市时纳入。窗外正常开市日的价格不归入窗口。历史完整性任务保留原来的全历史容差。
 - 不足 3 个市场日（如长假 + 15 天回退上限）→ 按实际天数判定并在理由附 `INSUFFICIENT_MARKET_DAYS` 说明；**不**把「无法判定」误报为「完整」。
 
 ### 4.3 对外契约（冻结；新增字段，不改已验收 AC）
@@ -250,9 +240,9 @@ Data = {
 #### 4.3.2 `POST /api/asset-integrity/check`（手动触发）
 
 - 挂载点：新 router `server/routes/assetIntegrity.routes.js`，在 `app.js` 全站闸门（L109）之后 `app.use('/api/asset-integrity', ...)`；**不得**挂在 `/api/logs` 下（NG6 数据面只读）。
-- 请求体：`{}`（可选 `{dryRun?:boolean}`）；响应 `success(res, { taskName, runKey, status, startedAt, endedAt, summary })`。
-- controller 调 `cron-worker` 暴露的手动执行函数（见 OD-4）；返回的是**本次同步执行结果**（不是异步队列），便于按钮即时反馈。
-- 幂等/并发：复用 `runTrackedTask` 的 `activeTasks` 互斥 + `runKey=manual:<ISO>`；重复点击返回 `SKIPPED`（`ALREADY_RUNNING`/`DUPLICATE_RUN_KEY`），前端提示「检查进行中，请稍后」。
+- 请求体 `{}`，响应 `success(res, { taskName, runKey, status, startedAt, endedAt, summary })`。
+- API 调用与 CLI 共用的 `shared` 手动检查任务，同步返回本次结果。
+- 并发：进程内复用 `runTrackedTask` 锁。API 和 CLI 争用 `taskruns` 已有唯一索引上的 `manual:active`，只有持锁者读取资产和价格。完成时原子改用带 TaskRun ID 的历史运行键。活跃记录超过 15 分钟后可由下次触发留为 `FAILED` 并接管，过期执行不能发布结果。防重返回 `SKIPPED` / `ALREADY_RUNNING`。
 - 该端点是一次**只读检查 + 写 TaskRun.result 观测**；不改任何资产字段。launchDate 抓取写入（AC1）是独立动作，不由本端点触发（见 OD-5）。
 
 #### 4.3.3 资产详情/列表 launchDate 读写
@@ -266,7 +256,7 @@ Data = {
 |---|---|---|
 | 主语 | 某资产"理论上应有多少价格，实采多少" | 某资产"最近 3 个市场日是否连续为空" |
 | 判定 | 全历史 [launchDate, today] 的缺口率 | 近端 3 个市场日的全空趋势 |
-| 目标日 | 有效目标日（D-16，03:00 同步节奏） | 最近 3 个**已过**的市场日 |
+| 目标日 | 历史任务按其既有执行窗口检查 | 从 TASK-078 分组目标日（含）往前取 3 个开市日 |
 | 动作 | 可自动回补（INTEGRITY_AUTO_REPAIR） | **只读报告，不回补** |
 
 二者共享市场日口径（复用同一 helper），但**计数互不合并**：第 6 卡只看 assetCompleteness，既有「价格完整性」卡不变。此边界须在 §7 用测试防止误并。
@@ -275,12 +265,12 @@ Data = {
 
 ## 5. Work Breakdown
 
-- [ ] **W0（阻塞前置）**：PM/Human 登记 NG6 定向修订附录（D-m）；Human 批准本计划及 §6 全部决策。**未满足前不得实现看板按钮/触发端点**（其余工作可并行推进）。
-- [ ] **W1（探查）**：Implementer 用真实页面/API 核实 launchDate 抓取端点（U-1）并冻结到实现记录；失败即标未知，不虚构。
-- [ ] **W2（shared 基础）**：抽取市场日公共能力（`lastNMarketDays` + CN 桶候选）到 `shared/services/marketDay.service.js`（复用 calendar.service.js/marketTime.js，OD-2）；新增 `shared/services/assetIntegrity.service.js` 实现 §4.2 判定（可注入 `{now, assets, priceQuery}`）；补理由码常量 `shared/constants/assetIntegrity.constants.js`。产出：单元可测的纯判定服务。
-- [ ] **W3（cron-worker 手动任务）**：新增 `tasks/assetIntegrityCheck.js`（壳，`runTrackedTask` + `trigger:'MANUAL'`，`result` 按 §4.3.1 落库）；新增 `tasks/launchDateFetch.js`（AC1 抓取写入，包 timeout+retry，来源标注，失败记未知）。**不注册 cron**（scheduler.js 不新增 job）。
-- [ ] **W4（server）**：新增 `routes/assetIntegrity.routes.js` + `controllers/assetIntegrity.controller.js`（POST check + 可选 GET incomplete）；扩展 `cronStatus.service.getStatus` 顶层 `assetCompleteness`（只读聚合，OD-1）；asset 更新路径补 launchDate 校验。`app.js` 挂载新 router（闸门后、非 /logs）。文档：API_CONTRACT。
-- [ ] **W5（client）**：资产页 launchDate 展示/编辑（AssetList 列、AssetDetail 行、AssetForm 控件 + updateAsset）；看板第 6 卡（BOARD_SLOTS 6 槽 + buildIntegrityView 风格新视图 + 卡下方「运行资产信息检查」按钮，useMutation POST + invalidate cron-status）；详情页（只读列表 + 行尾去 `/instruments/edit/:id`，返回 `/logs?tab=board`）；状态色用 status* token；复跑 TASK-053 6 槽结构回归。
+- [x] **W0（前置）**：Human 已于 2026-11-19 批准登记 [NG6/R12 定向修订](../../requirements/specs/FS-cron-worker-status-board.md#appendix-b--2026-11-19-ng6--r12-定向修订)、复用 TASK-078 分组目标日及 shared 手动检查入口。
+- [x] **W1（探查）**：真实页面及字段核对，来源与覆盖见 §11。
+- [x] **W2（shared 基础）**：抽取 TASK-078 目标日、开市日和 CN 桶候选，完成资产完整性只读判定及理由码。
+- [x] **W3（手动任务）**：API 与 CLI 共用 `shared` 检查任务。日期抓取独立运行，默认预览。调度注册未变。
+- [x] **W4（server）**：鉴权 POST、顶层 `assetCompleteness` 只读快照和现有资产更新入口日期校验。
+- [x] **W5（client）**：资产日期展示与编辑、六槽看板、卡下按钮和资产域详情。六灯结构回归见 §11。
 - [ ] **W6（验证）**：按 §7 逐条验证（含「先红后绿」负向用例）；`test:server`/`test:worker`/client build+lint 全绿；独立 Reviewer 通过。
 - [ ] **W7（收尾）**：文档同步（DATA_MODEL / API_CONTRACT / NG6 附录引用 / docs:check 0 ERROR）；计划 §11–§13 记录；交 Human 关闭。
 
@@ -288,7 +278,7 @@ Data = {
 
 ## 6. Decisions
 
-> 下列需 Human 裁决；本计划当前为 Draft，未获批准。任务卡已裁决 D-i/D-j/D-k/D-l/D-m/D-n/D-o 不再重复；此处只列**计划层新增**且影响实现/契约的事项。
+> 2026-11-19 Human 确认 D1、D2 与 OD-4 的实施口径：三个开市日从 TASK-078 的分组目标日（含）向前取，API 与 CLI 共用 `shared` 手动任务。D3、D4 与 D6 沿用 §4 已批准契约，D5 实测见 §11。
 
 | # | 决策事项 | 选项与建议 | 决定人 / 依据 |
 |---|---|---|---|
@@ -360,11 +350,76 @@ Data = {
 
 ## 11. Implementation Record
 
-> 待 Implementer 填写。
+
+### 2026-11-19 · 开工、日期编辑与抓取预览
+
+- 从含 TASK-074 的 `origin/main` `e9f81d2`（PR #61）创建 `feature/TASK-076-asset-information-completeness-check`，使用独立工作树 `D:/projects/portomind-task-076`。TASK-053 已登记 6 卡附录。FS 的 NG6 定向附录仍缺，W0 未满足。
+- **W1 / AC1 来源核实。** [天天基金 001180](https://fundf10.eastmoney.com/001180.html) 返回 `基金代码` 与 `成立日期`。[Yahoo VOO](https://finance.yahoo.com/quote/VOO/) 和 [Yahoo 加拿大 VFV.TO](https://ca.finance.yahoo.com/quote/VFV.TO/) 返回 `Inception Date`。[Yahoo 0700.HK](https://finance.yahoo.com/quote/0700.HK/) 的单标的内嵌报价返回 `firstTradeDateMilliseconds`，按该市场日期解释。Yahoo 美国站的部分加拿大报价页返回 404，改用加拿大站后复验。CN-SH/CN-SZ 未在 D-i 指定日期来源，保留为未支持。
+- **W3 / AC1 实作与覆盖。** 独立 Worker CLI 默认预览，显式 `--apply` 才写入。更新同时核对资产仍 active、键未变、日期仍为空，保留抓取期间人工录入的值。`portomind_task077_restore_test` 只读预览为 41/44，CN-FUND 29/29、US 3/4、CA 9/11。库内无 active HK 资产，HK 单独实探。`CQQQ.US`、`VBG.TO`、`VBU.TO` 的指定 Yahoo 页面返回 404，日期维持未知。逐条结果在 `%TEMP%/portomind-TASK-076-launch-date-preview-final.json`。写入条件用测试替身验证，未对真实库执行 `--apply`。
+- **W4/W5 / AC2 进展。** 列表与详情显示日期或「未知」。表单提交实际改动，日期校验走既有资产 API。后端按 UTC 正午保存逻辑日期，兼容价格完整性检查按市场时区读取。只更新其它字段时省略日期，以免覆盖并发回填。鉴权集成测试已验证设置、清空、无效及未来日期。浏览器编辑保存及检查结果随编辑更新尚未验收。
+- **待协调。** NG6/R12 附录登记前暂缓按钮与 POST。计划 §4.3.2 的 server 调 Worker 与架构 §4 的 workspace 依赖约束冲突，建议 API 与 CLI 共用 `shared` 手动任务。计划 §4.2.2 的市场本地「今天」与 §4.4「已过」及任务卡共用目标市场日口径不一致，W2 的市场日抽取与价格连续性待 Planner/Human 统一到 TASK-078 分组目标日后继续。
+- **验证。** 服务端和 Worker 全量通过，日志 `%TEMP%/portomind-TASK-076-start-workspaces.log`。Client build 和 lint 通过，仍有既有分块和 Fast Refresh 警告。Server `validate` 遇到基线脚本仍扫描已不存在的 `server/config`，改用 `node --check` 补验本轮的后端 JavaScript 文件。
+
+### 2026-11-19 · 手动检查与看板实施
+
+- **授权与基线。** `e9f81d2` 的 TASK-076 独立工作树继续开发。Human 确认 TASK-078 分组目标日与 API/CLI 共用手动任务，批准 NG6/R12 的一个例外，已先登记附录。调度器注册维持五类六个触发器。
+- **AC1。** 临时独立 MongoDB 的实采回填把 `001180.CN` 的 `2015-05-06` 写入日期，重跑保留该值。`VBG.TO` 的上游 404 保持空值，事先人工填写的 VOO 日期保留。隔离验收镜像的 41/44 为只读预览覆盖，未在该镜像执行回填。
+- **AC2、AC5。** 浏览器夹具通过第六卡到资产域详情、缺失原因、跳转编辑、按原日期保存、返回看板重新检查并从 0/1 更新至 1/1 的闭环。详情页只有查看和导航动作。
+- **AC3。** 复用原分组目标日及历史任务的 CN 桶候选，测试覆盖周末、旧桶、CN 午间边界、US 前一交易日、三个开市日全空及窗口内至少一个有效价格。真实 HTTP 集成用模型替身验证鉴权、空请求体、防重、回读与资产未改变。临时真实 MongoDB 回读两条手动 TaskRun，检查本身未改资产。`portomind_task077_restore_test` 于 11-18 15:00 ET 的只读核对为完整 0/44、日期缺失 44、三个市场日无价 2。
+- **AC4、AC6。** 浏览器验证六卡与六灯、未检查时灰色、按钮仅出现在第六卡下方、一次点击后刷新一次。API `tasks[]` 仍为 5 项。服务端与 Worker 全量、Client build/lint、TASK-063 与 TASK-056 浏览器夹具、文档检查、新改动后端文件语法检查通过。自动校验脚本的已知路径故障见上文。尚待独立 Reviewer。
+
+### 2026-11-19 · 第一轮审查返工
+
+- **R1 / AC3。** 11-23 13:00 ET 样例的窗口为 11-23、11-20、11-19。仅有 11-18 时全空计数由 0 修正为 1，改给 11-19 时全空仍为 0。休市日旧桶对照保留。回归先红后绿。
+- **R2 / AC3。** API 和 CLI 通过 `TaskRun` 已有唯一索引共用活跃键。临时 MongoDB 中两个独立 Node 进程以相差 1 ms 的参数运行且首个保持活跃，仅首个创建 TaskRun，后一个返回 `SKIPPED / ALREADY_RUNNING` 并留下跳过事件。还验证了过期活跃记录可回收且旧进程不能发布结果。测试仅写入新建的临时库。索引定义未变。
+- **R3 / AC2。** Human 确认保存后立即刷新报告的上市／成立日期判定。`GET /api/cron/status` 以最近一次检查的受检资产清单为范围，按当前日期字段更新该项理由和计数。价格、其它字段理由、报告时间和历史 TaskRun 保留原值。浏览器验证资产保存后仅追加一次 GET，详情立即更新。服务端验证日期补齐及清空、历史数据保持、未受检资产排除。旧运行如缺少受检资产 ID 清单，仅读取并更新原已列入缺失项的资产日期。
+- **R3 真实库对照。** 临时 MongoDB 上实际保存与清空日期后，GET 的缺日期计数依次为 `1 → 0 → 1`，三个市场日全空计数始终为 1。原 TaskRun 逐文档一致，运行记录总数仍为 1。
+- **AC6 验证入口。** 修正标准服务端语法脚本的目录清单，并纳入 `app.js`。该入口现通过。
+- 全量服务端和 Worker、浏览器报告刷新夹具、Client build/lint、标准语法校验和文档检查通过。日志 `%TEMP%/portomind-TASK-076-r1-workspaces.log`、`%TEMP%/portomind-TASK-076-r1-browser.log`。验收待独立复审。
+
+### 2026-11-19 · AC2 停用受检资产返工
+
+- **R3 / AC2。** 报告沿用上次手动检查的资产 ID。未出现在当前启用列表的受检资产按 ID 批量补查日期，包含已停用资产。价格看板和下次手动检查仍按当前启用状态选取资产。保存补日期并同时停用的 HTTP 回归先红后绿，校验日期理由消失，受检分母、价格理由和 `checkedAt` 保留，TaskRun 未新增或修改。
+- 临时 MongoDB 实测缺日期 `1 → 0`，受检分母和三日全空各为 `1 → 1`，仅一条原始 TaskRun 且逐文档一致。浏览器夹具实测同次保存停用后仅发 GET，下一次手动检查才从范围中移除该资产。服务端和 Worker 全量、浏览器、标准 `validate` 和 lint 通过，工作区日志 `%TEMP%/portomind-TASK-076-r2-workspaces.log`、`%TEMP%/portomind-TASK-076-r2-browser.log`。待独立复审。
 
 ## 12. Review Record
 
-> 待独立 Reviewer 填写（格式见 [REVIEWER.md](../../../os/roles/REVIEWER.md) §7）；Implementer 不得自判。
+### 2026-11-19 · 独立审查
+
+**Fail。** 审查对象为 `feature/TASK-076-asset-information-completeness-check` @ `e9f81d2` 的当前工作树，包含尚未提交的 TASK-076 改动及新增文件。Reviewer 未参与实现或编写交付验收脚本。范围限于本卡 AC 和直接受影响的看板、目标市场日与资产日期契约。
+
+| AC | 结论与证据 |
+|---|---|
+| AC1 | 通过。查阅 §11 的来源核实、预览覆盖率和隔离 MongoDB 回填记录。独立复跑抓取与回填测试，验证各来源解析、预览及失败保留未知。核对外部请求同时使用超时和重试包装。 |
+| AC2 | 部分满足。源码确认列表、详情和表单接入日期，定向测试覆盖日期校验，浏览器夹具已验证保存及手动重查。保存后返回报告仍显示上次检查结果，见 R3。 |
+| AC3 | 不满足。单进程 HTTP 集成验证了鉴权、手动触发、防重、只读判定及快照回读，生产调度注册未变。定向对照复现窗口外净值漏报与跨进程防重缺口，见 R1、R2。 |
+| AC4 | 通过。TASK-053 六槽修订与 NG6 / R12 例外已有登记。浏览器夹具覆盖六卡六灯、初始未知、按钮卡下落位和检查后刷新。HTTP 集成确认原 `tasks[]` 保持 5 项，新卡使用顶层快照。 |
+| AC5 | 通过。浏览器夹具覆盖从卡片进入资产域详情、显示缺失理由及跳转每行编辑。源码确认详情页只读，返回看板链接存在。 |
+| AC6 | 未通过。沿用交付的服务端、Worker 全量和两组浏览器夹具日志，另核对 §11 的构建与 lint 记录。独立审查发现未关闭问题，标准服务端语法入口仍有基线路径故障。 |
+
+- **R1 · BLOCKER · AC3 最近三个市场日全空会漏报。** 在 2026-11-23 13:00 ET 检查 CN-FUND，目标窗口为 11-23、11-20、11-19。仅提供 11-18 的正常日桶净值时，结果为完整 1、全空 0。不给任何价格时全空为 1，仅给 11-19 净值时全空为 0。原因是 [检查服务](../../../../shared/services/assetIntegrity.service.js) 将候选日期合并，最早窗内日的旧桶候选与窗外开市日的正常日桶重叠。[天天基金采集器](../../../../shared/fetchers/tiantianFetcher.js) 正常按净值日期归桶，现有夹具把重叠日期直接视作旧桶，遗漏了该对照。待区分能确认归属的窗内价格与有歧义的旧桶，并补窗外有价、窗内全空的断言。
+- **R2 · MAJOR · AC3 跨进程并发会创建两条检查记录。** 两个隔离 Node 进程调用真正的 [共享检查任务](../../../../shared/tasks/assetIntegrityCheck.js)，用模型替身拦截写入并保持两次检查同时进行。两次触发时间差 1 毫秒，均进入 `TaskRun.create` 并返回 `SUCCEEDED`。网页和 CLI 在独立进程运行，[互斥表](../../../../shared/services/taskRunner.js) 只在单进程生效，[唯一索引](../../../../shared/models/taskRun.js) 只拦截完全相同的 `runKey`。待明确跨入口的并发口径，并按约定补同进程与跨入口对照。
+- **R3 · MAJOR · AC2 编辑保存后的报告仍为旧快照。** [表单](../../../../client/src/pages/Asset/AssetForm.jsx) 保存后返回[资产完整度详情](../../../../client/src/pages/Asset/AssetIntegrityDetail.jsx)，该页仍消费上次 TaskRun 的缺失清单。浏览器夹具要返回看板后二次点击检查才从 0/1 变成 1/1。待确认“修改后完整性检查结果随之更新”是否以这次手动重查为验收点，或落实保存后的报告更新，同时保持检查手动触发和历史记录语义。
+
+独立实跑覆盖日期解析与回填、资产 API 校验、完整度服务和状态 API 定向用例，均通过。R1、R2 用 stdin 隔离对照，不入库。改动的后端 JavaScript 语法检查及文档检查通过。标准 `validate` 已复现基线 `server/config` 路径缺失，单文件语法检查用作补充。本轮未重新连接真实上游、启动生产服务或写入现有数据库，未重复交付全量回归。返工后按 R1–R3 复审。
+
+### 2026-11-19 · 第一轮返工复审
+
+**Fail。** 复审对象为 `feature/TASK-076-asset-information-completeness-check` @ `e9f81d2` 的当前返工工作树。Reviewer 未参与本轮实现或编写交付验收脚本。复审覆盖 R1–R3 和受影响的状态接口、任务防重与语法校验入口。
+
+- **R1 已关闭。** 独立重跑原 CN-FUND 窗口。无净值、仅有窗口外 11-18 净值均报全空，只有窗内 11-19 净值时全空计数为 0。休市日 11-22 的旧桶兼容对照通过。
+- **R2 已关闭。** 查阅 §11 的独立进程临时 MongoDB 验证和过期活跃记录对照，核对现有唯一索引与共享活跃键。独立复跑同进程跳过、数据库键冲突、跳过事件和任务完成释放键的定向测试，均通过。真实 MongoDB 对照沿用 §11 的交付证据。
+- **R3 仍有一处未关闭。** 当前启用的受检资产保存日期后可立即更新，浏览器日志确认只追加一次 GET，无需再触发检查。**MAJOR / AC2：如在同一次表单保存中补填日期并停用受检资产，报告仍保留原来的缺日期理由。** 独立运行真实状态服务，模型替身按查询条件筛选。样本保持启用且填日期时缺失数从 1 降到 0，同时停用时缺失数仍为 1、总数仍为 1。状态服务传入的是[当前启用资产](../../../../shared/services/cronStatus.service.js)，[报告刷新](../../../../shared/services/assetIntegrity.service.js)由此漏掉仍在上次受检清单中的停用资产。按上次受检范围读取当前日期，并保留该次检查的分母、其它理由和时间，可覆盖此场景。
+
+AC1、AC4、AC5 维持通过，AC3 复审通过。AC2 尚有上述缺口，AC6 的独立审查尚未通过。定向回归、标准服务端语法校验、文档检查均通过。全量服务端与 Worker、浏览器夹具及前端构建与 lint 沿用 §11 的返工证据。本次独立对照用 stdin 执行，未重跑实库、上游抓取或全量测试。
+
+### 2026-11-20 · AC2 停用场景复审
+
+**Pass。** 复审对象为 `feature/TASK-076-asset-information-completeness-check` @ `e9f81d2` 的最新返工工作树，含未提交改动。Reviewer 未参与实现或编写交付验收脚本。
+
+- **R3 关闭，AC2 通过。** [日期刷新](../../../../shared/services/assetIntegrity.service.js)按上次受检资产 ID 补查当前已停用的资产。独立复跑 HTTP 回归，同次保存补日期及停用后，GET 即移除缺日期理由，保留受检分母、缺价理由和原检查时间。独立状态服务对照以模型替身按查询过滤，验证缺日期计数随补填和清空从 1 变为 0 再回到 1。未受检资产未进入报告，原 TaskRun 内容一致。查阅 §11 浏览器证据，确认保存后只发起 GET，下次手动检查才排除该停用资产。
+- **AC1、AC3–AC5 维持通过。** R1、R2 沿用前次独立复审，本轮定向回归覆盖完整度服务、状态 API 和任务防重。
+- **AC6 通过。** 本轮定向回归、标准服务端语法校验和文档检查通过。服务端和 Worker 全量、浏览器及临时 MongoDB 验证沿用 §11 最新交付证据。本轮独立对照经 stdin 在模型替身上执行，未连接真实上游或写入现有数据库。
 
 ## 13. Completion Record
 

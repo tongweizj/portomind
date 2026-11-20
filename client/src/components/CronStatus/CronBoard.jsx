@@ -7,13 +7,16 @@
 // - 总览：buildOverview（bad > warn > 数据未就绪 > 全部正常）
 // - 错误分层：整体请求失败时五卡统一不可用；有旧快照时保留旧数据并明确过时；
 //            单卡字段异常只影响该卡（逐卡 build 函数）。
-// - 只读：无任务触发/写操作。
+// - TASK-076 只允许第六卡的手动资产信息检查入口。
 
 import { useCronStatus } from '../../hooks/useCronStatus';
+import { useMutation } from '@tanstack/react-query';
+import { runAssetIntegrityCheck } from '../../services/asset-integrity.service';
 import { getApiErrorMessage } from '../../services/api.client';
 import { colors } from '../../constants/design-tokens';
 import BoardShell from './BoardShell';
 import DataTaskCard from './DataTaskCard';
+import AssetCompletenessCard from './AssetCompletenessCard';
 import PriceTaskCard from './PriceTaskCard';
 import { getPriceView } from './priceDataState';
 import {
@@ -23,6 +26,7 @@ import {
 } from './unknownValue';
 import {
   buildAlertView,
+  buildAssetCompletenessView,
   buildFxView,
   buildIntegrityView,
   buildOverview,
@@ -35,7 +39,8 @@ const CARD_COMPONENTS = {
   'integrity-check': DataTaskCard,
   'alert-evaluate': DataTaskCard,
   'fx-rate-sync': DataTaskCard,
-  'rebalance': DataTaskCard
+  'rebalance': DataTaskCard,
+  'asset-completeness': AssetCompletenessCard
 };
 
 /** 价格卡 + lastSkip 独立行（PriceTaskCard 的 props 契约不含 lastSkip）。 */
@@ -72,7 +77,7 @@ function priceViewOf(task, requestError) {
   });
 }
 
-function buildCards(tasksByKey, { requestError, generatedAt, onRetry }) {
+function buildCards(tasksByKey, { requestError, generatedAt, onRetry, assetCompleteness, assetCheck }) {
   const unavailable = Boolean(requestError);
 
   const priceTask = tasksByKey.get('daily-price-sync') || null;
@@ -103,7 +108,8 @@ function buildCards(tasksByKey, { requestError, generatedAt, onRetry }) {
     'integrity-check': unavailable ? buildUnavailableView() : buildIntegrityView(integrityTask),
     'alert-evaluate': unavailable ? buildUnavailableView() : buildAlertView(alertTask),
     'fx-rate-sync': unavailable ? buildUnavailableView() : buildFxView(fxTask),
-    'rebalance': unavailable ? buildUnavailableView() : buildRebalanceView(rebalanceTask)
+    'rebalance': unavailable ? buildUnavailableView() : buildRebalanceView(rebalanceTask),
+    'asset-completeness': unavailable ? buildUnavailableView() : buildAssetCompletenessView(assetCompleteness)
   };
 
   return {
@@ -114,7 +120,8 @@ function buildCards(tasksByKey, { requestError, generatedAt, onRetry }) {
       'integrity-check': { view: views['integrity-check'] },
       'alert-evaluate': { view: views['alert-evaluate'] },
       'fx-rate-sync': { view: views['fx-rate-sync'] },
-      'rebalance': { view: views['rebalance'] }
+      'rebalance': { view: views['rebalance'] },
+      'asset-completeness': { view: views['asset-completeness'], ...assetCheck }
     }
   };
 }
@@ -133,7 +140,8 @@ export function CronBoardView({
   error = null,
   isLoading = false,
   isFetching = false,
-  onRefresh
+  onRefresh,
+  assetCheck
 } = {}) {
   const hasSnapshot = Boolean(snapshot && Array.isArray(snapshot.tasks));
   const requestError = error || null;
@@ -144,7 +152,9 @@ export function CronBoardView({
   const { priceView, views, cards } = buildCards(tasksByKey, {
     requestError: hasSnapshot ? null : requestError,
     generatedAt,
-    onRetry: onRefresh
+    onRetry: onRefresh,
+    assetCompleteness: snapshot?.assetCompleteness,
+    assetCheck
   });
 
   const entries = BOARD_SLOTS.map((slot) => {
@@ -251,6 +261,9 @@ export default function CronBoard() {
   const { data, error, isLoading, isFetching, isRefetchError, refetch } = useCronStatus();
   const hasSnapshot = Boolean(data && Array.isArray(data.tasks));
   const requestError = error && (!hasSnapshot || isRefetchError) ? error : null;
+  const check = useMutation({ mutationFn: runAssetIntegrityCheck, onSuccess: () => refetch() });
+  const checkFeedback = check.error ? getApiErrorMessage(check.error, '资产信息检查失败')
+    : check.data?.status === 'SKIPPED' ? '检查正在进行，请稍后刷新。' : null;
 
   return (
     <CronBoardView
@@ -259,6 +272,7 @@ export default function CronBoard() {
       isLoading={isLoading}
       isFetching={isFetching}
       onRefresh={refetch}
+      assetCheck={{ onRun: check.mutate, running: check.isPending, feedback: checkFeedback }}
     />
   );
 }

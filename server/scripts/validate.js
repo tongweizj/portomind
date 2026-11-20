@@ -4,9 +4,9 @@ const { spawnSync } = require('child_process');
 
 const serverRoot = path.resolve(__dirname, '..');
 const includedDirectories = [
-  'config', 'controllers', 'middleware', 'models', 'routes', 'services', 'scripts', 'tasks', 'utils'
+  'controllers', 'middleware', 'routes', 'scripts', 'tasks', 'utils'
 ];
-const files = [path.join(serverRoot, 'server.js')];
+const files = ['app.js', 'server.js'].map(name => path.join(serverRoot, name));
 
 function collectJavaScriptFiles(directory) {
   for (const entry of fs.readdirSync(directory, { withFileTypes: true })) {

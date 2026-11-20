@@ -85,7 +85,7 @@ AlertRule ──_id──> AlertEvent.ruleId（**可空**：再平衡通知没�
 | `type` | String，required，enum `stock`/`etf`/`fund`/`bond`/`cash` |
 | `assetClass` | String，enum `equity`/`bond`/`gold`/`cash` **或 `null`**，= `null`（未分类） |
 | `tags[]` | [String]，每项 trim、≤40，= `[]` |
-| `launchDate` | Date，可空。**不填会被完整性检查跳过**（`SKIPPED_NO_LAUNCH_DATE`） |
+| `launchDate` | 上市 / 成立日期，Date，可空。日期写入按 UTC 正午存储，使现有各市场本地日期相同。**不填会被价格完整性检查跳过**（`SKIPPED_NO_LAUNCH_DATE`） |
 | `active` | Boolean，= `true`。false = 不可用于交易与行情同步 |
 | `watchlist` | Boolean，= `false`。**仅展示偏好，不代表可用于业务** |
 | `createdAt` | Date，= now，**immutable** |

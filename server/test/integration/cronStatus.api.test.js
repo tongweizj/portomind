@@ -13,6 +13,9 @@ process.env.LOG_DIR = path.join(os.tmpdir(), 'portomind-cronstatus-api-logs');
 const app = require('../../app');
 const { installAdminSession, uninstallSessionStub, authHeaders } = require('../helpers/auth');
 const { applyWorld } = require('../helpers/modelStubs');
+const TaskRun = require('@portomind/shared/models/taskRun');
+const TaskSkip = require('@portomind/shared/models/taskSkip');
+const Asset = require('@portomind/shared/models/asset');
 
 const TASK_NAMES = [
   'daily-price-sync',
@@ -85,6 +88,8 @@ test('A1 主视图返回 5 个任务条目且含运行态 + 数据态 + notes', 
   const data = result.body.data;
   assert.equal(data.tasks.length, 5);
   assert.deepEqual(data.tasks.map((entry) => entry.taskName), TASK_NAMES);
+  assert.equal(data.assetCompleteness.contractReady, false);
+  assert.equal(data.assetCompleteness.total, null);
   assert.ok(Number.isFinite(Date.parse(data.generatedAt)));
   assert.equal(typeof data.timezone, 'string');
   assert.equal(typeof data.staleThresholdHours, 'number');
@@ -96,6 +101,77 @@ test('A1 主视图返回 5 个任务条目且含运行态 + 数据态 + notes', 
     assert.ok(['ok', 'warn', 'bad', 'unknown'].includes(entry.dataStateLevel));
     assert.ok(Array.isArray(entry.notes));
   }
+});
+
+test('TASK-076 仅鉴权手动检查可写 TaskRun，防重后读回快照且资产未改变', async (t) => {
+  const assetId = '64b000000000000000000076';
+  const docs = [{ _id: assetId, symbol: 'VOO.US', market: 'US', currency: 'USD', name: 'VOO', active: true }];
+  const original = structuredClone(docs);
+  const latestRuns = [];
+  useWorld({ latestRuns });
+  let allowRead;
+  let readStarted;
+  const entered = new Promise(resolve => { readStarted = resolve; });
+  const gate = new Promise(resolve => { allowRead = resolve; });
+  const findAssets = t.mock.method(Asset, 'find', filter => ({ select() { return this; }, async lean() {
+    readStarted();
+    await gate;
+    return filter.active === true ? docs.filter(doc => doc.active) : docs.filter(doc => filter._id.$in.includes(doc._id));
+  } }));
+  t.mock.method(Asset, 'findByIdAndUpdate', async (id, data) => {
+    assert.equal(id, assetId);
+    return Object.assign(docs[0], data);
+  });
+  const start = t.mock.method(TaskRun, 'create', async row => ({ ...row, _id: 'run-076' }));
+  t.mock.method(TaskRun, 'init', async () => TaskRun);
+  t.mock.method(TaskRun, 'updateOne', async (_filter, update) => {
+    latestRuns.push({ _id: 'asset-integrity-check', doc: update.$set });
+    return { modifiedCount: 1 };
+  });
+  t.mock.method(TaskSkip, 'create', async () => ({ _id: 'skip-076' }));
+  const url = '/api/asset-integrity/check';
+  assert.equal((await fetch(baseUrl + url, { method: 'POST' })).status, 401);
+  assert.equal((await request(url, { method: 'POST', body: '{"apply":true}' })).status, 400);
+  const first = request(url, { method: 'POST', body: '{}' });
+  await entered;
+  try {
+    const repeated = await request(url, { method: 'POST', body: '{}' });
+    assert.equal(repeated.body.data.status, 'SKIPPED');
+    assert.equal(repeated.body.data.reason, 'ALREADY_RUNNING');
+  } finally {
+    allowRead();
+  }
+  const result = (await first).body.data;
+  assert.equal(start.mock.callCount(), 1);
+  assert.equal(start.mock.calls[0].arguments[0].runKey, 'manual:active');
+  assert.equal(result.status, 'SUCCEEDED');
+  assert.equal(result.summary.launchDateMissing, 1);
+  assert.deepEqual(docs, original);
+  const snapshot = (await request('/api/cron/status')).body.data;
+  assert.equal(snapshot.tasks.length, 5);
+  assert.equal(snapshot.assetCompleteness.checkedAt, result.endedAt);
+  assert.equal(snapshot.assetCompleteness.incomplete, 1);
+  assert.equal(snapshot.assetCompleteness.incompleteAssets[0].assetId, assetId);
+  assert.equal(result.summary.checkedAssetIds, undefined);
+  const saved = await request(`/api/assets/${assetId}`, {
+    method: 'PUT', body: JSON.stringify({ launchDate: '2020-01-01', active: false })
+  });
+  assert.equal(saved.status, 200);
+  assert.equal(saved.body.data.active, false);
+  const refreshedStatus = (await request('/api/cron/status')).body.data;
+  const refreshed = refreshedStatus.assetCompleteness;
+  assert.equal(refreshed.checkedAt, result.endedAt);
+  assert.equal(refreshed.total, 1);
+  assert.equal(refreshed.launchDateMissing, 0);
+  assert.equal(refreshed.priceEmpty3MarketDays, snapshot.assetCompleteness.priceEmpty3MarketDays);
+  assert.deepEqual(refreshed.incompleteAssets[0].reasons, ['PRICE_EMPTY_3_MARKET_DAYS']);
+  assert.equal(refreshedStatus.tasks[0].dataState.expected, 0);
+  assert.deepEqual(findAssets.mock.calls.at(-1).arguments[0], { _id: { $in: [assetId] } });
+  assert.equal(latestRuns[0].doc.result.launchDateMissing, 1);
+  assert.equal(start.mock.callCount(), 1);
+  const rechecked = (await request(url, { method: 'POST', body: '{}' })).body.data;
+  assert.equal(rechecked.summary.launchDateMissing, 0);
+  assert.equal(rechecked.summary.total, 0);
 });
 
 /**

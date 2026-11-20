@@ -1,12 +1,18 @@
 // ✅ 文件：src/pages/AssetForm.jsx
 import { useEffect, useState } from 'react';
-import { useNavigate, useParams } from 'react-router';
+import { useLocation, useNavigate, useParams } from 'react-router';
+import { useQueryClient } from '@tanstack/react-query';
 import { createAsset, getAssetById, updateAsset } from '../../services/asset.service';
 import { getApiErrorMessage } from '../../services/api.client';
 import { ASSET_TYPES, ASSET_CLASSES, ASSET_MARKETS, ASSET_CURRENCIES } from '../../constants/enums';
+import { launchDateValue } from './launchDate';
+import { ROUTES } from '../../constants/routes';
+import { CRON_STATUS_QUERY_KEY } from '../../hooks/useCronStatus';
 
 export default function AssetForm() {
   const navigate = useNavigate();
+  const { state } = useLocation();
+  const queryClient = useQueryClient();
   const { id } = useParams();
   const isEdit = !!id;
 
@@ -21,10 +27,15 @@ export default function AssetForm() {
     active: true,
     watchlist: false
   });
+  const [launchDate, setLaunchDate] = useState('');
+  const [originalLaunchDate, setOriginalLaunchDate] = useState('');
   const [error, setError] = useState(null);
   useEffect(() => {
     if (isEdit) {
-      getAssetById(id).then(asset => {
+      getAssetById(id).then(({ launchDate: storedLaunchDate, ...asset }) => {
+        const value = launchDateValue(storedLaunchDate);
+        setLaunchDate(value);
+        setOriginalLaunchDate(value);
         setForm({
           ...asset,
           tags: asset.tags?.join(', ') || ''
@@ -46,10 +57,15 @@ export default function AssetForm() {
       ...form,
       tags: form.tags.split(',').map(t => t.trim()).filter(Boolean)
     };
+    const dateChanged = launchDate !== originalLaunchDate;
+    if (dateChanged) submitData.launchDate = launchDate || null;
     try {
       if (isEdit) await updateAsset(id, submitData);
       else await createAsset(submitData);
-      navigate('/instruments');
+      if (isEdit && dateChanged) {
+        await queryClient.invalidateQueries({ queryKey: CRON_STATUS_QUERY_KEY, refetchType: 'all' });
+      }
+      navigate(state?.fromIntegrity ? ROUTES.ASSET_INTEGRITY : '/instruments');
     } catch (err) {
       console.error('Error saving asset:', err);
       setError(getApiErrorMessage(err, '保存标的失败'));
@@ -124,6 +140,13 @@ export default function AssetForm() {
               <option key={option.value} value={option.value}>{option.label}</option>
             ))}
           </select>
+        </div>
+
+        <div>
+          <label htmlFor="asset-launch-date" className="block text-sm text-gray-700 mb-1">上市 / 成立日期</label>
+          <input id="asset-launch-date" type="date" name="launchDate" value={launchDate}
+            onChange={event => setLaunchDate(event.target.value)} className="w-full border px-3 py-2 rounded" />
+          <p className="text-xs text-gray-500 mt-1">留空表示未知。</p>
         </div>
 
         <div>

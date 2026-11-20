@@ -318,3 +318,9 @@
 | ⚠ `normalizeCounts` 白名单（吞掉非计数结果） | `shared/services/taskRunner.js:7-14` |
 | ⚠ 再平衡**无父级 taskrun**，逐组合记录不区分 `needsRebalance` 真假 | `cron-worker/src/schedulers/rebalanceScheduler.js`、`cronScheduler.js:37-43` |
 | 再平衡提醒事件（`snapshot.recordId` 已写入但前端零引用；属组合域，非本频道） | `shared/services/alertCenter.service.js`、`client/src/pages/Dashboard.jsx` |
+
+## Appendix B — 2026-11-19 NG6 / R12 定向修订
+
+Human 批准 [TASK-076](../../tasks/active/TASK-076-asset-information-completeness-check.md) 的一项例外。「资产信息完整度」卡片下方可显示「运行资产信息检查」，调用鉴权后的 `POST /api/asset-integrity/check`。该操作只读资产与价格，只保存检查的 TaskRun 和防重观测记录。
+
+该入口限定为此按钮和请求。资产编辑在标的域，日期抓取是独立 CLI。原日志端点保留 GET-only，其余写操作仍按 NG6 / R12 执行。

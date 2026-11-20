@@ -186,3 +186,15 @@ test('updateAsset 冻结 market 和 symbol，并允许表单回传同键', async
   const updated = await assetService.updateAsset('asset', { name: '基金', symbol: '001180', market: 'CN-FUND' });
   assert.deepEqual(updated, { name: '基金' });
 });
+
+test('launchDate 接受真实日历日期和显式清空，省略时保留原值', async (t) => {
+  const update = t.mock.method(Asset, 'findByIdAndUpdate', async (_id, data) => data);
+  const updated = await assetService.updateAsset('asset', { launchDate: '2024-02-29' });
+  assert.equal(updated.launchDate.toISOString(), '2024-02-29T12:00:00.000Z');
+  assert.deepEqual(await assetService.updateAsset('asset', { launchDate: null }), { launchDate: null });
+  assert.deepEqual(await assetService.updateAsset('asset', { name: '基金' }), { name: '基金' });
+  for (const launchDate of ['2023-02-29', '2100-01-01', '', true, '2024-02-29T12:00:00Z']) {
+    await assert.rejects(assetService.updateAsset('asset', { launchDate }), { status: 400 });
+  }
+  assert.equal(update.mock.callCount(), 3);
+});

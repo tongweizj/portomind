@@ -135,8 +135,8 @@ function runChecks() {
   const gridText = grid ? grid.innerText : '';
   const cards = grid ? [...grid.querySelectorAll('[data-testid="task-card"]')] : [];
   check(
-    'AC6 无 taskrun 场景：5 卡均为 unknown 灰态',
-    cards.length === 5 && cards.every((card) => card.getAttribute('data-state') === 'unknown'),
+    'AC6 无 taskrun 场景：6 卡均为 unknown 灰态',
+    cards.length === 6 && cards.every((card) => card.getAttribute('data-state') === 'unknown'),
     `cards=${cards.length}`
   );
   check(
@@ -172,8 +172,8 @@ function runChecks() {
   const board = document.querySelector('[data-testid="board-shell"]');
   const healthDots = [...document.querySelectorAll('[data-testid="health-dot"]')];
   check(
-    '053 回归：总览条恰好 5 灯且状态全为 unknown',
-    healthDots.length === 5 && healthDots.every((dot) => dot.getAttribute('data-state') === 'unknown'),
+    '053 回归：总览条恰好 6 灯且状态全为 unknown',
+    healthDots.length === 6 && healthDots.every((dot) => dot.getAttribute('data-state') === 'unknown'),
     'dots=' + healthDots.length
   );
   check(
@@ -186,8 +186,8 @@ function runChecks() {
   check('053 回归：board-shell 无 undefined/NaN/Invalid Date/null', badTokens.length === 0, badTokens.join(','));
   const sixRegions = ['card-title', 'run-state', 'last-run', 'data-ratio', 'key-metric', 'anomaly-entry'];
   check(
-    '053 回归：五卡六区域各 5 个',
-    sixRegions.every((id) => document.querySelectorAll('[data-testid="' + id + '"]').length === 5)
+    '053 回归：六卡六区域各 6 个',
+    sixRegions.every((id) => document.querySelectorAll('[data-testid="' + id + '"]').length === 6)
   );
   const dotColors = healthDots.map((dot) => {
     const span = dot.querySelector('span');
@@ -199,7 +199,7 @@ function runChecks() {
     const [r, g, b] = match[1].split(/[,s/]+/).filter(Boolean).map(Number);
     return g > r + 25 && g > b + 25;
   };
-  check('053 回归：5 个健康灯无绿色（骨架不得暗示成功）', dotColors.length === 5 && dotColors.every((color) => !isGreenish(color)));
+  check('053 回归：6 个健康灯无绿色（骨架不得暗示成功）', dotColors.length === 6 && dotColors.every((color) => !isGreenish(color)));
 
   // ── AC7：4 token 作文字色在 bgCard 上的对比度（浏览器计算色 + WCAG 公式） ──
   const bg = parseRgb(computedColorOfToken('bgCard'));
