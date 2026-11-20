@@ -37,7 +37,13 @@ function staticChecks() {
 
   const mutationHits = [...files, { name: 'hooks/useCronStatus.js', content: hook }]
     .filter((file) => /useMutation|api\.(post|put|patch|delete)\s*\(/.test(file.content));
-  check('AC8 /logs 看板子树无 useMutation / 写 API 调用', mutationHits.length === 0,
+  const checkService = read('src/services/asset-integrity.service.js');
+  check('AC8 /logs 写入口限定为 TASK-076 的资产信息检查', mutationHits.length === 1
+    && mutationHits[0].name === 'CronBoard.jsx'
+    && (mutationHits[0].content.match(/useMutation\s*\(/g) || []).length === 1
+    && /mutationFn: runAssetIntegrityCheck/.test(mutationHits[0].content)
+    && /api\.post\('\/asset-integrity\/check', \{\}\)/.test(checkService)
+    && (checkService.match(/api\.(?:post|put|patch|delete)\s*\(/g) || []).length === 1,
     mutationHits.map((file) => file.name).join(','));
 
   check('AC8 数据层只有 GET /cron/status', /api\.get\(CRON_STATUS_ENDPOINT\)/.test(service)

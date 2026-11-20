@@ -14,6 +14,7 @@ import Account from './pages/Account';
 import AccountUsers from './pages/AccountUsers';
 import AssetDetail from './pages/Asset/AssetDetail';
 import AssetForm from './pages/Asset/AssetForm';
+import AssetIntegrityDetail from './pages/Asset/AssetIntegrityDetail';
 import AssetList from './pages/Asset/AssetList';
 import Dashboard from './pages/Dashboard';
 import Login from './pages/Login';
@@ -69,6 +70,7 @@ export default function AppRouter() {
               {/* 标的：列表从「今日行情」屏底进入，不占顶层导航 */}
               <Route path="/instruments" element={<AssetList />} />
               <Route path="/instruments/new" element={<AssetForm />} />
+              <Route path={ROUTE_PATTERNS.ASSET_INTEGRITY} element={<AssetIntegrityDetail />} />
               <Route path="/instruments/edit/:id" element={<AssetForm />} />
               <Route path="/instruments/:id" element={<AssetDetail />} />
 

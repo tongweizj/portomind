@@ -48,7 +48,27 @@ async function recordSkip({ taskName, runKey, trigger, reason, activeRunKey }) {
   }
 }
 
-async function runTrackedTask({ taskName, runKey, trigger = 'SCHEDULED', execute }) {
+async function createExclusiveRun(doc, staleAfterMs) {
+  // 等待已有的 taskName + runKey 唯一索引就绪。持锁记录本身就是这次 TaskRun。
+  await TaskRun.init();
+  try {
+    return await TaskRun.create(doc);
+  } catch (error) {
+    if (error.code !== 11000) throw error;
+    const expired = await TaskRun.updateOne({
+      taskName: doc.taskName, runKey: doc.runKey, status: 'RUNNING',
+      startedAt: { $lte: new Date(doc.startedAt.getTime() - staleAfterMs) }
+    }, [{ $set: {
+      runKey: { $concat: ['manual:interrupted:', { $toString: '$_id' }] },
+      status: 'FAILED', endedAt: doc.startedAt, durationMs: { $subtract: [doc.startedAt, '$startedAt'] },
+      failureCount: 1, failures: [{ item: doc.taskName, category: 'TIMEOUT', message: 'Exclusive task run expired' }]
+    } }]);
+    if (expired.modifiedCount !== 1) throw error;
+    return TaskRun.create(doc);
+  }
+}
+
+async function runTrackedTask({ taskName, runKey, trigger = 'SCHEDULED', execute, exclusiveRunKey }) {
   if (activeTasks.has(taskName)) {
     const activeRunKey = activeTasks.get(taskName);
     taskLogger.warn('TASK_SKIPPED_ALREADY_RUNNING', {
@@ -58,15 +78,23 @@ async function runTrackedTask({ taskName, runKey, trigger = 'SCHEDULED', execute
     return { taskName, runKey, trigger, status: 'SKIPPED', reason: 'ALREADY_RUNNING', ...persisted };
   }
 
-  activeTasks.set(taskName, runKey);
+  const storedKey = exclusiveRunKey?.key || runKey;
+  activeTasks.set(taskName, storedKey);
   const startedAt = new Date();
   let taskRun;
 
   try {
     try {
-      taskRun = await TaskRun.create({ taskName, runKey, trigger, startedAt });
+      const doc = { taskName, runKey: storedKey, trigger, startedAt };
+      taskRun = exclusiveRunKey ? await createExclusiveRun(doc, exclusiveRunKey.staleAfterMs) : await TaskRun.create(doc);
     } catch (error) {
       if (error && error.code === 11000) {
+        if (exclusiveRunKey) {
+          const reason = 'ALREADY_RUNNING';
+          const persisted = await recordSkip({ taskName, runKey, trigger, reason, activeRunKey: storedKey });
+          taskLogger.warn('TASK_SKIPPED_ALREADY_RUNNING', { taskName, runKey, trigger, activeRunKey: storedKey });
+          return { taskName, runKey, trigger, status: 'SKIPPED', reason, ...persisted };
+        }
         taskLogger.warn('TASK_SKIPPED_DUPLICATE_RUN_KEY', { taskName, runKey, trigger });
         const persisted = await recordSkip({ taskName, runKey, trigger, reason: 'DUPLICATE_RUN_KEY' });
         return { taskName, runKey, trigger, status: 'SKIPPED', reason: 'DUPLICATE_RUN_KEY', ...persisted };
@@ -74,9 +102,11 @@ async function runTrackedTask({ taskName, runKey, trigger = 'SCHEDULED', execute
       throw error;
     }
 
+    const finishedKey = exclusiveRunKey ? `${runKey}:${taskRun._id}` : runKey;
+    const filter = exclusiveRunKey ? { _id: taskRun._id, runKey: storedKey } : { _id: taskRun._id };
     taskLogger.info('TASK_START', {
       taskName,
-      runKey,
+      runKey: finishedKey,
       trigger,
       taskRunId: taskRun._id.toString(),
       startedAt: startedAt.toISOString()
@@ -88,12 +118,13 @@ async function runTrackedTask({ taskName, runKey, trigger = 'SCHEDULED', execute
       const durationMs = endedAt.getTime() - startedAt.getTime();
       const status = result.failureCount > 0 ? 'PARTIAL' : 'SUCCEEDED';
       const summary = {
-        taskName, runKey, trigger, status,
+        taskName, runKey: finishedKey, trigger, status,
         startedAt, endedAt, durationMs,
         ...result
       };
 
-      await TaskRun.updateOne({ _id: taskRun._id }, { $set: summary });
+      const saved = await TaskRun.updateOne(filter, { $set: summary });
+      if (exclusiveRunKey && saved.modifiedCount !== 1) throw new Error('Exclusive task run is no longer active');
       taskLogger.info('TASK_END', { taskRunId: taskRun._id.toString(), ...summary });
       return summary;
     } catch (error) {
@@ -104,9 +135,9 @@ async function runTrackedTask({ taskName, runKey, trigger = 'SCHEDULED', execute
         failureCount: 1,
         failures: [{ item: taskName, category: error.category || 'INTERNAL', message: error.message }]
       };
-      await TaskRun.updateOne({ _id: taskRun._id }, { $set: summary });
+      await TaskRun.updateOne(filter, { $set: exclusiveRunKey ? { ...summary, runKey: finishedKey } : summary });
       taskLogger.error('TASK_END', {
-        taskRunId: taskRun._id.toString(), taskName, runKey, trigger,
+        taskRunId: taskRun._id.toString(), taskName, runKey: finishedKey, trigger,
         startedAt: startedAt.toISOString(), endedAt: endedAt.toISOString(),
         durationMs, successCount: 0, failureCount: 1,
         error: { message: error.message, category: error.category || 'INTERNAL' }

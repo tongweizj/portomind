@@ -133,7 +133,7 @@ cron-worker ──────────────┘
 | 模块 | 禁止 |
 |---|---|
 | `client` | 直连数据库 · 存密钥 · 引入 `@portomind/shared` · 自算百分比阈值 |
-| `server` | 注册 cron · 承载业务规则 · 托管静态文件（生产由 Nginx） · 暴露触发/写操作类调度接口（**只读聚合查询除外**，如 `GET /api/cron/status`） |
+| `server` | 注册 cron · 承载业务规则 · 托管静态文件（生产由 Nginx） · 暴露触发/写操作类调度接口。`GET /api/cron/status` 是只读查询。手动资产信息检查按 [TASK-076 定向例外](../../development/requirements/specs/FS-cron-worker-status-board.md#appendix-b--2026-11-19-ng6--r12-定向修订) 执行 |
 | `cron-worker` | 引入 Web 框架 · 监听端口 · 直接改业务数据而不经 `shared` 服务层 |
 | `shared` | 依赖进程环境（已核：无 `process.exit`、不读 CLI 参数、不注册信号） · 引用任何外壳模块 |
 

@@ -20,13 +20,14 @@ export function isUnknown(value) {
 /** 未知态的展示文案。中性灰，不带任何成功/失败语义（AC3：不得默认渲染成绿色）。 */
 export const UNKNOWN_TEXT = '未知';
 
-/** 五个固定任务槽位（顺序固定，对应 C-01 的「恰好 5 个健康灯位」）。 */
+/** TASK-053 原有槽位在前，TASK-076 追加第六个固定槽位。 */
 export const BOARD_SLOTS = Object.freeze([
   { key: 'price-sync', label: '价格同步' },
   { key: 'integrity-check', label: '价格完整性' },
   { key: 'alert-evaluate', label: '提醒评估' },
   { key: 'fx-rate-sync', label: '汇率同步' },
   { key: 'rebalance', label: '再平衡建议' },
+  { key: 'asset-completeness', label: '资产信息完整度' },
 ]);
 
 /** 时间戳的安全渲染：未知 / 非法值一律显示占位符，绝不出现 Invalid Date（AC4）。 */

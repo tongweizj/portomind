@@ -8,6 +8,7 @@ import { deleteAsset, getAssets } from '../../services/asset.service';
 import { getApiErrorMessage } from '../../services/api.client';
 import { ASSET_TYPES, ASSET_CLASSES } from '../../constants/enums';
 import { colors } from '../../constants/design-tokens';
+import { launchDateValue } from './launchDate';
 
 const typeLabels = Object.fromEntries(ASSET_TYPES.map(option => [option.value, option.label]));
 const assetClassLabels = Object.fromEntries(ASSET_CLASSES.map(option => [option.value, option.label]));
@@ -237,6 +238,7 @@ export default function AssetList() {
                 <th className="px-4 py-2 text-left">市场</th>
                 <th className="px-4 py-2 text-left">币种</th>
                 <th className="px-4 py-2 text-left">类型</th>
+                <th className="px-4 py-2 text-left whitespace-nowrap">上市 / 成立日期</th>
                 <th className="px-4 py-2 text-left">大类</th>
                 <th className="px-4 py-2 text-left">标签</th>
                 <th className="px-4 py-2 text-left">状态</th>
@@ -263,6 +265,7 @@ export default function AssetList() {
                   <td className="px-4 py-2 whitespace-nowrap">{asset.market}</td>
                   <td className="px-4 py-2 whitespace-nowrap">{asset.currency}</td>
                   <td className="px-4 py-2 whitespace-nowrap">{typeLabels[asset.type] || asset.type}</td>
+                  <td className="px-4 py-2 whitespace-nowrap">{launchDateValue(asset.launchDate) || '未知'}</td>
                   <td className="px-4 py-2 whitespace-nowrap">
                     <AssetClassChip value={asset.assetClass} />
                   </td>

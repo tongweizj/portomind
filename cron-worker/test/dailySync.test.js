@@ -109,6 +109,7 @@ test('CN 定时批次收到前一日净值时保留旧桶并记录资产失败',
   const updateRun = t.mock.method(TaskRun, 'updateOne', async () => ({}));
   const dependencies = {
     getActiveAssets: async () => [{ symbol: '001180.CN', market: 'CN-FUND' }],
+    isMarketOpenToday: () => true,
     fetchLatest: () => tiantian.fetchLatest('001180', {
       get: async () => ({ data: { Data: { LSJZList: [{ FSRQ: priorDay, DWJZ: '1.25' }] } } })
     }),

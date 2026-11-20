@@ -25,7 +25,7 @@ dayjs.extend(timezone);
 const { taskLogger } = require('@portomind/shared/config/logger');
 const { getActiveAssets, getAssetsBySymbols } = require('@portomind/shared/services/asset.service');
 const { isMarketOpenToday, normalizeMarket } = require('@portomind/shared/services/calendar.service');
-const { MARKETS } = require('@portomind/shared/config/markets');
+const { marketTimezone, expectedBucketCandidates } = require('@portomind/shared/services/marketDay.service');
 const { dateBounds, marketDate, todayString, MARKET_TIMEZONE } = require('@portomind/shared/utils/marketTime');
 const { runTrackedTask } = require('@portomind/shared/services/taskRunner');
 const { toStorageSymbol } = require('@portomind/shared/utils/symbol');
@@ -33,13 +33,6 @@ const { allItemsSkipped } = require('@portomind/shared/utils/taskResult');
 const historySync = require('./historySync.cjs');
 
 const TASK_NAME = 'price-integrity-check';
-
-function marketTimezone(market) {
-  const normalized = normalizeMarket(market);
-  const config = MARKETS[normalized];
-  if (!config) throw new Error(`Unsupported market: ${market}`);
-  return config.timezone;
-}
 
 // 市场本地「今天」；CN 时区比 ET 领先，可能与 MARKET_TIMEZONE 的今天相差一天。
 function marketToday(market, now = new Date()) {
@@ -62,16 +55,6 @@ function expectedTradingDates(market, from, to, isOpen = isMarketOpenToday) {
     cursor = cursor.add(1, 'day');
   }
   return expected;
-}
-
-// 市场交易日 dateStr 可能落入的 ET 桶日期：US/CA 即当日；CN 因时区领先可落入前一日或当日。
-function expectedBucketCandidates(market, dateStr) {
-  if (normalizeMarket(market) === 'CN') {
-    const marketMidnight = dayjs.tz(dateStr, marketTimezone(market));
-    const etDate = marketMidnight.tz(MARKET_TIMEZONE).format('YYYY-MM-DD');
-    return [etDate, dayjs(etDate).add(1, 'day').format('YYYY-MM-DD')];
-  }
-  return [dateStr];
 }
 
 // 实际落库的 ET 桶日期列表（来自 Price 集合，按 MARKET_TIMEZONE 解释）。

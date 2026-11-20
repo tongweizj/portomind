@@ -1,9 +1,10 @@
 const Asset = require('../models/asset');
 const { normalizeSymbol, toStorageSymbol } = require('../utils/symbol');
 const { ASSET_SORT_FIELDS, ASSET_CLASSES } = require('../constants/asset.constants');
+const { launchDateFromDay } = require('../utils/launchDate');
 
 const WRITABLE_FIELDS = [
-  'symbol', 'name', 'market', 'currency', 'type', 'assetClass', 'tags', 'active', 'watchlist'
+  'symbol', 'name', 'market', 'currency', 'type', 'assetClass', 'tags', 'active', 'watchlist', 'launchDate'
 ];
 
 function escapeRegExp(value) {
@@ -39,6 +40,11 @@ function normalizeInput(input) {
   }
 
   if (data.name !== undefined) data.name = data.name.trim();
+  if (data.launchDate !== undefined && data.launchDate !== null) {
+    const date = launchDateFromDay(data.launchDate);
+    if (!date) throw badRequest('launchDate must be a valid non-future YYYY-MM-DD date or null');
+    data.launchDate = date;
+  }
   if (data.tags !== undefined) {
     if (!Array.isArray(data.tags)) throw badRequest('tags must be an array of strings');
     if (data.tags.some(tag => typeof tag !== 'string')) {

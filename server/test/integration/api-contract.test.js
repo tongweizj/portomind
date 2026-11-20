@@ -5,6 +5,7 @@ process.env.LOG_DIR = '/tmp/portomind-api-contract-test-logs';
 
 const priceService = require('@portomind/shared/services/price.service');
 const assetService = require('@portomind/shared/services/asset.service');
+const updateAsset = assetService.updateAsset;
 const executeService = require('@portomind/shared/services/rebalance/executeRebalance');
 const Asset = require('@portomind/shared/models/asset');
 
@@ -225,6 +226,21 @@ test('Asset 主要 CRUD 都遵循统一契约', async () => {
   const missing = await request(`/api/assets/${assetId}`);
   assert.equal(missing.status, 404);
   assert.ok(missing.body.traceId);
+});
+
+test('鉴权后的资产更新入口保存并清空 launchDate，拒绝无效日期', async (t) => {
+  t.mock.method(assetService, 'updateAsset', updateAsset);
+  const update = t.mock.method(Asset, 'findByIdAndUpdate', async (id, data) => ({ _id: id, ...data }));
+  const send = launchDate => request(`/api/assets/${assetId}`, {
+    method: 'PUT', body: JSON.stringify({ launchDate })
+  });
+  const saved = await send('2024-02-29');
+  assert.equal(saved.status, 200);
+  assert.equal(saved.body.data.launchDate, '2024-02-29T12:00:00.000Z');
+  assert.equal((await send(null)).body.data.launchDate, null);
+  assert.equal((await send('2023-02-29')).status, 400);
+  assert.equal((await send('2100-01-01')).status, 400);
+  assert.equal(update.mock.callCount(), 2);
 });
 
 test('Asset 查询参数和字段枚举会拒绝无效输入', async () => {

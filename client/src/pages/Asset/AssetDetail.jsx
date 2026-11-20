@@ -9,6 +9,7 @@ import { getPriceHistory } from '../../services/price.service';
 import { getApiErrorMessage } from '../../services/api.client';
 import { ASSET_TYPES } from '../../constants/enums';
 import { colors, radii } from '../../constants/design-tokens';
+import { launchDateValue } from './launchDate';
 import {
   GAP_THRESHOLD_DAYS,
   assetClassLabels,
@@ -165,6 +166,7 @@ export default function AssetDetail() {
     asset.market,
     asset.currency,
     typeLabels[asset.type] || asset.type,
+    `上市 / 成立日期 ${launchDateValue(asset.launchDate) || '未知'}`,
     asset.assetClass ? (assetClassLabels[asset.assetClass] || asset.assetClass) : '未分类',
   ];
   if (asset.tags?.length) metaBits.push(asset.tags.join('/'));

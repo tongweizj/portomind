@@ -175,9 +175,12 @@ shared/services/assetIntegrity.service.js   ← 完整性判定唯一实现（�
    ▼
 shared/tasks/assetIntegrityCheck.js（API 与 CLI 共用：runTrackedTask, trigger=MANUAL）
 cron-worker  tasks/assetIntegrityCheck.js（手动 CLI 入口）
+shared/tasks/assetIntegrityCheck.js（API 与 CLI 共用：runTrackedTask, trigger=MANUAL）
+cron-worker  tasks/assetIntegrityCheck.js（手动 CLI 入口）
              tasks/launchDateFetch.js（抓取写入，独立授权 AC1；withMarketDataTimeout+fetchWithRetry）
 ```
 
+判定与手动任务共用 `shared/` 实现，API 和 CLI 只负责入口编排。价格同步看板与本检查共用 TASK-078 的目标日算法，历史价格完整性任务与本检查共用 CN 桶候选算法。
 判定与手动任务共用 `shared/` 实现，API 和 CLI 只负责入口编排。价格同步看板与本检查共用 TASK-078 的目标日算法，历史价格完整性任务与本检查共用 CN 桶候选算法。
 
 ### 4.2 判定规则（§3.1 冻结）
@@ -192,6 +195,7 @@ cron-worker  tasks/assetIntegrityCheck.js（手动 CLI 入口）
 | `currency` | ∈ `ASSET_CURRENCIES` 且与 market 预期一致（映射表在 §4.2.1 冻结） | `CURRENCY_INVALID` / `CURRENCY_MISMATCH` |
 | `launchDate` | 合法 Date、非未来 | `LAUNCH_DATE_MISSING` / `LAUNCH_DATE_INVALID` / `LAUNCH_DATE_FUTURE` |
 | 价格连续性 | 完整窗口中至少有一个有效价格 | 三个开市日全空 `PRICE_EMPTY_3_MARKET_DAYS`，窗口不足 `INSUFFICIENT_MARKET_DAYS` |
+| 价格连续性 | 完整窗口中至少有一个有效价格 | 三个开市日全空 `PRICE_EMPTY_3_MARKET_DAYS`，窗口不足 `INSUFFICIENT_MARKET_DAYS` |
 
 > 完整度 = 六项全合格的资产数 / active 资产总数；任一项不合格即计入不完整，并给出全部命中理由码（数组）。其它资产字段（type/assetClass/tags/active/watchlist/createdAt）不检查、不出理由、不进详情页。
 
@@ -202,8 +206,10 @@ cron-worker  tasks/assetIntegrityCheck.js（手动 CLI 入口）
 #### 4.2.2 市场日算法（最近 3 个市场日）
 
 第一天为 TASK-078 分组规则所算目标日，再取前两个开市日。窗口从目标日最多回看 15 个自然日，休市日不计入。
+第一天为 TASK-078 分组规则所算目标日，再取前两个开市日。窗口从目标日最多回看 15 个自然日，休市日不计入。
 - 复用 `isMarketOpenToday` + 各市场时区（`config/markets.js`）；候选日构造沿用 `${dateStr}T12:00:00Z`（`cronStatus.service.js:99` 既有做法）。
 - 对某资产：这 3 天逐日查 `Price(symbol, timestamp ∈ dateBounds(day))`，**3 天均无记录** → `PRICE_EMPTY_3_MARKET_DAYS`。
+- CN 的旧桶复用共享候选函数。窗口内开市日直接查价，窗外旧桶候选仅在该市场休市时纳入。窗外正常开市日的价格不归入窗口。历史完整性任务保留原来的全历史容差。
 - CN 的旧桶复用共享候选函数。窗口内开市日直接查价，窗外旧桶候选仅在该市场休市时纳入。窗外正常开市日的价格不归入窗口。历史完整性任务保留原来的全历史容差。
 - 不足 3 个市场日（如长假 + 15 天回退上限）→ 按实际天数判定并在理由附 `INSUFFICIENT_MARKET_DAYS` 说明；**不**把「无法判定」误报为「完整」。
 
@@ -243,6 +249,9 @@ Data = {
 - 请求体 `{}`，响应 `success(res, { taskName, runKey, status, startedAt, endedAt, summary })`。
 - API 调用与 CLI 共用的 `shared` 手动检查任务，同步返回本次结果。
 - 并发：进程内复用 `runTrackedTask` 锁。API 和 CLI 争用 `taskruns` 已有唯一索引上的 `manual:active`，只有持锁者读取资产和价格。完成时原子改用带 TaskRun ID 的历史运行键。活跃记录超过 15 分钟后可由下次触发留为 `FAILED` 并接管，过期执行不能发布结果。防重返回 `SKIPPED` / `ALREADY_RUNNING`。
+- 请求体 `{}`，响应 `success(res, { taskName, runKey, status, startedAt, endedAt, summary })`。
+- API 调用与 CLI 共用的 `shared` 手动检查任务，同步返回本次结果。
+- 并发：进程内复用 `runTrackedTask` 锁。API 和 CLI 争用 `taskruns` 已有唯一索引上的 `manual:active`，只有持锁者读取资产和价格。完成时原子改用带 TaskRun ID 的历史运行键。活跃记录超过 15 分钟后可由下次触发留为 `FAILED` 并接管，过期执行不能发布结果。防重返回 `SKIPPED` / `ALREADY_RUNNING`。
 - 该端点是一次**只读检查 + 写 TaskRun.result 观测**；不改任何资产字段。launchDate 抓取写入（AC1）是独立动作，不由本端点触发（见 OD-5）。
 
 #### 4.3.3 资产详情/列表 launchDate 读写
@@ -256,6 +265,7 @@ Data = {
 |---|---|---|
 | 主语 | 某资产"理论上应有多少价格，实采多少" | 某资产"最近 3 个市场日是否连续为空" |
 | 判定 | 全历史 [launchDate, today] 的缺口率 | 近端 3 个市场日的全空趋势 |
+| 目标日 | 历史任务按其既有执行窗口检查 | 从 TASK-078 分组目标日（含）往前取 3 个开市日 |
 | 目标日 | 历史任务按其既有执行窗口检查 | 从 TASK-078 分组目标日（含）往前取 3 个开市日 |
 | 动作 | 可自动回补（INTEGRITY_AUTO_REPAIR） | **只读报告，不回补** |
 
@@ -278,6 +288,7 @@ Data = {
 
 ## 6. Decisions
 
+> 2026-11-19 Human 确认 D1、D2 与 OD-4 的实施口径：三个开市日从 TASK-078 的分组目标日（含）向前取，API 与 CLI 共用 `shared` 手动任务。D3、D4 与 D6 沿用 §4 已批准契约，D5 实测见 §11。
 > 2026-11-19 Human 确认 D1、D2 与 OD-4 的实施口径：三个开市日从 TASK-078 的分组目标日（含）向前取，API 与 CLI 共用 `shared` 手动任务。D3、D4 与 D6 沿用 §4 已批准契约，D5 实测见 §11。
 
 | # | 决策事项 | 选项与建议 | 决定人 / 依据 |
@@ -350,6 +361,37 @@ Data = {
 
 ## 11. Implementation Record
 
+
+### 2026-11-19 · 开工、日期编辑与抓取预览
+
+- 从含 TASK-074 的 `origin/main` `e9f81d2`（PR #61）创建 `feature/TASK-076-asset-information-completeness-check`，使用独立工作树 `D:/projects/portomind-task-076`。TASK-053 已登记 6 卡附录。FS 的 NG6 定向附录仍缺，W0 未满足。
+- **W1 / AC1 来源核实。** [天天基金 001180](https://fundf10.eastmoney.com/001180.html) 返回 `基金代码` 与 `成立日期`。[Yahoo VOO](https://finance.yahoo.com/quote/VOO/) 和 [Yahoo 加拿大 VFV.TO](https://ca.finance.yahoo.com/quote/VFV.TO/) 返回 `Inception Date`。[Yahoo 0700.HK](https://finance.yahoo.com/quote/0700.HK/) 的单标的内嵌报价返回 `firstTradeDateMilliseconds`，按该市场日期解释。Yahoo 美国站的部分加拿大报价页返回 404，改用加拿大站后复验。CN-SH/CN-SZ 未在 D-i 指定日期来源，保留为未支持。
+- **W3 / AC1 实作与覆盖。** 独立 Worker CLI 默认预览，显式 `--apply` 才写入。更新同时核对资产仍 active、键未变、日期仍为空，保留抓取期间人工录入的值。`portomind_task077_restore_test` 只读预览为 41/44，CN-FUND 29/29、US 3/4、CA 9/11。库内无 active HK 资产，HK 单独实探。`CQQQ.US`、`VBG.TO`、`VBU.TO` 的指定 Yahoo 页面返回 404，日期维持未知。逐条结果在 `%TEMP%/portomind-TASK-076-launch-date-preview-final.json`。写入条件用测试替身验证，未对真实库执行 `--apply`。
+- **W4/W5 / AC2 进展。** 列表与详情显示日期或「未知」。表单提交实际改动，日期校验走既有资产 API。后端按 UTC 正午保存逻辑日期，兼容价格完整性检查按市场时区读取。只更新其它字段时省略日期，以免覆盖并发回填。鉴权集成测试已验证设置、清空、无效及未来日期。浏览器编辑保存及检查结果随编辑更新尚未验收。
+- **待协调。** NG6/R12 附录登记前暂缓按钮与 POST。计划 §4.3.2 的 server 调 Worker 与架构 §4 的 workspace 依赖约束冲突，建议 API 与 CLI 共用 `shared` 手动任务。计划 §4.2.2 的市场本地「今天」与 §4.4「已过」及任务卡共用目标市场日口径不一致，W2 的市场日抽取与价格连续性待 Planner/Human 统一到 TASK-078 分组目标日后继续。
+- **验证。** 服务端和 Worker 全量通过，日志 `%TEMP%/portomind-TASK-076-start-workspaces.log`。Client build 和 lint 通过，仍有既有分块和 Fast Refresh 警告。Server `validate` 遇到基线脚本仍扫描已不存在的 `server/config`，改用 `node --check` 补验本轮的后端 JavaScript 文件。
+
+### 2026-11-19 · 手动检查与看板实施
+
+- **授权与基线。** `e9f81d2` 的 TASK-076 独立工作树继续开发。Human 确认 TASK-078 分组目标日与 API/CLI 共用手动任务，批准 NG6/R12 的一个例外，已先登记附录。调度器注册维持五类六个触发器。
+- **AC1。** 临时独立 MongoDB 的实采回填把 `001180.CN` 的 `2015-05-06` 写入日期，重跑保留该值。`VBG.TO` 的上游 404 保持空值，事先人工填写的 VOO 日期保留。隔离验收镜像的 41/44 为只读预览覆盖，未在该镜像执行回填。
+- **AC2、AC5。** 浏览器夹具通过第六卡到资产域详情、缺失原因、跳转编辑、按原日期保存、返回看板重新检查并从 0/1 更新至 1/1 的闭环。详情页只有查看和导航动作。
+- **AC3。** 复用原分组目标日及历史任务的 CN 桶候选，测试覆盖周末、旧桶、CN 午间边界、US 前一交易日、三个开市日全空及窗口内至少一个有效价格。真实 HTTP 集成用模型替身验证鉴权、空请求体、防重、回读与资产未改变。临时真实 MongoDB 回读两条手动 TaskRun，检查本身未改资产。`portomind_task077_restore_test` 于 11-18 15:00 ET 的只读核对为完整 0/44、日期缺失 44、三个市场日无价 2。
+- **AC4、AC6。** 浏览器验证六卡与六灯、未检查时灰色、按钮仅出现在第六卡下方、一次点击后刷新一次。API `tasks[]` 仍为 5 项。服务端与 Worker 全量、Client build/lint、TASK-063 与 TASK-056 浏览器夹具、文档检查、新改动后端文件语法检查通过。自动校验脚本的已知路径故障见上文。尚待独立 Reviewer。
+
+### 2026-11-19 · 第一轮审查返工
+
+- **R1 / AC3。** 11-23 13:00 ET 样例的窗口为 11-23、11-20、11-19。仅有 11-18 时全空计数由 0 修正为 1，改给 11-19 时全空仍为 0。休市日旧桶对照保留。回归先红后绿。
+- **R2 / AC3。** API 和 CLI 通过 `TaskRun` 已有唯一索引共用活跃键。临时 MongoDB 中两个独立 Node 进程以相差 1 ms 的参数运行且首个保持活跃，仅首个创建 TaskRun，后一个返回 `SKIPPED / ALREADY_RUNNING` 并留下跳过事件。还验证了过期活跃记录可回收且旧进程不能发布结果。测试仅写入新建的临时库。索引定义未变。
+- **R3 / AC2。** Human 确认保存后立即刷新报告的上市／成立日期判定。`GET /api/cron/status` 以最近一次检查的受检资产清单为范围，按当前日期字段更新该项理由和计数。价格、其它字段理由、报告时间和历史 TaskRun 保留原值。浏览器验证资产保存后仅追加一次 GET，详情立即更新。服务端验证日期补齐及清空、历史数据保持、未受检资产排除。旧运行如缺少受检资产 ID 清单，仅读取并更新原已列入缺失项的资产日期。
+- **R3 真实库对照。** 临时 MongoDB 上实际保存与清空日期后，GET 的缺日期计数依次为 `1 → 0 → 1`，三个市场日全空计数始终为 1。原 TaskRun 逐文档一致，运行记录总数仍为 1。
+- **AC6 验证入口。** 修正标准服务端语法脚本的目录清单，并纳入 `app.js`。该入口现通过。
+- 全量服务端和 Worker、浏览器报告刷新夹具、Client build/lint、标准语法校验和文档检查通过。日志 `%TEMP%/portomind-TASK-076-r1-workspaces.log`、`%TEMP%/portomind-TASK-076-r1-browser.log`。验收待独立复审。
+
+### 2026-11-19 · AC2 停用受检资产返工
+
+- **R3 / AC2。** 报告沿用上次手动检查的资产 ID。未出现在当前启用列表的受检资产按 ID 批量补查日期，包含已停用资产。价格看板和下次手动检查仍按当前启用状态选取资产。保存补日期并同时停用的 HTTP 回归先红后绿，校验日期理由消失，受检分母、价格理由和 `checkedAt` 保留，TaskRun 未新增或修改。
+- 临时 MongoDB 实测缺日期 `1 → 0`，受检分母和三日全空各为 `1 → 1`，仅一条原始 TaskRun 且逐文档一致。浏览器夹具实测同次保存停用后仅发 GET，下一次手动检查才从范围中移除该资产。服务端和 Worker 全量、浏览器、标准 `validate` 和 lint 通过，工作区日志 `%TEMP%/portomind-TASK-076-r2-workspaces.log`、`%TEMP%/portomind-TASK-076-r2-browser.log`。待独立复审。
 
 ### 2026-11-19 · 开工、日期编辑与抓取预览
 
