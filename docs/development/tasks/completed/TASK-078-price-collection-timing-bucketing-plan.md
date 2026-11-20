@@ -2,7 +2,7 @@
 
 ## Status
 
-Status：Implementing（2026-11-18，Human 指示开工；2026-11-17 批准「073～078 计划」）
+Status：Completed（2026-11-20，参见 §13）
 
 Owner：Planner（起草）；Implementer（待指派）
 
@@ -119,7 +119,7 @@ const startUsCaScheduler = createCronScheduler({
   - 后：`PRICE_UPSERTED`（记录 `symbol`、`timestamp`、`price`、`market`、`trigger`/`marketGroup`（从 record 带入或调用方透传）、`batch`（如 `scheduled-cn` / `scheduled-us-ca` / `manual:<iso>`）、`writtenAt`（写入时刻 ISO）、是否覆盖 `overwritten: boolean`）。
 - 记录 content 使用结构化字段（伴随 taskLogger 的 JSON 格式），遵守现有日志脱敏规则（`sanitizeLogValue`）。不新增日志模块，复用 `taskLogger`。
 - 效果：同一 `(symbol, 日)` 被第二个批次覆盖时，日志中可见旧值与新值及批次来源 → 消除 P3-9c「无声覆盖不可追溯」。不改消费侧「取最新价」的行为。
-- **前置与合并分工（与 TASK-073 AC1）**：本节日志的 `symbol` 标准存储格式由 [TASK-073 AC1](../active/TASK-073-price-pipeline-p0-data-correctness.md) 的 `toStorageSymbol` 接线提供；本卡**不改** `priceStorage.service.js:8` 的 symbol 归一化行，只在 `saveLatest` 主体前后加日志。073 未落地前，同一基金价格落在 `001180` / `001180.CN` 双键而非同一 `(symbol, 日)` 键，不存在本节所述「覆盖」事件，日志 symbol 也无法按标准格式对齐——故 073 是 AC4 正确性的前置。合并时两卡改同一文件不同行，须跑 `priceStorage` 单测确认互不覆盖。
+- **前置与合并分工（与 TASK-073 AC1）**：本节日志的 `symbol` 标准存储格式由 [TASK-073 AC1](./TASK-073-price-pipeline-p0-data-correctness.md) 的 `toStorageSymbol` 接线提供；本卡**不改** `priceStorage.service.js:8` 的 symbol 归一化行，只在 `saveLatest` 主体前后加日志。073 未落地前，同一基金价格落在 `001180` / `001180.CN` 双键而非同一 `(symbol, 日)` 键，不存在本节所述「覆盖」事件，日志 symbol 也无法按标准格式对齐——故 073 是 AC4 正确性的前置。合并时两卡改同一文件不同行，须跑 `priceStorage` 单测确认互不覆盖。
 
 ### 4.4 `integrityCheck` CN 补偿复核（AC3）
 
@@ -275,7 +275,7 @@ R2 独立复验：对 `portomind_task077_restore_test` 只读调用实际看板�
 
 ## 13. Completion Record
 
-（填写：AC 与验证证据引用、关闭依据、归档与移交、长期沉淀位置与证据入口。计划完成后随独立任务留在 `docs/development/tasks/active/`，结案后按 [DOCS.md §1.1](../../../os/standards/DOCS.md#11-story-交付目录与文档生命周期) 随卡片移到 `completed/`。Merged 仅引用 Human 登记，不自行判定。）
+2026-11-20，原任务卡已登记完成，本次核对证据后归档。§11 的全量回归及 §12 的独立复审支持 AC1–AC5，最终结论为 Pass，R1、R2 已关闭。真实 ET 12:00 定时批次的上游净值发布覆盖仍待运行观测。实现 `40ce7c3` 随 PR #60 进入主干（`a8d8837`）。
 
 ## 自检
 

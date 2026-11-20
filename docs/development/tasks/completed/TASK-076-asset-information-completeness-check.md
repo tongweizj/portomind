@@ -1,12 +1,12 @@
 # TASK-076 — 资产信息完整性检查（launchDate 抓取 / 前台可编辑 / 手动检查 / 看板卡片与详情）
 
-> **Status：Implementing**（2026-11-17，Human 批准计划后 Orchestrator 登记）。按 [DEV-ORDER-073-078](../DEV-ORDER-073-078.md) 顺序实施。
+> **Status：Completed**（2026-11-20，原任务卡已登记完成，本次核对证据后归档）。见[结案记录](./TASK-076-asset-information-completeness-check-plan.md#13-completion-record)。
 
 ## Metadata
 
 | 字段 | 内容 |
 |---|---|
-| Status | **Implementing**（2026-11-17，Human 批准计划后 Orchestrator 登记；按开发顺序实施） |
+| Status | **Completed** |
 | 所属 Story | 无（独立维护任务；与已结案 US-001 的任务运行看板有接口依赖，见 §7） |
 | 覆盖的验收条件 | 本卡 §3 AC（来源：Human 2026-11-17 指令 + [PRICE-PIPELINE-REVIEW](../../../os/architecture/PRICE-PIPELINE-REVIEW.md) P0-2 / D-c） |
 | Priority | High（建议；用户可见数据质量 + 监控闸门，待 Human 确认） |
@@ -23,7 +23,7 @@
 - 没人知道哪些资产信息不完整，`launchDate` 既不能自动获取，也没有界面查看/修正；
 - 价格完整性检查因此永远抓不到 P0-1 类缺价问题——**监控失效比数据缺失更危险**。
 
-Human 2026-11-17 决定：把 launchDate 相关工作从 [TASK-073](../active/TASK-073-price-pipeline-p0-data-correctness.md) 拆出，独立成本卡，并扩展为"资产信息完整性检查"体系（**手动触发**检查 + 看板卡片 + 详情页 + 编辑入口）。**同日修订**：原"每日自动运行"因日志过多被取消，改为日志频道看板按钮手动触发（见 AC3 / D-m）。
+Human 2026-11-17 决定：把 launchDate 相关工作从 [TASK-073](./TASK-073-price-pipeline-p0-data-correctness.md) 拆出，独立成本卡，并扩展为"资产信息完整性检查"体系（**手动触发**检查 + 看板卡片 + 详情页 + 编辑入口）。**同日修订**：原"每日自动运行"因日志过多被取消，改为日志频道看板按钮手动触发（见 AC3 / D-m）。
 
 ## 2. 已核实的事实
 
@@ -56,7 +56,7 @@ Human 2026-11-17 决定：把 launchDate 相关工作从 [TASK-073](../active/TA
 
 | 字段 | 完整判定标准 | 缺失/异常判定 | 自动修正 |
 |---|---|---|---|
-| `symbol` | 符合 `^[A-Z0-9][A-Z0-9._-]*$`、`trim` + 大写、长度 1–32，**且匹配 ADR-003 `STORAGE_SUFFIX` 按 `market` 派生的存储格式**（如 `001180.CN` / `VOO.US` / `600519.SS`） | 空/非法字符/大小写或空格违规/后缀与 market 派生不符（如 `001180.cn`、裸码） | ❌ **不自动改**（用户点名）——symbol 是 `transactions`/`prices`/`targets` 的跨表关联键，自动改会断链；归 [TASK-073](../active/TASK-073-price-pipeline-p0-data-correctness.md) 统一迁移；详情页只提示"去处理" |
+| `symbol` | 符合 `^[A-Z0-9][A-Z0-9._-]*$`、`trim` + 大写、长度 1–32，**且匹配 ADR-003 `STORAGE_SUFFIX` 按 `market` 派生的存储格式**（如 `001180.CN` / `VOO.US` / `600519.SS`） | 空/非法字符/大小写或空格违规/后缀与 market 派生不符（如 `001180.cn`、裸码） | ❌ **不自动改**（用户点名）——symbol 是 `transactions`/`prices`/`targets` 的跨表关联键，自动改会断链；归 [TASK-073](./TASK-073-price-pipeline-p0-data-correctness.md) 统一迁移；详情页只提示"去处理" |
 | `name` | 非空、`trim` 后 ≤120 字符 | 空/纯空格/超长 | ❌ 人工 |
 | `market` | 必填、且 ∈ `ASSET_MARKETS` 枚举 | 空/非法枚举值 | ❌ 人工（且与 symbol 后缀派生强相关，必须人确认） |
 | `currency` | 必填、且 ∈ `ASSET_CURRENCIES`；且与 `market` 的预期币种一致（如 CN-FUND→CNY、US→USD、CA→CAD、HK→HKD，映射表在 ExecPlan 冻结） | 空/非法枚举/与 market 不一致 | ❌ 人工（币种错会导致估值分桶错） |
@@ -83,8 +83,8 @@ Human 2026-11-17 决定：把 launchDate 相关工作从 [TASK-073](../active/TA
 
 **Out of Scope**
 
-- 价格双轨序列迁移、采集日期错位、归桶时区（[TASK-073](../active/TASK-073-price-pipeline-p0-data-correctness.md) 剩余范围）
-- P1/P2 观测健壮性（[TASK-074](../active/TASK-074-price-pipeline-observability-and-robustness.md)、[TASK-075](../active/TASK-075-today-symbol-case-mismatch.md)）
+- 价格双轨序列迁移、采集日期错位、归桶时区（[TASK-073](./TASK-073-price-pipeline-p0-data-correctness.md) 剩余范围）
+- P1/P2 观测健壮性（[TASK-074](./TASK-074-price-pipeline-observability-and-robustness.md)、[TASK-075](./TASK-075-today-symbol-case-mismatch.md)）
 - C-07 再平衡详情页；任务运行看板的其它扩容；定时/cron 自动运行（本卡不注册任何每日自动任务）
 - 自动修改资产其它字段（除 AC1 launchDate 抓取写入外）
 
@@ -112,7 +112,7 @@ Human 2026-11-17 决定：把 launchDate 相关工作从 [TASK-073](../active/TA
 
 ## 7. Coordination Notes
 
-- 与 [TASK-073](../active/TASK-073-price-pipeline-p0-data-correctness.md)：本卡已承接其 P0-2 的 launchDate 回填与 D-c；073 保留价格侧修复与"全跳过语义"（D-d）。两卡分别验收，不许互相顶替。
+- 与 [TASK-073](./TASK-073-price-pipeline-p0-data-correctness.md)：本卡已承接其 P0-2 的 launchDate 回填与 D-c；073 保留价格侧修复与"全跳过语义"（D-d）。两卡分别验收，不许互相顶替。
 - **D-j 背景（2026-11-17 回复 Human 疑问）**：任务运行看板（`/logs` 的看板 tab）现状**恰好 5 张卡**——价格同步 / 价格完整性 / 提醒评估 / 汇率同步 / 再平衡建议。出处：①已验收 [TASK-053 §3 AC3/AC4](../../delivery/completed/US-001/TASK-053.md)（原文"恰好 **5 个健康灯位**"、"**5 任务卡片网格**"，第 83–84 行）；②代码 [`BOARD_SLOTS`](../../../../client/src/components/CronStatus/unknownValue.js)（五个固定键，第 24–30 行）。Human 要求新增的"资产信息完整度"卡是**第 6 张**，因此必须选 D-j 的落地方式（修订已验收 AC / 替换某卡 / 看板外展示），本卡不擅自改 US-001 已验收 AC。
 - 与已结案 US-001 看板：D-j=A 已由 Human 授权修订 AC3/AC4（5→6），修订以 [TASK-053 末「AC 修订附录」](../../delivery/completed/US-001/TASK-053.md) 留痕，原 AC 正文不动；实施以 6 槽位为准。
 - 硬规则：抓取/检查属业务规则，**只在 `shared/`**；调度只在 `cron-worker/`（ADR-002）；客户端不 `require` shared、不算业务阈值（AGENTS §5）。
@@ -124,6 +124,7 @@ Human 2026-11-17 决定：把 launchDate 相关工作从 [TASK-073](../active/TA
 
 ## 9. 记录
 
+2026-11-20，独立复审为 **Pass**，AC1–AC6 均通过。见[执行计划 §12](./TASK-076-asset-information-completeness-check-plan.md#12-review-record)。
 2026-11-17，Planner：依据 Human 指令「将 launchDate 相关任务独立 + 新增资产信息完整性检查任务」建卡。同步从 TASK-073 剥离 launchDate 回填与 D-c（见该卡 §9）。初始 Status 待 Orchestrator 登记；优先级建议 High，最终以 Human 为准。
 
 2026-11-17（续 3）：Human 修订 **AC3**——**取消每日自动运行**（日志过多），改为日志频道看板「运行资产信息检查」按钮手动触发（D-m）；并要求写清**每个字段的检查标准与自动修正策略**。D-m 与 [FS P0 NG6](../../requirements/specs/FS-cron-worker-status-board.md) 冲突，须 PM/Human 日期附录定向修订后按钮方可上线。

@@ -147,7 +147,7 @@ Portfolio 枚举：`type`（风险定位）为 `活钱 | 稳健 | 长期`；`acc
 
 > `GET /api/cron/status` 是**只读聚合**端点。价格覆盖按 `byMarket` 的目标日分别查价，顶层 `targetMarketDate` 取最晚目标日，`expected` 和 `fetched` 为各市场的合计。TASK-078 更新了[分组目标日规则](../../development/requirements/specs/FS-cron-worker-status-board.md#4-看板设计)。其余字段定义见 [TASK-054 ExecPlan](../../development/tasks/completed/TASK-054-cron-status-aggregate-api-plan.md) §4.3/§4.4。
 
-价格同步 `notes` 可包含 `PRICE_NO_NEW_DATA`、`PRICE_STALE`、`PRICE_NOT_FOUND_STREAK`，见 [TASK-074 的阈值裁决](../../development/tasks/active/TASK-074-price-pipeline-observability-and-robustness-plan.md#6-decisions)。提示按服务端的市场日历及已完成的应采批次派生。旧价为提示，估值仍消费原价格值或缺价 `null`。
+价格同步 `notes` 可包含 `PRICE_NO_NEW_DATA`、`PRICE_STALE`、`PRICE_NOT_FOUND_STREAK`，见 [TASK-074 的阈值裁决](../../development/tasks/completed/TASK-074-price-pipeline-observability-and-robustness-plan.md#6-decisions)。提示按服务端的市场日历及已完成的应采批次派生。旧价为提示，估值仍消费原价格值或缺价 `null`。
 
 > **TASK-064（读侧契约兼容，2026-11-05）**：
 > - 每个 task 条目新增**可选** `lastSkip: {taskName,runKey,reason,skippedAt,trigger} | null`，来源为 `taskskips` 最近一次事件；`lastSkip` 与 `lastRun` **分离**，不替换、不冒充成功，无集合/无记录时为 `null`。

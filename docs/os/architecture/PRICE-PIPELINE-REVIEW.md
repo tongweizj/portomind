@@ -444,7 +444,7 @@ function expectedBucketCandidates(market, dateStr) { … return [etDate, etDate+
 
 ## 附录 C：2026-11-17 补充 —— P0-4 今日行情客户端查找端未归一化
 
-> 本附录为审阅后续发现，**不是 2026-11-15 审阅基线的一部分**；由 Human 在讨论中提供现象、Planner 亲读源码校正根因后补记。对应任务：[TASK-075](../../development/tasks/active/TASK-075-today-symbol-case-mismatch.md)。
+> 本附录为审阅后续发现，**不是 2026-11-15 审阅基线的一部分**；由 Human 在讨论中提供现象、Planner 亲读源码校正根因后补记。对应任务：[TASK-075](../../development/tasks/completed/TASK-075-today-symbol-case-mismatch.md)。
 
 **现象**（Human 用真实列表算法模拟 + 页面观察）：今日行情列表 44 个资产中仅 15 个命中价格，**29 个 CN-FUND 显示「近 14 天无数据 · 缺口」**；这 29 个基金在库里（11-12 桶）全有价，只是 key 大小写/后缀对不上。
 
@@ -452,4 +452,4 @@ function expectedBucketCandidates(market, dateStr) { … return [etDate, etDate+
 
 > ⚠️ **更正**：讨论中曾描述为「存时 uppercase、查时没 uppercase」。亲读确认**两端都没有 uppercase**——现象与 29 个受害资产不变，但根因是"两端均未归一化"，不是"单边漏做"。以本附录为准。
 
-**与 P0-1 的关系**：同根（无统一归一化层）但**不同的第三个消费端**——P0-1 是服务端 `getLatestPrices`（27/29 无价），本条是客户端列表（29/44 无数据）；价格同步卡片服务端两端都 uppercase 因此 29/29 命中，三页面表现不一致正是"每个消费者各实现一半"的确证。根治须与 [TASK-073](../../development/tasks/active/TASK-073-price-pipeline-p0-data-correctness.md) 的统一归一化契约对齐，避免客户端另起一份口径。
+**与 P0-1 的关系**：同根（无统一归一化层）但**不同的第三个消费端**——P0-1 是服务端 `getLatestPrices`（27/29 无价），本条是客户端列表（29/44 无数据）；价格同步卡片服务端两端都 uppercase 因此 29/29 命中，三页面表现不一致正是"每个消费者各实现一半"的确证。根治须与 [TASK-073](../../development/tasks/completed/TASK-073-price-pipeline-p0-data-correctness.md) 的统一归一化契约对齐，避免客户端另起一份口径。

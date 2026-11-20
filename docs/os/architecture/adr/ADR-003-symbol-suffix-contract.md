@@ -41,7 +41,7 @@ Superseded By:
 | 大写后缀 `.CN` | `001180.CN`（仍在更新的日常价格序列） | `dailySync → fetchLatest`，写入侧 `toUpperCase()` |
 | 裸码 | `001180`（停在 7 月的历史回补序列） | `historySync → fetchHistory` 历史别名 |
 
-同一基金因此有**两套并发价格序列**（重叠 448 个交易日中 104 天数值不同），并导致三个消费端各自实现一半归一化：`getStatus` 两端都 uppercase（29/29 命中）、`getLatestPrices` 与客户端 `Today.jsx` 两端都不归一化（分别 27/29、29/44 无价）。这就是 P0-1 与 P0-4（[TASK-073](../../../development/tasks/active/TASK-073-price-pipeline-p0-data-correctness.md)、[TASK-075](../../../development/tasks/active/TASK-075-today-symbol-case-mismatch.md)）的共同根因。
+同一基金因此有**两套并发价格序列**（重叠 448 个交易日中 104 天数值不同），并导致三个消费端各自实现一半归一化：`getStatus` 两端都 uppercase（29/29 命中）、`getLatestPrices` 与客户端 `Today.jsx` 两端都不归一化（分别 27/29、29/44 无价）。这就是 P0-1 与 P0-4（[TASK-073](../../../development/tasks/completed/TASK-073-price-pipeline-p0-data-correctness.md)、[TASK-075](../../../development/tasks/completed/TASK-075-today-symbol-case-mismatch.md)）的共同根因。
 
 代码事实（已亲读核实）：
 
@@ -261,8 +261,8 @@ Unaffected areas:
 ## 13. References
 
 - [PRICE-PIPELINE-REVIEW.md](../../architecture/PRICE-PIPELINE-REVIEW.md) — P0-1 symbol 双轨、P0-4 客户端未归一化、附录 C（唯一事实来源）
-- [TASK-073](../../../development/tasks/active/TASK-073-price-pipeline-p0-data-correctness.md) — 归一化 + 迁移主卡（本 ADR 反转其 AC1 目标格式）
-- [TASK-075](../../../development/tasks/active/TASK-075-today-symbol-case-mismatch.md) — 客户端展示端对齐
+- [TASK-073](../../../development/tasks/completed/TASK-073-price-pipeline-p0-data-correctness.md) — 归一化 + 迁移主卡（本 ADR 反转其 AC1 目标格式）
+- [TASK-075](../../../development/tasks/completed/TASK-075-today-symbol-case-mismatch.md) — 客户端展示端对齐
 - [ARCHITECTURE.md §8 债 #4](../../architecture/ARCHITECTURE.md) — 无归一化层（结构性根因）
 - [DATA_MODEL.md §5.1](../../../handbook/technical/DATA_MODEL.md) — symbol 写法不统一（当前状态记录）
 - [ADR-002](./ADR-002-single-scheduler.md) — 单一调度器（取价链路的调度归属，未受本 ADR 影响）
