@@ -1,12 +1,12 @@
 # TASK-074 — 价格链路观测与健壮性（SUCCEEDED 语义 / result 部署核对 / 新鲜度 / 熔断 / NOT_FOUND 提示）
 
-> **Status：Implementing**（2026-11-17，Human 批准计划后 Orchestrator 登记）。按 [DEV-ORDER-073-078](../DEV-ORDER-073-078.md) 顺序实施。
+> **Status：Completed**（2026-11-20，Human 确认结案）。见[结案记录](./TASK-074-price-pipeline-observability-and-robustness-plan.md#13-completion-record)。
 
 ## Metadata
 
 | 字段 | 内容 |
 |---|---|
-| Status | **Implementing**（2026-11-17，Human 批准计划后 Orchestrator 登记；按开发顺序实施） |
+| Status | **Completed** |
 | 所属 Story | 无（独立维护任务） |
 | 覆盖的验收条件 | 本卡 §3 AC（来源：[PRICE-PIPELINE-REVIEW](../../../os/architecture/PRICE-PIPELINE-REVIEW.md) P1-3 / P1-4 / P1-5 / P2-6 / P2-7） |
 | Priority | Medium（建议；观测与健壮性，排在 [TASK-073](./TASK-073-price-pipeline-p0-data-correctness.md) P0 之后，待 Human 确认） |

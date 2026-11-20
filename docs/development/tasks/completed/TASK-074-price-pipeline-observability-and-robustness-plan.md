@@ -2,7 +2,7 @@
 
 ## Status
 
-Status：Implementing（2026-11-19，Human 指示开工；2026-11-17 批准「073～078 计划」）
+Status：Completed（2026-11-20，参见 §13）
 
 Owner：Planner（起草）；Implementer（待指派）
 
@@ -87,7 +87,7 @@ Approval：Human 于 2026-11-17 批准计划，D-e 复用 TASK-073 D-d。2026-11
 ### 4.5 AC5 — NOT_FOUND 连续失败用户可见提示
 
 1. 复用 `classifyMarketDataError` 的 `NOT_FOUND` 分类（已有，`errors.js:7,38-43`），按资产统计连续 `NOT_FOUND` 天数；达阈值（D-f，建议 3）产生用户可见提示，**复用既有提醒/看板异常通道**（`alertEngine` / `cronStatus` 数据态），不新建子系统。
-2. 与 [TASK-077 AC7](../completed/TASK-077-symbol-historical-data-migration.md) 的一次性只读探测、[TASK-076](./TASK-076-asset-information-completeness-check.md) 的升级入口保持边界：074 负责**持续告警**，077 负责**一次性报告**（卡 §7 其它重叠项未处理，实施时以"不重复造检测逻辑"为最低要求，复用同一分类实现）。
+2. 与 [TASK-077 AC7](./TASK-077-symbol-historical-data-migration.md) 的一次性只读探测、[TASK-076](./TASK-076-asset-information-completeness-check.md) 的升级入口保持边界：074 负责**持续告警**，077 负责**一次性报告**（卡 §7 其它重叠项未处理，实施时以"不重复造检测逻辑"为最低要求，复用同一分类实现）。
 
 ### 4.6 兼容性 / 关键取舍
 
@@ -261,7 +261,7 @@ Approval：Human 于 2026-11-17 批准计划，D-e 复用 TASK-073 D-d。2026-11
 
 ## 13. Completion Record
 
-（待 Human 关闭时填写：AC 与验证证据引用、关闭依据、归档与移交；Merged 仅引用 Human 登记，不自行判定。）
+2026-11-20，Human 确认结案。§11 的服务端、Worker 和浏览器回归及 §12 的独立复审支持 AC1–AC6，最终结论为 Pass。AC1 按 Human 裁决以已核实的 TaskRun 字段验收，原异常未复现，根因未确认。实现 `4904ce7` 随 PR #61 进入主干（`e9f81d2`）。
 
 ## 自检
 

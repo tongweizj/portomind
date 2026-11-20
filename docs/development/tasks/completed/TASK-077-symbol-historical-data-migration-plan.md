@@ -269,6 +269,8 @@ Human 在本会话明确：Yahoo 无 `VBG.TO` 和 `VBU.TO` 本次行情，两只
 - **结案依据**：§11 的隔离镜像迁移与恢复证据，以及 §12 的独立审查、AC3 执行后回读和 AC5 Human 验收裁决。AC1–AC8 满足；独立审查为 `Pass with issues`。R3 遗留的 D-b 旧说明已在任务卡 §2 同步至 §6 的裁决。
 - **交付与证据**：[工具手册](../../../../scripts/PROBE-SYMBOL-DATA-QUALITY.md)、[迁移前探测报告](./TASK-077-data-quality-report.md)、[冻结迁移清单](./TASK-077-migration-dry-run.json)。备份、试还原与写入日志的私有恢复目录及文件名见 §11 和 §12。实库验收范围为获批隔离镜像。
 
+- **提交证据（2026-11-20 核对）**：迁移及探测实现 `f182d7e`、旧目标修正 `f452a25` 和结案归档 `38368ce` 均可从 `origin/main` 追溯。
+
 ## 自检
 
 - [x] Task 与批准依据对应（AC1–AC8、D-b、D-e-data 均来自任务卡）

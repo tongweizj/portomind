@@ -2,7 +2,7 @@
 
 ## Status
 
-Status：Implementing（2026-11-18，Implementer 开始实施；Human 于 2026-11-17 批准「073～078 计划」）
+Status：Completed（2026-11-20，参见 §13）
 
 Owner：Planner（起草）；Implementer（待指派）
 
@@ -21,7 +21,7 @@ Approval：**已批准（2026-11-17，Human）**。本计划冻结任务卡 §6 
 按 **方案 A** 实施（不改需求、不改产品行为）：
 
 - **客户端零后缀派生 / strip 逻辑**（硬规则 #3、AC2）：`Today.jsx` 继续用服务端返回值的原始 `symbol` 做归并与查找，**不新增** `toUpperCase()` / `replace(/\.CN$/…)` 等任何内联处理。
-- **一处定义**：symbol 存储格式由 [ADR-003](../../../os/architecture/adr/ADR-003-symbol-suffix-contract.md) 唯一定义（按 `market` 派生大写后缀：`001180.CN` / `VOO.US` / `600519.SS`），由 [TASK-073 AC1/AC2](./TASK-073-price-pipeline-p0-data-correctness.md) 的 `shared/` 单一实现保证新数据，由 [TASK-077 AC1/AC2/AC5](../completed/TASK-077-symbol-historical-data-migration.md) 迁移保证存量数据。
+- **一处定义**：symbol 存储格式由 [ADR-003](../../../os/architecture/adr/ADR-003-symbol-suffix-contract.md) 唯一定义（按 `market` 派生大写后缀：`001180.CN` / `VOO.US` / `600519.SS`），由 [TASK-073 AC1/AC2](./TASK-073-price-pipeline-p0-data-correctness.md) 的 `shared/` 单一实现保证新数据，由 [TASK-077 AC1/AC2/AC5](./TASK-077-symbol-historical-data-migration.md) 迁移保证存量数据。
 - 本卡的**真实工作**是：①前置依赖闸门（确认 073+077 已落地且**库已迁移**）；②API_CONTRACT 的 symbol 语义澄清（只引用 ADR-003，不复写后缀规则）；③真实数据 / 浏览器 E2E 验证 44/44 命中与零回归。**不写生产代码**即为方案 A 的正确实施结果。
 
 覆盖 AC1–AC4；范围外事项见任务卡 §4（服务端 `shared/` 归一化层与迁移属 073/077，观测/熔断/新鲜度属 074，估值/再平衡规则不碰）。
@@ -70,7 +70,7 @@ Approval：**已批准（2026-11-17，Human）**。本计划冻结任务卡 §6 
 开工验证前必须确认（任一不满足 → 停止，不得用客户端补丁绕过）：
 
 1. [TASK-073 AC1/AC2](./TASK-073-price-pipeline-p0-data-correctness.md)：`shared/` 存在唯一 `toStorageSymbol` / `toProviderSymbol`，档案建档/采集/`priceStorage`/`getLatestPrices` 四处接线；`grep` 无第二份后缀实现。
-2. [TASK-077 AC1/AC2/AC5](../completed/TASK-077-symbol-historical-data-migration.md)：获批隔离镜像已按 D-b 迁移和重采，资产 44/44 符合存储格式，交易和组合目标无悬挂引用。077 验收记录为最近价 44/44、持仓 32/32 有最近价，今日行情全量 42/44，按 Human 裁决排除两只上游无数据标的后为 42/42。见 [077 结案记录](../completed/TASK-077-symbol-historical-data-migration-plan.md#13-completion-record)。
+2. [TASK-077 AC1/AC2/AC5](./TASK-077-symbol-historical-data-migration.md)：获批隔离镜像已按 D-b 迁移和重采，资产 44/44 符合存储格式，交易和组合目标无悬挂引用。077 验收记录为最近价 44/44、持仓 32/32 有最近价，今日行情全量 42/44，按 Human 裁决排除两只上游无数据标的后为 42/42。见 [077 结案记录](./TASK-077-symbol-historical-data-migration-plan.md#13-completion-record)。
 3. 两者 Status 由 Orchestrator 登记为已完成（卡片记录为准，非口传）。
 
 ### 4.3 API_CONTRACT 语义澄清（只引用，不复写）
@@ -132,7 +132,7 @@ Approval：**已批准（2026-11-17，Human）**。本计划冻结任务卡 §6 
 ## 9. Rollback
 
 - 代码：客户端生产代码零改动（§4.1），**无可回退代码**；W2 仅文档 diff，回退即还原 API_CONTRACT 该行。
-- 数据：本卡不写任何数据；迁移与回退责任属 [TASK-077 §9](../completed/TASK-077-symbol-historical-data-migration.md)（备份/`sync:db` 还原点），本卡不介入。
+- 数据：本卡不写任何数据；迁移与回退责任属 [TASK-077 §9](./TASK-077-symbol-historical-data-migration.md)（备份/`sync:db` 还原点），本卡不介入。
 - 不可逆影响：无。若 E2E 失败，根因必在上游 073/077 或环境，回退本卡文档即可，不得在客户端打补丁掩盖。
 
 ## 10. Implementer Handoff
@@ -141,7 +141,7 @@ Approval：**已批准（2026-11-17，Human）**。本计划冻结任务卡 §6 
 
 你是 PortoMind 的 Implementer。请按 Human 已批准的 TASK-075 方案 A 执行。先读 `AGENTS.md`、`client/AGENTS.md`、[任务卡 AC1–AC4 与 D-h](./TASK-075-today-symbol-case-mismatch.md) 和本计划 §4–§7。先检查工作树和基线，保留其它任务的改动。通过 W1 后，从最新 `main` 开 `feature/TASK-075-today-symbol-case-mismatch`。
 
-1. **先核对 W1。** 复核 TASK-073 AC1/AC2 的已合入实现、独立审查证据和任务卡状态，以及 TASK-077 的结案记录和所选验收库的迁移、重采证据。截至本交接，073 的实现已合入，独立审查覆盖 AC1/AC2，但任务卡仍为 `Implementing`。按 §4.2 向 Orchestrator 报告这个缺口，待 073 结案依据和验收库都核实后进入 W2/W3。TASK-077 已 `Completed`，验收限于获批隔离镜像。确认浏览器连接的 API 实际读取该镜像或有同等迁移证据的验收库。禁止重跑 077 迁移或复用其删除清单。[TASK-073 审查](./TASK-073-price-pipeline-p0-data-correctness-plan.md#12-review-record) · [TASK-077 结案](../completed/TASK-077-symbol-historical-data-migration-plan.md#13-completion-record)
+1. **先核对 W1。** 复核 TASK-073 AC1/AC2 的已合入实现、独立审查证据和任务卡状态，以及 TASK-077 的结案记录和所选验收库的迁移、重采证据。截至本交接，073 的实现已合入，独立审查覆盖 AC1/AC2，但任务卡仍为 `Implementing`。按 §4.2 向 Orchestrator 报告这个缺口，待 073 结案依据和验收库都核实后进入 W2/W3。TASK-077 已 `Completed`，验收限于获批隔离镜像。确认浏览器连接的 API 实际读取该镜像或有同等迁移证据的验收库。禁止重跑 077 迁移或复用其删除清单。[TASK-073 审查](./TASK-073-price-pipeline-p0-data-correctness-plan.md#12-review-record) · [TASK-077 结案](./TASK-077-symbol-historical-data-migration-plan.md#13-completion-record)
 2. **按方案 A 对齐契约。** 在 `API_CONTRACT.md` 的资产和按日价格端点说明中，注明返回的 `symbol` 遵循 ADR-003 存储格式，并链接 ADR。客户端以 API 返回的原样键归并和查找。保持生产代码零改动，禁止客户端大小写或后缀兜底、引入 `shared` 或在服务端重复派生。
 3. **验证真实页面。** 用浏览器打开「今日行情」，核对资产与按日价格 API 的实际键、14 日窗口、29 个 CN-FUND 的价格及涨跌幅、缺口数和 `failedCount`。区分真实缺价和请求失败，并回归估值页面、价格同步卡片及日志。记录验收库、日期窗口、分子和分母、未命中标的和原因，附截图或可复核记录。按 DEPLOYMENT §7 运行 client build 与 lint。
 4. **保留 TASK-075 自己的 AC1 判定。** TASK-077 的隔离库实采今日行情为 42/44，`VBG.TO` 和 `VBU.TO` 因 Yahoo `NOT_FOUND` 经 Human 裁决仅在 077 的验收中排除，得到 42/42。含历史的最近价 44/44 和去重持仓 32/32 属于不同指标。若 075 浏览器实测仍为 42/44，保留原始分母和两只标的的缺价证据，向 Human 请求 TASK-075 自身的裁决，AC1 保持待验收。估值读取按 TASK-073 AC2 独立验收。
@@ -154,7 +154,7 @@ Approval：**已批准（2026-11-17，Human）**。本计划冻结任务卡 §6 
 **W1 未通过。** 本次在 `feature/TASK-077-symbol-historical-data-migration` @ `38368ce` 复核。`git ls-remote` 确认远端 `main` 同为 `38368ce`，本地 `main` 为 `fc1c728`。开工前已有开发顺序、075 交接提示词和 077 结案计划三处未提交改动。本轮只追加本节，保留原改动。075 分支尚未创建，API_CONTRACT 和生产代码 diff 均为空。
 
 - **TASK-073。** PR #58 的合入提交 `fc1c728` 已在远端基线中。`shared/utils/symbol.js` 定义 `toStorageSymbol` / `toProviderSymbol`，已核对资产建档、采集、价格存储、`getLatestPrices` 和完整性检查的调用。[独立复审](./TASK-073-price-pipeline-p0-data-correctness-plan.md#12-review-record)对 `42e5d8d` 的范围内判定为 `Pass with issues`，AC1/AC2 满足，剩余 F-05 为 MINOR。基线与审查记录提交 `926660b` 在四个 workspace 内无差异。任务卡仍为 `Implementing`，[结案节](./TASK-073-price-pipeline-p0-data-correctness-plan.md#13-completion-record)仍是占位。请 Orchestrator 协调 Human 确认关闭并登记结案依据。
-- **TASK-077 获批隔离镜像。** [结案记录](../completed/TASK-077-symbol-historical-data-migration-plan.md#13-completion-record)确认 `Completed`。核对本机私有恢复目录的 `migration-audit.json` 和 `post-collection-ac5.json`，目标均为 `portomind_task077_probe_dev`，11 月 17 日实采 42/44。今日行情原始口径 42/44，`VBG.TO`、`VBU.TO` 均为 Yahoo `NOT_FOUND`，077 按其 Human 裁决为 42/42。含历史的最近价 44/44，去重持仓 32/32。组合专用修正后，结案回读显示 53 个目标和 50 条交易均精确匹配资产。
+- **TASK-077 获批隔离镜像。** [结案记录](./TASK-077-symbol-historical-data-migration-plan.md#13-completion-record)确认 `Completed`。核对本机私有恢复目录的 `migration-audit.json` 和 `post-collection-ac5.json`，目标均为 `portomind_task077_probe_dev`，11 月 17 日实采 42/44。今日行情原始口径 42/44，`VBG.TO`、`VBU.TO` 均为 Yahoo `NOT_FOUND`，077 按其 Human 裁决为 42/42。含历史的最近价 44/44，去重持仓 32/32。组合专用修正后，结案回读显示 53 个目标和 50 条交易均精确匹配资产。
 - **当前候选验收库。** 本机 6600 为 Vite，8080 为开发 API。客户端配置使用同源 `/api`，Vite 默认转至 8080。当前 `server/.env` 配置目标为另一已迁移库 `portomind_task077_restore_test`。只读实查确认四个集合 UUID 与索引指纹均匹配 `%LOCALAPPDATA%/PortoMind-TASK-077-20261118-DbMFmv/migration-audit.json`；资产、交易、组合的内容指纹也一致，44/44 资产为规范键，50 条交易、53 个组合目标均无悬挂。价格 32,332 条，与同目录 `post-collection.json` 的 11 月 18 日重采后计数相符；迁移后、重采前的审计价格指纹与当前值有差异。重采文件记载成功 42/44，同两只标的为 Yahoo `NOT_FOUND`。同目录的 `frontend-browser.json` 早于当前 API 进程启动，保留候选库的历史浏览器实测 42/44。当前进程实际读取该库仍待用当前浏览器的鉴权请求核实。以上核对仅读取数据与已有文件。
 
 | AC | 当前证据与待验证项 |
@@ -261,7 +261,7 @@ Orchestrator 交接：可审对象为当前分支的资产接口文档 diff、�
 
 ## 13. Completion Record
 
-（填写：AC 与验证证据引用、关闭依据、归档与移交、长期沉淀位置与证据入口。计划完成后随独立任务留在 `docs/development/tasks/active/`，结案后按 [DOCS.md §1.1](../../../os/standards/DOCS.md#11-story-交付目录与文档生命周期) 随卡片移到 `completed/`。Merged 仅引用 Human 登记，不自行判定。）
+2026-11-20，原任务卡已登记完成，本次核对证据后归档。§11 和 §12 的浏览器验收与独立复审支持 AC1–AC4，最终结论为 Pass。获批验收库的今日行情实测 42/44，按本卡批准的两只上游缺价例外为 42/42，29 个 CN-FUND 均显示价格和涨跌幅。实现 `9436bb3` 随 PR #59 进入主干（`f7ef68a`）。
 
 ## 自检
 

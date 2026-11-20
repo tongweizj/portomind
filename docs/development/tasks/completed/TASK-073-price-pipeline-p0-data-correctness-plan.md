@@ -2,7 +2,7 @@
 
 ## Status
 
-Status：Implementing（2026-11-17，Implementer 开始实施；Human 于同日批准「073～078 计划」）
+Status：Completed（2026-11-20，参见 §13）
 
 Owner：Planner（起草）；Implementer（待指派）
 
@@ -12,7 +12,7 @@ Related Spec / ADR：[ADR-003 symbol 统一契约](../../../os/architecture/adr/
 
 Branch / Base：起草时 `main` @ `d6e1413`（审阅基线）；实施从最新 `main` 开 `feature/TASK-073-price-pipeline-p0-data-correctness`
 
-Approval：**已批准（2026-11-17，Human）**。本计划覆盖任务卡 AC1 / AC2 / AC5 / AC6 / AC7（AC3、AC4 已拆至 077 / 078）与已裁决 D-d（"全部跳过"为数据态中间态、不加入状态机），以及 ADR-003 的单一实现与四处消费接线。`Draft → Approved` 须 Human 明确批准当前设计。本卡是 [TASK-077](../completed/TASK-077-symbol-historical-data-migration.md) W0 与 [TASK-078](./TASK-078-price-collection-timing-bucketing.md) AC4 的前置，须先落地。
+Approval：**已批准（2026-11-17，Human）**。本计划覆盖任务卡 AC1 / AC2 / AC5 / AC6 / AC7（AC3、AC4 已拆至 077 / 078）与已裁决 D-d（"全部跳过"为数据态中间态、不加入状态机），以及 ADR-003 的单一实现与四处消费接线。`Draft → Approved` 须 Human 明确批准当前设计。本卡是 [TASK-077](./TASK-077-symbol-historical-data-migration.md) W0 与 [TASK-078](./TASK-078-price-collection-timing-bucketing.md) AC4 的前置，须先落地。
 
 ---
 
@@ -310,7 +310,7 @@ Human 确认手动价格 API 不属于 TASK-073，将另立任务处理。首轮
 
 ## 13. Completion Record
 
-（填写：AC 与验证证据引用、关闭依据、归档与移交、长期沉淀位置与证据入口。结案后随卡片移到 `docs/development/tasks/completed/`，与同编号 `-plan.md` 成对；Merged 仅引用 Human 登记，不自行判定。）
+2026-11-20，原任务卡已登记完成，本次核对证据后归档。§11 的全量回归及 §12 的独立复审支持本卡结案，结论为 Pass with issues，范围内无未决 BLOCKER 或 MAJOR。F-05 所涉旧状态投影已由目录导航替代（`853d329`）。手动价格 API 已按 Human 裁决移出本卡范围。实现与返工随 PR #58 进入主干（`fc1c728`）。
 
 ## 自检
 

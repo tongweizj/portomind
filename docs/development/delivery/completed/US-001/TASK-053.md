@@ -256,7 +256,7 @@ Human 确认「053 任务已经完成了」，指示更新各文档状态。核�
 
 ## AC 修订附录（2026-11-17，Human 裁决 D-j = A）
 
-> 本附录为**日期追加记录**，不覆盖上文原 AC 正文，也不改变本卡 `Completed` / `Merged` 状态与既有验收证据。依据：Human 在 [TASK-076 D-j](../../../tasks/active/TASK-076-asset-information-completeness-check.md) 明确选择方案 A（看板扩为 6 灯/6 卡）。授权范围仅限下列 AC 数值修订，实施归 [TASK-076](../../../tasks/active/TASK-076-asset-information-completeness-check.md)。
+> 本附录为**日期追加记录**，不覆盖上文原 AC 正文，也不改变本卡 `Completed` / `Merged` 状态与既有验收证据。依据：Human 在 [TASK-076 D-j](../../../tasks/completed/TASK-076-asset-information-completeness-check.md) 明确选择方案 A（看板扩为 6 灯/6 卡）。授权范围仅限下列 AC 数值修订，实施归 [TASK-076](../../../tasks/completed/TASK-076-asset-information-completeness-check.md)。
 
 | 原 AC | 修订后（供 TASK-076 实施参照） |
 |---|---|

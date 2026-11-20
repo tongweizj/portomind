@@ -151,7 +151,11 @@ TASK-076 在看板主视图的 `data` 顶层增加 `assetCompleteness`，原 `ta
 
 `POST /api/asset-integrity/check` 需要登录，接受空请求体 `{}`，同步返回 `{taskName,runKey,status,startedAt?,endedAt?,reason?,summary?}`。成功时 `summary` 是本次检查的计数和清单。重复运行返回 `SKIPPED` 及原因。该端点只读资产和价格，仅写任务观测记录。
 
-价格同步 `notes` 可包含 `PRICE_NO_NEW_DATA`、`PRICE_STALE`、`PRICE_NOT_FOUND_STREAK`，见 [TASK-074 的阈值裁决](../../development/tasks/active/TASK-074-price-pipeline-observability-and-robustness-plan.md#6-decisions)。提示按服务端的市场日历及已完成的应采批次派生。旧价为提示，估值仍消费原价格值或缺价 `null`。
+TASK-076 在看板主视图的 `data` 顶层增加 `assetCompleteness`，原 `tasks` 仍为五项。检查快照包含 `contractReady`、`checkedAt`、`dataStateLevel`、`total`、`complete`、`incomplete`、`launchDateMissing`、`priceEmpty3MarketDays`、`missingByReason`、`incompleteAssets` 和 `notes`。不完整清单每项返回 `{assetId,symbol,name,market,reasons}`。读回时按上次受检资产的当前上市／成立日期更新该项理由和计数，包含检查后已停用的资产。受检范围、价格、其它字段理由和 `checkedAt` 取自上次手动检查。无可用检查结果时计数为 `null`，清单为空。
+
+`POST /api/asset-integrity/check` 需要登录，接受空请求体 `{}`，同步返回 `{taskName,runKey,status,startedAt?,endedAt?,reason?,summary?}`。成功时 `summary` 是本次检查的计数和清单。重复运行返回 `SKIPPED` 及原因。该端点只读资产和价格，仅写任务观测记录。
+
+价格同步 `notes` 可包含 `PRICE_NO_NEW_DATA`、`PRICE_STALE`、`PRICE_NOT_FOUND_STREAK`，见 [TASK-074 的阈值裁决](../../development/tasks/completed/TASK-074-price-pipeline-observability-and-robustness-plan.md#6-decisions)。提示按服务端的市场日历及已完成的应采批次派生。旧价为提示，估值仍消费原价格值或缺价 `null`。
 
 > **TASK-064（读侧契约兼容，2026-11-05）**：
 > - 每个 task 条目新增**可选** `lastSkip: {taskName,runKey,reason,skippedAt,trigger} | null`，来源为 `taskskips` 最近一次事件；`lastSkip` 与 `lastRun` **分离**，不替换、不冒充成功，无集合/无记录时为 `null`。

@@ -1,13 +1,13 @@
 # TASK-078 — 价格采集时刻与归桶修正（P0-3 / P2-8：采集程序问题）
 
-> **Status：Completed**（2026-11-17，Human 批准计划后 Orchestrator 登记）。按 [DEV-ORDER-073-078](../DEV-ORDER-073-078.md) 顺序实施。
+> **Status：Completed**（2026-11-20，原任务卡已登记完成，本次核对证据后归档）。见[结案记录](./TASK-078-price-collection-timing-bucketing-plan.md#13-completion-record)。
 
 ## Metadata
 
 | 字段 | 内容 |
 |---|---|
-| Status | **Completed**（2026-11-17，Human 批准计划后 Orchestrator 登记；按开发顺序实施） |
-| 所属 Story | 无（独立维护任务；从 [TASK-073](../active/TASK-073-price-pipeline-p0-data-correctness.md) 剥离的采集程序问题，2026-11-17 Human 指令独立成卡） |
+| Status | **Completed** |
+| 所属 Story | 无（独立维护任务；从 [TASK-073](./TASK-073-price-pipeline-p0-data-correctness.md) 剥离的采集程序问题，2026-11-17 Human 指令独立成卡） |
 | 覆盖的验收条件 | 本卡 §3 AC（来源：[PRICE-PIPELINE-REVIEW P0-3 / P2-8](../../../os/architecture/PRICE-PIPELINE-REVIEW.md)） |
 | Priority | High（建议；采集日期错位导致价格覆盖 + 场外基金恒定滞后一天，待 Human 确认） |
 | Owner | 待指派 |
@@ -87,9 +87,9 @@ D-a 改成按市场分组调度后，同一天会出现 CN 组（ET 12:00）与 
 
 ## 7. Coordination Notes
 
-- 与 [TASK-073](../active/TASK-073-price-pipeline-p0-data-correctness.md)：本卡承接其 P0-3/P2-8 与 D-a；073 保留 symbol 归一代码逻辑与"全跳过"语义（D-d）。两卡分别验收。**AC4 前置**：本卡覆盖日志的 symbol 用 073 的 `toStorageSymbol` 统一格式；073 未落地前同基金落双键而非同一 `(symbol, 日)` 键，AC4 所述「覆盖」与可追溯日志不成立。两卡同改 `priceStorage.service.js`（073 改第 8 行归一化、本卡改 `saveLatest` 主体加日志），合并分工见 [078 计划 §4.3](./TASK-078-price-collection-timing-bucketing-plan.md)。
-- 与 [TASK-077](../completed/TASK-077-symbol-historical-data-migration.md)：本卡改**新采集的归桶规则**，077 处理**已有历史数据**；排期上建议 077 先迁移（清掉双键/旧桶），本卡再切换口径，避免新旧数据二次错位。
-- 与 [TASK-074](../active/TASK-074-price-pipeline-observability-and-robustness.md)：R-1 的熔断属 074 范围，本卡只保留既有 `fetchWithRetry`。
+- 与 [TASK-073](./TASK-073-price-pipeline-p0-data-correctness.md)：本卡承接其 P0-3/P2-8 与 D-a；073 保留 symbol 归一代码逻辑与"全跳过"语义（D-d）。两卡分别验收。**AC4 前置**：本卡覆盖日志的 symbol 用 073 的 `toStorageSymbol` 统一格式；073 未落地前同基金落双键而非同一 `(symbol, 日)` 键，AC4 所述「覆盖」与可追溯日志不成立。两卡同改 `priceStorage.service.js`（073 改第 8 行归一化、本卡改 `saveLatest` 主体加日志），合并分工见 [078 计划 §4.3](./TASK-078-price-collection-timing-bucketing-plan.md)。
+- 与 [TASK-077](./TASK-077-symbol-historical-data-migration.md)：本卡改**新采集的归桶规则**，077 处理**已有历史数据**；排期上建议 077 先迁移（清掉双键/旧桶），本卡再切换口径，避免新旧数据二次错位。
+- 与 [TASK-074](./TASK-074-price-pipeline-observability-and-robustness.md)：R-1 的熔断属 074 范围，本卡只保留既有 `fetchWithRetry`。
 
 ## 8. 本卡未做的事
 
