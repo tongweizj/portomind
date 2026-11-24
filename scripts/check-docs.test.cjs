@@ -26,29 +26,20 @@ function run(root, extra = []) {
   assert.ok(result.stdout, result.stderr);
   return { status: result.status, ...JSON.parse(result.stdout) };
 }
-const card = 'docs/development/delivery/US-001/TASK-001.md';
-test('plain tables, bold tables and legacy paragraph/heading metadata are recognised', t => {
+test('valid local links, Unicode anchors and directory targets pass', t => {
   const root = fixture(t, {
-    [card]: '| Status | Planning |\n| Created / Updated | 2026-10-30 / 2026-10-30 |',
-    'docs/development/tasks/active/TASK-002.md': '| **Status** | `Reviewing` |\n| **Created** | 2026-10-30 |',
-    'docs/development/tasks/completed/TASK-003.md': '## Status\n\n`Done`\n\n## Created\n\n`2026-10-15`',
-    'docs/development/tasks/active/TASK-004.md': '**Status:**  \n`BACKLOG`\n\n**Created:**  \n`2026-10-26`'
+    'docs/index.md': '# Index\n[guide](./guide.md)\n[chapter](./guide.md#2-用法)\n[dir](./sub)',
+    'docs/guide.md': '# Guide\n## 2. 用法\ntext',
+    'docs/sub/note.md': '# Note'
   });
   assert.equal(run(root).status, 0);
+  assert.equal(run(root, ['--links-only']).status, 0);
 });
-test('invalid unquoted status is rejected; a recent Updated date does not revoke legacy spelling', t => {
-  const bad = fixture(t, { [card]: '| Status | Ready |\n| Created / Updated | 2026-10-30 / 2026-10-30 |' });
-  assert.ok(run(bad).errors.some(e => e.rule === 'task-status-enum'));
-  const legacy = fixture(t, { [card]: '| Status | BACKLOG |\n| Created / Updated | 2026-10-26 / 2026-10-30 |' });
-  assert.equal(run(legacy).status, 0);
-});
-test('only an explicit unregistered declaration permits absent Status; declaration plus Status conflicts', t => {
-  const declaration = '> 待 Orchestrator 正式登记的任务内容，当前不含 Status，不属于已登记任务或实施队列。';
-  const pending = run(fixture(t, { [card]: declaration }));
-  assert.equal(pending.status, 0);
-  assert.equal(pending.pendingTasks.length, 1);
-  assert.equal(run(fixture(t, { [card]: '# incomplete card' })).status, 2);
-  assert.ok(run(fixture(t, { [card]: declaration + '\n| Status | Planning |' })).errors.some(e => e.rule === 'pending-status-conflict'));
+test('missing local targets are reported as broken-link', t => {
+  const root = fixture(t, { 'docs/index.md': '[missing](./absent.md)\n![image](./absent.png)' });
+  const result = run(root);
+  assert.equal(result.status, 1);
+  assert.deepEqual(result.errors.map(e => e.rule), ['broken-link', 'broken-link']);
 });
 test('source fallback can resolve code but cannot mask a missing document', t => {
   const source = fixture(t, { 'client/example.js': '// original code', 'docs/missing.md': '# Original document' });
@@ -69,48 +60,28 @@ test('HTML assets are checked and external MongoDB paths cannot silently inherit
   const root = fixture(t, { 'docs/index.md': '[correct](https://www.mongodb.com/docs/manual/core/index-partial/)\n[corrupt](https://www.mongodb.com/docs/handbook/manual/core/index-partial/)\n<img src="./absent.png">' });
   assert.deepEqual(run(root).errors.map(e => e.rule).sort(), ['broken-link', 'external-url-rewritten']);
 });
-test('current template directory is allowed; unfilled role instructions are rejected', t => {
-  const root = fixture(t, { 'docs/os/templates/TASK_TEMPLATE.md': '<PROJECT_NAME>', 'docs/os/roles/PLANNER.md': '<PROJECT_NAME>' });
-  const result = run(root);
-  assert.equal(result.errors.length, 1);
-  assert.equal(result.errors[0].file, 'docs/os/roles/PLANNER.md');
-});
-test('flat current, completed and exited Story cards are checked, while plans are not treated as cards', t => {
+test('task-card statuses, delivery layout and template placeholders are no longer validated', t => {
   const root = fixture(t, {
-    [card]: '| Status | Planning |',
-    'docs/development/delivery/US-001/TASK-001-plan.md': '## Status\n\nStatus：Draft',
-    'docs/development/delivery/completed/US-002/TASK-002.md': '| Status | Ready |',
-    'docs/development/archive/delivery/US-003/TASK-003.md': '| Status | Ready |'
+    'docs/development/tasks/active/TASK-001.md': '| Status | NotARealStatus |',
+    'docs/development/delivery/US-001/note.md': '# One',
+    'docs/development/delivery/US-002/note.md': '# Two',
+    'docs/development/delivery/US-003/note.md': '# Three',
+    'docs/os/templates/TASK_TEMPLATE.md': '<PROJECT_NAME>',
+    'docs/os/roles/PLANNER.md': '<PROJECT_NAME>',
+    'docs/standards/CODING.md': '<technology>'
   });
   const result = run(root);
-  assert.equal(result.errors.length, 2);
-  assert.ok(result.errors.every(e => e.rule === 'task-status-enum'));
-  assert.equal(result.warns.length, 0);
+  assert.equal(result.status, 0);
+  assert.deepEqual(result.errors, []);
 });
-test('standalone task data-quality reports are checked for links without a card status', t => {
-  const root = fixture(t, {
-    'docs/development/tasks/active/TASK-077-data-quality-report.md': '# 探测报告\n[缺失目标](./missing.md)',
-    'docs/development/tasks/active/TASK-077-data-quality-report-2026-11-17.md': '# 探测报告',
-    'docs/development/tasks/active/TASK-077-symbol-data.md': '# 未完成的任务卡'
-  });
+test('json output exposes link-check fields only', t => {
+  const root = fixture(t, { 'docs/index.md': '[guide](./guide.md)', 'docs/guide.md': '# Guide' });
   const result = run(root);
-  assert.deepEqual(result.errors.map(error => error.rule), ['broken-link']);
-  assert.deepEqual(result.warns.map(warning => warning.file), ['docs/development/tasks/active/TASK-077-symbol-data.md']);
-});
-test('at most two Story directories are allowed, and Story process directories stay flat', t => {
-  const root = fixture(t, {
-    [card]: '| Status | Planning |',
-    'docs/development/delivery/US-002/note.md': '# Second Story (preparation)',
-    'docs/development/delivery/US-003/note.md': '# Third Story (over the limit)',
-    'docs/development/delivery/completed/US-003/tasks/TASK-003.md': '| Status | Completed |'
-  });
-  assert.deepEqual(run(root).errors.map(e => e.rule).sort(), ['multiple-current-deliveries', 'nested-story-directory']);
-});
-
-test('one development Story plus one preparation Story is allowed', t => {
-  const root = fixture(t, {
-    [card]: '| Status | Implementing |',
-    'docs/development/delivery/US-002/note.md': '# Preparation Story'
-  });
-  assert.deepEqual(run(root).errors.map(e => e.rule), []);
+  assert.equal(result.files, 2);
+  assert.equal(result.totalLinks, 1);
+  assert.deepEqual(result.errors, []);
+  assert.deepEqual(result.warns, []);
+  assert.ok(Array.isArray(result.sourceOnlyLinks));
+  assert.equal('routingRows' in result, false);
+  assert.equal('pendingTasks' in result, false);
 });
