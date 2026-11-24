@@ -1,8 +1,8 @@
 // shared/services/assetMetadata.service.js
 //
 // TASK-068：资产基础信息（symbol/name/market/currency/launchDate）校验。
-// TASK-068 从已退休的 assetIntegrity.service 抽出；运维中心资产总表与
-// 价格完整性检查共用这一份基础信息判定，禁止另写一份。
+// TASK-068 从已退休的 assetIntegrity.service 抽出；运维中心资产总表使用这一份
+// 基础信息判定，禁止另写一份。
 
 const { ASSET_MARKETS, ASSET_CURRENCIES } = require('../constants/asset.constants');
 const { marketDate, MARKET_TIMEZONE } = require('../utils/marketTime');
@@ -10,7 +10,6 @@ const { toStorageSymbol } = require('../utils/symbol');
 const { marketTimezone } = require('./marketDay.service');
 
 const EXPECTED_CURRENCY = { US: 'USD', CA: 'CAD', HK: 'HKD', 'CN-SH': 'CNY', 'CN-SZ': 'CNY', 'CN-FUND': 'CNY' };
-const DATE_REASONS = new Set(['LAUNCH_DATE_MISSING', 'LAUNCH_DATE_INVALID', 'LAUNCH_DATE_FUTURE']);
 
 const FIELD_BY_REASON = {
   SYMBOL_FORMAT: 'symbol',
@@ -57,4 +56,4 @@ function missingFieldsOf(reasons) {
   return FIELD_ORDER.filter((field) => fields.has(field));
 }
 
-module.exports = { EXPECTED_CURRENCY, DATE_REASONS, launchDateReason, metadataReasons, missingFieldsOf };
+module.exports = { metadataReasons, missingFieldsOf };

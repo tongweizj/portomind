@@ -371,7 +371,7 @@ async function runScenarios() {
       text('[data-testid="overall-badge"]').includes('刷新失败'));
   stale.unmount();
 
-  // ── 053 默认骨架回归：不传 props 时仍为五个 TaskCardShell + 五区域 ──
+  // ── 053 默认骨架回归：不传 props 时仍为五卡六区域 ──
   const shellContainer = document.createElement('div');
   document.body.appendChild(shellContainer);
   const shellRoot = createRoot(shellContainer);

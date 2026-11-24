@@ -16,31 +16,14 @@
 // 退出码：0 全部 PASS；1 有失败；2 运行期错误（浏览器/服务器启动失败等）。
 
 const fs = require('fs');
-const os = require('os');
 const net = require('net');
 const path = require('path');
 const { spawn, execFileSync } = require('child_process');
+const { resolveChrome, makeChromeProfile } = require('./lib/chrome.cjs');
 
 const CLIENT_DIR = path.resolve(__dirname, '..');
 const ROOT_DIR = path.resolve(CLIENT_DIR, '..');
-const CHROME = process.env.CHROME_PATH || [
-  'C:/Program Files/Google/Chrome/Application/chrome.exe',
-  '/mnt/c/Program Files/Google/Chrome/Application/chrome.exe'
-].find((candidate) => fs.existsSync(candidate)) || 'C:/Program Files/Google/Chrome/Application/chrome.exe';
-
-// WSL 下调用 Windows Chrome 时，--user-data-dir 必须是 Windows 可识别路径。
-function makeChromeProfile(prefix) {
-  if (!/^\/mnt\/[a-z]\//i.test(CHROME)) {
-    return { dir: fs.mkdtempSync(path.join(os.tmpdir(), prefix)), chromeArg: null };
-  }
-  const windowsTemp = execFileSync('cmd.exe', ['/c', 'echo %TEMP%'], { encoding: 'utf8' }).trim();
-  const windowsProfile = `${windowsTemp}\\${prefix}${process.pid}-${Date.now()}`;
-  const wslProfile = windowsProfile
-    .replace(/^([A-Za-z]):/, (_, drive) => `/mnt/${drive.toLowerCase()}`)
-    .replace(/\\/g, '/');
-  fs.mkdirSync(wslProfile, { recursive: true });
-  return { dir: wslProfile, chromeArg: windowsProfile };
-}
+const CHROME = resolveChrome();
 
 const STATIC_ONLY = process.argv.includes('--static-only');
 const FIXTURE_PATH = '/scripts/fixtures/task056-fixture.html';
@@ -190,7 +173,7 @@ async function browserChecks() {
   vite.stdout.on('data', (chunk) => { viteLog += chunk.toString(); });
   vite.stderr.on('data', (chunk) => { viteLog += chunk.toString(); });
 
-  const profileDir = makeChromeProfile('task056-chrome-');
+  const profileDir = makeChromeProfile(CHROME, 'task056-chrome-');
   try {
     await waitForUrl(`${base}${FIXTURE_PATH}`);
     // 预热 Vite 模块转换 / 依赖优化，避免 Chrome 首访拿到 504 Outdated Optimize Dep

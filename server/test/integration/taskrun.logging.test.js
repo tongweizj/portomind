@@ -75,13 +75,13 @@ test('数据库活跃键冲突记录为跳过，完成时原子释放活跃键',
   TaskRun.create = async doc => {
     starts.push(doc);
     if (starts.length === 1) throw Object.assign(new Error('duplicate key'), { code: 11000 });
-    return { _id: 'row076' };
+    return { _id: 'row-sample' };
   };
   TaskRun.updateOne = async (filter, update) => {
     writes.push({ filter, update });
     return { modifiedCount: filter._id ? 1 : 0 };
   };
-  TaskSkip.create = async doc => { skips.push(doc); return { _id: 'skip076' }; };
+  TaskSkip.create = async doc => { skips.push(doc); return { _id: 'skip-sample' }; };
 
   const skipped = await runTrackedTask({ taskName, trigger: 'MANUAL', runKey: 'manual:first', exclusiveRunKey,
     execute: async () => assert.fail('活跃检查期间禁止重复运行') });
@@ -90,8 +90,8 @@ test('数据库活跃键冲突记录为跳过，完成时原子释放活跃键',
   const run = await runTrackedTask({ taskName, trigger: 'MANUAL', runKey: 'manual:next', exclusiveRunKey,
     execute: async () => ({ result: { total: 0 } }) });
   assert.deepEqual(starts.map(doc => doc.runKey), ['manual:active', 'manual:active']);
-  assert.equal(run.runKey, 'manual:next:row076');
-  assert.deepEqual(writes[1].filter, { _id: 'row076', runKey: 'manual:active' });
+  assert.equal(run.runKey, 'manual:next:row-sample');
+  assert.deepEqual(writes[1].filter, { _id: 'row-sample', runKey: 'manual:active' });
   assert.equal(writes[1].update.$set.runKey, run.runKey);
 });
 

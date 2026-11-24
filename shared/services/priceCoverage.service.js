@@ -1,8 +1,8 @@
 // shared/services/priceCoverage.service.js
 //
 // TASK-068：逐资产「目标市场日 + 最近 N 个市场日」的价格覆盖计算。
-// TASK-068 从 assetIntegrity.service 抽出；运维中心资产总表与价格完整性检查
-// 共用这一份目标市场日/窗口口径，禁止再写第二份。
+// TASK-068 从已退休的 assetIntegrity.service 抽出；运维中心资产总表使用这一份
+// 目标市场日/窗口口径，禁止再写第二份。
 
 const dayjs = require('dayjs');
 const utc = require('dayjs/plugin/utc');

@@ -111,7 +111,7 @@ function marketOf(asset) {
 
 function loadLatestRuns() {
   return TaskRun.aggregate([
-    { $match: { taskName: { $in: [...CRON_TASK_NAMES] } } },
+    { $match: { taskName: { $in: CRON_TASK_NAMES } } },
     { $sort: { startedAt: -1 } },
     { $group: { _id: '$taskName', doc: { $first: '$$ROOT' } } }
   ]);

@@ -7,31 +7,14 @@
 // 不新增依赖；不连真实后端（fixture 用 axios adapter 注入快照）。
 
 const fs = require('fs');
-const os = require('os');
 const net = require('net');
 const path = require('path');
 const { spawn, execFileSync } = require('child_process');
+const { resolveChrome, makeChromeProfile } = require('./lib/chrome.cjs');
 
 const CLIENT_DIR = path.resolve(__dirname, '..');
 const ROOT_DIR = path.resolve(CLIENT_DIR, '..');
-const CHROME = process.env.CHROME_PATH || [
-  'C:/Program Files/Google/Chrome/Application/chrome.exe',
-  '/mnt/c/Program Files/Google/Chrome/Application/chrome.exe'
-].find((candidate) => fs.existsSync(candidate)) || 'C:/Program Files/Google/Chrome/Application/chrome.exe';
-
-// WSL 下调用 Windows Chrome 时，--user-data-dir 必须是 Windows 可识别路径。
-function makeChromeProfile(prefix) {
-  if (!/^\/mnt\/[a-z]\//i.test(CHROME)) {
-    return { dir: fs.mkdtempSync(path.join(os.tmpdir(), prefix)), chromeArg: null };
-  }
-  const windowsTemp = execFileSync('cmd.exe', ['/c', 'echo %TEMP%'], { encoding: 'utf8' }).trim();
-  const windowsProfile = `${windowsTemp}\\${prefix}${process.pid}-${Date.now()}`;
-  const wslProfile = windowsProfile
-    .replace(/^([A-Za-z]):/, (_, drive) => `/mnt/${drive.toLowerCase()}`)
-    .replace(/\\/g, '/');
-  fs.mkdirSync(wslProfile, { recursive: true });
-  return { dir: wslProfile, chromeArg: windowsProfile };
-}
+const CHROME = resolveChrome();
 
 const FIXTURE_PATH = '/scripts/fixtures/task063-fixture.html';
 
@@ -146,7 +129,7 @@ async function browserChecks() {
   vite.stdout.on('data', (chunk) => { viteLog += chunk.toString(); });
   vite.stderr.on('data', (chunk) => { viteLog += chunk.toString(); });
 
-  const profile = makeChromeProfile('task063-chrome-');
+  const profile = makeChromeProfile(CHROME, 'task063-chrome-');
   try {
     await waitForUrl(`${base}${FIXTURE_PATH}`);
     await waitForUrl(`${base}/scripts/fixtures/task063-fixture.jsx`);

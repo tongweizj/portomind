@@ -110,6 +110,21 @@ test('TASK-073 旧 asset-integrity 端点退休：未登录 401，已登录 404'
   assert.equal(result.body.success, false);
 });
 
+test('TASK-073 未登录 GET /api/cron/status 仍返回 401', async () => {
+  const response = await fetch(`${baseUrl}/api/cron/status`);
+  assert.equal(response.status, 401);
+});
+
+test('TASK-073 旧 asset-integrity-check TaskRun 保留但不影响主视图', async () => {
+  useWorld({ latestRuns: [latest('asset-integrity-check', { status: 'SUCCEEDED' })] });
+
+  const result = await request('/api/cron/status');
+
+  assert.equal(result.status, 200);
+  assert.equal(result.body.data.tasks.length, 5);
+  assert.equal('assetCompleteness' in result.body.data, false);
+});
+
 /**
  * AC1：有记录时 lastRun 字段完整；RUNNING 记录的 endedAt/durationMs 归一为 null（键存在）
  */
