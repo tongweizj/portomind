@@ -76,6 +76,5 @@ async function historySync(from, to, options = {}) {
 }
 
 module.exports = historySync;
-module.exports.historySync = historySync;
 module.exports.resolveItems = resolveItems;
 module.exports.DEFAULT_CONCURRENCY = DEFAULT_CONCURRENCY;

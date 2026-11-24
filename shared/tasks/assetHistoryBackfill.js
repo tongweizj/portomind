@@ -11,13 +11,12 @@ const { isDateString, dateBounds } = require('../utils/marketTime');
 const {
   countAssetCoverage,
   groupMissingRanges,
+  MAX_MISSING_RANGES,
   boundedMissingRanges,
   targetMarketDay,
   marketLocalDate
 } = require('../services/priceCoverage.service');
 const historySync = require('./historySync');
-
-const MAX_RESULT_RANGES = 20;
 
 function badRequest(message, code = 'INVALID_RANGE') {
   const error = new RangeError(message);
@@ -86,7 +85,8 @@ async function resolveBackfillRequest(options = {}) {
   const loadAsset = options.getAssetById || getAssetById;
   const asset = await loadAsset(options.assetId);
   if (!asset) throw assetNotFound();
-  return { asset, ...resolveWindow(asset, options), now: options.now || new Date() };
+  const now = options.now || new Date();
+  return { asset, ...resolveWindow(asset, { ...options, now }), now };
 }
 
 function failureForRange(asset, range, error) {
@@ -104,7 +104,8 @@ async function runAssetBackfill(asset, from, to, options = {}) {
   const syncFn = options.historySync || historySync;
   const reportProgress = typeof options.reportProgress === 'function' ? options.reportProgress : () => {};
   const before = await countFn(asset, from, to, options.countOptions || {});
-  const ranges = groupMissingRanges(before.missingDates);
+  // 抓取规划只合并连续缺失日；报告区间仍按 3 天容差合并。
+  const ranges = groupMissingRanges(before.missingDates, 1);
   const failures = [];
   let completed = 0;
   await reportProgress(0, ranges.length);
@@ -131,8 +132,8 @@ async function runAssetBackfill(asset, from, to, options = {}) {
   }
 
   const after = await countFn(asset, from, to, options.countOptions || {});
-  const requested = boundedMissingRanges(before.missingDates, 3, MAX_RESULT_RANGES);
-  const remaining = boundedMissingRanges(after.missingDates, 3, MAX_RESULT_RANGES);
+  const requested = boundedMissingRanges(before.missingDates, 3);
+  const remaining = boundedMissingRanges(after.missingDates, 3);
   const remainingFailure = after.missingCount > 0
     ? [{
         item: asset.symbol,
@@ -156,13 +157,13 @@ async function runAssetBackfill(asset, from, to, options = {}) {
     requestedRangesTruncated: requested.truncated,
     missingRanges: remaining.ranges,
     missingRangesTruncated: remaining.truncated,
-    failureRanges: failures.slice(0, MAX_RESULT_RANGES)
+    failureRanges: failures.slice(0, MAX_MISSING_RANGES)
   };
 
   return {
     totalCount: 1,
     successCount: success ? 1 : 0,
-    failureCount: allFailures.length,
+    failureCount: success ? 0 : 1,
     failures: allFailures,
     result
   };
@@ -171,7 +172,7 @@ async function runAssetBackfill(asset, from, to, options = {}) {
 function trackedOptions(options, context) {
   return {
     taskName: OPS_TASK_CONFIG.assetBackfill.taskName,
-    runKey: options.runKey || `manual:${String(context.asset._id)}:${context.now.toISOString()}`, 
+    runKey: options.runKey || `manual:${String(context.asset._id)}:${context.now.toISOString()}`,
     trigger: options.trigger || 'MANUAL',
     lockKey: `${OPS_TASK_CONFIG.assetBackfill.lockKeyPrefix}${String(context.asset._id)}`,
     staleAfterMs: OPS_TASK_CONFIG.assetBackfill.staleAfterMs,
@@ -185,12 +186,6 @@ function trackedOptions(options, context) {
   };
 }
 
-/** 同步等待的单资产补采（CLI / 测试）。 */
-async function assetHistoryBackfill(options = {}) {
-  const context = await resolveBackfillRequest(options);
-  return runTrackedTask(trackedOptions(options, context));
-}
-
 /** server 端点使用：先校验资产/区间，再启动 TaskRun；调用方 await handle.promise。 */
 async function startAssetHistoryBackfill(options = {}) {
   const context = await resolveBackfillRequest(options);
@@ -198,9 +193,7 @@ async function startAssetHistoryBackfill(options = {}) {
 }
 
 module.exports = {
-  assetHistoryBackfill,
   startAssetHistoryBackfill,
-  resolveBackfillRequest,
   resolveWindow,
   runAssetBackfill
 };

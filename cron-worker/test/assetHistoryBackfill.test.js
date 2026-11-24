@@ -69,6 +69,28 @@ test('runAssetBackfill 只对缺失区间调用 historySync，并回读剩余缺
   assert.deepEqual(result.result.requestedRanges, [{ from: '2026-11-02', to: '2026-11-03' }]);
 });
 
+test('runAssetBackfill 只为缺失日规划，不把稀疏缺口合并成大区间', async () => {
+  const calls = [];
+  let counts = 0;
+  const result = await runAssetBackfill(ASSET, '2026-11-01', '2026-11-10', {
+    countAssetCoverage: async () => {
+      counts += 1;
+      return counts === 1
+        ? { expectedCount: 6, actualCount: 4, missingCount: 2, missingDates: ['2026-11-02', '2026-11-05'] }
+        : { expectedCount: 6, actualCount: 6, missingCount: 0, missingDates: [] };
+    },
+    historySync: async (from, to) => {
+      calls.push([from.toISOString(), to.toISOString()]);
+      return [{ symbol: 'VOO.US', count: 1 }];
+    }
+  });
+
+  assert.equal(calls.length, 2);
+  assert.equal(result.successCount, 1);
+  assert.equal(result.result.fetchedCount, 2);
+  assert.deepEqual(result.result.requestedRanges, [{ from: '2026-11-02', to: '2026-11-05' }]);
+});
+
 test('runAssetBackfill 补采失败保留失败原因并标记剩余缺口', async () => {
   const result = await runAssetBackfill(ASSET, '2026-11-01', '2026-11-05', {
     countAssetCoverage: async () => ({
@@ -79,7 +101,7 @@ test('runAssetBackfill 补采失败保留失败原因并标记剩余缺口', asy
   });
 
   assert.equal(result.successCount, 0);
-  assert.equal(result.failureCount, 2);
+  assert.equal(result.failureCount, 1);
   assert.equal(result.result.missingAfterCount, 2);
   assert.equal(result.failures[0].item, 'VOO.US');
   assert.equal(result.failures[0].category, 'UPSTREAM');

@@ -101,7 +101,8 @@ server 把任务投递到队列或调用 worker 内部接口，由 worker 执行
 | `server/controllers/opsTask.controller.js` | 空 Body 校验、`202/409` 协议映射、TaskRun 详情读取；不含业务规则 |
 | `client` | 展示三态历史、admin 刷新入口、轮询与终态刷新；不自算完整度 |
 
-`historySync` 仍留在 `cron-worker`，因为它依赖 worker 的历史抓取路径。TASK-070 只抽取可复用的完整性业务；
+TASK-070 只抽取可复用的完整性业务；`historySync` 当时仍留在 `cron-worker`。TASK-072 已把
+`historySync` 业务抽入 `shared/tasks/historySync.js`，`cron-worker/src/tasks/historySync.cjs` 退化为 CLI 薄壳；
 CLI 参数、输出与退出码保持原行为。
 
 ### 4.2 手动触发契约

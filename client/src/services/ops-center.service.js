@@ -54,7 +54,8 @@ export async function backfillAsset(assetId, { from, to, year } = {}) {
   if (from) body.from = from;
   if (to) body.to = to;
   if (year !== undefined) body.year = year;
-  return (await api.post(`${ASSET_BACKFILL_ENDPOINT}/${assetId}/price-backfill`, body)).data;
+  // 单资产补采同步等待，可能超过 API 默认 15 秒。
+  return (await api.post(`${ASSET_BACKFILL_ENDPOINT}/${assetId}/price-backfill`, body, { timeout: 120000 })).data;
 }
 
 /** TASK-070：读取一次任务运行的状态/进度/结果。 */

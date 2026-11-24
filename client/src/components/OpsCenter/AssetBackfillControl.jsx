@@ -3,36 +3,61 @@
 // TASK-072：资产行内的单资产历史补采。默认当前年份，可改起止日期；
 // 同步等待结果，仅显示本行状态，不自动改写历史完整度快照。
 import { useState } from 'react';
-import { useMutation } from '@tanstack/react-query';
-import { backfillAsset } from '../../services/ops-center.service';
+import { useAssetBackfill } from '../../hooks/useAssetBackfill';
 import { getApiErrorMessage } from '../../services/api.client';
 import { colors } from '../../constants/design-tokens';
 
+function todayString() {
+  return new Intl.DateTimeFormat('en-CA', {
+    year: 'numeric', month: '2-digit', day: '2-digit'
+  }).format(new Date());
+}
+
 function defaultRange() {
-  const today = new Date().toISOString().slice(0, 10);
+  const today = todayString();
   return { from: `${today.slice(0, 4)}-01-01`, to: today };
 }
 
 export default function AssetBackfillControl({ asset }) {
+  const today = todayString();
+  const currentYear = Number(today.slice(0, 4));
+  const years = Array.from({ length: 6 }, (_, index) => String(currentYear - index));
   const initial = defaultRange();
+  const [year, setYear] = useState(String(currentYear));
   const [from, setFrom] = useState(initial.from);
   const [to, setTo] = useState(initial.to);
-  const mutation = useMutation({
-    mutationFn: ({ start, end }) => backfillAsset(asset.assetId, { from: start, to: end })
-  });
+  const mutation = useAssetBackfill();
   const data = mutation.data;
   const error = mutation.error;
   const suffix = asset.assetId;
 
+  const changeYear = (event) => {
+    const value = event.target.value;
+    setYear(value);
+    if (!value) return;
+    setFrom(`${value}-01-01`);
+    setTo(Number(value) === currentYear ? today : `${value}-12-31`);
+  };
+
+  const changeFrom = (event) => {
+    setFrom(event.target.value);
+    setYear('');
+  };
+
+  const changeTo = (event) => {
+    setTo(event.target.value);
+    setYear('');
+  };
+
   const submit = (event) => {
     event.preventDefault();
-    mutation.mutate({ start: from, end: to });
+    mutation.mutate({ assetId: asset.assetId, from, to });
   };
 
   let resultText = null;
   if (data && !mutation.isPending) {
     resultText = data.missingAfterCount === 0
-      ? `补采完成：补充 ${data.fetchedCount ?? 0} 天`
+      ? `补采完成：补充 ${data.fetchedCount ?? '—'} 天`
       : `补采完成：仍缺 ${data.missingAfterCount ?? '—'} 天`;
   }
   const failureText = !mutation.isPending && data?.failures?.length ? data.failures[0].message : null;
@@ -42,12 +67,24 @@ export default function AssetBackfillControl({ asset }) {
       <summary style={{ color: colors.brand, cursor: 'pointer' }}>补历史</summary>
       <form onSubmit={submit} className="mt-2 space-y-1">
         <label className="block text-xs" style={{ color: colors.textMuted }}>
+          年份
+          <select
+            data-testid={`ops-backfill-year-${suffix}`}
+            value={year}
+            onChange={changeYear}
+            className="ml-1 border rounded px-1"
+          >
+            {years.map((value) => <option key={value} value={value}>{value}</option>)}
+            <option value="">自定义区间</option>
+          </select>
+        </label>
+        <label className="block text-xs" style={{ color: colors.textMuted }}>
           起
           <input
             type="date"
             data-testid={`ops-backfill-from-${suffix}`}
             value={from}
-            onChange={(event) => setFrom(event.target.value)}
+            onChange={changeFrom}
             className="ml-1 border rounded px-1"
           />
         </label>
@@ -57,7 +94,7 @@ export default function AssetBackfillControl({ asset }) {
             type="date"
             data-testid={`ops-backfill-to-${suffix}`}
             value={to}
-            onChange={(event) => setTo(event.target.value)}
+            onChange={changeTo}
             className="ml-1 border rounded px-1"
           />
         </label>

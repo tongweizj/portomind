@@ -94,7 +94,7 @@ module.exports = { startXxxScheduler };
 
 1. **进程内 Map 锁**（`shared/services/taskRunner.js` 的 `activeTasks`）：同 `taskName` / `lockKey` 已在跑 → 返回 `SKIPPED`（`ALREADY_RUNNING`）。
 2. **`taskruns` 集合唯一索引** `(taskName, runKey)`：并发 / 多实例下重复 `runKey` → `DUPLICATE_RUN_KEY`，返回 `SKIPPED`。
-3. **活跃运行互斥锁 `lockKey`**（TASK-070 / TASK-071）：`taskruns` 的 `{lockKey:1}` 部分唯一索引只约束 `status='RUNNING'` 且 `lockKey` 为字符串的文档。`price-integrity-check` 使用固定 `ops:price-integrity-check`，`daily-price-sync` 使用固定 `ops:daily-price-sync`，因此不同 `runKey` 的手动/定时触发也不能并发跑。终态更新会 `$unset lockKey`，无锁的历史记录保持合法。单资产回填使用 `ops:asset-backfill:<assetId>` 前缀锁。
+3. **活跃运行互斥锁 `lockKey`**（TASK-070 / TASK-071 / TASK-072）：`taskruns` 的 `{lockKey:1}` 部分唯一索引只约束 `status='RUNNING'` 且 `lockKey` 为字符串的文档。`price-integrity-check` 使用固定 `ops:price-integrity-check`，`daily-price-sync` 使用固定 `ops:daily-price-sync`，因此不同 `runKey` 的手动/定时触发也不能并发跑。终态更新会 `$unset lockKey`，无锁的历史记录保持合法。单资产回填使用 `ops:asset-backfill:<assetId>` 前缀锁。
 
 冲突时仍写 `taskskips`（`reason` 只取 `ALREADY_RUNNING` / `DUPLICATE_RUN_KEY`）；手动端点把冲突翻译为 `409 TASK_ALREADY_RUNNING`。
 

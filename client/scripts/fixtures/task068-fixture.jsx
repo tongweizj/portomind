@@ -507,6 +507,10 @@ async function runScenarios() {
     throw new Error(`Unexpected request ${config.method} ${config.url}`);
   };
   q('[data-testid="ops-backfill-a-priced"] summary').click();
+  setSelect('ops-backfill-year-a-priced', '2025');
+  check('TASK-072 可按年份选择补采区间',
+    q('[data-testid="ops-backfill-from-a-priced"]').value === '2025-01-01'
+      && q('[data-testid="ops-backfill-to-a-priced"]').value === '2025-12-31');
   setInput('ops-backfill-from-a-priced', '2026-01-01');
   setInput('ops-backfill-to-a-priced', '2026-11-20');
   q('[data-testid="ops-backfill-submit-a-priced"]').click();
@@ -523,6 +527,9 @@ async function runScenarios() {
         data: { success: true, data: ITEMS, pagination: { page: 1, pageSize: 50, total: ITEMS.length } },
         status: 200, statusText: 'OK', headers: {}, config
       };
+    }
+    if (config.url !== '/ops-center/assets/a-priced/price-backfill') {
+      throw new Error(`Unexpected request ${config.method} ${config.url}`);
     }
     return {
       data: { success: true, data: {

@@ -62,11 +62,17 @@ function staticChecks() {
       && !/api\.(put|patch|delete)/.test(service));
 
   const panel = read('src/components/OpsCenter/AssetDataPanel.jsx');
-  check('TASK-070/071 资产面板不直接写 API，刷新/同步经专用 hook',
+  const backfillControl = read('src/components/OpsCenter/AssetBackfillControl.jsx');
+  const backfillHook = read('src/hooks/useAssetBackfill.js');
+  check('TASK-070/071/072 资产面板不直接写 API，刷新/同步/补采经专用入口',
     !/useMutation|api\.(post|put|patch|delete)/.test(panel)
       && /useIntegrityRefresh\(\)/.test(panel)
       && /usePriceSync\(\)/.test(panel)
       && /<AssetBackfillControl asset=\{asset\} \/>/.test(panel));
+  check('TASK-072 补采控件不直接写 API，mutation 经专用 hook',
+    !/useMutation|\bapi\.(get|post|put|patch|delete)\(/.test(backfillControl)
+      && /useAssetBackfill\(\)/.test(backfillControl)
+      && /backfillAsset\(/.test(backfillHook));
   check('TASK-068 编辑链接仅 admin 可见', /isAdmin \?/.test(panel) && /instruments\/edit\//.test(panel));
   check('TASK-068 缺失/未知值不补 0', !/\|\|\s*0\b/.test(panel) && !/\|\|\s*0\b/.test(service));
   check('TASK-068 无可用运行的历史完整度仍回退 unavailable',

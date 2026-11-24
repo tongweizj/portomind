@@ -8,7 +8,9 @@
 const mongoose = require('mongoose');
 const { startPriceIntegrityCheck } = require('@portomind/shared/tasks/priceIntegrityCheck');
 const { startDailySync } = require('@portomind/shared/tasks/dailySync');
-const { startAssetHistoryBackfill } = require('@portomind/shared/tasks/assetHistoryBackfill');
+const {
+  startAssetHistoryBackfill: startAssetHistoryBackfillTask
+} = require('@portomind/shared/tasks/assetHistoryBackfill');
 const {
   getTaskRunById,
   serializeTaskRun
@@ -112,14 +114,14 @@ exports.startPriceSync = async (req, res, next) => {
   }
 };
 
-exports.startAssetPriceBackfill = async (req, res, next) => {
+exports.startAssetHistoryBackfill = async (req, res, next) => {
   if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
     return failure(req, res, 400, 'Invalid asset ID');
   }
   const parsed = parseBackfillBody(req.body);
   if (!parsed.ok) return failure(req, res, 400, parsed.message);
   try {
-    const handle = await startAssetHistoryBackfill({
+    const handle = await startAssetHistoryBackfillTask({
       assetId: req.params.id,
       from: parsed.value.from,
       to: parsed.value.to,

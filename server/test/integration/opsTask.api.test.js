@@ -103,6 +103,10 @@ test('未登录触发/读取均返回 401', async () => {
   assert.equal(start.status, 401);
   const priceSync = await request('/api/ops-center/price-sync', { method: 'POST', body: '{}' }, { authenticated: false });
   assert.equal(priceSync.status, 401);
+  const backfill = await request(`/api/ops-center/assets/${ASSET_ID}/price-backfill`, {
+    method: 'POST', body: '{}'
+  }, { authenticated: false });
+  assert.equal(backfill.status, 401);
   const detail = await request(`/api/ops-center/task-runs/${RUN_ID}`, {}, { authenticated: false });
   assert.equal(detail.status, 401);
 });
