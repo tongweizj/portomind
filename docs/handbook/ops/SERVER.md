@@ -86,14 +86,16 @@ curl "http://localhost:8080/api/prices/date/$(date +%F)?page=1&pageSize=20"
 
 ## 5. 手动 API 端点
 
-这些端点中，除标注「只读」的 `GET /api/cron/status` 外，其余提供**手动触发**能力，与 cron-worker 的定时任务**共用同一业务引擎**（`@portomind/shared`），
+这些端点中，除标注「只读」的 `GET /api/cron/status` 与 `GET /api/ops-center/task-runs/:id` 外，其余提供**手动触发**能力，与 cron-worker 的定时任务**共用同一业务引擎**（`@portomind/shared`），
 结果口径一致。自动触发由 cron-worker 负责（见 [cron-worker 总览](./CRON_WORKER.md) §2）。
 
-> ⚠️ 自 TASK-058 U1 起，下表端点除 `GET /api/cron/status` 外均需先登录（会话 cookie `pm_sid`）；直接用 `curl` 调试时先 `POST /api/auth/login` 取 cookie（详见 [DEPLOYMENT §9](./DEPLOYMENT.md) 与 [API 契约](../technical/API_CONTRACT.md)「认证与错误码」）。
+> ⚠️ 自 TASK-058 U1 起，下表端点均需先登录（会话 cookie `pm_sid`）；直接用 `curl` 调试时先 `POST /api/auth/login` 取 cookie（详见 [DEPLOYMENT §9](./DEPLOYMENT.md) 与 [API 契约](../technical/API_CONTRACT.md)「认证与错误码」）。
 
 | 方法 | 路径 | 作用 |
 |---|---|---|
 | `GET` | `/api/cron/status` | **只读**聚合查询：5 个定时任务的最近一次运行（运行态）+ 数据态派生指标（价格完成度 / 完整性缺口 / 提醒 / 汇率 / 再平衡）。**不触发任务、不写库**；详情用 `?detail=rebalance&date=&portfolioId=`（同一端点，不新增第二条路由） |
+| `POST` | `/api/ops-center/integrity-check` | 异步刷新价格完整性检查（`price-integrity-check`）：空 Body，成功 `202 + runId`，已有运行 `409 TASK_ALREADY_RUNNING`；手动刷新固定 `repair:false` |
+| `GET` | `/api/ops-center/task-runs/<id>` | **只读**任务运行详情：状态、`stale`、进度、计数、失败与 `result`；不返回内部 `lockKey` |
 | `POST` | `/api/alerts/evaluate` | 手动跑一次提醒规则评估（界面「立即评估」按钮同效） |
 | `POST` | `/api/family/fx/sync` | 手动同步汇率（USD/CAD/HKD → CNY）。采集源以 CNY 为 base，入库前取倒数转成 `rateToCny` =「1 外币 = X CNY」 |
 | `PUT` | `/api/family/fx/rates/<CUR>` | 手动录入汇率，如 `PUT /api/family/fx/rates/USD` body `{"rateToCny":7.2}`（数据以 `manual` 标记） |
@@ -110,6 +112,8 @@ curl -X PUT http://localhost:8080/api/family/fx/rates/USD -H 'Content-Type: appl
 curl -X PUT http://localhost:8080/api/valuations/000300/pe -H 'Content-Type: application/json' -d '{"value":12.5,"percentile":25}'
 curl http://localhost:8080/api/cron/status
 curl 'http://localhost:8080/api/cron/status?detail=rebalance&date=2026-10-26'
+curl -X POST http://localhost:8080/api/ops-center/integrity-check -H 'Content-Type: application/json' -d '{}'
+curl http://localhost:8080/api/ops-center/task-runs/<runId>
 ```
 
 > 估值分位（`valuation_percentile` 规则）必须先有数据，家庭视图没有录入入口，只能走本 API。

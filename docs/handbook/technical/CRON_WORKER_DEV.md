@@ -1,6 +1,6 @@
 # cron-worker 开发文档
 
-> 受众：**开发者**。覆盖 cron-worker 的**调度引擎实现、再平衡分发算法、两层防重、TaskRun 数据契约、
+> 受众：**开发者**。覆盖 cron-worker 的**调度引擎实现、再平衡分发算法、防重与跨进程互斥、TaskRun 数据契约、
 > 如何新增调度器、目录结构**。
 >
 > - 进程运行 / 配置 / 监控见 [运维手册](../ops/CRON_WORKER_OPS.md)；任务功能介绍见
@@ -24,7 +24,7 @@ cron-worker/
     │   ├── scheduler.js         # 注册 5 类任务，共 6 个 cron
     │   ├── dailySync.js         # 价格同步（CLI 入口，trigger=MANUAL）
     │   ├── historySync.cjs      # 历史回补（--from/--to/--symbols/--concurrency）
-    │   └── integrityCheck.js    # 完整性检查（本进程独有，非 shared）
+    │   └── integrityCheck.js    # 完整性检查 CLI/调度薄壳（业务在 shared）
     └── schedulers/
         ├── cronScheduler.js     # 通用工厂 createCronScheduler
         ├── priceScheduler.js    # 价格同步
@@ -35,8 +35,9 @@ cron-worker/
 ```
 
 **核心约束**：业务引擎必须在 `@portomind/shared`，cron-worker 只持触发权（禁止在本目录复制实现）。
-价格同步 / 提醒评估 / 汇率同步 / 再平衡的业务函数均来自 `shared`；仅 `integrityCheck` 与调度器骨架在
-本进程内。
+价格同步 / 完整性检查 / 提醒评估 / 汇率同步 / 再平衡的业务函数均来自 `shared`；
+`cron-worker/src/tasks/integrityCheck.js` 只负责加载本进程 `.env`、建立 Mongo 连接、解析 CLI 参数、
+注入 `historySync` 修复函数，然后调用 `shared/tasks/priceIntegrityCheck.js`。调度器骨架仍在本进程。
 
 ---
 
@@ -87,12 +88,17 @@ module.exports = { startXxxScheduler };
 
 ---
 
-## 4. 两层防重
+## 4. 防重与跨进程互斥
 
-同一个任务不会被重复执行：
+同一个任务不会被重复执行，按三层防护：
 
-1. **进程内 Map 锁**（`shared/services/taskRunner.js` 的 `activeTasks`）：同 `taskName` 已在跑 → 返回 `SKIPPED`（`ALREADY_RUNNING`）。
+1. **进程内 Map 锁**（`shared/services/taskRunner.js` 的 `activeTasks`）：同 `taskName` / `lockKey` 已在跑 → 返回 `SKIPPED`（`ALREADY_RUNNING`）。
 2. **`taskruns` 集合唯一索引** `(taskName, runKey)`：并发 / 多实例下重复 `runKey` → `DUPLICATE_RUN_KEY`，返回 `SKIPPED`。
+3. **活跃运行互斥锁 `lockKey`**（TASK-070）：`taskruns` 的 `{lockKey:1}` 部分唯一索引只约束 `status='RUNNING'` 且 `lockKey` 为字符串的文档。`price-integrity-check` 使用固定 `ops:price-integrity-check`，因此不同 `runKey` 的手动/定时触发也不能并发跑。终态更新会 `$unset lockKey`，无锁的历史记录保持合法。后续价格同步 / 单资产回填沿用同一机制，分别使用全局锁与按资产前缀的锁键。
+
+冲突时仍写 `taskskips`（`reason` 只取 `ALREADY_RUNNING` / `DUPLICATE_RUN_KEY`）；手动端点把冲突翻译为 `409 TASK_ALREADY_RUNNING`。
+
+**stale 判定不等于自动释放 / 自动重试**：读侧按 `progress.updatedAt`（缺失时回退 `startedAt`）与任务阈值判定 `stale`，只影响展示；下一次实际触发才会条件更新过期运行（`status=FAILED`、`runKey=interrupted:<id>`、`$unset lockKey`）后重建。任务不会因为“过期”自行重启。
 
 因此误启动多个 worker 实例，多余实例只会得到 `SKIPPED`，不会重复跑。**多实例部署只允许一个 worker 启用调度**
 （`SCHEDULER_ENABLED=true`），其余设为 `false`。
@@ -101,7 +107,7 @@ module.exports = { startXxxScheduler };
 
 ## 5. TaskRun 数据契约
 
-每个任务运行由 `runTrackedTask` 落库到 `taskruns` 集合，便于追溯。以下字段是**稳定契约**，改名 / 改形会断代历史或破坏防重。
+每个任务运行由 `runTrackedTask`（同步等待）或 `startTrackedTask`（异步返回 `runId`）落库到 `taskruns` 集合，便于追溯。以下字段是**稳定契约**，改名 / 改形会断代历史或破坏防重。
 
 ### 5.1 taskName（必须稳定）
 
@@ -125,6 +131,10 @@ module.exports = { startXxxScheduler };
 | 再平衡 自动（逐组合子任务） | `<schedule>:<当日日期>`（如 `monthly:2026-10-01`） |
 | 再平衡 自动（父任务 `rebalance-check`） | `marketDate(now, timezone)`（如 `2026-10-01`） |
 
+`price-integrity-check` 的手动与定时触发共享同一 `lockKey`，因此 `runKey` 不同也不能并发；手动触发冲突返回 `409 TASK_ALREADY_RUNNING`，定时触发写 `taskskips` 后跳过。
+
+**唯一例外**：stale 运行被下一次触发恢复时，旧 RUNNING 记录的 `runKey` 会改为 `interrupted:<id>`、状态改为 `FAILED`、释放 `lockKey`，以便同一防重键可以重新运行；正常完成/失败的记录不改 `runKey`。审计以 `runId` 为准，`interrupted:*` 仍保留原任务名与结束时间。
+
 价格同步的两个定时批次沿用 `daily-price-sync`，在同一进程顺序进入任务锁。分组日期按触发时点确定。CN 批次以该日期查询亚洲市场交易日历，避免 ET 中午已跨亚洲午夜时采用次日的开市状态。两组 cron 配置见 [运维手册 §2](../ops/CRON_WORKER_OPS.md#2-配置环境变量)。
 
 CN 定时批次只写入日期与批次目标日相符的场外基金净值。日期不符时，保留已存价格，将该标的记入 `failures`，并在消息中记录目标日和返回日。手动同步继续按上游净值日期入桶。
@@ -139,6 +149,8 @@ CN 定时批次只写入日期与批次目标日相符的场外基金净值。�
 | `SKIPPED` | `runTrackedTask` 的**返回值**（已在跑 / 重复 runKey）；**不写入 `taskruns`** | 无需处理；事件见 `taskskips`（§5.5） |
 
 > `taskruns.status` 的 schema 枚举仍只有 `RUNNING / SUCCEEDED / PARTIAL / FAILED`；TASK-057 **不新增 SKIPPED 状态**。监控与告警如何解读这些状态，见 [运维手册 §7](../ops/CRON_WORKER_OPS.md#7-监控与巡检)。
+
+TASK-070 起，带 `lockKey` 的任务在 `RUNNING` 期间维护 `progress: {completed,total,updatedAt}`（默认最多 1 秒写一次，可通过 `OPS_PROGRESS_THROTTLE_MS` 调整）。读侧 `stale` 只按心跳判断并返回给 API，**不落库、不改状态、不触发重试**；默认 `price-integrity-check` 阈值为 30 分钟（`OPS_INTEGRITY_STALE_MS`）。终态时写最终进度并释放 `lockKey`。
 
 ### 5.4 退出码约定
 
@@ -156,12 +168,14 @@ CN 定时批次只写入日期与批次目标日相符的场外基金净值。�
 | taskName | `result` 形状（冻结） |
 |---|---|
 | `daily-price-sync` | `{ skippedCount, marketGroup?, circuitOpened? }`。`marketGroup` 为 `CN` 或 `US_CA`，`circuitOpened` 列出本批已熔断的行情源。手动及历史全量批次可省略 `marketGroup`。 |
-| `price-integrity-check` | `{ totals:{expectedCount,actualCount,missingCount}, checkedCount, skippedCount, allSkipped, completenessRatio, gapAssets:[{symbol,missingCount}] }`（不存 `assets[]` / `missingRanges[]` / 堆栈） |
+| `price-integrity-check` | `{ totals:{expectedCount,actualCount,missingCount}, checkedCount, skippedCount, allSkipped, completenessRatio, assets:[{assetId,symbol,market,launchDate,status,from,to,expected,actual,missing,ratio,missingRanges[],missingRangesTruncated}], gapAssets:[{symbol,missingCount}] }`。`assets[].status ∈ OK \| GAP \| ERROR \| SKIPPED_NO_LAUNCH_DATE \| INSUFFICIENT_SAMPLE`；`missingRanges` 最多 20 段，超出由 `missingRangesTruncated=true` 标记；不落原始价格序列、补采错误详情或堆栈 |
 | `alert-evaluate` | `{ evaluated, created, archived, failed }` |
 | `fx-rate-sync` | `{ fxCount, currencies:{ USD:{ok:true,rateToCny}, CAD:{…}, HKD:{…} } }`；`ok:true` 仅表示该币种本次真实写入完成，失败运行记 `FAILED` 且不补造成功标志 |
 | `rebalance-check` | `{ totalPortfolios, dueCount, skippedCount, perPortfolio:[{portfolioId,due,needsRebalance,suggestionsCount,recordId,status,failureReason?,skipReason?}] }` |
 
-价格完整性检查在资产总数大于零且全部跳过时记录 `allSkipped: true`、`checkedCount: 0` 和 `completenessRatio: null`。这些字段表示本次未检查，同样用于结束日志。TaskRun 运行状态沿用现有判定。
+价格完整性检查在资产总数大于零且全部跳过时记录 `allSkipped: true`、`checkedCount: 0` 和 `completenessRatio: null`。这些字段表示本次未检查，同样用于结束日志。TaskRun 运行状态沿用现有判定。TASK-070 起 `skippedCount` 是未检查总数（无 `launchDate` + 样本不足）；看板的 `skippedNoLaunchDate` 从 `result.assets[].status` 派生，不再用 `skippedCount` 代替。
+
+TASK-070 起，`result.assets` 是运维中心历史完整度的唯一回读来源：`expected` 以目标市场日的理论交易日计算，`actual` 只计与理论交易日匹配的落库日；`expected < 3` 记 `INSUFFICIENT_SAMPLE`，不进入 `checked` 口径。读侧只取最近一次 `SUCCEEDED` / `PARTIAL`、`endedAt` 非空且 `result.assets` 为数组的运行，映射为 `unavailable` / `checked` / `unknown`（字段契约见 [API_CONTRACT.md](./API_CONTRACT.md)）。`GAP` 只表示检测到缺失交易日，**不推断**停牌、采集失败或供应商异常。server 手动触发固定 `repair: false`；定时任务仍按 `INTEGRITY_AUTO_REPAIR` 决定是否补采。
 
 日价写入成功后发出 `PRICE_UPSERT_PREVIOUS` 与 `PRICE_UPSERTED`，共享标准键、日桶时间戳、来源、批次和写入时刻。前一条含 `existing`（首次为空），后一条含 `price` 和 `overwritten`。并发改价时重新读取并条件更新，日志记录本次生效的前值。
 
@@ -177,16 +191,17 @@ CN 定时批次只写入日期与批次目标日相符的场外基金净值。�
 
 ## 6. launchDate 字段与暴露
 
-完整性检查依赖 `asset.launchDate`（可选字段）推算理论交易日数。**当前 API 层尚未暴露该字段**：
-`shared/services/asset.service.js` 的 `WRITABLE_FIELDS` 白名单未包含它，需直接操作 MongoDB 维护：
+完整性检查依赖 `asset.launchDate`（可选字段）推算理论交易日数。该字段已通过资产 API 维护：
+`POST /api/assets` 与 `PUT /api/assets/:id` 接受非未来的 `YYYY-MM-DD` 或 `null`（清空），读取侧见
+[API 契约](./API_CONTRACT.md)。需要批量修复时也可直接操作 MongoDB：
 
 ```bash
 mongosh 'mongodb://127.0.0.1:27017/portomind_dev' \
   --eval 'db.assets.updateOne({symbol:"VTI"}, {$set:{launchDate: ISODate("2018-06-08T00:00:00Z")}})'
 ```
 
-若希望通过 API 维护，需先把 `launchDate` 加入 `shared/services/asset.service.js` 的 `WRITABLE_FIELDS` 白名单，
-并走既有资产更新接口。产品侧对 `launchDate` 的说明见 [产品介绍 §3.4](../manual/CRON_WORKER_PRODUCT.md#34-launchdate成立日的作用)。
+未填 `launchDate` 的资产在完整性检查中记 `SKIPPED_NO_LAUNCH_DATE`，在运维中心显示为 `history.status='unknown'`。
+产品侧对 `launchDate` 的说明见 [产品介绍 §3.4](../manual/CRON_WORKER_PRODUCT.md#34-launchdate成立日的作用)。
 
 ---
 

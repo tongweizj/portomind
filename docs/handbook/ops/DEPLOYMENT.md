@@ -76,6 +76,8 @@ MONGO_URI=mongodb://127.0.0.1:27017/portomind      # 与 cron-worker 同一库�
 PORT=8080
 SCHEDULER_TIMEZONE=America/Toronto   # 只读/查询接口按调度时区取当天日期，需与 worker 一致
 MARKET_TIMEZONE=America/Toronto
+OPS_PROGRESS_THROTTLE_MS=1000        # TaskRun 进度写节流（TASK-070）
+OPS_INTEGRITY_STALE_MS=1800000       # 完整性运行 stale 阈值；需与 worker 一致
 # LOG_DIR 可选；默认写入仓库根 logs/，与 cron-worker 共用
 
 # TASK-058 认证（U1）：
@@ -101,6 +103,8 @@ FX_SYNC_CRON=30 9 * * *          # 汇率同步
 REBALANCE_CHECK_CRON=0 0 * * *   # 再平衡分发
 INTEGRITY_AUTO_REPAIR=true
 INTEGRITY_REPAIR_MAX_DAYS=30
+OPS_PROGRESS_THROTTLE_MS=1000        # TaskRun 进度写节流（TASK-070）
+OPS_INTEGRITY_STALE_MS=1800000       # 完整性运行 stale 阈值；需与 server 一致
 MARKET_DATA_TIMEOUT_MS=10000
 # LOG_DIR 可选；默认写入仓库根 logs/，与 server 共用
 ```
@@ -299,6 +303,14 @@ cd cron-worker && npm test
 ```
 
 完整检查要求 `test`、`validate`、`lint` 和 `build` 全部成功。Vite 仍会提示主 bundle 超过 500 kB，是性能优化项，不影响构建产物正确性。根目录也可一次性跑全部 workspace 测试：`npm test`。
+
+TaskRun 活跃锁的隔离 MongoDB 验证（TASK-070；只创建并清理临时库 `portomind_taskrun_lock_verify`，源库必须是 `portomind_dev`，不会改动生产库）：
+
+```bash
+node server/scripts/verify-taskrun-lock.cjs
+```
+
+验证内容：旧 TaskRun 兼容、部分唯一索引生效、同锁活跃冲突、终态释放、过期恢复。生产库索引变更需单独批准，不由该脚本执行。
 
 > **不要把测试数量写进文档**：用例数随开发变动，以 `npm test` 实际输出为准。
 

@@ -8,7 +8,8 @@
 //   - 今日价格按 marketDay.service 的目标市场日口径；
 //   - 基础信息复用 assetMetadata.service 的 5 字段校验；
 //   - 有效性与历史价格完整性复用 priceCoverage.service 的最近 3 个目标市场日窗口；
-//   - 历史完整度由后续 Ticket 04 填充，本票保持 unavailable 占位。
+//   - 历史完整度读取最近一次可用 price-integrity-check 的 result.assets，
+//     派生为 unavailable / checked / unknown；没有可用运行时才回退 unavailable。
 
 const Asset = require('../models/asset');
 const { ASSET_MARKETS } = require('../constants/asset.constants');
@@ -25,6 +26,8 @@ const {
   anyPriceInWindow
 } = require('./priceCoverage.service');
 const { metadataReasons, missingFieldsOf } = require('./assetMetadata.service');
+const { findLatestUsableIntegrityRun, historyEntriesByAsset } = require('./taskRuns.service');
+const { HISTORY_MIN_MARKET_DAYS } = require('../config/opsTasks');
 
 const DEFAULT_PAGE_SIZE = 50;
 const SORT_FIELDS = Object.freeze(['priority', 'symbol', 'name', 'market', 'currency']);
@@ -48,7 +51,11 @@ const VALIDITY_STATUS = Object.freeze({
   UNKNOWN: 'unknown'
 });
 
-const HISTORY_STATUS = Object.freeze({ UNAVAILABLE: 'unavailable' });
+const HISTORY_STATUS = Object.freeze({
+  UNAVAILABLE: 'unavailable',
+  CHECKED: 'checked',
+  UNKNOWN: 'unknown'
+});
 
 function parseDateOrNull(value) {
   if (value instanceof Date) return Number.isFinite(value.getTime()) ? value : null;
@@ -192,7 +199,36 @@ function buildAssetQuery({ active, market, search }) {
   return query;
 }
 
-async function buildRows(assets, now) {
+
+function historyState(status, checkedAt, values = {}) {
+  return {
+    status,
+    checkedAt,
+    expected: values.expected ?? null,
+    actual: values.actual ?? null,
+    missing: values.missing ?? null,
+    ratio: values.ratio ?? null
+  };
+}
+
+function historyOf(asset, historyContext) {
+  if (!historyContext) return historyState(HISTORY_STATUS.UNAVAILABLE, null);
+  const checkedAt = historyContext.checkedAt ?? null;
+  const entry = historyContext.entries?.get(String(asset._id)) || null;
+  if (!entry || (entry.status !== 'OK' && entry.status !== 'GAP')) {
+    return historyState(HISTORY_STATUS.UNKNOWN, checkedAt);
+  }
+  const expected = Number.isInteger(entry.expected) ? entry.expected : null;
+  const actual = Number.isInteger(entry.actual) ? entry.actual : null;
+  const missing = Number.isInteger(entry.missing) ? entry.missing : null;
+  const ratio = typeof entry.ratio === 'number' && Number.isFinite(entry.ratio) ? entry.ratio : null;
+  if (expected === null || expected < HISTORY_MIN_MARKET_DAYS || actual === null || missing === null || ratio === null) {
+    return historyState(HISTORY_STATUS.UNKNOWN, checkedAt);
+  }
+  return historyState(HISTORY_STATUS.CHECKED, checkedAt, { expected, actual, missing, ratio });
+}
+
+async function buildRows(assets, now, historyContext = null) {
   const tz = process.env.SCHEDULER_TIMEZONE || MARKET_TIMEZONE;
   const markets = [...new Set(assets
     .map((asset) => asset.market)
@@ -233,7 +269,7 @@ async function buildRows(assets, now) {
         missingFields: missingFieldsOf(reasons)
       },
       validity: validityOf(asset, windows.get(asset.market), pricedDays, priceDataAvailable),
-      history: { status: HISTORY_STATUS.UNAVAILABLE }
+      history: historyOf(asset, historyContext)
     };
   });
 }
@@ -258,13 +294,29 @@ async function getAssetsOverview({
   search,
   sortBy = 'priority',
   sortOrder = 'asc',
-  now = new Date()
+  now = new Date(),
+  dependencies = {}
 } = {}) {
   const query = buildAssetQuery({ active, market, search });
   // 关键：先取全部匹配资产，再做派生/筛选/排序，最后切片；
   // 不能先分页再排序，否则 priority 排序与 total 都会错。
   const assets = await Asset.find(query).sort({ symbol: 1 }).lean();
-  const rows = await buildRows(Array.isArray(assets) ? assets : [], now);
+  let historyContext = null;
+  try {
+    const loadLatest = dependencies.loadLatestIntegrityRun || findLatestUsableIntegrityRun;
+    const run = await loadLatest();
+    if (run) {
+      historyContext = {
+        checkedAt: run.endedAt ?? null,
+        entries: historyEntriesByAsset(run)
+      };
+    }
+  } catch (error) {
+    // 查询失败不等于“从未检查”：保留“无法判断”，避免把降级误报成 unavailable。
+    historyContext = { checkedAt: null, entries: new Map() };
+    logger.warn('OPS_CENTER_HISTORY_QUERY_FAILED', { error: error.message });
+  }
+  const rows = await buildRows(Array.isArray(assets) ? assets : [], now, historyContext);
   const filtered = missingType ? rows.filter((row) => matchesMissingType(row, missingType)) : rows;
   const ordered = [...filtered].sort((a, b) => compareRows(a, b, sortBy, sortOrder));
 

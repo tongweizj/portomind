@@ -38,7 +38,7 @@ const Asset = require('@portomind/shared/models/asset');
 | **AlertRule** | 提醒规则（含外部信号登记） | 无（三条查询索引） | [PL-5](../product/lines/PL-5-alerting.md) |
 | **AlertEvent** | 提醒事件（审计，不可删） | 无（三条查询索引） | [PL-5](../product/lines/PL-5-alerting.md) |
 | **FxRate** | 外币兑 CNY 汇率 | `{currency, date}` | [PL-6](../product/lines/PL-6-household.md) |
-| **TaskRun** | 定时任务运行记录 | `{taskName, runKey}` | [PL-0](../product/lines/PL-0-platform-foundation.md) |
+| **TaskRun** | 定时任务运行记录 | `{taskName, runKey}`；活跃 `lockKey` 部分唯一 | [PL-0](../product/lines/PL-0-platform-foundation.md) |
 | **User** | 登录账号（单租户多账号；`admin`/`member`） | `username` | [PL-0](../product/lines/PL-0-platform-foundation.md)（认证内核） |
 | **Session** | 服务端会话（绝对 7 天 TTL，存 Mongo） | `sid` | [PL-0](../product/lines/PL-0-platform-foundation.md)（认证内核） |
 
@@ -279,13 +279,17 @@ AlertRule ──_id──> AlertEvent.ruleId（**可空**：再平衡通知没�
 | `startedAt` | Date，required |
 | `endedAt` | Date |
 | `durationMs` | Number |
+| `lockKey` | String，trim，= `undefined`（旧记录无该字段）。仅活跃（`status='RUNNING'`）时参与部分唯一索引；终态时由任务外壳 `$unset` 释放。**不进入 HTTP 契约** |
+| `progress` | 子文档 `{completed:Number,total:Number,updatedAt:Date}`，= `undefined`。TASK-070 起带 `lockKey` 的活跃任务最多每 1 秒写一次心跳；旧记录无该字段。`updatedAt` 缺失时读侧以 `startedAt` 作为心跳 |
 | `totalCount` / `successCount` / `failureCount` | Number，= `0` |
 | `failures[]` | `{item, category, provider, retryable, message, status?, responseBody?}`，`_id: false`。行情请求有 HTTP 响应时可记录状态及最多 4096 字符的脱敏正文摘要。 |
+| `result` | `Mixed`，可空。写侧形状见 [CRON_WORKER_DEV.md §5.5](./CRON_WORKER_DEV.md#55-result-字段与跳过观测task-057)；读侧缺失表示契约未就绪，不得折算为 0 |
 | `createdAt` / `updatedAt` | `timestamps: true` |
 
-- 索引：`{taskName: 1, runKey: 1}` **unique**（两层防重的第二层）；`{startedAt: -1, taskName: 1}`（按时间倒序巡检）。
+- 索引：`{taskName: 1, runKey: 1}` **unique**（防重键）；`{startedAt: -1, taskName: 1}`（按时间倒序巡检）；`{lockKey: 1}` **unique partial**，`partialFilterExpression: {status:'RUNNING', lockKey:{$type:'string'}}`（`taskrun_active_lock_unique`，TASK-070 跨进程互斥）。
+- **锁语义**：只约束活跃且带锁的任务；终态记录即使残留 `lockKey` 也不参与唯一约束，正常路径仍会 `$unset` 释放。旧记录没有 `lockKey`，无需迁移。stale 只由读侧按心跳判定，不自动释放；下一次触发才会条件恢复过期运行（置 `FAILED`、`runKey=interrupted:<id>`、释放锁）后创建新运行。`runKey` 的稳定契约以正常记录为准；`interrupted:*` 是恢复专用的审计改键，必须以 `runId` 关联原运行。
 - **语义边界**：`successCount` 计的是「处理动作调用成功」，**不等于「有新数据入库」**——见 §5.6。
-- 契约细节（runKey 构造、四态含义、退出码）的唯一归属是 [CRON_WORKER_DEV.md §5](./CRON_WORKER_DEV.md)，此处不重复。
+- 契约细节（runKey 构造、四态含义、退出码、result 形状）的唯一归属是 [CRON_WORKER_DEV.md §5](./CRON_WORKER_DEV.md)，此处不重复。
 
 ---
 
@@ -359,6 +363,8 @@ AlertRule ──_id──> AlertEvent.ruleId（**可空**：再平衡通知没�
 - `result` 缺失 / `null` = 「契约未就绪 / 结果未知」，读侧**不得**当成 `{}` 后渲染成 0 缺口或全部正常。
 - `TaskRun.status` 仍只有 `RUNNING/SUCCEEDED/PARTIAL/FAILED`，**没有 `SKIPPED`**；防重跳过写独立 `taskskips` 事件，不改写正在运行的 TaskRun。
 - `taskskips` 事件字段：`{taskName,runKey,trigger,reason: ALREADY_RUNNING|DUPLICATE_RUN_KEY,skippedAt,activeRunKey?}`；索引 `{taskName:1,skippedAt:-1}`，无 TTL。读侧按 taskName 取**最新一条**作为可选 `lastSkip`。
+- TASK-070 起 `price-integrity-check` 的 `result.assets[]` 保存资产级历史摘要（`status/expected/actual/missing/ratio` 与最多 20 段 `missingRanges`），供运维中心历史完整度回读；不保存原始价格序列。`GAP` 只表示检测到缺失交易日，不推断停采/停牌/供应商异常。
+- 跨进程互斥使用独立 `lockKey` 部分唯一索引，不改四态枚举，也不把锁编码成新的 `runKey`；详见 §4.10 与 [CRON_WORKER_DEV.md §4](./CRON_WORKER_DEV.md#4-防重与跨进程互斥)。
 
 **含义**：`SUCCEEDED` 仍只能读成「跑完且没有异常抛出」，不能读成「有数据更新」；数据是否到位必须看 `result` 的业务摘要 + `Price.timestamp` 等事实字段交叉验证。
 
@@ -380,6 +386,7 @@ AlertRule ──_id──> AlertEvent.ruleId（**可空**：再平衡通知没�
 | 单标的行情序列 | `find({symbol}).sort({timestamp:1})` |
 | 汇率取最新 | `findOne({currency}).sort({date:-1})` —— 命中 unique 索引 |
 | 任务防重 | 依赖 `{taskName, runKey}` unique 索引的 E11000，不要先查再写（有并发窗口） |
+| 活跃任务互斥 | 依赖 `{lockKey:1}` partial unique 索引的 E11000；冲突后按 `lockKey + status:'RUNNING'` 查活跃运行。不要用普通查询做互斥 |
 | 未读提醒数 | `countDocuments({status:'unread'})` —— 命中 `{status:1, triggeredAt:-1}` 前缀 |
 
 ---

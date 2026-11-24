@@ -12,7 +12,7 @@ docs/
 ├── architecture/          # 架构真相：分层、边界、技术决策
 │   ├── ARCHITECTURE.md
 │   ├── PRICE-PIPELINE-REVIEW.md
-│   └── adr/               # ADR-001 认证 / ADR-002 单一调度器 / ADR-003 symbol 后缀契约
+│   └── adr/               # ADR-001 认证 / ADR-002 单一调度器 / ADR-003 symbol 后缀契约 / ADR-004 运维任务执行
 ├── prototypes/            # 设计稿与交互原型：Ardot 视觉稿、HTML 原型、截图基线
 ├── agents/                # 代理配置与工程规范：Issue tracker、triage 标签、域文档、编码/测试/Git
 ├── handbook/              # 持续维护的系统资料
@@ -49,7 +49,7 @@ docs/
 
 ## 明细入口
 
-- 架构：[架构总览](./architecture/ARCHITECTURE.md)、[ADR-001 认证](./architecture/adr/ADR-001-authentication.md)、[ADR-002 单一调度器](./architecture/adr/ADR-002-single-scheduler.md)、[ADR-003 symbol 后缀契约](./architecture/adr/ADR-003-symbol-suffix-contract.md)、[价格链路审阅](./architecture/PRICE-PIPELINE-REVIEW.md)。
+- 架构：[架构总览](./architecture/ARCHITECTURE.md)、[ADR-001 认证](./architecture/adr/ADR-001-authentication.md)、[ADR-002 单一调度器](./architecture/adr/ADR-002-single-scheduler.md)、[ADR-003 symbol 后缀契约](./architecture/adr/ADR-003-symbol-suffix-contract.md)、[ADR-004 运维任务执行](./architecture/adr/ADR-004-ops-center-manual-task-execution.md)、[价格链路审阅](./architecture/PRICE-PIPELINE-REVIEW.md)。
 - 规范：[编码](./agents/CODING.md)、[测试](./agents/TESTING.md)、[Git](./agents/GIT.md)。
 - 开发：[API 契约](./handbook/technical/API_CONTRACT.md)、[数据模型](./handbook/technical/DATA_MODEL.md)、[前端开发](./handbook/technical/CLIENT_DEV.md)、[调度开发](./handbook/technical/CRON_WORKER_DEV.md)。
 - 用户：[客户端操作](./handbook/manual/CLIENT.md)、[业务概念](./handbook/manual/Concept.md)、[后台任务功能介绍](./handbook/manual/CRON_WORKER_PRODUCT.md)。

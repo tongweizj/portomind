@@ -126,6 +126,7 @@ function mount({ role = 'admin', nextMode = 'ok' } = {}) {
   );
   return {
     container,
+    queryClient,
     async unmount() {
       root.unmount();
       container.remove();
@@ -185,7 +186,7 @@ async function runScenarios() {
       && unknown?.querySelector('[data-testid="ops-today-status"]')?.innerText === '无法判断'
       && unknown?.querySelector('[data-testid="ops-validity"]')?.innerText === '无法判断');
 
-  check('TASK-068 历史完整度占位 = 尚未检查',
+  check('TASK-068 无可用运行的历史完整度 = 尚未检查',
     qa('[data-testid="ops-history"]').every((el) => el.innerText === '尚未检查'));
   check('TASK-068 admin 每行可见资产编辑链接',
     qa('[data-testid="ops-asset-edit"]').length === ITEMS.length
@@ -312,6 +313,119 @@ async function runScenarios() {
   check('TASK-069 筛选无结果时显示可辨识空态，并回到第 1 页',
     requests.at(-1).page === 1
       && text('[data-testid="ops-assets-empty"]').includes('没有匹配的资产'));
+  await view.unmount();
+
+  // ── TASK-070 历史三态与刷新 ──
+  view = mount();
+  await waitRows();
+  const checkedAt = '2026-11-24T07:30:00.000Z';
+  const historyItems = ITEMS.map((item, index) => {
+    if (index === 0) {
+      return { ...item, history: { status: 'checked', checkedAt, expected: 240, actual: 238, missing: 2, ratio: 238 / 240 } };
+    }
+    if (index === 1) {
+      return { ...item, history: { status: 'unknown', checkedAt, expected: null, actual: null, missing: null, ratio: null } };
+    }
+    return item;
+  });
+  api.defaults.adapter = async (config) => {
+    if (config.url !== '/ops-center/assets') throw new Error(`Unexpected request ${config.url}`);
+    return {
+      data: { success: true, data: historyItems, pagination: { page: 1, pageSize: 50, total: historyItems.length } },
+      status: 200, statusText: 'OK', headers: {}, config
+    };
+  };
+  await view.queryClient.invalidateQueries({ queryKey: ['ops-center-assets'] });
+  await waitFor(() => Boolean(q('[data-testid="ops-history"][data-status="checked"]')));
+  const checkedRow = qa('[data-testid="ops-asset-row"]')[0];
+  check('TASK-070 checked 显示已采/应有/缺失/完整率/检查时间',
+    checkedRow.querySelector('[data-testid="ops-history-actual"]')?.innerText === '238'
+      && checkedRow.querySelector('[data-testid="ops-history-expected"]')?.innerText === '240'
+      && checkedRow.querySelector('[data-testid="ops-history-missing"]')?.innerText === '2'
+      && checkedRow.querySelector('[data-testid="ops-history-ratio"]')?.innerText === '99.2%'
+      && checkedRow.querySelector('[data-testid="ops-history-checked-at"]')?.innerText.includes('2026'));
+  const unknownRow = qa('[data-testid="ops-asset-row"]')[1];
+  check('TASK-070 unknown 显示无法判断且不伪造 0%',
+    unknownRow.querySelector('[data-testid="ops-history"]')?.getAttribute('data-status') === 'unknown'
+      && unknownRow.innerText.includes('无法判断')
+      && !unknownRow.innerText.includes('0%'));
+  const unavailableRow = qa('[data-testid="ops-asset-row"]')[2];
+  check('TASK-070 unavailable 显示尚未检查',
+    unavailableRow.querySelector('[data-testid="ops-history"]')?.getAttribute('data-status') === 'unavailable'
+      && unavailableRow.innerText.includes('尚未检查'));
+  await view.unmount();
+
+  // admin 刷新：202 -> 轮询 RUNNING -> SUCCEEDED -> 刷新资产
+  view = mount();
+  await waitRows();
+  let polls = 0;
+  const refreshRequests = [];
+  api.defaults.adapter = async (config) => {
+    refreshRequests.push({ method: config.method, url: config.url });
+    if (config.method === 'post' && config.url === '/ops-center/integrity-check') {
+      return {
+        data: { success: true, data: { runId: 'run-70', taskName: 'price-integrity-check', status: 'RUNNING', startedAt: checkedAt } },
+        status: 202, statusText: 'Accepted', headers: {}, config
+      };
+    }
+    if (config.url === '/ops-center/assets') {
+      return {
+        data: { success: true, data: historyItems, pagination: { page: 1, pageSize: 50, total: historyItems.length } },
+        status: 200, statusText: 'OK', headers: {}, config
+      };
+    }
+    if (config.url === '/ops-center/task-runs/run-70') {
+      polls += 1;
+      const done = polls >= 2;
+      return {
+        data: { success: true, data: {
+          runId: 'run-70', taskName: 'price-integrity-check', runKey: 'manual:x', trigger: 'MANUAL',
+          status: done ? 'SUCCEEDED' : 'RUNNING', stale: false, startedAt: checkedAt,
+          progress: { completed: done ? 2 : 1, total: 2, updatedAt: checkedAt },
+          counts: { totalCount: 2, successCount: done ? 2 : 0, failureCount: 0 },
+          failures: [], result: { assets: [] }
+        } },
+        status: 200, statusText: 'OK', headers: {}, config
+      };
+    }
+    throw new Error(`Unexpected request ${config.method} ${config.url}`);
+  };
+  const assetsBeforeRefresh = refreshRequests.filter((request) => request.url === '/ops-center/assets').length;
+  q('[data-testid="ops-integrity-refresh"]').click();
+  await waitFor(() => Boolean(q('[data-testid="ops-integrity-progress"]')));
+  check('TASK-070 admin 可触发刷新并显示进度',
+    refreshRequests.some((request) => request.url === '/ops-center/integrity-check')
+      && text('[data-testid="ops-integrity-progress"]').includes('已完成 1 / 2'));
+  await waitFor(() => text('[data-testid="ops-integrity-result"]').includes('检查完成'), 6000);
+  await waitFor(
+    () => refreshRequests.filter((request) => request.url === '/ops-center/assets').length > assetsBeforeRefresh,
+    4000
+  );
+  check('TASK-070 刷新终态后显示完成并回读资产总表',
+    refreshRequests.filter((request) => request.url === '/ops-center/assets').length > assetsBeforeRefresh);
+  await view.unmount();
+
+  // 409 冲突可辨识
+  view = mount();
+  await waitRows();
+  api.defaults.adapter = async (config) => {
+    const error = new Error('conflict');
+    error.config = config;
+    error.response = {
+      status: 409,
+      data: { message: 'price-integrity-check is already running', code: 'TASK_ALREADY_RUNNING' }
+    };
+    throw error;
+  };
+  q('[data-testid="ops-integrity-refresh"]').click();
+  await waitFor(() => Boolean(q('[data-testid="ops-integrity-error"]')));
+  check('TASK-070 409 冲突按稳定 code 显示明确错误', text('[data-testid="ops-integrity-error"]').includes('已有检查在运行'));
+  await view.unmount();
+
+  // member 只读
+  view = mount({ role: 'member' });
+  await waitRows();
+  check('TASK-070 member 看不到刷新按钮', !q('[data-testid="ops-integrity-refresh"]'));
   await view.unmount();
 }
 

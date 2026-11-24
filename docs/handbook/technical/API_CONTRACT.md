@@ -57,7 +57,7 @@ Portfolio 枚举：`type`（风险定位）为 `活钱 | 稳健 | 长期`；`acc
 }
 ```
 
-校验错误可能额外包含 `details`。认证/授权/CORS 类错误可能额外包含顶层 `code`（见「认证与错误码」）；状态码语义：`400` 请求参数或请求体无效，`401` 未登录/会话失效，`403` 已登录但无权限或需先改密（`PASSWORD_CHANGE_REQUIRED` / `FORBIDDEN` / CORS 拒绝），`404` 资源/路由不存在，`409` 唯一键/不变量冲突，`429` 登录限流锁定，`500` 未处理的服务器错误。创建返回 `201`，其余成功请求返回 `200`。
+校验错误可能额外包含 `details`。认证/授权/CORS 类错误可能额外包含顶层 `code`（见「认证与错误码」）；状态码语义：`400` 请求参数或请求体无效，`401` 未登录/会话失效，`403` 已登录但无权限或需先改密（`PASSWORD_CHANGE_REQUIRED` / `FORBIDDEN` / CORS 拒绝），`404` 资源/路由不存在，`409` 唯一键/不变量冲突，`429` 登录限流锁定，`500` 未处理的服务器错误。创建返回 `201`，其余成功请求返回 `200`；运维中心手动任务被受理后在后台执行，返回 `202`（见 `POST /api/ops-center/integrity-check`）。
 
 ## 响应形状例外
 
@@ -144,17 +144,30 @@ Portfolio 枚举：`type`（风险定位）为 `活钱 | 稳健 | 长期`；`acc
 | `GET /api/logs` | Query: `date?` (`YYYY-MM-DD`，默认市场当日), `level?` (`all\|error\|warn\|info\|verbose\|debug\|silly`), `page,pageSize` | 应用日志条目数组 + 分页 | `200`; 查询参数无效 `400`; `500` |
 | `GET /api/logs/tasks` | Query: `date?` (`YYYY-MM-DD`，默认市场当日), `level?`, `page,pageSize` | 任务日志条目数组 + 分页 | `200`; 查询参数无效 `400`; `500` |
 | `GET /api/cron/status` | Query: `detail?`（缺省＝主视图；`rebalance`＝再平衡逐组合明细；其它非空值 `400`）、`date?`（`YYYY-MM-DD`，**仅 detail 校验/使用**；detail 下非法 `400`，主视图忽略该参数）、`portfolioId?`（ObjectId，仅 detail；非法/不存在仍 `200` + 空 `rows` + `notes[].code`） | **只读**聚合快照：`{generatedAt,timezone,staleThresholdHours,tasks:[5]}`。每项含 `taskName/lastRun(无记录 null)/stale/contractReady/dataState/dataStateLevel(ok\|warn\|bad\|unknown)/notes[]`。价格数据态：`{targetMarketDate,calendarPrevOpenDay,expected,fetched,missing[],byMarket,notListed[],unsupportedMarkets[],dayPriceSymbolCount}`；完整性/提醒/汇率/再平衡的 `result` 派生值在缺失时为 `null`（`contractReady=false` + `CONTRACT_NOT_READY`）；TASK-057 落地后按冻结 `result` 归一化。detail 形态：`{date,contractReady,generatedAt,summary:{totalPortfolios,due,generated,failed,skipped},rows[],notes[]}` | `200`; `detail` 非法 `400`；detail 下 `date` 非法 `400`；`portfolioId` 非法/不存在不报错（`200` + 空结果）。**不触发任何任务、不写任何集合** |
-| `GET /api/ops-center/assets` | Query: `page,pageSize`（默认 `1/50`，上限 100）、`market`（`ASSET_MARKETS`）、`active`（`true` 默认 / `false` / `all`）、`missingType`（`validity\|today_price\|basic_info\|history_gap`）、`search`（symbol/name 子串，≤100 字符）、`sortBy`（`priority` 默认 / `symbol\|name\|market\|currency`）、`sortOrder`（`asc` 默认 / `desc`）。 | 资产总表数组 + 分页。每项 `{assetId,symbol,name,market,currency,launchDate,todayPrice:{marketDay,status,priceDate},basicInfo:{complete,missingFields},validity:{status},history:{status:'unavailable'}}`。默认只取 `active`；默认问题优先排序（有效性待核查/无法判断 → 今日价缺失 → 基础信息缺失 → 历史缺口 → 完整），同组按 `symbol` 升序。缺失/未知值为 `null`，不补 0。 | `200`; 非法筛选/排序/分页参数 `400`; 未登录 `401`。**只读，不触发任务、不写集合** |
+| `GET /api/ops-center/assets` | Query: `page,pageSize`（默认 `1/50`，上限 100）、`market`（`ASSET_MARKETS`）、`active`（`true` 默认 / `false` / `all`）、`missingType`（`validity\|today_price\|basic_info\|history_gap`）、`search`（symbol/name 子串，≤100 字符）、`sortBy`（`priority` 默认 / `symbol\|name\|market\|currency`）、`sortOrder`（`asc` 默认 / `desc`）。 | 资产总表数组 + 分页。每项 `{assetId,symbol,name,market,currency,launchDate,todayPrice:{marketDay,status,priceDate},basicInfo:{complete,missingFields},validity:{status},history:{status,checkedAt,expected,actual,missing,ratio}}`。`history.status ∈ unavailable \| checked \| unknown`。默认只取 `active`；默认问题优先排序（有效性待核查/无法判断 → 今日价缺失 → 基础信息缺失 → 历史缺口 → 完整），同组按 `symbol` 升序。缺失/未知值为 `null`，不补 0。 | `200`; 非法筛选/排序/分页参数 `400`; 未登录 `401`。**只读，不触发任务、不写集合** |
+| `POST /api/ops-center/integrity-check` | 空 Body。非空 Body（对象、数组或标量，如 `{repair:true}`）返回 `400`；手动刷新禁止补采。 | `{runId,taskName,runKey,status:'RUNNING',startedAt}`；任务在后台执行，客户端用 `GET /api/ops-center/task-runs/:id` 轮询。 | `202`; 请求体非空 `400`; 已有活跃运行 `409 TASK_ALREADY_RUNNING`（`details.activeRun` 含 `runId/taskName/runKey/status/startedAt/progress`）; 未登录 `401`。**不创建交易、不自动补采** |
+| `GET /api/ops-center/task-runs/:id` | Path: `id`（ObjectId） | TaskRun 投影：`{runId,taskName,runKey,trigger,status,stale,startedAt,endedAt,durationMs,progress,counts:{totalCount,successCount,failureCount},failures,result}`。`progress` 为 `{completed,total,updatedAt}|null`；`stale` 由服务端按任务的心跳阈值判定，仅表示 `RUNNING` 超过阈值未更新，不自动改状态。不返回 `lockKey`。 | `200`; 非法 id `400`; 不存在 `404`; 未登录 `401`。只读 |
 
 > `GET /api/ops-center/assets` 的字段口径（TASK-068）：
 > - `todayPrice.marketDay` 是 `marketDay.service` 计算的市场日，不是自然日。`priced` / `missing` / `not_listed` 时为目标市场日；`market_closed` / `not_due` 时为状态所指的当前市场日（`todayStr`），避免把上一目标日误标为休市/未到点；`unknown` 时若可确定为目标市场日则返回，否则为 `null`。
 > - `todayPrice.status ∈ priced | missing | market_closed | not_due | not_listed | unknown`：`priced` 表示目标市场日已有价格；`missing` 表示已到同步点、市场开市且无价格；`market_closed` 表示当前市场日休市；`not_due` 表示尚未到该市场当日同步点；`not_listed` 表示目标市场日早于资产 `launchDate`；`unknown` 表示市场不受支持、无法确定目标日或价格源不可用。`priceDate` 仅在 `priced` 时返回实际价格入桶日期（`MARKET_TIMEZONE`），否则为 `null`。
 > - `basicInfo` 只检查 `symbol/name/market/currency/launchDate` 五个元数据字段；`missingFields` 取 `symbol|name|market|currency|launchDate`（含格式非法），不包含价格、类型、标签或启用状态。
 > - `validity.status` 按最近 3 个目标市场日判断：任一有价 `normal`；全空 `needs_review`（表示资产资料可能有问题，**不是采集失败**）；无 `launchDate`、上市不足 3 个市场日或市场不受支持为 `unknown`。休市日不计入 3 个市场日。
-> - `history.status = unavailable` 是本票的占位契约（历史完整度由 Ticket 04 填充），客户端显示「尚未检查」；`missingType=history_gap` 只在 `history.status='checked'` 且 `missing > 0` 时命中，`unavailable` 不得被当成缺口。
+> - `history` 的三态契约（TASK-070）：
+>   - `unavailable`：从未有可用的 `price-integrity-check` 运行（`SUCCEEDED`/`PARTIAL`、已结束且 `result.assets` 为数组）。此时 `checkedAt/expected/actual/missing/ratio` 全部为 `null`，客户端显示「尚未检查」。
+>   - `checked`：最近一次可用运行中该资产状态为 `OK` 或 `GAP`，且 `expected >= 3`；`checkedAt` 为该次运行 `endedAt`，`expected` 为理论交易日数，`actual` 为与理论日匹配的实际有价日数，`missing` 为二者之差，`ratio = actual / expected`（0–1）。客户端按百分比展示，不用 0 冒充未知。
+>   - `unknown`：可用运行中没有该资产条目，或条目为 `SKIPPED_NO_LAUNCH_DATE` / `INSUFFICIENT_SAMPLE` / `ERROR`，或关键计数/比例缺失、`expected < 3`，或历史运行查询降级失败。除 `checkedAt` 外其余计数为 `null`；客户端显示「无法判断」。
+>   - `GAP` 只表示「检测到缺失交易日」，**不推断**为停牌、上游采集失败或供应商异常；当前模型没有独立的交易状态/采集失败信号。
+>   - `missingType=history_gap` 只在 `history.status='checked'` 且 `missing > 0` 时命中；`unavailable` / `unknown` 不得被当成缺口。
 > - `missingType` 口径：`validity` 命中待核查/无法判断；`today_price` 只命中 `missing`（休市/未到点/未上市不算缺价）；`basic_info` 命中基础信息不完整；`history_gap` 见上。筛选、搜索、排序和分页全部在服务端完成，客户端不得拉取全量后自行切片。
 > - 价格源查询失败时，受影响资产的 `todayPrice.status` 与 `validity.status` 降级为 `unknown`，不得伪造 `missing` / `needs_review`；市场日历计算失败也降级为 `unknown` 并记录 `OPS_CENTER_*_FAILED` 日志。
 > - 端点只要求登录，不新增 admin 校验；admin 可见的资产编辑链接是 UI 约定，不是安全边界。
+>
+> `GET /api/ops-center/task-runs/:id` 的 `runKey` 对正常记录保持稳定；stale 恢复会把旧 `RUNNING` 记录改为 `FAILED` 并改键为 `interrupted:<id>`，审计关联以 `runId` 为准。该字段不参与前端路由或资源定位。
+
+> `POST /api/ops-center/integrity-check` 创建的 TaskRun 的 `result` 形状（含 `assets[]` / `gapAssets[]`）
+> 由 [CRON_WORKER_DEV.md §5.5](./CRON_WORKER_DEV.md#55-result-字段与跳过观测task-057) 维护；本节的
+> `history` 是从该结果派生的读模型，客户端不得自行重算。
 
 > `GET /api/cron/status` 是**只读聚合**端点。价格覆盖按 `byMarket` 的目标日分别查价，顶层 `targetMarketDate` 取最晚目标日，`expected` 和 `fetched` 为各市场的合计。TASK-078 更新了分组目标日规则。其余字段定义见 TASK-054 ExecPlan §4.3/§4.4。
 

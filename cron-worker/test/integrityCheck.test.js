@@ -3,13 +3,13 @@ const { test } = require('node:test');
 const assert = require('node:assert');
 const integrityCheck = require('../src/tasks/integrityCheck');
 const {
-  runIntegrityCheck,
-  countAsset,
+  countAssetCoverage: countAsset,
   expectedTradingDates,
-  expectedBucketCandidates,
   groupMissingRanges,
   clipRepairRanges
-} = integrityCheck;
+} = require('@portomind/shared/services/priceCoverage.service');
+const { expectedBucketCandidates } = require('@portomind/shared/services/marketDay.service');
+const { runIntegrityReport: runIntegrityCheck } = require('@portomind/shared/tasks/priceIntegrityCheck');
 
 test('expectedTradingDates：US 八月无节假日，工作日全开', () => {
   const dates = expectedTradingDates('US', '2024-08-01', '2024-08-31');
@@ -108,6 +108,7 @@ test('runIntegrityCheck：无 launchDate 跳过，缺口自动 repair', async ()
   let repairCalls = 0;
   let recount = 0;
   const report = await runIntegrityCheck({
+    repair: true,
     to: '2024-08-31', // 显式 to，使缺失日期落在默认修复窗口（最近 30 天）内
     getActiveAssets: async () => [
       { symbol: 'VOO', market: 'US', launchDate: new Date('2024-08-01T00:00:00Z') },
@@ -134,8 +135,8 @@ test('runIntegrityCheck：无 launchDate 跳过，缺口自动 repair', async ()
   const voo = report.assets.find(a => a.symbol === 'VOO');
   assert.equal(voo.status, 'GAP');
   assert.equal(voo.repaired, true);
-  assert.equal(voo.missingCount, 0);
-  assert.equal(voo.completenessRatio, 1);
+  assert.equal(voo.missing, 0);
+  assert.equal(voo.ratio, 1);
   const skipped = report.assets.find(a => a.symbol === 'BND');
   assert.equal(skipped.status, 'SKIPPED_NO_LAUNCH_DATE');
 });
@@ -143,6 +144,7 @@ test('runIntegrityCheck：无 launchDate 跳过，缺口自动 repair', async ()
 test('runIntegrityCheck：超出修复窗口的缺口被延后，不触发补全', async () => {
   let repairCalls = 0;
   const report = await runIntegrityCheck({
+    repair: true,
     to: '2026-08-25',
     repairMaxDays: 30, // 窗口 [2026-07-26, 2026-08-25]
     getActiveAssets: async () => [
@@ -158,7 +160,6 @@ test('runIntegrityCheck：超出修复窗口的缺口被延后，不触发补全
   const voo = report.assets.find(a => a.symbol === 'VOO');
   assert.equal(voo.repaired, false);
   assert.equal(voo.repairDeferred, 1);
-  assert.ok(voo.repairDeferredDays >= 1);
   assert.equal(voo.status, 'GAP');
 });
 
@@ -170,7 +171,7 @@ test('runIntegrityCheck：dryRun 不执行补全并标记预览', async () => {
     getActiveAssets: async () => [
       { symbol: 'VOO', market: 'US', launchDate: new Date('2024-08-01T00:00:00Z') }
     ],
-    expectedTradingDates: () => ['2024-08-01', '2024-08-02'],
+    expectedTradingDates: () => ['2024-08-01', '2024-08-02', '2024-08-05'],
     storedBucketDates: () => ['2024-08-01'],
     historySync: async () => { repairCalls += 1; return []; }
   });
@@ -183,6 +184,7 @@ test('runIntegrityCheck：dryRun 不执行补全并标记预览', async () => {
 test('runIntegrityCheck：超过 maxRepairRanges 时截断并记录', async () => {
   let repairCalls = 0;
   const report = await runIntegrityCheck({
+    repair: true,
     to: '2026-08-25',
     repairMaxDays: 3650,
     maxRepairRanges: 1,
@@ -212,7 +214,7 @@ test('runIntegrityCheck：repair=false 时不调用 historySync', async () => {
     getActiveAssets: async () => [
       { symbol: 'VOO', market: 'US', launchDate: new Date('2024-08-01T00:00:00Z') }
     ],
-    expectedTradingDates: () => ['2024-08-01', '2024-08-02'],
+    expectedTradingDates: () => ['2024-08-01', '2024-08-02', '2024-08-05'],
     storedBucketDates: () => ['2024-08-01'],
     historySync: async () => { repairCalls += 1; return []; }
   });
@@ -228,8 +230,8 @@ test('runIntegrityCheck：全部完整时 successCount 正确', async () => {
       { symbol: 'VOO', market: 'US', launchDate: new Date('2024-08-01T00:00:00Z') },
       { symbol: 'XEQT.TO', market: 'CA', launchDate: new Date('2024-08-01T00:00:00Z') }
     ],
-    expectedTradingDates: () => ['2024-08-01'],
-    storedBucketDates: () => ['2024-08-01'],
+    expectedTradingDates: () => ['2024-08-01', '2024-08-02', '2024-08-05'],
+    storedBucketDates: () => ['2024-08-01', '2024-08-02', '2024-08-05'],
     historySync: async () => []
   });
 
@@ -242,9 +244,9 @@ test('runIntegrityCheck：全部完整时 successCount 正确', async () => {
 
 test('TASK-073：有 launchDate 的旧键资产按派生键查价并报告 GAP', async () => {
   const keys = [];
-  const report = await integrityCheck.runIntegrityCheck({
+  const report = await runIntegrityCheck({
     getActiveAssets: async () => [{ symbol: '001180.cn', market: 'CN-FUND', launchDate: new Date('2026-08-24T12:00:00Z') }],
-    expectedTradingDates: () => ['2026-08-24'],
+    expectedTradingDates: () => ['2026-08-20', '2026-08-21', '2026-08-24'],
     storedBucketDates: (symbol) => { keys.push(symbol); return []; },
     to: '2026-08-24',
     dryRun: true
@@ -252,14 +254,48 @@ test('TASK-073：有 launchDate 的旧键资产按派生键查价并报告 GAP',
 
   assert.deepEqual(keys, ['001180.CN']);
   assert.equal(report.checkedCount, 1);
-  assert.equal(report.totals.missingCount, 1);
+  assert.equal(report.totals.missingCount, 3);
   assert.equal(report.assets[0].status, 'GAP');
+});
+
+test('TASK-070：result.assets 只持久化有界历史摘要，不含补采错误详情', async (t) => {
+  const TaskRun = require('@portomind/shared/models/taskRun');
+  t.mock.method(TaskRun, 'init', async () => TaskRun);
+  t.mock.method(TaskRun, 'create', async () => ({ _id: 'integrity-history-run' }));
+  const update = t.mock.method(TaskRun, 'updateOne', async () => ({ modifiedCount: 1 }));
+
+  const run = await integrityCheck({
+    trigger: 'MANUAL',
+    repair: false,
+    to: '2024-08-31',
+    getActiveAssets: async () => [
+      { _id: 'asset-1', symbol: 'VOO.US', market: 'US', launchDate: new Date('2024-08-01T12:00:00Z') }
+    ],
+    expectedTradingDates: () => ['2024-08-01', '2024-08-02', '2024-08-05'],
+    storedBucketDates: () => ['2024-08-01']
+  });
+
+  assert.equal(run.status, 'PARTIAL');
+  assert.deepEqual(run.result.assets, [{
+    assetId: 'asset-1', symbol: 'VOO.US', market: 'US',
+    launchDate: '2024-08-01T12:00:00.000Z', status: 'GAP',
+    from: '2024-08-01', to: '2024-08-31',
+    expected: 3, actual: 1, missing: 2, ratio: 1 / 3,
+    missingRanges: [{ from: '2024-08-02', to: '2024-08-05' }],
+    missingRangesTruncated: false
+  }]);
+  assert.deepEqual(run.result.gapAssets, [{ symbol: 'VOO.US', missingCount: 2 }]);
+  assert.equal('repairFailures' in run.result.assets[0], false);
+  assert.equal('repaired' in run.result.assets[0], false);
+  const finalUpdate = update.mock.calls.find((call) => call.arguments[1].$set?.result);
+  assert.deepEqual(finalUpdate.arguments[1].$set.result.assets, run.result.assets);
 });
 
 test('TASK-073：全部跳过持久化为 result 数据态，运行态仍为 SUCCEEDED', async (t) => {
   const TaskRun = require('@portomind/shared/models/taskRun');
+  t.mock.method(TaskRun, 'init', async () => TaskRun);
   t.mock.method(TaskRun, 'create', async () => ({ _id: 'integrity-run' }));
-  const update = t.mock.method(TaskRun, 'updateOne', async () => {});
+  const update = t.mock.method(TaskRun, 'updateOne', async () => ({ modifiedCount: 1 }));
   const { taskLogger } = require('@portomind/shared/config/logger');
   const info = t.mock.method(taskLogger, 'info', () => {});
   const run = await integrityCheck({
@@ -273,7 +309,8 @@ test('TASK-073：全部跳过持久化为 result 数据态，运行态仍为 SUC
   assert.equal(run.result.checkedCount, 0);
   assert.equal(run.result.skippedCount, 1);
   assert.equal(run.result.completenessRatio, null);
-  assert.equal(update.mock.calls[0].arguments[1].$set.result.allSkipped, true);
+  const finalUpdate = update.mock.calls.find((call) => call.arguments[1].$set?.result);
+  assert.equal(finalUpdate.arguments[1].$set.result.allSkipped, true);
   const end = info.mock.calls.find(call => call.arguments[0] === 'INTEGRITY_CHECK_END').arguments[1];
   assert.equal(end.allSkipped, true);
   assert.equal(end.completenessRatio, null);

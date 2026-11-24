@@ -24,7 +24,7 @@ PortoMind **唯一的调度进程**（CommonJS、纯 Node、无 Web 框架）。
 1. **业务逻辑不在本目录**。引擎（models / services / tasks 内核 / fetchers）全部位于 `../shared`，通过 `@portomind/shared/...` 引用。本进程只持有「**触发权**」。
 2. **禁止在本目录复制业务实现**。历史上 `src/services/*`、`src/fetchers/*`、`src/models/*`、`src/utils/*` 曾存在（与 server 两份并存），已在 TASK-005 全部迁入 `shared/`。任何「再复制一份」的做法都会重新制造口径漂移债务。
 3. **跨包引用必须用包名**：`require('@portomind/shared/services/...')`。`shared/` 内部仍使用相对路径（搬迁时保留了原目录结构，故包内相对引用零改动）。
-4. **`src/tasks/dailySync.js` 与 `src/tasks/integrityCheck.js` 的角色不同**——前者是 CLI 薄壳（`.env` → 建连 → 调用 `@portomind/shared/tasks/dailySync` → 断开），后者是本进程独有的任务实现（无 API 手动端点）。
+4. **`src/tasks/dailySync.js` 与 `src/tasks/integrityCheck.js` 都是 CLI/调度薄壳**：加载 `cron-worker/.env` → 建连 → 调用 `@portomind/shared/tasks/*` → 断开。完整性检查的业务已抽入 `shared/tasks/priceIntegrityCheck.js`（TASK-070），server 的运维中心手动刷新复用同一实现；本进程只额外注入 `historySync` 修复函数与调度触发。
 5. `server` 进程**没有任何调度路径**。若发现 server 侧出现 cron 注册代码，那是回归，应删除。
 
 ## 环境与手动运行
@@ -46,7 +46,7 @@ node src/tasks/integrityCheck.js [--symbols ...] [--from ...] [--to ...] [--no-r
 ## 任务约定
 
 - 任务函数支持依赖注入（`options.dependencies`，默认回退到真实实现），用于测试。
-- 防重两层：`TaskRun` 的 `(taskName, runKey)` 唯一索引 + 进程内 Map 锁。runKey：SCHEDULED 用市场日期（`marketDate()`），MANUAL 用 `manual:<ISO时间>`。
+- 防重三层：进程内 Map 锁、`TaskRun` 的 `(taskName, runKey)` 唯一索引，以及仅约束 `RUNNING` 的 `lockKey` 部分唯一索引（运维中心任务跨进程互斥，TASK-070）。runKey：SCHEDULED 用市场日期（`marketDate()`），MANUAL 用 `manual:<ISO时间>`。
 - **`taskName` 必须稳定**：`daily-price-sync`、`price-integrity-check`、`alert-evaluate`、`fx-rate-sync`、`rebalance-suggestions:<portfolioId>`。改名会导致 `taskruns` 历史断代。
 - 结果状态：`SUCCEEDED` / `PARTIAL`（有失败）/ `FAILED` / `SKIPPED`（重复或已在跑）。
 - 逐资产故障隔离：单个资产失败只记录 `{item, category, provider, retryable, message}` 进 `failures`，不中断其余同步，最终返回 `{totalCount, successCount, failureCount, failures}`。

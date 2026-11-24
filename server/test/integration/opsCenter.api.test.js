@@ -13,6 +13,7 @@ const app = require('../../app');
 const Asset = require('@portomind/shared/models/asset');
 const { matchesAssetQuery } = require('../helpers/assetQuery');
 const Price = require('@portomind/shared/models/price');
+const TaskRun = require('@portomind/shared/models/taskRun');
 const {
   installAdminSession,
   uninstallSessionStub,
@@ -86,6 +87,10 @@ function stubWorld(t, { assets = [], prices = [] } = {}) {
     select() { return this; },
     lean: async () => prices
   }));
+  t.mock.method(TaskRun, 'findOne', () => ({
+    sort() { return this; },
+    lean: async () => null
+  }));
   return calls;
 }
 
@@ -133,7 +138,9 @@ test('默认 active 第 1 页 pageSize=50，返回今日价格/基础信息/有�
   });
   assert.deepEqual(priced.validity, { status: 'normal' });
   assert.deepEqual(priced.basicInfo, { complete: true, missingFields: [] });
-  assert.deepEqual(priced.history, { status: 'unavailable' });
+  assert.deepEqual(priced.history, {
+    status: 'unavailable', checkedAt: null, expected: null, actual: null, missing: null, ratio: null
+  });
   assert.equal(priced.launchDate, '2010-09-07T00:00:00.000Z');
 
   const missing = bySymbol(result.body.data, 'MISS.US');

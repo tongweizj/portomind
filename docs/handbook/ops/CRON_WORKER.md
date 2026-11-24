@@ -6,7 +6,7 @@
 > |---|---|---|
 > | 运维 | [cron-worker 运维手册](./CRON_WORKER_OPS.md) | 安装 / 启动 / 关闭 / 手动触发 / 监控巡检 / 故障排查 |
 > | 产品 | [cron-worker 产品介绍](../manual/CRON_WORKER_PRODUCT.md) | 每个后台任务是什么、解决什么问题、产出什么（**非 PRD**） |
-> | 开发 | [cron-worker 开发文档](../technical/CRON_WORKER_DEV.md) | 调度引擎 / 再平衡分发算法 / 两层防重 / TaskRun 契约 / 如何新增调度器 |
+> | 开发 | [cron-worker 开发文档](../technical/CRON_WORKER_DEV.md) | 调度引擎 / 再平衡分发算法 / 防重与跨进程互斥 / TaskRun 契约 / 如何新增调度器 |
 >
 > 进程的生产部署（PM2 / Nginx / 上线检查 / 备份 / 安全边界）与**环境变量完整表**见 [系统部署手册](./DEPLOYMENT.md)；
 > 界面操作见 [client 使用手册](../manual/CLIENT.md)；API 手动端点见 [server 使用手册](./SERVER.md)。

@@ -327,6 +327,32 @@ test('U8 完整性：result 缺失 → 数值全 null（不是 0）+ CONTRACT_NO
   assert.ok(entry.notes.some((note) => note.code === 'CONTRACT_NOT_READY'));
 });
 
+test('TASK-070 完整性 skippedNoLaunchDate 不再混入样本不足，gapAssets 兼容 missing 字段', async () => {
+  useWorld({
+    latestRuns: [
+      latest('price-integrity-check', {
+        result: {
+          totals: { expectedCount: 5, actualCount: 3, missingCount: 2 },
+          checkedCount: 1,
+          skippedCount: 2,
+          allSkipped: false,
+          completenessRatio: 3 / 5,
+          assets: [
+            { symbol: 'NOLAUNCH', status: 'SKIPPED_NO_LAUNCH_DATE' },
+            { symbol: 'NEW', status: 'INSUFFICIENT_SAMPLE' },
+            { symbol: 'GAP', status: 'GAP', missing: 2 }
+          ]
+        }
+      })
+    ]
+  });
+
+  const data = await service.getStatus({ now: new Date('2026-10-26T14:00:00.000Z') });
+  const entry = taskEntry(data, 1);
+  assert.equal(entry.dataState.skippedNoLaunchDate, 1);
+  assert.deepEqual(entry.dataState.gapAssets, [{ symbol: 'GAP', missingCount: 2 }]);
+});
+
 test('U9 再平衡：父任务 result 缺失 → due=null（不是 0/4），perPortfolio 仍可读', async () => {
   const pid = '64b000000000000000000001';
   const other = '64b000000000000000000002';
