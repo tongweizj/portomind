@@ -1,6 +1,6 @@
 // server/test/integration/opsCenter.api.test.js
 //
-// TASK-068：GET /api/ops-center/assets 的 HTTP 集成契约。
+// TASK-068 / TASK-069：GET /api/ops-center/assets 的 HTTP 集成契约。
 // 起真实 Express app + fetch + 真实 shared 聚合服务，只替换模型查询；
 // 认证闸门执行真实逻辑，时间用 mock timers 固定，不依赖运行当天。
 
@@ -11,6 +11,7 @@ const assert = require('node:assert/strict');
 
 const app = require('../../app');
 const Asset = require('@portomind/shared/models/asset');
+const { matchesAssetQuery } = require('../helpers/assetQuery');
 const Price = require('@portomind/shared/models/price');
 const {
   installAdminSession,
@@ -65,30 +66,19 @@ function makeAsset(over = {}) {
 }
 
 /**
- * 真实服务的模型替身：active 过滤、服务端 skip/limit 与分页计数都走真实 asset.service。
- * 返回计数供「未进入查询」类断言使用。
+ * 真实服务的模型替身：Asset.find(query).sort().lean() + Price.find。
+ * 记录查询供筛选下推断言。
  */
 function stubWorld(t, { assets = [], prices = [] } = {}) {
-  const calls = { countDocuments: 0, filters: [], skip: null, limit: null };
-  t.mock.method(Asset, 'countDocuments', async (filter) => {
-    calls.countDocuments += 1;
-    calls.filters.push(filter);
-    return assets.filter((asset) => filter.active === undefined || asset.active === filter.active).length;
-  });
-  t.mock.method(Asset, 'find', (filter) => {
-    calls.filters.push(filter);
+  const calls = { queries: [] };
+  t.mock.method(Asset, 'find', (query) => {
+    calls.queries.push(query);
     const rows = assets
-      .filter((asset) => filter.active === undefined || asset.active === filter.active)
+      .filter((asset) => matchesAssetQuery(query, asset))
       .sort((a, b) => String(a.symbol).localeCompare(String(b.symbol)));
     const chain = {
       sort() { return chain; },
-      skip(value) { calls.skip = value; return chain; },
-      limit(value) { calls.limit = value; return chain; },
-      then(resolve, reject) {
-        const start = calls.skip ?? 0;
-        const end = calls.limit == null ? rows.length : start + calls.limit;
-        Promise.resolve(rows.slice(start, end)).then(resolve, reject);
-      }
+      lean: async () => rows
     };
     return chain;
   });
@@ -114,7 +104,7 @@ test('未登录返回 401，不进入聚合查询', async (t) => {
 
   assert.equal(result.status, 401);
   assert.equal(result.body.success, false);
-  assert.equal(calls.countDocuments, 0);
+  assert.equal(calls.queries.length, 0);
 });
 
 test('默认 active 第 1 页 pageSize=50，返回今日价格/基础信息/有效性/history 契约', async (t) => {
@@ -135,9 +125,7 @@ test('默认 active 第 1 页 pageSize=50，返回今日价格/基础信息/有�
   assert.equal(result.body.success, true);
   assert.deepEqual(result.body.pagination, { page: 1, pageSize: 50, total: 3 });
   assert.equal(result.body.data.length, 3);
-  assert.ok(calls.filters.every((filter) => filter.active === true), '只查询 active 资产');
-  assert.equal(calls.skip, 0);
-  assert.equal(calls.limit, 50);
+  assert.deepEqual(calls.queries[0], { active: true }, '默认只查询 active 资产');
 
   const priced = bySymbol(result.body.data, 'VOO.US');
   assert.deepEqual(priced.todayPrice, {
@@ -159,7 +147,7 @@ test('默认 active 第 1 页 pageSize=50，返回今日价格/基础信息/有�
   assert.equal('0' in noLaunch.todayPrice, false);
 });
 
-test('page/pageSize 由服务端分页；筛选/排序参数本票不接收', async (t) => {
+test('筛选、排序与分页参数由服务端处理，翻页返回对应页数据', async (t) => {
   const assets = Array.from({ length: 12 }, (_, index) => makeAsset({
     _id: `p${index}`,
     symbol: `A${String(index).padStart(2, '0')}.US`,
@@ -167,24 +155,60 @@ test('page/pageSize 由服务端分页；筛选/排序参数本票不接收', as
   }));
   const calls = stubWorld(t, { assets });
 
-  const result = await request('/api/ops-center/assets?page=2&pageSize=10&market=US&sortBy=name&search=A1');
+  const result = await request('/api/ops-center/assets?page=2&pageSize=10&market=US&active=all&sortBy=symbol&sortOrder=asc');
 
   assert.equal(result.status, 200);
   assert.deepEqual(result.body.pagination, { page: 2, pageSize: 10, total: 12 });
   assert.deepEqual(result.body.data.map((item) => item.symbol), ['A10.US', 'A11.US']);
-  assert.equal(calls.skip, 10);
-  assert.equal(calls.limit, 10);
-  assert.ok(calls.filters.every((filter) => filter.active === true), '未把筛选参数下推给模型');
+  assert.deepEqual(calls.queries[0], { market: 'US' }, 'active=all 不限制启用状态');
 });
 
-test('非法分页参数返回 400，不进入聚合查询', async (t) => {
+test('filter/search 参数进入服务端查询；四类 missingType 各有覆盖', async (t) => {
+  const assets = [
+    makeAsset({ _id: 'f1', symbol: 'AAA.US', name: 'Alpha' }),
+    makeAsset({ _id: 'f2', symbol: 'OFF.US', name: 'Off', active: false }),
+    makeAsset({ _id: 'f3', symbol: 'VOO.US', name: 'Vanguard' }),
+    makeAsset({ _id: 'f4', symbol: 'BAD.US', name: 'Bad Validity' }),
+    makeAsset({ _id: 'f5', symbol: 'MISS.US', name: 'Missing Price' }),
+    makeAsset({ _id: 'f6', symbol: 'BASIC.US', name: '' })
+  ];
+  const prices = [
+    priceAt('AAA.US', '2026-11-20'),
+    priceAt('VOO.US', '2026-11-20'),
+    priceAt('MISS.US', '2026-11-19'),
+    priceAt('BASIC.US', '2026-11-20')
+  ];
+  const calls = stubWorld(t, { assets, prices });
+
+  const validity = await request('/api/ops-center/assets?active=false&search=off&missingType=validity');
+  assert.equal(validity.status, 200);
+  assert.deepEqual(validity.body.data.map((item) => item.symbol), ['OFF.US']);
+  assert.equal(calls.queries[0].active, false);
+  assert.equal(calls.queries[0].$or.length, 2);
+
+  const today = await request('/api/ops-center/assets?search=MISS&missingType=today_price');
+  assert.deepEqual(today.body.data.map((item) => item.symbol), ['MISS.US']);
+
+  const basic = await request('/api/ops-center/assets?search=BASIC&missingType=basic_info');
+  assert.deepEqual(basic.body.data.map((item) => item.symbol), ['BASIC.US']);
+
+  const history = await request('/api/ops-center/assets?missingType=history_gap');
+  assert.deepEqual(history.body.data, [], 'unavailable 不得被当成历史缺口');
+});
+
+test('非法筛选/排序/分页参数返回 400，不进入聚合查询', async (t) => {
   const calls = stubWorld(t, { assets: [makeAsset()] });
-  for (const query of ['page=0', 'page=abc', 'pageSize=0', 'pageSize=abc', 'pageSize=101']) {
+  const invalidQueries = [
+    'page=0', 'page=abc', 'pageSize=0', 'pageSize=abc', 'pageSize=101',
+    'market=XX', 'active=maybe', 'missingType=foo', 'sortBy=foo', 'sortOrder=sideways',
+    `search=${'x'.repeat(101)}`
+  ];
+  for (const query of invalidQueries) {
     const result = await request(`/api/ops-center/assets?${query}`);
     assert.equal(result.status, 400, query);
     assert.equal(result.body.success, false, query);
   }
-  assert.equal(calls.countDocuments, 0);
+  assert.equal(calls.queries.length, 0);
 });
 
 test('空态返回 200 + 空数组 + total=0', async (t) => {

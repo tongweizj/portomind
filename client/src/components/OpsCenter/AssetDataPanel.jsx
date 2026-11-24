@@ -1,14 +1,17 @@
 // client/src/components/OpsCenter/AssetDataPanel.jsx
 //
 // TASK-068：运维中心「资产数据」tab 的第一版总表。
-// - 数据全部来自 GET /api/ops-center/assets（服务端聚合 + 分页）；
-// - 本票只渲染默认页，不提供筛选/排序/翻页控件（Ticket 03）；
-// - admin 可见资产编辑链接，member 只读；服务端仍只要求登录（UI 约定，不是安全边界）；
+// TASK-069：服务端筛选、搜索、问题优先排序与分页；客户端只发送 query params，
+// 不在浏览器里拉全量或自行排序/切片。
+// - admin 可见资产编辑链接，member 只读；服务端仍只要求登录（UI 约定，不是安全边界）。
 // - 缺失/未知值显示「—」或「无法判断」，绝不补 0、不伪造完整数据。
 
+import { useState } from 'react';
 import { Link } from 'react-router';
 import { useAuth } from '../auth/authContext';
 import { EmptyState, ErrorState, LoadingState } from '../DataState';
+import { ASSET_MARKETS } from '../../constants/enums';
+import { OPS_CENTER_DEFAULT_FILTERS, OPS_CENTER_DEFAULT_PAGE_SIZE } from '../../constants/opsCenter';
 import { colors } from '../../constants/design-tokens';
 import { useOpsCenterAssets } from '../../hooks/useOpsCenterAssets';
 import { getApiErrorMessage } from '../../services/api.client';
@@ -35,6 +38,28 @@ const FIELD_LABELS = Object.freeze({
   currency: '币种',
   launchDate: '上市/成立日期'
 });
+
+const ACTIVE_OPTIONS = Object.freeze([
+  { value: 'true', label: '启用' },
+  { value: 'all', label: '全部' },
+  { value: 'false', label: '停用' }
+]);
+
+const MISSING_TYPE_OPTIONS = Object.freeze([
+  { value: '', label: '全部缺失类型' },
+  { value: 'validity', label: '有效性待核查/无法判断' },
+  { value: 'today_price', label: '今日价缺失' },
+  { value: 'basic_info', label: '基础信息缺失' },
+  { value: 'history_gap', label: '历史缺口' }
+]);
+
+const SORT_OPTIONS = Object.freeze([
+  { value: 'priority', label: '问题优先' },
+  { value: 'symbol', label: '代码' },
+  { value: 'name', label: '名称' },
+  { value: 'market', label: '市场' },
+  { value: 'currency', label: '币种' }
+]);
 
 const UNKNOWN_TEXT = '—';
 
@@ -99,7 +124,34 @@ function historyCell(history) {
 
 export default function AssetDataPanel() {
   const { isAdmin } = useAuth();
-  const { assets, pagination, isLoading, isError, error, refetch } = useOpsCenterAssets();
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(OPS_CENTER_DEFAULT_PAGE_SIZE);
+  const [filters, setFilters] = useState({ ...OPS_CENTER_DEFAULT_FILTERS });
+  const [searchDraft, setSearchDraft] = useState('');
+
+  const queryFilters = {
+    market: filters.market || undefined,
+    active: filters.active,
+    missingType: filters.missingType || undefined,
+    search: filters.search || undefined,
+    sortBy: filters.sortBy,
+    sortOrder: filters.sortOrder
+  };
+  const { assets, pagination, isLoading, isFetching, isError, error, refetch } = useOpsCenterAssets({
+    page,
+    pageSize,
+    ...queryFilters
+  });
+
+  const updateFilter = (patch) => {
+    setFilters((current) => ({ ...current, ...patch }));
+    setPage(1);
+  };
+
+  const submitSearch = (event) => {
+    event.preventDefault();
+    updateFilter({ search: searchDraft.trim() });
+  };
 
   if (isLoading) {
     return (
@@ -122,66 +174,192 @@ export default function AssetDataPanel() {
     );
   }
 
-  if (assets.length === 0) {
-    return (
-      <div data-testid="ops-assets-empty">
-        <EmptyState>暂无 active 资产</EmptyState>
-      </div>
-    );
-  }
+  const total = pagination?.total ?? 0;
+  const totalPages = Math.max(1, Math.ceil(total / pageSize));
+  const hasFilters = Boolean(filters.market || filters.missingType || filters.search || filters.active !== 'true');
 
   return (
     <div className="space-y-3">
-      <p className="text-sm" style={{ color: colors.textSecondary }}>
-        共 {pagination?.total ?? assets.length} 只 active 资产
-      </p>
-      <div className="overflow-x-auto">
-        <table
-          data-testid="ops-asset-table"
-          className="min-w-full border bg-white shadow-sm rounded text-sm"
-        >
-          <thead style={{ backgroundColor: '#FBFBFD', color: colors.textMuted }}>
-            <tr>
-              <th className="px-4 py-2 text-left">资产</th>
-              <th className="px-4 py-2 text-left">今日价格</th>
-              <th className="px-4 py-2 text-left">历史完整度</th>
-              <th className="px-4 py-2 text-left">基础信息</th>
-              <th className="px-4 py-2 text-left">有效性</th>
-              <th className="px-4 py-2 text-left">操作</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y" style={{ color: colors.textPrimary }}>
-            {assets.map((asset) => (
-              <tr key={asset.assetId} data-testid="ops-asset-row" className="hover:bg-gray-50">
-                <td className="px-4 py-2">
-                  <div className="font-semibold" data-testid="ops-asset-symbol">{asset.symbol || UNKNOWN_TEXT}</div>
-                  <div style={{ color: colors.textSecondary }}>{asset.name || UNKNOWN_TEXT}</div>
-                  <div style={{ color: colors.textMuted, fontSize: 11 }}>
-                    {asset.market || UNKNOWN_TEXT} · {asset.currency || UNKNOWN_TEXT}
-                  </div>
-                </td>
-                <td className="px-4 py-2 whitespace-nowrap">{todayPriceCell(asset.todayPrice)}</td>
-                <td className="px-4 py-2 whitespace-nowrap">{historyCell(asset.history)}</td>
-                <td className="px-4 py-2">{basicInfoCell(asset.basicInfo)}</td>
-                <td className="px-4 py-2 whitespace-nowrap">{validityCell(asset.validity)}</td>
-                <td className="px-4 py-2 whitespace-nowrap">
-                  {isAdmin ? (
-                    <Link
-                      data-testid="ops-asset-edit"
-                      to={`/instruments/edit/${asset.assetId}`}
-                      style={{ color: colors.brand }}
-                      className="hover:underline"
-                    >
-                      编辑
-                    </Link>
-                  ) : (
-                    <span style={{ color: colors.textMuted }}>—</span>
-                  )}
-                </td>
-              </tr>
+      <form
+        className="flex flex-wrap items-end gap-3 rounded border bg-white p-3"
+        onSubmit={submitSearch}
+      >
+        <label className="text-sm" style={{ color: colors.textSecondary }}>
+          市场
+          <select
+            data-testid="ops-filter-market"
+            value={filters.market}
+            onChange={(event) => updateFilter({ market: event.target.value })}
+            className="ml-2 border rounded px-2 py-1"
+          >
+            <option value="">全部市场</option>
+            {ASSET_MARKETS.map((market) => (
+              <option key={market.value} value={market.value}>{market.label}</option>
             ))}
-          </tbody>
-        </table>
+          </select>
+        </label>
+
+        <label className="text-sm" style={{ color: colors.textSecondary }}>
+          启用状态
+          <select
+            data-testid="ops-filter-active"
+            value={filters.active}
+            onChange={(event) => updateFilter({ active: event.target.value })}
+            className="ml-2 border rounded px-2 py-1"
+          >
+            {ACTIVE_OPTIONS.map((option) => (
+              <option key={option.value} value={option.value}>{option.label}</option>
+            ))}
+          </select>
+        </label>
+
+        <label className="text-sm" style={{ color: colors.textSecondary }}>
+          缺失类型
+          <select
+            data-testid="ops-filter-missing-type"
+            value={filters.missingType}
+            onChange={(event) => updateFilter({ missingType: event.target.value })}
+            className="ml-2 border rounded px-2 py-1"
+          >
+            {MISSING_TYPE_OPTIONS.map((option) => (
+              <option key={option.value || 'all'} value={option.value}>{option.label}</option>
+            ))}
+          </select>
+        </label>
+
+        <label className="text-sm" style={{ color: colors.textSecondary }}>
+          搜索
+          <input
+            data-testid="ops-search-input"
+            value={searchDraft}
+            onChange={(event) => setSearchDraft(event.target.value)}
+            placeholder="代码或名称"
+            maxLength={100}
+            className="ml-2 border rounded px-2 py-1"
+          />
+        </label>
+        <button type="submit" data-testid="ops-search-submit" className="px-3 py-1 bg-gray-200 rounded">
+          搜索
+        </button>
+
+        <label className="text-sm" style={{ color: colors.textSecondary }}>
+          排序
+          <select
+            data-testid="ops-sort-by"
+            value={filters.sortBy}
+            onChange={(event) => updateFilter({ sortBy: event.target.value })}
+            className="ml-2 border rounded px-2 py-1"
+          >
+            {SORT_OPTIONS.map((option) => (
+              <option key={option.value} value={option.value}>{option.label}</option>
+            ))}
+          </select>
+        </label>
+        <select
+          data-testid="ops-sort-order"
+          aria-label="排序方向"
+          value={filters.sortOrder}
+          onChange={(event) => updateFilter({ sortOrder: event.target.value })}
+          className="border rounded px-2 py-1"
+        >
+          <option value="asc">升序</option>
+          <option value="desc">降序</option>
+        </select>
+      </form>
+
+      <div className="flex flex-wrap items-center justify-between gap-2 text-sm" style={{ color: colors.textSecondary }}>
+        <span>
+          共 {total} 只资产{isFetching ? ' · 更新中…' : ''}
+        </span>
+        <label>
+          每页
+          <select
+            data-testid="ops-page-size"
+            value={pageSize}
+            onChange={(event) => { setPageSize(Number(event.target.value)); setPage(1); }}
+            className="mx-2 border rounded px-2 py-1"
+          >
+            {[10, 20, 50].map((size) => <option key={size} value={size}>{size}</option>)}
+          </select>
+          条
+        </label>
+      </div>
+
+      {assets.length === 0 ? (
+        <div data-testid="ops-assets-empty">
+          <EmptyState>{hasFilters ? '没有匹配的资产' : '暂无 active 资产'}</EmptyState>
+        </div>
+      ) : (
+        <div className="overflow-x-auto">
+          <table
+            data-testid="ops-asset-table"
+            className="min-w-full border bg-white shadow-sm rounded text-sm"
+          >
+            <thead style={{ backgroundColor: '#FBFBFD', color: colors.textMuted }}>
+              <tr>
+                <th className="px-4 py-2 text-left">资产</th>
+                <th className="px-4 py-2 text-left">今日价格</th>
+                <th className="px-4 py-2 text-left">历史完整度</th>
+                <th className="px-4 py-2 text-left">基础信息</th>
+                <th className="px-4 py-2 text-left">有效性</th>
+                <th className="px-4 py-2 text-left">操作</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y" style={{ color: colors.textPrimary }}>
+              {assets.map((asset) => (
+                <tr key={asset.assetId} data-testid="ops-asset-row" className="hover:bg-gray-50">
+                  <td className="px-4 py-2">
+                    <div className="font-semibold" data-testid="ops-asset-symbol">{asset.symbol || UNKNOWN_TEXT}</div>
+                    <div style={{ color: colors.textSecondary }}>{asset.name || UNKNOWN_TEXT}</div>
+                    <div style={{ color: colors.textMuted, fontSize: 11 }}>
+                      {asset.market || UNKNOWN_TEXT} · {asset.currency || UNKNOWN_TEXT}
+                    </div>
+                  </td>
+                  <td className="px-4 py-2 whitespace-nowrap">{todayPriceCell(asset.todayPrice)}</td>
+                  <td className="px-4 py-2 whitespace-nowrap">{historyCell(asset.history)}</td>
+                  <td className="px-4 py-2">{basicInfoCell(asset.basicInfo)}</td>
+                  <td className="px-4 py-2 whitespace-nowrap">{validityCell(asset.validity)}</td>
+                  <td className="px-4 py-2 whitespace-nowrap">
+                    {isAdmin ? (
+                      <Link
+                        data-testid="ops-asset-edit"
+                        to={`/instruments/edit/${asset.assetId}`}
+                        style={{ color: colors.brand }}
+                        className="hover:underline"
+                      >
+                        编辑
+                      </Link>
+                    ) : (
+                      <span style={{ color: colors.textMuted }}>—</span>
+                    )}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+
+      <div className="flex flex-wrap items-center justify-end gap-3 text-sm" style={{ color: colors.textSecondary }}>
+        <button
+          type="button"
+          data-testid="ops-pagination-prev"
+          disabled={page <= 1}
+          onClick={() => setPage((value) => Math.max(1, value - 1))}
+          className="px-3 py-1 bg-gray-200 rounded disabled:opacity-50"
+        >
+          上一页
+        </button>
+        <span data-testid="ops-pagination-info">第 {page} / {totalPages} 页</span>
+        <button
+          type="button"
+          data-testid="ops-pagination-next"
+          disabled={page >= totalPages}
+          onClick={() => setPage((value) => Math.min(totalPages, value + 1))}
+          className="px-3 py-1 bg-gray-200 rounded disabled:opacity-50"
+        >
+          下一页
+        </button>
       </div>
     </div>
   );

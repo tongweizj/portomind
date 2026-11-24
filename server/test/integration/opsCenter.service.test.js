@@ -1,7 +1,7 @@
 // server/test/integration/opsCenter.service.test.js
 //
-// TASK-068：运维中心资产总表聚合服务。
-// 只验证外部可观察结果：每行资产的今日价格状态、基础信息缺失字段、
+// TASK-068 / TASK-069：运维中心资产总表聚合服务。
+// 只验证外部可观察结果：状态契约、服务端筛选/搜索/排序/分页、
 // 有效性（最近 3 个目标市场日）与 history 占位契约。
 // 时间固定注入，不依赖运行当天的真实日期。
 
@@ -11,8 +11,13 @@ const test = require('node:test');
 const assert = require('node:assert/strict');
 
 const Asset = require('@portomind/shared/models/asset');
+const { matchesAssetQuery } = require('../helpers/assetQuery');
 const Price = require('@portomind/shared/models/price');
-const { getAssetsOverview } = require('@portomind/shared/services/opsCenter.service');
+const {
+  getAssetsOverview,
+  matchesMissingType,
+  priorityGroup
+} = require('@portomind/shared/services/opsCenter.service');
 
 // 2026-11-23 是周一；13:00 America/Toronto，US 当日 03:00 同步已过、CN 当日 12:00 同步已过。
 const NOW_SYNCED = new Date('2026-11-23T18:00:00.000Z');
@@ -28,32 +33,17 @@ const priceAt = (symbol, bucketDate) => ({
   timestamp: new Date(`${bucketDate}T05:00:00.000Z`)
 });
 
-function matchesActive(filter, asset) {
-  return filter.active === undefined || asset.active === filter.active;
-}
-
-/**
- * Asset.countDocuments / Asset.find 的最小链式替身，供 asset.service.getAllAssets 使用。
- * 记录查询过滤条件与 skip/limit，用来断言「默认 active + 分页」。
- */
+/** Asset.find(query).sort().lean() 的最小替身；记录查询供断言。 */
 function stubAssets(t, assets) {
-  const calls = { filters: [], skip: null, limit: null };
-  t.mock.method(Asset, 'countDocuments', async (filter) => {
-    calls.filters.push(filter);
-    return assets.filter((asset) => matchesActive(filter, asset)).length;
-  });
-  t.mock.method(Asset, 'find', (filter) => {
-    calls.filters.push(filter);
-    const rows = assets.filter((asset) => matchesActive(filter, asset));
+  const calls = { queries: [] };
+  t.mock.method(Asset, 'find', (query) => {
+    calls.queries.push(query);
+    const rows = assets
+      .filter((item) => matchesAssetQuery(query, item))
+      .sort((a, b) => String(a.symbol).localeCompare(String(b.symbol)));
     const chain = {
       sort() { return chain; },
-      skip(value) { calls.skip = value; return chain; },
-      limit(value) { calls.limit = value; return chain; },
-      then(resolve, reject) {
-        const start = calls.skip ?? 0;
-        const end = calls.limit == null ? rows.length : start + calls.limit;
-        Promise.resolve(rows.slice(start, end)).then(resolve, reject);
-      }
+      lean: async () => rows
     };
     return chain;
   });
@@ -83,7 +73,7 @@ function asset(over = {}) {
 
 const byId = (items, id) => items.find((item) => item.assetId === id);
 
-test('默认 active、pageSize=50，并按今日价格/基础信息/有效性返回可观察状态', async (t) => {
+test('默认 active、问题优先排序，并按今日价格/基础信息/有效性返回可观察状态', async (t) => {
   const assets = [
     asset({ _id: 'a1', symbol: 'VOO.US' }),
     asset({ _id: 'a2', symbol: 'MISS.US', name: 'Missing Price' }),
@@ -103,9 +93,7 @@ test('默认 active、pageSize=50，并按今日价格/基础信息/有效性返
 
   assert.equal(result.total, 5, '停用资产不计入总数');
   assert.equal(result.data.length, 5);
-  assert.deepEqual(calls.filters[0], { active: true });
-  assert.equal(calls.limit, 50);
-  assert.equal(calls.skip, 0);
+  assert.deepEqual(calls.queries[0], { active: true });
 
   const voo = byId(result.data, 'a1');
   assert.deepEqual(voo.todayPrice, {
@@ -143,6 +131,117 @@ test('默认 active、pageSize=50，并按今日价格/基础信息/有效性返
   assert.equal('price' in cn.todayPrice, false, '总表不返回原始价格序列/数值');
 });
 
+test('问题优先排序：有效性 → 今日价缺失 → 基础信息 → 完整，同组按 symbol', async (t) => {
+  const assets = [
+    asset({ _id: 'p1', symbol: 'DONE.US' }),
+    asset({ _id: 'p2', symbol: 'MISS.US', name: 'Missing Price' }),
+    asset({ _id: 'p3', symbol: 'BAD.US', name: 'Bad Validity' }),
+    asset({ _id: 'p4', symbol: 'BASIC.US', name: '' })
+  ];
+  stubAssets(t, assets);
+  stubPrices(t, [
+    priceAt('DONE.US', '2026-11-20'),
+    priceAt('MISS.US', '2026-11-19'),
+    priceAt('BASIC.US', '2026-11-20')
+  ]);
+
+  const result = await getAssetsOverview({ now: NOW_SYNCED });
+
+  assert.deepEqual(result.data.map((item) => item.symbol), ['BAD.US', 'MISS.US', 'BASIC.US', 'DONE.US']);
+});
+
+test('服务端筛选：market、active、symbol/name 搜索', async (t) => {
+  const assets = [
+    asset({ _id: 'f1', symbol: 'AAA.US', name: 'Alpha' }),
+    asset({ _id: 'f2', symbol: '510300.CN', name: '沪深300ETF', market: 'CN-SH', currency: 'CNY' }),
+    asset({ _id: 'f3', symbol: 'OFF.US', name: 'Inactive', active: false }),
+    asset({ _id: 'f4', symbol: 'VOO.US', name: 'Vanguard S&P 500 ETF' })
+  ];
+  const calls = stubAssets(t, assets);
+  stubPrices(t, []);
+
+  const byMarket = await getAssetsOverview({ market: 'CN-SH', now: NOW_SYNCED });
+  assert.deepEqual(byMarket.data.map((item) => item.assetId), ['f2']);
+
+  const inactive = await getAssetsOverview({ active: false, now: NOW_SYNCED });
+  assert.deepEqual(inactive.data.map((item) => item.assetId), ['f3']);
+
+  const all = await getAssetsOverview({ active: null, now: NOW_SYNCED });
+  assert.equal(all.total, 4);
+
+  const searchName = await getAssetsOverview({ search: 'vanguard', now: NOW_SYNCED });
+  assert.deepEqual(searchName.data.map((item) => item.assetId), ['f4']);
+
+  const searchSymbol = await getAssetsOverview({ search: 'AAA', now: NOW_SYNCED });
+  assert.deepEqual(searchSymbol.data.map((item) => item.assetId), ['f1']);
+
+  assert.deepEqual(calls.queries[0], { market: 'CN-SH', active: true });
+  assert.deepEqual(calls.queries[1], { active: false });
+  assert.deepEqual(calls.queries[2], {});
+  assert.equal(calls.queries[3].$or.length, 2);
+});
+
+test('缺失类型筛选：validity / today_price / basic_info；history unavailable 不算缺口', async (t) => {
+  const assets = [
+    asset({ _id: 'm1', symbol: 'BAD.US', name: 'Bad Validity' }),
+    asset({ _id: 'm2', symbol: 'MISS.US', name: 'Missing Price' }),
+    asset({ _id: 'm3', symbol: 'BASIC.US', name: '' }),
+    asset({ _id: 'm4', symbol: 'DONE.US' })
+  ];
+  stubAssets(t, assets);
+  stubPrices(t, [
+    priceAt('MISS.US', '2026-11-19'),
+    priceAt('BASIC.US', '2026-11-20'),
+    priceAt('DONE.US', '2026-11-20')
+  ]);
+
+  const validity = await getAssetsOverview({ missingType: 'validity', now: NOW_SYNCED });
+  assert.deepEqual(validity.data.map((item) => item.symbol), ['BAD.US']);
+
+  const today = await getAssetsOverview({ missingType: 'today_price', now: NOW_SYNCED });
+  assert.deepEqual(today.data.map((item) => item.symbol), ['BAD.US', 'MISS.US']);
+
+  const basic = await getAssetsOverview({ missingType: 'basic_info', now: NOW_SYNCED });
+  assert.deepEqual(basic.data.map((item) => item.symbol), ['BASIC.US']);
+
+  const history = await getAssetsOverview({ missingType: 'history_gap', now: NOW_SYNCED });
+  assert.deepEqual(history.data, [], 'unavailable 不得被当成历史缺口');
+
+  assert.equal(matchesMissingType({ history: { status: 'checked', missing: 2 } }, 'history_gap'), true);
+  assert.equal(matchesMissingType({ history: { status: 'checked', missing: 0 } }, 'history_gap'), false);
+  assert.equal(matchesMissingType({ history: { status: 'unavailable' } }, 'history_gap'), false);
+});
+
+test('分页在筛选/排序后的全量结果上切片，不从数据库先分页', async (t) => {
+  const assets = [
+    asset({ _id: 'p1', symbol: 'AAA.US' }),
+    asset({ _id: 'p2', symbol: 'BBB.US' }),
+    asset({ _id: 'p3', symbol: 'CCC.US' }),
+    asset({ _id: 'p4', symbol: 'DDD.US' }),
+    asset({ _id: 'p5', symbol: 'EEE.US' })
+  ];
+  stubAssets(t, assets);
+  stubPrices(t, []);
+
+  const result = await getAssetsOverview({ page: 2, pageSize: 2, now: NOW_SYNCED });
+
+  // 全部无价 → 同一优先级组，组内按 symbol 升序。
+  assert.equal(result.total, 5);
+  assert.deepEqual(result.data.map((item) => item.assetId), ['p3', 'p4']);
+});
+
+test('用户排序：symbol desc 且同值时稳定', async (t) => {
+  const assets = [
+    asset({ _id: 's1', symbol: 'AAA.US' }),
+    asset({ _id: 's2', symbol: 'BBB.US' })
+  ];
+  stubAssets(t, assets);
+  stubPrices(t, []);
+
+  const result = await getAssetsOverview({ sortBy: 'symbol', sortOrder: 'desc', now: NOW_SYNCED });
+  assert.deepEqual(result.data.map((item) => item.assetId), ['s2', 's1']);
+});
+
 test('休市与未到点不误报为缺价', async (t) => {
   stubAssets(t, [asset({ _id: 'a1' })]);
   stubPrices(t, []);
@@ -174,25 +273,6 @@ test('基础信息只检查 5 个元数据字段，并把非法值折算到对�
   assert.equal(b2.todayPrice.status, 'unknown', '不支持的市场不得猜测目标市场日');
   assert.equal(b2.todayPrice.marketDay, null);
   assert.equal(b2.validity.status, 'unknown');
-});
-
-test('分页参数原样落到服务端查询，不从全量结果切片', async (t) => {
-  const assets = [
-    asset({ _id: 'p1', symbol: 'AAA.US' }),
-    asset({ _id: 'p2', symbol: 'BBB.US' }),
-    asset({ _id: 'p3', symbol: 'CCC.US' }),
-    asset({ _id: 'p4', symbol: 'DDD.US' }),
-    asset({ _id: 'p5', symbol: 'EEE.US' })
-  ];
-  const calls = stubAssets(t, assets);
-  stubPrices(t, []);
-
-  const result = await getAssetsOverview({ page: 2, pageSize: 2, now: NOW_SYNCED });
-
-  assert.equal(result.total, 5);
-  assert.deepEqual(result.data.map((item) => item.assetId), ['p3', 'p4']);
-  assert.equal(calls.skip, 2);
-  assert.equal(calls.limit, 2);
 });
 
 test('最近 3 个市场日包含任一有价日即视为正常，全空才待核查', async (t) => {
@@ -236,4 +316,16 @@ test('价格源查询失败时降级为 unknown，不伪造缺价/待核查', as
   assert.equal(result.data[0].todayPrice.priceDate, null);
   assert.equal(result.data[0].validity.status, 'unknown');
   assert.deepEqual(result.data[0].history, { status: 'unavailable' });
+});
+
+
+test('历史缺口只在 checked 且 missing>0 时进入优先级分组', () => {
+  const base = {
+    validity: { status: 'normal' },
+    todayPrice: { status: 'priced' },
+    basicInfo: { complete: true }
+  };
+  assert.equal(priorityGroup({ ...base, history: { status: 'checked', missing: 2 } }), 3);
+  assert.equal(priorityGroup({ ...base, history: { status: 'checked', missing: 0 } }), 4);
+  assert.equal(priorityGroup({ ...base, history: { status: 'unavailable' } }), 4);
 });
