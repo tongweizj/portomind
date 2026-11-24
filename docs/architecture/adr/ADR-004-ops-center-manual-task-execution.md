@@ -194,6 +194,7 @@ progress: { completed: Number, total: Number, updatedAt: Date }
 |---|---|---|
 | 部分唯一索引与旧数据冲突 | 中 | 索引只约束 `RUNNING + lockKey`；旧记录无 `lockKey`。隔离库验证后再申请生产变更 |
 | 进程崩溃留下 `RUNNING` 锁 | 中 | 读侧 `stale` + 下一次触发条件恢复；不自动重试，避免重复执行 |
+| 慢但存活的任务被误判 stale | 中 | 阈值可调；任务每处理一个资产写心跳；恢复只在下一次明确触发时发生，旧运行记 `FAILED`/`interrupted:<id>` 保留审计 |
 | 手动刷新触发补采 | 高 | 端点拒绝非空 Body，服务端固定 `repair:false`；定时任务才读 `INTEGRITY_AUTO_REPAIR` |
 | `result.assets` 过大 | 中 | 每资产只存计数与最多 20 段区间；不存原始价格与补采错误详情 |
 | 把 GAP 误读为采集失败 | 高 | API/文档明确 GAP 只表示检测到缺口；不生成新交易状态或质量信号 |
