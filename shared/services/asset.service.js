@@ -2,14 +2,11 @@ const Asset = require('../models/asset');
 const { normalizeSymbol, toStorageSymbol } = require('../utils/symbol');
 const { ASSET_SORT_FIELDS, ASSET_CLASSES } = require('../constants/asset.constants');
 const { launchDateFromDay } = require('../utils/launchDate');
+const { escapeRegExp } = require('../utils/escapeRegExp');
 
 const WRITABLE_FIELDS = [
   'symbol', 'name', 'market', 'currency', 'type', 'assetClass', 'tags', 'active', 'watchlist', 'launchDate'
 ];
-
-function escapeRegExp(value) {
-  return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-}
 
 function badRequest(message) {
   const error = new Error(message);

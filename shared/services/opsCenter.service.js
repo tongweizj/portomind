@@ -14,6 +14,7 @@ const Asset = require('../models/asset');
 const { ASSET_MARKETS } = require('../constants/asset.constants');
 const { logger } = require('../config/logger');
 const { marketDate, MARKET_TIMEZONE } = require('../utils/marketTime');
+const { escapeRegExp } = require('../utils/escapeRegExp');
 const { pickTargetInfo, isMarketOpenOn, marketTimezone } = require('./marketDay.service');
 const {
   MARKET_DAY_COUNT,
@@ -144,23 +145,23 @@ function hasHistoryGap(row) {
     && history.missing > 0;
 }
 
+// 问题类型与优先级的唯一谓词表；新增类型只改这一处。
+const PROBLEM_PREDICATES = Object.freeze([
+  ['validity', hasValidityIssue],
+  ['today_price', (row) => row?.todayPrice?.status === TODAY_PRICE_STATUS.MISSING],
+  ['basic_info', (row) => row?.basicInfo?.complete === false],
+  ['history_gap', hasHistoryGap]
+]);
+
 function matchesMissingType(row, missingType) {
-  switch (missingType) {
-    case 'validity': return hasValidityIssue(row);
-    case 'today_price': return row?.todayPrice?.status === TODAY_PRICE_STATUS.MISSING;
-    case 'basic_info': return row?.basicInfo?.complete === false;
-    case 'history_gap': return hasHistoryGap(row);
-    default: return false;
-  }
+  const entry = PROBLEM_PREDICATES.find(([type]) => type === missingType);
+  return entry ? entry[1](row) : false;
 }
 
 // 问题优先级：有效性待核查/无法判断 → 今日价缺失 → 基础信息缺失 → 历史缺口 → 完整。
 function priorityGroup(row) {
-  if (hasValidityIssue(row)) return 0;
-  if (row?.todayPrice?.status === TODAY_PRICE_STATUS.MISSING) return 1;
-  if (row?.basicInfo?.complete === false) return 2;
-  if (hasHistoryGap(row)) return 3;
-  return 4;
+  const index = PROBLEM_PREDICATES.findIndex(([, predicate]) => predicate(row));
+  return index === -1 ? PROBLEM_PREDICATES.length : index;
 }
 
 function compareRows(a, b, sortBy, sortOrder) {
@@ -176,10 +177,6 @@ function compareRows(a, b, sortBy, sortOrder) {
   if (comparison !== 0) return comparison * direction;
   // 同组/同值固定按 symbol 升序，保证分页顺序稳定（Ticket 03 明确要求）。
   return String(a?.symbol ?? '').localeCompare(String(b?.symbol ?? ''));
-}
-
-function escapeRegExp(value) {
-  return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
 
 function buildAssetQuery({ active, market, search }) {
@@ -284,7 +281,6 @@ module.exports = {
   TODAY_PRICE_STATUS,
   VALIDITY_STATUS,
   HISTORY_STATUS,
-  hasHistoryGap,
   matchesMissingType,
   priorityGroup,
   getAssetsOverview

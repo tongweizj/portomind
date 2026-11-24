@@ -11,6 +11,7 @@ import { Link } from 'react-router';
 import { useAuth } from '../auth/authContext';
 import { EmptyState, ErrorState, LoadingState } from '../DataState';
 import { ASSET_MARKETS } from '../../constants/enums';
+import { OPS_CENTER_DEFAULT_FILTERS, OPS_CENTER_DEFAULT_PAGE_SIZE } from '../../constants/opsCenter';
 import { colors } from '../../constants/design-tokens';
 import { useOpsCenterAssets } from '../../hooks/useOpsCenterAssets';
 import { getApiErrorMessage } from '../../services/api.client';
@@ -61,15 +62,6 @@ const SORT_OPTIONS = Object.freeze([
 ]);
 
 const UNKNOWN_TEXT = '—';
-
-const DEFAULT_FILTERS = Object.freeze({
-  market: '',
-  active: 'true',
-  missingType: '',
-  search: '',
-  sortBy: 'priority',
-  sortOrder: 'asc'
-});
 
 function todayPriceCell(todayPrice) {
   const status = todayPrice?.status;
@@ -133,8 +125,8 @@ function historyCell(history) {
 export default function AssetDataPanel() {
   const { isAdmin } = useAuth();
   const [page, setPage] = useState(1);
-  const [pageSize, setPageSize] = useState(50);
-  const [filters, setFilters] = useState({ ...DEFAULT_FILTERS });
+  const [pageSize, setPageSize] = useState(OPS_CENTER_DEFAULT_PAGE_SIZE);
+  const [filters, setFilters] = useState({ ...OPS_CENTER_DEFAULT_FILTERS });
   const [searchDraft, setSearchDraft] = useState('');
 
   const queryFilters = {

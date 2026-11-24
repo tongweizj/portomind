@@ -274,34 +274,44 @@ async function runScenarios() {
   await waitFor(() => requests.length >= 2 && requests.at(-1).search === 'VOO');
   check('TASK-069 搜索进入服务端参数', requests.at(-1).search === 'VOO' && requests.at(-1).page === 1);
 
-  setSelect('ops-filter-missing-type', 'validity');
-  await waitFor(() => requests.length >= 3 && requests.at(-1).missingType === 'validity');
-  check('TASK-069 缺失类型筛选进入服务端参数', requests.at(-1).missingType === 'validity');
+  const missingTypeValues = ['validity', 'today_price', 'basic_info', 'history_gap'];
+  for (let index = 0; index < missingTypeValues.length; index += 1) {
+    const value = missingTypeValues[index];
+    setSelect('ops-filter-missing-type', value);
+    await waitFor(() => requests.length >= 3 + index && requests.at(-1).missingType === value);
+    check(`TASK-069 缺失类型 ${value} 进入服务端参数`, requests.at(-1).missingType === value);
+  }
 
   setSelect('ops-sort-by', 'symbol');
-  await waitFor(() => requests.length >= 4 && requests.at(-1).sortBy === 'symbol');
+  await waitFor(() => requests.length >= 7 && requests.at(-1).sortBy === 'symbol');
   setSelect('ops-sort-order', 'desc');
-  await waitFor(() => requests.length >= 5 && requests.at(-1).sortOrder === 'desc');
+  await waitFor(() => requests.length >= 8 && requests.at(-1).sortOrder === 'desc');
   check('TASK-069 排序字段与方向进入服务端参数',
     requests.at(-1).sortBy === 'symbol' && requests.at(-1).sortOrder === 'desc');
 
   setSelect('ops-filter-active', 'all');
-  await waitFor(() => requests.length >= 6 && requests.at(-1).active === 'all');
-  check('TASK-069 启用状态筛选进入服务端参数', requests.at(-1).active === 'all');
+  await waitFor(() => requests.length >= 9 && requests.at(-1).active === 'all');
+  check('TASK-069 启用状态=全部进入服务端参数', requests.at(-1).active === 'all');
+
+  setSelect('ops-filter-active', 'false');
+  await waitFor(() => requests.length >= 10 && requests.at(-1).active === 'false');
+  check('TASK-069 启用状态=停用进入服务端参数', requests.at(-1).active === 'false');
 
   setSelect('ops-page-size', '10');
-  await waitFor(() => requests.length >= 7 && requests.at(-1).pageSize === 10);
+  await waitFor(() => requests.length >= 11 && requests.at(-1).pageSize === 10);
   await waitFor(() => text('[data-testid="ops-pagination-info"]').includes('第 1 / 12 页'));
   q('[data-testid="ops-pagination-next"]').click();
-  await waitFor(() => requests.length >= 8 && requests.at(-1).page === 2);
+  await waitFor(() => requests.length >= 12 && requests.at(-1).page === 2);
   check('TASK-069 翻页只改 page 参数并渲染服务端分页元数据',
     requests.at(-1).page === 2 && text('[data-testid="ops-pagination-info"]').includes('第 2 / 12 页'));
 
   setInput('ops-search-input', 'NONE');
   q('form').requestSubmit();
+  await waitFor(() => requests.length >= 13 && requests.at(-1).search === 'NONE');
   await waitFor(() => Boolean(q('[data-testid="ops-assets-empty"]')));
-  check('TASK-069 筛选无结果时显示可辨识空态',
-    text('[data-testid="ops-assets-empty"]').includes('没有匹配的资产'));
+  check('TASK-069 筛选无结果时显示可辨识空态，并回到第 1 页',
+    requests.at(-1).page === 1
+      && text('[data-testid="ops-assets-empty"]').includes('没有匹配的资产'));
   await view.unmount();
 }
 

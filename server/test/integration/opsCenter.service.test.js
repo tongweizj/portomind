@@ -11,10 +11,12 @@ const test = require('node:test');
 const assert = require('node:assert/strict');
 
 const Asset = require('@portomind/shared/models/asset');
+const { matchesAssetQuery } = require('../helpers/assetQuery');
 const Price = require('@portomind/shared/models/price');
 const {
   getAssetsOverview,
-  matchesMissingType
+  matchesMissingType,
+  priorityGroup
 } = require('@portomind/shared/services/opsCenter.service');
 
 // 2026-11-23 是周一；13:00 America/Toronto，US 当日 03:00 同步已过、CN 当日 12:00 同步已过。
@@ -31,25 +33,13 @@ const priceAt = (symbol, bucketDate) => ({
   timestamp: new Date(`${bucketDate}T05:00:00.000Z`)
 });
 
-function matchesQuery(query, asset) {
-  if (query.active !== undefined && asset.active !== query.active) return false;
-  if (query.market && asset.market !== query.market) return false;
-  if (query.$or) {
-    return query.$or.some((condition) => {
-      const field = Object.keys(condition)[0];
-      return condition[field].test(String(asset[field] ?? ''));
-    });
-  }
-  return true;
-}
-
 /** Asset.find(query).sort().lean() 的最小替身；记录查询供断言。 */
 function stubAssets(t, assets) {
   const calls = { queries: [] };
   t.mock.method(Asset, 'find', (query) => {
     calls.queries.push(query);
     const rows = assets
-      .filter((item) => matchesQuery(query, item))
+      .filter((item) => matchesAssetQuery(query, item))
       .sort((a, b) => String(a.symbol).localeCompare(String(b.symbol)));
     const chain = {
       sort() { return chain; },
@@ -326,4 +316,16 @@ test('价格源查询失败时降级为 unknown，不伪造缺价/待核查', as
   assert.equal(result.data[0].todayPrice.priceDate, null);
   assert.equal(result.data[0].validity.status, 'unknown');
   assert.deepEqual(result.data[0].history, { status: 'unavailable' });
+});
+
+
+test('历史缺口只在 checked 且 missing>0 时进入优先级分组', () => {
+  const base = {
+    validity: { status: 'normal' },
+    todayPrice: { status: 'priced' },
+    basicInfo: { complete: true }
+  };
+  assert.equal(priorityGroup({ ...base, history: { status: 'checked', missing: 2 } }), 3);
+  assert.equal(priorityGroup({ ...base, history: { status: 'checked', missing: 0 } }), 4);
+  assert.equal(priorityGroup({ ...base, history: { status: 'unavailable' } }), 4);
 });

@@ -4,16 +4,21 @@
 // 客户端不拉全量；queryKey 带完整参数，缓存按筛选条件隔离。
 import { useQuery } from '@tanstack/react-query';
 import { getAssetsOverview } from '../services/ops-center.service';
+import {
+  OPS_CENTER_DEFAULT_PAGE_SIZE,
+  OPS_CENTER_DEFAULT_SORT_BY,
+  OPS_CENTER_DEFAULT_SORT_ORDER
+} from '../constants/opsCenter';
 
 export function useOpsCenterAssets({
   page = 1,
-  pageSize = 50,
+  pageSize = OPS_CENTER_DEFAULT_PAGE_SIZE,
   market,
   active,
   missingType,
   search,
-  sortBy = 'priority',
-  sortOrder = 'asc'
+  sortBy = OPS_CENTER_DEFAULT_SORT_BY,
+  sortOrder = OPS_CENTER_DEFAULT_SORT_ORDER
 } = {}) {
   const params = { page, pageSize, market, active, missingType, search, sortBy, sortOrder };
   const query = useQuery({

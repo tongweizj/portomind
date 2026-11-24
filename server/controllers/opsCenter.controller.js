@@ -17,7 +17,7 @@ const {
 const ACTIVE_FILTERS = ['true', 'false', 'all'];
 const SORT_ORDERS = ['asc', 'desc'];
 
-function validateListQuery(req, res) {
+function validateListQuery(req) {
   const paginationError = validatePaginationQuery(req.query, 100);
   if (paginationError) return paginationError;
 
@@ -50,7 +50,7 @@ function parseActive(value) {
 }
 
 exports.getAssets = async (req, res, next) => {
-  const queryError = validateListQuery(req, res);
+  const queryError = validateListQuery(req);
   if (queryError) return failure(req, res, 400, queryError);
   try {
     const { page, pageSize } = parsePagination(req.query, { pageSize: opsCenterService.DEFAULT_PAGE_SIZE });

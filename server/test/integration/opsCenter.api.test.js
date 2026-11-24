@@ -11,6 +11,7 @@ const assert = require('node:assert/strict');
 
 const app = require('../../app');
 const Asset = require('@portomind/shared/models/asset');
+const { matchesAssetQuery } = require('../helpers/assetQuery');
 const Price = require('@portomind/shared/models/price');
 const {
   installAdminSession,
@@ -64,18 +65,6 @@ function makeAsset(over = {}) {
   };
 }
 
-function matchesQuery(query, asset) {
-  if (query.active !== undefined && asset.active !== query.active) return false;
-  if (query.market && asset.market !== query.market) return false;
-  if (query.$or) {
-    return query.$or.some((condition) => {
-      const field = Object.keys(condition)[0];
-      return condition[field].test(String(asset[field] ?? ''));
-    });
-  }
-  return true;
-}
-
 /**
  * 真实服务的模型替身：Asset.find(query).sort().lean() + Price.find。
  * 记录查询供筛选下推断言。
@@ -85,7 +74,7 @@ function stubWorld(t, { assets = [], prices = [] } = {}) {
   t.mock.method(Asset, 'find', (query) => {
     calls.queries.push(query);
     const rows = assets
-      .filter((asset) => matchesQuery(query, asset))
+      .filter((asset) => matchesAssetQuery(query, asset))
       .sort((a, b) => String(a.symbol).localeCompare(String(b.symbol)));
     const chain = {
       sort() { return chain; },
@@ -158,7 +147,7 @@ test('默认 active 第 1 页 pageSize=50，返回今日价格/基础信息/有�
   assert.equal('0' in noLaunch.todayPrice, false);
 });
 
-test('筛选、排序与分页由服务端完成；参数下推到模型查询', async (t) => {
+test('筛选、排序与分页参数由服务端处理，翻页返回对应页数据', async (t) => {
   const assets = Array.from({ length: 12 }, (_, index) => makeAsset({
     _id: `p${index}`,
     symbol: `A${String(index).padStart(2, '0')}.US`,
@@ -174,21 +163,37 @@ test('筛选、排序与分页由服务端完成；参数下推到模型查询',
   assert.deepEqual(calls.queries[0], { market: 'US' }, 'active=all 不限制启用状态');
 });
 
-test('filter/search 参数进入服务端查询；missingType=history_gap 不把 unavailable 当缺口', async (t) => {
+test('filter/search 参数进入服务端查询；四类 missingType 各有覆盖', async (t) => {
   const assets = [
     makeAsset({ _id: 'f1', symbol: 'AAA.US', name: 'Alpha' }),
     makeAsset({ _id: 'f2', symbol: 'OFF.US', name: 'Off', active: false }),
-    makeAsset({ _id: 'f3', symbol: 'VOO.US', name: 'Vanguard' })
+    makeAsset({ _id: 'f3', symbol: 'VOO.US', name: 'Vanguard' }),
+    makeAsset({ _id: 'f4', symbol: 'BAD.US', name: 'Bad Validity' }),
+    makeAsset({ _id: 'f5', symbol: 'MISS.US', name: 'Missing Price' }),
+    makeAsset({ _id: 'f6', symbol: 'BASIC.US', name: '' })
   ];
-  const calls = stubWorld(t, { assets });
+  const prices = [
+    priceAt('AAA.US', '2026-11-20'),
+    priceAt('VOO.US', '2026-11-20'),
+    priceAt('MISS.US', '2026-11-19'),
+    priceAt('BASIC.US', '2026-11-20')
+  ];
+  const calls = stubWorld(t, { assets, prices });
 
-  const result = await request('/api/ops-center/assets?active=false&search=off&missingType=validity&sortBy=priority&sortOrder=desc');
-
-  assert.equal(result.status, 200);
-  assert.equal(result.body.pagination.total, 1);
-  assert.equal(result.body.data[0].symbol, 'OFF.US');
+  const validity = await request('/api/ops-center/assets?active=false&search=off&missingType=validity');
+  assert.equal(validity.status, 200);
+  assert.deepEqual(validity.body.data.map((item) => item.symbol), ['OFF.US']);
   assert.equal(calls.queries[0].active, false);
   assert.equal(calls.queries[0].$or.length, 2);
+
+  const today = await request('/api/ops-center/assets?search=MISS&missingType=today_price');
+  assert.deepEqual(today.body.data.map((item) => item.symbol), ['MISS.US']);
+
+  const basic = await request('/api/ops-center/assets?search=BASIC&missingType=basic_info');
+  assert.deepEqual(basic.body.data.map((item) => item.symbol), ['BASIC.US']);
+
+  const history = await request('/api/ops-center/assets?missingType=history_gap');
+  assert.deepEqual(history.body.data, [], 'unavailable 不得被当成历史缺口');
 });
 
 test('非法筛选/排序/分页参数返回 400，不进入聚合查询', async (t) => {
