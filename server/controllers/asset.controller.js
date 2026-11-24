@@ -1,7 +1,7 @@
 const mongoose = require('mongoose');
 const assetService = require('@portomind/shared/services/asset.service');
 const { ASSET_SORT_FIELDS, ASSET_CLASSES } = require('@portomind/shared/constants/asset.constants');
-const { success, failure, pagination, parsePagination } = require('../utils/apiResponse');
+const { success, failure, pagination, parsePagination, validatePaginationQuery } = require('../utils/apiResponse');
 
 function validateId(req, res) {
   if (mongoose.Types.ObjectId.isValid(req.params.id)) return true;
@@ -10,14 +10,9 @@ function validateId(req, res) {
 }
 
 function validateListQuery(req, res) {
-  for (const field of ['page', 'pageSize']) {
-    if (req.query[field] !== undefined && !/^[1-9]\d*$/.test(req.query[field])) {
-      failure(req, res, 400, `${field} must be a positive integer`);
-      return false;
-    }
-  }
-  if (Number(req.query.pageSize) > 100) {
-    failure(req, res, 400, 'pageSize cannot exceed 100');
+  const paginationError = validatePaginationQuery(req.query, 100);
+  if (paginationError) {
+    failure(req, res, 400, paginationError);
     return false;
   }
   if (req.query.sortBy && !ASSET_SORT_FIELDS.includes(req.query.sortBy)) {

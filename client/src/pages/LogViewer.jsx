@@ -4,10 +4,10 @@
 // TASK-067：频道可见身份改为「运维中心」（页面标题 + tablist aria-label），URL 与 tab key 不变。
 //
 // 本文件只做 **tab 编排**（计划 §4 / R-4：不再往里塞看板内容）：
-//   - AC1：三个 tab，看板第一、服务器第二、任务第三
-//   - AC2：tab 落 URL（`?tab=board|server|task`），刷新保持、前进后退正确、无效值回落 board
+//   - TASK-068：四个 tab，看板第一、资产数据第二、服务器第三、任务第四
+//   - AC2：tab 落 URL（`?tab=board|assets|server|task`），刷新保持、前进后退正确、无效值回落 board
 //   - AC5：两个原始视图由 <RawLogView> 承载，行为与改造前一致
-//   - AC7：看板与原始日志互不影响（看板不请求接口；原始日志各自独立请求）
+//   - AC7：看板/资产数据与原始日志互不影响（各自独立请求）
 //   - NG6：本页与 /logs 子树**不出现任何写操作**（无 mutation、无 api.post/put/patch/delete）
 //
 // URL 承载实现说明（计划 §4「优先复用既有路由 search 参数方法」）：
@@ -18,8 +18,16 @@
 import { useCallback, useState } from 'react';
 import { useSearchParams } from 'react-router';
 import CronBoard from '../components/CronStatus/CronBoard';
+import AssetDataPanel from '../components/OpsCenter/AssetDataPanel';
 import RawLogView from '../components/RawLog/RawLogView';
-import { DEFAULT_LOG_TAB, LOG_TAB_PARAM, LOG_TABS, normalizeLogTab } from '../constants/logTabs';
+import {
+  DEFAULT_LOG_TAB,
+  LOG_TAB_ASSETS,
+  LOG_TAB_PARAM,
+  LOG_TABS,
+  RAW_LOG_TAB_KEYS,
+  normalizeLogTab
+} from '../constants/logTabs';
 
 const LogsPage = () => {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -49,7 +57,7 @@ const LogsPage = () => {
     <div className="p-4">
       <h1 className="text-2xl font-bold mb-4">运维中心</h1>
 
-      {/* 三个 tab：顺序由 LOG_TABS 决定（看板第一），不在此处手写先后 */}
+      {/* 四个 tab：顺序由 LOG_TABS 决定（看板第一），不在此处手写先后 */}
       <div role="tablist" aria-label="运维中心" className="flex items-center mb-4 space-x-2">
         {LOG_TABS.map((tab) => {
           const selected = tab.key === activeTab;
@@ -81,6 +89,13 @@ const LogsPage = () => {
         </section>
       )}
 
+      {/* 资产数据：仅在 assets tab 挂载，只读聚合（TASK-068）。 */}
+      {activeTab === LOG_TAB_ASSETS && (
+        <section role="tabpanel" aria-label="资产数据">
+          <AssetDataPanel />
+        </section>
+      )}
+
       {/*
         原始日志：仅在对应 tab 挂载（AC7「自动请求只由对应 tab 激活」）。
         `key={activeTab}` 让 server ↔ task 切换时组件重挂 → 页码回到第 1 页，
@@ -90,8 +105,8 @@ const LogsPage = () => {
         改造前两个视图共用一个组件，切换视图时 levelFilter / dateFilter 是不重置的。
         若把它们留在子组件内、靠 key 重挂，就会被静默清空 —— 那是行为回归。
       */}
-      {activeTab !== DEFAULT_LOG_TAB && (
-        <section role="tabpanel" aria-label={activeTab === 'server' ? '服务器日志' : '任务日志'}>
+      {RAW_LOG_TAB_KEYS.includes(activeTab) && (
+        <section role="tabpanel" aria-label={LOG_TABS.find((tab) => tab.key === activeTab)?.label}>
           <RawLogView
             key={activeTab}
             logType={activeTab}
