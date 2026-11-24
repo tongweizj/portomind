@@ -137,8 +137,9 @@ async function syncActiveAssetPrices(dependencies = {}, context = {}) {
 }
 
 function assertMarketGroup(marketGroup) {
-  if (marketGroup !== undefined && !Object.hasOwn(PRICE_SYNC_GROUPS, marketGroup)) {
-    throw new RangeError(`Unknown price sync market group: ${marketGroup}`);
+  if (marketGroup === undefined) return;
+  if (typeof marketGroup !== 'string' || !Object.hasOwn(PRICE_SYNC_GROUPS, marketGroup)) {
+    throw new RangeError(`Unknown price sync market group: ${String(marketGroup)}`);
   }
 }
 

@@ -149,7 +149,10 @@ test('价格同步将 CN / US_CA 市场组传入共享任务', async (t) => {
 });
 
 test('价格同步非法市场组/额外字段返回 400', async () => {
-  for (const body of [{ marketGroup: 'HK' }, { marketGroup: null }, { marketGroup: 'CN', repair: true }]) {
+  for (const body of [
+    { marketGroup: 'HK' }, { marketGroup: null }, { marketGroup: ['CN'] },
+    { marketGroup: 'CN', repair: true }
+  ]) {
     const response = await request('/api/ops-center/price-sync', {
       method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body)
     });
