@@ -176,7 +176,7 @@ TASK-070 起，带 `lockKey` 的任务在 `RUNNING` 期间维护 `progress: {com
 | `alert-evaluate` | `{ evaluated, created, archived, failed }` |
 | `fx-rate-sync` | `{ fxCount, currencies:{ USD:{ok:true,rateToCny}, CAD:{…}, HKD:{…} } }`；`ok:true` 仅表示该币种本次真实写入完成，失败运行记 `FAILED` 且不补造成功标志 |
 | `asset-history-backfill` | `{assetId,symbol,market,from,to,expectedCount,missingBeforeCount,missingAfterCount,fetchedCount,requestedRanges[],requestedRangesTruncated,missingRanges[],missingRangesTruncated,failureRanges[]}`；同步等待端点返回同一摘要的关键字段。 |
-| `asset-history-backfill-batch` | `{assetCount,successCount,failureCount,skippedCount,missingBeforeCount,missingAfterCount,fetchedCount,assets:[{assetId,symbol,market,status:'succeeded'\|'partial'\|'failed'\|'skipped',runId,from,to,missingBeforeCount,missingAfterCount,fetchedCount,reason?,message?}]}`；父任务只聚合，子任务为单资产结果。 |
+| `asset-history-backfill-batch` | `{assetCount,successCount,failureCount,skippedCount,missingBeforeCount,missingAfterCount,fetchedCount,assets:[{assetId,symbol,market,status:'succeeded'\|'partial'\|'failed'\|'skipped',runId,from,to,missingBeforeCount,missingAfterCount,fetchedCount,reason?,message?}]}`；父任务只聚合，子任务为单资产结果。`failureCount = assetCount - successCount`（含 skipped），因此存在跳过资产时父任务终态为 `PARTIAL`。 |
 | `rebalance-check` | `{ totalPortfolios, dueCount, skippedCount, perPortfolio:[{portfolioId,due,needsRebalance,suggestionsCount,recordId,status,failureReason?,skipReason?}] }` |
 
 价格完整性检查在资产总数大于零且全部跳过时记录 `allSkipped: true`、`checkedCount: 0` 和 `completenessRatio: null`。这些字段表示本次未检查，同样用于结束日志。TaskRun 运行状态沿用现有判定。TASK-070 起 `skippedCount` 是未检查总数（无 `launchDate` + 样本不足）；看板的 `skippedNoLaunchDate` 从 `result.assets[].status` 派生，不再用 `skippedCount` 代替。
