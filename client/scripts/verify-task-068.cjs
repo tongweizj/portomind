@@ -14,7 +14,11 @@ const { spawn, execFileSync } = require('child_process');
 
 const CLIENT_DIR = path.resolve(__dirname, '..');
 const ROOT_DIR = path.resolve(CLIENT_DIR, '..');
-const CHROME = process.env.CHROME_PATH || 'C:/Program Files/Google/Chrome/Application/chrome.exe';
+// 本机默认路径；WSL 下 Node 无法直接 spawn Windows 盘符路径，回退到 /mnt/c 挂载点。
+const CHROME = process.env.CHROME_PATH || [
+  'C:/Program Files/Google/Chrome/Application/chrome.exe',
+  '/mnt/c/Program Files/Google/Chrome/Application/chrome.exe'
+].find((candidate) => fs.existsSync(candidate)) || 'C:/Program Files/Google/Chrome/Application/chrome.exe';
 const FIXTURE_PATH = '/scripts/fixtures/task068-fixture.html';
 
 const results = [];
