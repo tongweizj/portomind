@@ -1,6 +1,7 @@
 // client/src/pages/LogViewer.jsx
 //
 // TASK-053（C-01）：/logs 从「单页原始日志」改为「置顶看板 tab 的轻量子应用」。
+// TASK-067：频道可见身份改为「运维中心」（页面标题 + tablist aria-label），URL 与 tab key 不变。
 //
 // 本文件只做 **tab 编排**（计划 §4 / R-4：不再往里塞看板内容）：
 //   - AC1：三个 tab，看板第一、服务器第二、任务第三
@@ -46,10 +47,10 @@ const LogsPage = () => {
 
   return (
     <div className="p-4">
-      <h1 className="text-2xl font-bold mb-4">日志查看</h1>
+      <h1 className="text-2xl font-bold mb-4">运维中心</h1>
 
       {/* 三个 tab：顺序由 LOG_TABS 决定（看板第一），不在此处手写先后 */}
-      <div role="tablist" aria-label="日志视图" className="flex items-center mb-4 space-x-2">
+      <div role="tablist" aria-label="运维中心" className="flex items-center mb-4 space-x-2">
         {LOG_TABS.map((tab) => {
           const selected = tab.key === activeTab;
           return (

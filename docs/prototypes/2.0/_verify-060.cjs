@@ -6,6 +6,7 @@
    运行：node _verify-060.cjs     只读两个原型，不改它们。
 
    ⚠️ 2026-10-27 文件合并后本脚本**已不适用**（保留原样，供追溯）
+   2026-11-24：随 #67（运维中心改名）同步更新唯一会因旧文案失败的期望串；脚本仍不适用。
    - 账号模块已并入 portomind-prototype.html；portomind-auth-prototype.html 退为跳转壳。
    - 因此 AUTH 常量（第 11 行）指向的已不是可实现原型页面，A/B/C 三段的 FAIL 属
      「审查对象消失」而非缺陷。
@@ -75,7 +76,7 @@ const txt = (p, sel) => p.evaluate(s => (document.querySelector(s) || {}).textCo
     bottom: (document.querySelector('.s-bottom') || {}).textContent || '',
   }));
   ok('A-01 侧栏顶级导航项 = 5', side.nav.length === 5, side.nav.join('|'));
-  ok('A-01 导航文本集合正确', side.nav.join(',') === 'Dashboard,组合管理,今日行情,提醒规则,日志', side.nav.join(','));
+  ok('A-01 导航文本集合正确', side.nav.join(',') === 'Dashboard,组合管理,今日行情,提醒规则,运维中心', side.nav.join(','));
   ok('A-07 无 .s-user / .s-exit', side.sUser === 0 && side.sExit === 0, `${side.sUser}/${side.sExit}`);
   ok('A-07 侧栏底部不含「账户/退出」', !/账户|退出/.test(side.bottom), side.bottom.trim());
 

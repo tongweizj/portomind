@@ -242,8 +242,8 @@ const CHROME = 'C:/Program Files/Google/Chrome/Application/chrome.exe';
   }));
   // 2026-10-27：「提醒规则」移出侧栏（改由顶栏下拉进入），侧栏 5 → 4 项；「今日行情」改名「自选行情」
   check('A-01/M-01 侧栏顶级导航项数 = 4（提醒规则已移入下拉）', side.n === 4, `n=${side.n}`);
-  check('A-01 侧栏导航文案 = {Dashboard,组合管理,自选行情,日志}',
-    JSON.stringify(side.texts) === JSON.stringify(['Dashboard', '组合管理', '自选行情', '日志']),
+  check('A-01 侧栏导航文案 = {Dashboard,组合管理,自选行情,运维中心}',
+    JSON.stringify(side.texts) === JSON.stringify(['Dashboard', '组合管理', '自选行情', '运维中心']),
     JSON.stringify(side.texts));
   check('A-01 侧栏不含「提醒规则」（入口已移至下拉）',
     !side.texts.includes('提醒规则') && !/提醒规则/.test(side.bottomText), JSON.stringify(side.texts));

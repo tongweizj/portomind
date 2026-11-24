@@ -3,8 +3,8 @@
   "entries": [
     {"zh": "再平衡分发详情（OQ8 独立子路由，非看板卡内展开）", "en": "Rebalance dispatch details (OQ8 standalone sub-route, not expanded inside the board card)"},
     {"zh": "深链初值：?date= / ?portfolio=（OQ8）", "en": "Deep-link initial values: ?date= / ?portfolio= (OQ8)"},
-    {"zh": "日志 · 再平衡详情", "en": "Logs · Rebalance details"},
-    {"zh": "日志", "en": "Logs"},
+    {"zh": "运维中心 · 再平衡详情", "en": "Operations Center · Rebalance details"},
+    {"zh": "运维中心", "en": "Operations Center"},
     {"zh": "账户与访问控制（TASK-060 M-01~M-04 / FS-authentication）", "en": "Accounts and access control (TASK-060 M-01~M-04 / FS-authentication)"},
     {"zh": "单租户多账号 · admin/member · 无自助注册 · 只停用不删除", "en": "Single tenant, multiple accounts · admin/member · no self-service signup · disable only, never delete"},
     {"zh": "账户与登出的唯一入口 = 顶栏头像下拉；侧栏不提供任何账户入口", "en": "The only entry for accounts and sign-out = the top-bar avatar dropdown; the sidebar offers no account entry"},

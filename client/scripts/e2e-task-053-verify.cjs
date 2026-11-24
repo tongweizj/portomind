@@ -42,6 +42,13 @@ async function main() {
   // ══ AC1：默认落看板 + 顺序 ══
   await page.goto(`${BASE}/logs`, { waitUntil: 'networkidle' });
   await sleep(900);
+  // TASK-067：/logs 的可见身份改为「运维中心」（URL 与 tab key 不变）。
+  const pageHeading = await page.locator('h1').first().innerText();
+  check('AC1 页面标题为运维中心', pageHeading.trim() === '运维中心', pageHeading);
+  const tablistLabel = await page.getByRole('tablist').getAttribute('aria-label');
+  check('AC1 tablist aria-label 为运维中心', tablistLabel === '运维中心', tablistLabel || '');
+  const navTexts = await page.locator('aside nav a').allInnerTexts();
+  check('AC1 侧栏入口为运维中心', navTexts.some((text) => text.includes('运维中心')), navTexts.join('|'));
   const tabLabels = await page.getByRole('tab').allInnerTexts();
   check('AC1 恰好 3 个 tab', tabLabels.length === 3, JSON.stringify(tabLabels));
   check('AC1 顺序 = 看板/服务器/任务',
