@@ -15,17 +15,7 @@ const minimist = require('minimist');
 
 const { taskLogger } = require('@portomind/shared/config/logger');
 const { dateBounds } = require('@portomind/shared/utils/marketTime');
-const { expectedBucketCandidates } = require('@portomind/shared/services/marketDay.service');
-const {
-  countAssetCoverage,
-  expectedTradingDates,
-  groupMissingRanges,
-  clipRepairRanges
-} = require('@portomind/shared/services/priceCoverage.service');
-const {
-  runIntegrityReport,
-  priceIntegrityCheck
-} = require('@portomind/shared/tasks/priceIntegrityCheck');
+const { priceIntegrityCheck } = require('@portomind/shared/tasks/priceIntegrityCheck');
 const historySync = require('./historySync.cjs');
 
 async function repairAsset(symbol, ranges, repairFn = historySync) {
@@ -92,9 +82,3 @@ if (require.main === module) {
 }
 
 module.exports = integrityCheck;
-module.exports.runIntegrityCheck = runIntegrityReport;
-module.exports.countAsset = countAssetCoverage;
-module.exports.expectedTradingDates = expectedTradingDates;
-module.exports.expectedBucketCandidates = expectedBucketCandidates;
-module.exports.groupMissingRanges = groupMissingRanges;
-module.exports.clipRepairRanges = clipRepairRanges;

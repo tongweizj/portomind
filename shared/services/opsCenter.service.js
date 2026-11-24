@@ -200,26 +200,32 @@ function buildAssetQuery({ active, market, search }) {
 }
 
 
+function historyState(status, checkedAt, values = {}) {
+  return {
+    status,
+    checkedAt,
+    expected: values.expected ?? null,
+    actual: values.actual ?? null,
+    missing: values.missing ?? null,
+    ratio: values.ratio ?? null
+  };
+}
+
 function historyOf(asset, historyContext) {
-  if (!historyContext) {
-    return { status: HISTORY_STATUS.UNAVAILABLE, checkedAt: null, expected: null, actual: null, missing: null, ratio: null };
-  }
+  if (!historyContext) return historyState(HISTORY_STATUS.UNAVAILABLE, null);
   const checkedAt = historyContext.checkedAt ?? null;
   const entry = historyContext.entries?.get(String(asset._id)) || null;
-  if (!entry) {
-    return { status: HISTORY_STATUS.UNKNOWN, checkedAt, expected: null, actual: null, missing: null, ratio: null };
-  }
-  if (entry.status !== 'OK' && entry.status !== 'GAP') {
-    return { status: HISTORY_STATUS.UNKNOWN, checkedAt, expected: null, actual: null, missing: null, ratio: null };
+  if (!entry || (entry.status !== 'OK' && entry.status !== 'GAP')) {
+    return historyState(HISTORY_STATUS.UNKNOWN, checkedAt);
   }
   const expected = Number.isInteger(entry.expected) ? entry.expected : null;
   const actual = Number.isInteger(entry.actual) ? entry.actual : null;
   const missing = Number.isInteger(entry.missing) ? entry.missing : null;
   const ratio = typeof entry.ratio === 'number' && Number.isFinite(entry.ratio) ? entry.ratio : null;
   if (expected === null || expected < HISTORY_MIN_MARKET_DAYS || actual === null || missing === null || ratio === null) {
-    return { status: HISTORY_STATUS.UNKNOWN, checkedAt, expected: null, actual: null, missing: null, ratio: null };
+    return historyState(HISTORY_STATUS.UNKNOWN, checkedAt);
   }
-  return { status: HISTORY_STATUS.CHECKED, checkedAt, expected, actual, missing, ratio };
+  return historyState(HISTORY_STATUS.CHECKED, checkedAt, { expected, actual, missing, ratio });
 }
 
 async function buildRows(assets, now, historyContext = null) {

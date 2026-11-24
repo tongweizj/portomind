@@ -89,18 +89,20 @@ async function runIntegrityReport(options = {}) {
   const loadBySymbols = dependencies.getAssetsBySymbols || options.getAssetsBySymbols || getAssetsBySymbols;
   const countFn = dependencies.countAssetCoverage || options.countAsset || countAssetCoverage;
   const countOptions = { ...options, ...dependencies };
-  const repairFn = options.repairAsset || (typeof options.historySync === 'function'
-    ? (symbol, ranges) => Promise.all(ranges.map((range) => options.historySync(
-      dayjs.utc(range.from).toDate(),
-      dayjs.utc(range.to).toDate(),
-      { symbols: [symbol] }
-    )))
-    : null);
+  const repairFn = typeof options.repairAsset === 'function'
+    ? options.repairAsset
+    : (typeof options.historySync === 'function'
+      ? (symbol, ranges) => Promise.all(ranges.map((range) => options.historySync(
+        dayjs.utc(range.from).toDate(),
+        dayjs.utc(range.to).toDate(),
+        { symbols: [symbol] }
+      )))
+      : null);
   const now = options.now || new Date();
   const fromOption = options.from || null;
   const toOption = options.to || null;
   const dryRun = Boolean(options.dryRun);
-  const repair = !dryRun && Boolean(options.repair) && Boolean(repairFn || options.repairAsset || options.historySync);
+  const repair = !dryRun && Boolean(options.repair) && Boolean(repairFn);
   const maxRepairRanges = Number.isInteger(options.maxRepairRanges) && options.maxRepairRanges > 0
     ? options.maxRepairRanges
     : 50;

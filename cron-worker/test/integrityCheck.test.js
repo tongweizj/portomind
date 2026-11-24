@@ -3,13 +3,13 @@ const { test } = require('node:test');
 const assert = require('node:assert');
 const integrityCheck = require('../src/tasks/integrityCheck');
 const {
-  runIntegrityCheck,
-  countAsset,
+  countAssetCoverage: countAsset,
   expectedTradingDates,
-  expectedBucketCandidates,
   groupMissingRanges,
   clipRepairRanges
-} = integrityCheck;
+} = require('@portomind/shared/services/priceCoverage.service');
+const { expectedBucketCandidates } = require('@portomind/shared/services/marketDay.service');
+const { runIntegrityReport: runIntegrityCheck } = require('@portomind/shared/tasks/priceIntegrityCheck');
 
 test('expectedTradingDates：US 八月无节假日，工作日全开', () => {
   const dates = expectedTradingDates('US', '2024-08-01', '2024-08-31');
@@ -244,7 +244,7 @@ test('runIntegrityCheck：全部完整时 successCount 正确', async () => {
 
 test('TASK-073：有 launchDate 的旧键资产按派生键查价并报告 GAP', async () => {
   const keys = [];
-  const report = await integrityCheck.runIntegrityCheck({
+  const report = await runIntegrityCheck({
     getActiveAssets: async () => [{ symbol: '001180.cn', market: 'CN-FUND', launchDate: new Date('2026-08-24T12:00:00Z') }],
     expectedTradingDates: () => ['2026-08-20', '2026-08-21', '2026-08-24'],
     storedBucketDates: (symbol) => { keys.push(symbol); return []; },

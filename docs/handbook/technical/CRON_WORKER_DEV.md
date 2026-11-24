@@ -107,7 +107,7 @@ module.exports = { startXxxScheduler };
 
 ## 5. TaskRun 数据契约
 
-每个任务运行由 `runTrackedTask` 落库到 `taskruns` 集合，便于追溯。以下字段是**稳定契约**，改名 / 改形会断代历史或破坏防重。
+每个任务运行由 `runTrackedTask`（同步等待）或 `startTrackedTask`（异步返回 `runId`）落库到 `taskruns` 集合，便于追溯。以下字段是**稳定契约**，改名 / 改形会断代历史或破坏防重。
 
 ### 5.1 taskName（必须稳定）
 
