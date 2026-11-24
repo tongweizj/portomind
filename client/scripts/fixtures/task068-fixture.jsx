@@ -516,7 +516,9 @@ async function runScenarios() {
   q('[data-testid="ops-backfill-submit-a-priced"]').click();
   await waitFor(() => text('[data-testid="ops-backfill-result-a-priced"]').includes('补采完成：补充 3 天'));
   check('TASK-072 admin 可按区间补采并显示成功摘要',
-    JSON.stringify(backfillRequests[0]) === JSON.stringify({ from: '2026-01-01', to: '2026-11-20' }));
+    JSON.stringify(backfillRequests[0]) === JSON.stringify({ from: '2026-01-01', to: '2026-11-20' })
+      && q('[data-testid="ops-backfill-history-link-a-priced"]')?.getAttribute('href')
+        === '/prices/VOO.US/history?year=2026');
   await view.unmount();
 
   view = mount();

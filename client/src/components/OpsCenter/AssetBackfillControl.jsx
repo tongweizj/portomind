@@ -3,6 +3,7 @@
 // TASK-072：资产行内的单资产历史补采。默认当前年份，可改起止日期；
 // 同步等待结果，仅显示本行状态，不自动改写历史完整度快照。
 import { useState } from 'react';
+import { Link } from 'react-router';
 import { useAssetBackfill } from '../../hooks/useAssetBackfill';
 import { getApiErrorMessage } from '../../services/api.client';
 import { colors } from '../../constants/design-tokens';
@@ -122,6 +123,19 @@ export default function AssetBackfillControl({ asset }) {
             style={{ color: colors.statusWarn }}
           >
             {failureText}
+          </span>
+        )}
+        {data && !mutation.isPending && (
+          <span className="block text-xs" style={{ color: colors.textMuted }}>
+            <Link
+              data-testid={`ops-backfill-history-link-${suffix}`}
+              to={`/prices/${encodeURIComponent(asset.symbol)}/history?year=${from.slice(0, 4)}`}
+              className="underline"
+              style={{ color: colors.brand }}
+            >
+              查看价格历史
+            </Link>
+            {' · '}历史完整度请点上方「刷新历史完整度」
           </span>
         )}
         {error && (
