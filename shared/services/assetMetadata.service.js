@@ -1,8 +1,8 @@
 // shared/services/assetMetadata.service.js
 //
 // TASK-068：资产基础信息（symbol/name/market/currency/launchDate）校验。
-// 该口径原先只在 assetIntegrity.service 内部使用；运维中心资产总表需要
-// 「基础信息缺失字段」的同一份判定，因此抽为共享实现，禁止另写一份。
+// TASK-068 从已退休的 assetIntegrity.service 抽出；运维中心资产总表与
+// 价格完整性检查共用这一份基础信息判定，禁止另写一份。
 
 const { ASSET_MARKETS, ASSET_CURRENCIES } = require('../constants/asset.constants');
 const { marketDate, MARKET_TIMEZONE } = require('../utils/marketTime');

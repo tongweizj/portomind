@@ -157,13 +157,7 @@ Portfolio 枚举：`type`（风险定位）为 `活钱 | 稳健 | 长期`；`acc
 
 > `GET /api/cron/status` 是**只读聚合**端点。价格覆盖按 `byMarket` 的目标日分别查价，顶层 `targetMarketDate` 取最晚目标日，`expected` 和 `fetched` 为各市场的合计。TASK-078 更新了分组目标日规则。其余字段定义见 TASK-054 ExecPlan §4.3/§4.4。
 
-TASK-076 在看板主视图的 `data` 顶层增加 `assetCompleteness`，原 `tasks` 仍为五项。检查快照包含 `contractReady`、`checkedAt`、`dataStateLevel`、`total`、`complete`、`incomplete`、`launchDateMissing`、`priceEmpty3MarketDays`、`missingByReason`、`incompleteAssets` 和 `notes`。不完整清单每项返回 `{assetId,symbol,name,market,reasons}`。读回时按上次受检资产的当前上市／成立日期更新该项理由和计数，包含检查后已停用的资产。受检范围、价格、其它字段理由和 `checkedAt` 取自上次手动检查。无可用检查结果时计数为 `null`，清单为空。
-
-`POST /api/asset-integrity/check` 需要登录，接受空请求体 `{}`，同步返回 `{taskName,runKey,status,startedAt?,endedAt?,reason?,summary?}`。成功时 `summary` 是本次检查的计数和清单。重复运行返回 `SKIPPED` 及原因。该端点只读资产和价格，仅写任务观测记录。
-
-TASK-076 在看板主视图的 `data` 顶层增加 `assetCompleteness`，原 `tasks` 仍为五项。检查快照包含 `contractReady`、`checkedAt`、`dataStateLevel`、`total`、`complete`、`incomplete`、`launchDateMissing`、`priceEmpty3MarketDays`、`missingByReason`、`incompleteAssets` 和 `notes`。不完整清单每项返回 `{assetId,symbol,name,market,reasons}`。读回时按上次受检资产的当前上市／成立日期更新该项理由和计数，包含检查后已停用的资产。受检范围、价格、其它字段理由和 `checkedAt` 取自上次手动检查。无可用检查结果时计数为 `null`，清单为空。
-
-`POST /api/asset-integrity/check` 需要登录，接受空请求体 `{}`，同步返回 `{taskName,runKey,status,startedAt?,endedAt?,reason?,summary?}`。成功时 `summary` 是本次检查的计数和清单。重复运行返回 `SKIPPED` 及原因。该端点只读资产和价格，仅写任务观测记录。
+TASK-073 起，`GET /api/cron/status` 不再返回 `assetCompleteness`；`POST /api/asset-integrity/check` 已退休，已登录请求返回 404（未登录仍先返回 401）。历史 TaskRun 保留。
 
 价格同步 `notes` 可包含 `PRICE_NO_NEW_DATA`、`PRICE_STALE`、`PRICE_NOT_FOUND_STREAK`，见 TASK-074 的阈值裁决。提示按服务端的市场日历及已完成的应采批次派生。旧价为提示，估值仍消费原价格值或缺价 `null`。
 

@@ -23,7 +23,25 @@ const { spawn, execFileSync } = require('child_process');
 
 const CLIENT_DIR = path.resolve(__dirname, '..');
 const ROOT_DIR = path.resolve(CLIENT_DIR, '..');
-const CHROME = process.env.CHROME_PATH || 'C:/Program Files/Google/Chrome/Application/chrome.exe';
+const CHROME = process.env.CHROME_PATH || [
+  'C:/Program Files/Google/Chrome/Application/chrome.exe',
+  '/mnt/c/Program Files/Google/Chrome/Application/chrome.exe'
+].find((candidate) => fs.existsSync(candidate)) || 'C:/Program Files/Google/Chrome/Application/chrome.exe';
+
+// WSL 下调用 Windows Chrome 时，--user-data-dir 必须是 Windows 可识别路径。
+function makeChromeProfile(prefix) {
+  if (!/^\/mnt\/[a-z]\//i.test(CHROME)) {
+    return { dir: fs.mkdtempSync(path.join(os.tmpdir(), prefix)), chromeArg: null };
+  }
+  const windowsTemp = execFileSync('cmd.exe', ['/c', 'echo %TEMP%'], { encoding: 'utf8' }).trim();
+  const windowsProfile = `${windowsTemp}\\${prefix}${process.pid}-${Date.now()}`;
+  const wslProfile = windowsProfile
+    .replace(/^([A-Za-z]):/, (_, drive) => `/mnt/${drive.toLowerCase()}`)
+    .replace(/\\/g, '/');
+  fs.mkdirSync(wslProfile, { recursive: true });
+  return { dir: wslProfile, chromeArg: windowsProfile };
+}
+
 const STATIC_ONLY = process.argv.includes('--static-only');
 const FIXTURE_PATH = '/scripts/fixtures/task056-fixture.html';
 
@@ -172,7 +190,7 @@ async function browserChecks() {
   vite.stdout.on('data', (chunk) => { viteLog += chunk.toString(); });
   vite.stderr.on('data', (chunk) => { viteLog += chunk.toString(); });
 
-  const profileDir = fs.mkdtempSync(path.join(os.tmpdir(), 'task056-chrome-'));
+  const profileDir = makeChromeProfile('task056-chrome-');
   try {
     await waitForUrl(`${base}${FIXTURE_PATH}`);
     // 预热 Vite 模块转换 / 依赖优化，避免 Chrome 首访拿到 504 Outdated Optimize Dep
@@ -186,7 +204,7 @@ async function browserChecks() {
       '--hide-scrollbars',
       '--no-first-run',
       '--no-default-browser-check',
-      `--user-data-dir=${profileDir}`,
+      `--user-data-dir=${profileDir.chromeArg || profileDir.dir}`,
       '--window-size=1440,900',
       '--virtual-time-budget=15000',
       '--dump-dom',
@@ -217,7 +235,7 @@ async function browserChecks() {
     console.log(`  视口：${payload.viewport.width}x${payload.viewport.height}`);
   } finally {
     killTree(vite);
-    try { fs.rmSync(profileDir, { recursive: true, force: true }); } catch (_) { /* noop */ }
+    try { fs.rmSync(profileDir.dir, { recursive: true, force: true }); } catch (_) { /* noop */ }
   }
 }
 

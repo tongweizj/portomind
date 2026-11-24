@@ -83,12 +83,12 @@ async function main() {
   });
   check('AC3 灯色无绿色（无成功语义）', greenish.length === 0, JSON.stringify(dotColors));
 
-  // ══ AC4：5 卡六区域，无 undefined/NaN/Invalid Date ══
+  // ══ AC4：1 张价格卡 + 4 张数据卡，共 5 卡；TASK-073 后 task-card 只剩数据卡 ══
   const cards = await page.getByTestId('task-card').count();
-  check('AC4 恰好 5 张任务卡', cards === 5, String(cards));
+  check('AC4 恰好 4 张数据卡（另有 1 张价格卡）', cards === 4, String(cards));
   for (const id of ['card-title', 'run-state', 'last-run', 'data-ratio', 'key-metric', 'anomaly-entry']) {
     const n = await page.getByTestId(id).count();
-    check(`AC4 每卡六区域之一就位：${id}（应为 5）`, n === 5, String(n));
+    check(`AC4 每卡六区域之一就位：${id}（应为 4）`, n === 4, String(n));
   }
   const boardText = await page.getByTestId('board-shell').innerText();
   const badTokens = ['undefined', 'NaN', 'Invalid Date', 'null'];

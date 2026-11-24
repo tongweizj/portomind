@@ -65,12 +65,12 @@ test('任务运行键同时提供进程内锁与数据库唯一键防重', async
   assert.equal(skipEvents[1].reason, 'DUPLICATE_RUN_KEY');
 });
 
-test('TASK-076 将数据库活跃键冲突记录为跳过，完成时原子释放活跃键', async (t) => {
+test('数据库活跃键冲突记录为跳过，完成时原子释放活跃键', async (t) => {
   t.mock.method(TaskRun, 'init', async () => TaskRun);
   const starts = [];
   const writes = [];
   const skips = [];
-  const taskName = 'asset-integrity-check';
+  const taskName = 'sample-retired-check';
   const exclusiveRunKey = { key: 'manual:active', staleAfterMs: 15 * 60 * 1000 };
   TaskRun.create = async doc => {
     starts.push(doc);

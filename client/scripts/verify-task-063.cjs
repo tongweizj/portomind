@@ -14,7 +14,25 @@ const { spawn, execFileSync } = require('child_process');
 
 const CLIENT_DIR = path.resolve(__dirname, '..');
 const ROOT_DIR = path.resolve(CLIENT_DIR, '..');
-const CHROME = process.env.CHROME_PATH || 'C:/Program Files/Google/Chrome/Application/chrome.exe';
+const CHROME = process.env.CHROME_PATH || [
+  'C:/Program Files/Google/Chrome/Application/chrome.exe',
+  '/mnt/c/Program Files/Google/Chrome/Application/chrome.exe'
+].find((candidate) => fs.existsSync(candidate)) || 'C:/Program Files/Google/Chrome/Application/chrome.exe';
+
+// WSL 下调用 Windows Chrome 时，--user-data-dir 必须是 Windows 可识别路径。
+function makeChromeProfile(prefix) {
+  if (!/^\/mnt\/[a-z]\//i.test(CHROME)) {
+    return { dir: fs.mkdtempSync(path.join(os.tmpdir(), prefix)), chromeArg: null };
+  }
+  const windowsTemp = execFileSync('cmd.exe', ['/c', 'echo %TEMP%'], { encoding: 'utf8' }).trim();
+  const windowsProfile = `${windowsTemp}\\${prefix}${process.pid}-${Date.now()}`;
+  const wslProfile = windowsProfile
+    .replace(/^([A-Za-z]):/, (_, drive) => `/mnt/${drive.toLowerCase()}`)
+    .replace(/\\/g, '/');
+  fs.mkdirSync(wslProfile, { recursive: true });
+  return { dir: wslProfile, chromeArg: windowsProfile };
+}
+
 const FIXTURE_PATH = '/scripts/fixtures/task063-fixture.html';
 
 const results = [];
@@ -37,14 +55,13 @@ function staticChecks() {
 
   const mutationHits = [...files, { name: 'hooks/useCronStatus.js', content: hook }]
     .filter((file) => /useMutation|api\.(post|put|patch|delete)\s*\(/.test(file.content));
-  const checkService = read('src/services/asset-integrity.service.js');
-  check('AC8 /logs 写入口限定为 TASK-076 的资产信息检查', mutationHits.length === 1
-    && mutationHits[0].name === 'CronBoard.jsx'
-    && (mutationHits[0].content.match(/useMutation\s*\(/g) || []).length === 1
-    && /mutationFn: runAssetIntegrityCheck/.test(mutationHits[0].content)
-    && /api\.post\('\/asset-integrity\/check', \{\}\)/.test(checkService)
-    && (checkService.match(/api\.(?:post|put|patch|delete)\s*\(/g) || []).length === 1,
-    mutationHits.map((file) => file.name).join(','));
+  check('TASK-073 看板只读：CronStatus 目录与 useCronStatus 无 mutation',
+    mutationHits.length === 0, mutationHits.map((file) => file.name).join(','));
+
+  const retiredRefs = [...files, { name: 'hooks/useCronStatus.js', content: hook }]
+    .filter((file) => /asset-integrity|assetCompleteness|AssetCompleteness/.test(file.content));
+  check('TASK-073 旧资产完整性入口不再被看板引用',
+    retiredRefs.length === 0, retiredRefs.map((file) => file.name).join(','));
 
   check('AC8 数据层只有 GET /cron/status', /api\.get\(CRON_STATUS_ENDPOINT\)/.test(service)
     && !/api\.(post|put|patch|delete)/.test(service));
@@ -70,6 +87,16 @@ function staticChecks() {
 
   const priceCard = read('src/components/CronStatus/PriceTaskCard.jsx');
   check('AC6 价格卡不发请求（只消费 props）', !/api\.|useQuery|fetch\(/.test(priceCard));
+
+  const router = read('src/router.jsx');
+  check('TASK-073 /instruments/incomplete 重定向到资产数据 tab',
+    router.includes('ROUTE_PATTERNS.ASSET_INTEGRITY')
+      && router.includes('/logs?${LOG_TAB_PARAM}=${LOG_TAB_ASSETS}')
+      && !router.includes('AssetIntegrityDetail'));
+  check('TASK-073 旧详情页与旧卡片文件已删除',
+    !fs.existsSync(path.join(CLIENT_DIR, 'src/pages/Asset/AssetIntegrityDetail.jsx'))
+      && !fs.existsSync(path.join(CLIENT_DIR, 'src/components/CronStatus/AssetCompletenessCard.jsx'))
+      && !fs.existsSync(path.join(CLIENT_DIR, 'src/services/asset-integrity.service.js')));
 }
 
 function findFreePort() {
@@ -119,7 +146,7 @@ async function browserChecks() {
   vite.stdout.on('data', (chunk) => { viteLog += chunk.toString(); });
   vite.stderr.on('data', (chunk) => { viteLog += chunk.toString(); });
 
-  const profile = fs.mkdtempSync(path.join(os.tmpdir(), 'task063-chrome-'));
+  const profile = makeChromeProfile('task063-chrome-');
   try {
     await waitForUrl(`${base}${FIXTURE_PATH}`);
     await waitForUrl(`${base}/scripts/fixtures/task063-fixture.jsx`);
@@ -136,7 +163,7 @@ async function browserChecks() {
         '--window-size=1440,900',
         '--virtual-time-budget=60000',
         '--run-all-compositor-stages-before-draw',
-        `--user-data-dir=${profile}`,
+        `--user-data-dir=${profile.chromeArg || profile.dir}`,
         '--dump-dom',
         `${base}${FIXTURE_PATH}`
       ], { encoding: 'utf8', maxBuffer: 30 * 1024 * 1024, timeout: 120000 });
@@ -155,7 +182,7 @@ async function browserChecks() {
     }
   } finally {
     killTree(vite);
-    try { fs.rmSync(profile, { recursive: true, force: true }); } catch (_) { /* noop */ }
+    try { fs.rmSync(profile.dir, { recursive: true, force: true }); } catch (_) { /* noop */ }
   }
 }
 
