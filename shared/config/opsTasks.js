@@ -27,6 +27,11 @@ const OPS_TASK_CONFIG = Object.freeze({
     taskName: 'daily-price-sync',
     lockKey: 'ops:daily-price-sync',
     staleAfterMs: envMs('OPS_PRICE_SYNC_STALE_MS', 60 * MINUTE_MS)
+  }),
+  assetBackfill: Object.freeze({
+    taskName: 'asset-history-backfill',
+    lockKeyPrefix: 'ops:asset-backfill:',
+    staleAfterMs: envMs('OPS_BACKFILL_STALE_MS', DEFAULT_STALE_MS)
   })
 });
 

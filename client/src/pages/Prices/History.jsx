@@ -1,6 +1,6 @@
 // client/src/pages/Prices/History.jsx
 import { useEffect, useMemo, useState } from 'react';
-import { useParams } from 'react-router';
+import { useParams, useSearchParams } from 'react-router';
 import { getPriceHistory } from '../../services/price.service';
 import { getApiErrorMessage } from '../../services/api.client';
 import {
@@ -14,10 +14,15 @@ import {
 
 export default function History() {
   const { symbol } = useParams();
+  const [searchParams] = useSearchParams();
   const today = new Date();
-  const [year, setYear] = useState(today.getFullYear());
+  const requestedYear = Number(searchParams.get('year'));
+  const requestedMonth = searchParams.get('month');
+  const [year, setYear] = useState(
+    Number.isInteger(requestedYear) && requestedYear > 0 ? requestedYear : today.getFullYear()
+  );
   const [month, setMonth] = useState(
-    String(today.getMonth() + 1).padStart(2, '0')
+    requestedMonth || String(today.getMonth() + 1).padStart(2, '0')
   );
   const [page, setPage] = useState(1);
   const [pageSize] = useState(50);

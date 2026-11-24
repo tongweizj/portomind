@@ -17,6 +17,7 @@ import { colors } from '../../constants/design-tokens';
 import { useOpsCenterAssets } from '../../hooks/useOpsCenterAssets';
 import { useIntegrityRefresh } from '../../hooks/useIntegrityRefresh';
 import { usePriceSync } from '../../hooks/usePriceSync';
+import AssetBackfillControl from './AssetBackfillControl';
 import { getApiErrorMessage } from '../../services/api.client';
 
 const TODAY_PRICE_VIEW = Object.freeze({
@@ -463,14 +464,17 @@ export default function AssetDataPanel() {
                   <td className="px-4 py-2 whitespace-nowrap">{validityCell(asset.validity)}</td>
                   <td className="px-4 py-2 whitespace-nowrap">
                     {isAdmin ? (
-                      <Link
-                        data-testid="ops-asset-edit"
-                        to={`/instruments/edit/${asset.assetId}`}
-                        style={{ color: colors.brand }}
-                        className="hover:underline"
-                      >
-                        编辑
-                      </Link>
+                      <div className="flex flex-col gap-1">
+                        <Link
+                          data-testid="ops-asset-edit"
+                          to={`/instruments/edit/${asset.assetId}`}
+                          style={{ color: colors.brand }}
+                          className="hover:underline"
+                        >
+                          编辑
+                        </Link>
+                        <AssetBackfillControl asset={asset} />
+                      </div>
                     ) : (
                       <span style={{ color: colors.textMuted }}>—</span>
                     )}
