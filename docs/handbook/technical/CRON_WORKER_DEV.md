@@ -23,7 +23,7 @@ cron-worker/
     ├── tasks/
     │   ├── scheduler.js         # 注册 5 类任务，共 6 个 cron
     │   ├── dailySync.js         # 价格同步（CLI 入口，trigger=MANUAL）
-    │   ├── historySync.cjs      # 历史回补（--from/--to/--symbols/--concurrency）
+    │   ├── historySync.cjs      # 历史回补 CLI 薄壳（业务在 shared/tasks/historySync.js）
     │   └── integrityCheck.js    # 完整性检查 CLI/调度薄壳（业务在 shared）
     └── schedulers/
         ├── cronScheduler.js     # 通用工厂 createCronScheduler
@@ -37,7 +37,7 @@ cron-worker/
 **核心约束**：业务引擎必须在 `@portomind/shared`，cron-worker 只持触发权（禁止在本目录复制实现）。
 价格同步 / 完整性检查 / 提醒评估 / 汇率同步 / 再平衡的业务函数均来自 `shared`；
 `cron-worker/src/tasks/integrityCheck.js` 只负责加载本进程 `.env`、建立 Mongo 连接、解析 CLI 参数、
-注入 `historySync` 修复函数，然后调用 `shared/tasks/priceIntegrityCheck.js`。调度器骨架仍在本进程。
+注入 `shared/tasks/historySync` 修复函数，然后调用 `shared/tasks/priceIntegrityCheck.js`。调度器骨架仍在本进程。
 
 ---
 
@@ -94,7 +94,7 @@ module.exports = { startXxxScheduler };
 
 1. **进程内 Map 锁**（`shared/services/taskRunner.js` 的 `activeTasks`）：同 `taskName` / `lockKey` 已在跑 → 返回 `SKIPPED`（`ALREADY_RUNNING`）。
 2. **`taskruns` 集合唯一索引** `(taskName, runKey)`：并发 / 多实例下重复 `runKey` → `DUPLICATE_RUN_KEY`，返回 `SKIPPED`。
-3. **活跃运行互斥锁 `lockKey`**（TASK-070 / TASK-071）：`taskruns` 的 `{lockKey:1}` 部分唯一索引只约束 `status='RUNNING'` 且 `lockKey` 为字符串的文档。`price-integrity-check` 使用固定 `ops:price-integrity-check`，`daily-price-sync` 使用固定 `ops:daily-price-sync`，因此不同 `runKey` 的手动/定时触发也不能并发跑。终态更新会 `$unset lockKey`，无锁的历史记录保持合法。后续单资产回填沿用同一机制，使用按资产前缀的锁键。
+3. **活跃运行互斥锁 `lockKey`**（TASK-070 / TASK-071）：`taskruns` 的 `{lockKey:1}` 部分唯一索引只约束 `status='RUNNING'` 且 `lockKey` 为字符串的文档。`price-integrity-check` 使用固定 `ops:price-integrity-check`，`daily-price-sync` 使用固定 `ops:daily-price-sync`，因此不同 `runKey` 的手动/定时触发也不能并发跑。终态更新会 `$unset lockKey`，无锁的历史记录保持合法。单资产回填使用 `ops:asset-backfill:<assetId>` 前缀锁。
 
 冲突时仍写 `taskskips`（`reason` 只取 `ALREADY_RUNNING` / `DUPLICATE_RUN_KEY`）；手动端点把冲突翻译为 `409 TASK_ALREADY_RUNNING`。
 
@@ -118,6 +118,7 @@ module.exports = { startXxxScheduler };
 | `alert-evaluate` | 提醒评估 |
 | `fx-rate-sync` | 汇率同步 |
 | `rebalance-suggestions:<portfolioId>` | 某组合的再平衡建议生成 |
+| `asset-history-backfill` | 单资产历史补采（TASK-072） |
 | `rebalance-check` | 再平衡分发的**父任务**（TASK-057；记录 due / skipped / perPortfolio） |
 
 ### 5.2 runKey（防重键）
@@ -130,6 +131,7 @@ module.exports = { startXxxScheduler };
 | 提醒评估 / 汇率同步 自动 | `daily:<调度时区当日日期>` |
 | 再平衡 自动（逐组合子任务） | `<schedule>:<当日日期>`（如 `monthly:2026-10-01`） |
 | 再平衡 自动（父任务 `rebalance-check`） | `marketDate(now, timezone)`（如 `2026-10-01`） |
+| 单资产历史补采 手动 | `manual:<assetId>:<ISO 时间>`（按资产区分，允许不同资产并行） |
 
 `price-integrity-check` 的手动与定时触发共享同一 `lockKey`，因此 `runKey` 不同也不能并发；手动触发冲突返回 `409 TASK_ALREADY_RUNNING`，定时触发写 `taskskips` 后跳过。
 
@@ -171,6 +173,7 @@ TASK-070 起，带 `lockKey` 的任务在 `RUNNING` 期间维护 `progress: {com
 | `price-integrity-check` | `{ totals:{expectedCount,actualCount,missingCount}, checkedCount, skippedCount, allSkipped, completenessRatio, assets:[{assetId,symbol,market,launchDate,status,from,to,expected,actual,missing,ratio,missingRanges[],missingRangesTruncated}], gapAssets:[{symbol,missingCount}] }`。`assets[].status ∈ OK \| GAP \| ERROR \| SKIPPED_NO_LAUNCH_DATE \| INSUFFICIENT_SAMPLE`；`missingRanges` 最多 20 段，超出由 `missingRangesTruncated=true` 标记；不落原始价格序列、补采错误详情或堆栈 |
 | `alert-evaluate` | `{ evaluated, created, archived, failed }` |
 | `fx-rate-sync` | `{ fxCount, currencies:{ USD:{ok:true,rateToCny}, CAD:{…}, HKD:{…} } }`；`ok:true` 仅表示该币种本次真实写入完成，失败运行记 `FAILED` 且不补造成功标志 |
+| `asset-history-backfill` | `{assetId,symbol,market,from,to,expectedCount,missingBeforeCount,missingAfterCount,fetchedCount,requestedRanges[],requestedRangesTruncated,missingRanges[],missingRangesTruncated,failureRanges[]}`；同步等待端点返回同一摘要的关键字段。 |
 | `rebalance-check` | `{ totalPortfolios, dueCount, skippedCount, perPortfolio:[{portfolioId,due,needsRebalance,suggestionsCount,recordId,status,failureReason?,skipReason?}] }` |
 
 价格完整性检查在资产总数大于零且全部跳过时记录 `allSkipped: true`、`checkedCount: 0` 和 `completenessRatio: null`。这些字段表示本次未检查，同样用于结束日志。TaskRun 运行状态沿用现有判定。TASK-070 起 `skippedCount` 是未检查总数（无 `launchDate` + 样本不足）；看板的 `skippedNoLaunchDate` 从 `result.assets[].status` 派生，不再用 `skippedCount` 代替。

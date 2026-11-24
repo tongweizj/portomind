@@ -35,6 +35,7 @@ export async function getAssetsOverview({
 
 const INTEGRITY_CHECK_ENDPOINT = '/ops-center/integrity-check';
 const PRICE_SYNC_ENDPOINT = '/ops-center/price-sync';
+const ASSET_BACKFILL_ENDPOINT = '/ops-center/assets';
 const TASK_RUNS_ENDPOINT = '/ops-center/task-runs';
 
 /** TASK-070：手动刷新历史完整度（202 + runId）。 */
@@ -45,6 +46,15 @@ export async function startIntegrityCheck() {
 /** TASK-071：手动触发今日价格同步（202 + runId）；空 marketGroup = 全部 active。 */
 export async function startPriceSync({ marketGroup } = {}) {
   return (await api.post(PRICE_SYNC_ENDPOINT, marketGroup ? { marketGroup } : {})).data;
+}
+
+/** TASK-072：同步补采单资产历史价格（200 + 摘要）。 */
+export async function backfillAsset(assetId, { from, to, year } = {}) {
+  const body = {};
+  if (from) body.from = from;
+  if (to) body.to = to;
+  if (year !== undefined) body.year = year;
+  return (await api.post(`${ASSET_BACKFILL_ENDPOINT}/${assetId}/price-backfill`, body)).data;
 }
 
 /** TASK-070：读取一次任务运行的状态/进度/结果。 */

@@ -8,6 +8,7 @@ const controller = require('../controllers/opsTask.controller');
 
 router.post('/integrity-check', controller.startIntegrityCheck);
 router.post('/price-sync', controller.startPriceSync);
+router.post('/assets/:id/price-backfill', controller.startAssetPriceBackfill);
 router.get('/task-runs/:id', controller.getTaskRun);
 
 module.exports = router;

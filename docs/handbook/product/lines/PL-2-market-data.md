@@ -132,7 +132,7 @@
 | A 股场内 fetcher | `shared/fetchers/eastmoneyFetcher.js` | server 与 worker 都能用 |
 | 交易日历 | `shared/services/calendar.service.js` + `shared/config/markets.js` | 两进程共用 |
 | 开市校验（skip） | `shared/tasks/dailySync.js` | 两进程共用 |
-| 历史回补并发 | `shared/tasks/historySync.cjs`（`p-limit`，默认 3） | cron-worker 任务 |
+| 历史回补并发 | `shared/tasks/historySync.js`（`p-limit`，默认 3）；`cron-worker/src/tasks/historySync.cjs` 为 CLI 薄壳 | cron-worker / server 共用 |
 | 重试退避 | `shared/utils/retry.js`（指数退避 + 抖动） | 两进程共用 |
 | 日志 | `shared/config/logger.js`（`app-%DATE%.log` + `task-%DATE%.log`，含脱敏） | 两进程共用同一目录与配置 |
 | 完整性检查 | `shared/tasks/priceIntegrityCheck.js`；`cron-worker/src/tasks/integrityCheck.js` 为 CLI/调度薄壳 | 定时触发只在 worker；server 运维中心可手动触发同一共享任务（TASK-070） |

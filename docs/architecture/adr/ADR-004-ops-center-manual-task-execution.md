@@ -134,7 +134,7 @@ progress: { completed: Number, total: Number, updatedAt: Date }
 
 规则：
 
-- `price-integrity-check` 使用固定 `ops:price-integrity-check`，`daily-price-sync` 使用固定 `ops:daily-price-sync`；手动与定时共享同一把锁。
+- `price-integrity-check` 使用固定 `ops:price-integrity-check`，`daily-price-sync` 使用固定 `ops:daily-price-sync`；手动与定时共享同一把锁。单资产回填使用 `ops:asset-backfill:<assetId>`，不同资产可并行。
 - 只有活跃运行参与唯一约束；终态更新 `$unset lockKey`，旧记录无该字段仍合法。
 - 活跃任务默认每 1 秒最多写一次 `progress`（`OPS_PROGRESS_THROTTLE_MS`），终态写最终进度。
 - `stale` 是读侧派生值：`RUNNING` 且心跳（`progress.updatedAt`，缺失回退 `startedAt`）超过阈值
@@ -206,7 +206,7 @@ progress: { completed: Number, total: Number, updatedAt: Date }
 - [x] TASK-070：共享完整性任务、`202` 手动端点、`GET task-runs/:id`、历史三态、锁与进度、测试与文档。
 - [ ] 生产 MongoDB 索引创建：合并/部署前需单独批准；本任务不连接生产库。若生产禁用 Mongoose `autoIndex`，需按模型定义手工创建；否则首次连接并加载 `TaskRun` 模型时由 Mongoose 创建。
 - [x] TASK-071：价格同步接入全局锁 `ops:daily-price-sync`（阈值 60 分钟）、统一 `progress` 与逐资产 `result.assets`。
-- [ ] TASK-072：单资产回填使用 `ops:asset-backfill:<assetId>` 前缀锁（计划阈值 30 分钟）；同步返回 `200 + summary`，冲突 `409`。
+- [x] TASK-072：单资产回填使用 `ops:asset-backfill:<assetId>` 前缀锁（阈值 30 分钟），复用 shared `historySync`/覆盖计算；同步返回 `200 + summary`，冲突 `409`。
 - [ ] 若后续需要区分停牌/采集失败/供应商异常，另立需求与 ADR，不在现有 GAP 上叠加推断。
 
 ## 9. Decision History

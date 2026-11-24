@@ -16,7 +16,7 @@ const minimist = require('minimist');
 const { taskLogger } = require('@portomind/shared/config/logger');
 const { dateBounds } = require('@portomind/shared/utils/marketTime');
 const { priceIntegrityCheck } = require('@portomind/shared/tasks/priceIntegrityCheck');
-const historySync = require('./historySync.cjs');
+const historySync = require('@portomind/shared/tasks/historySync');
 
 async function repairAsset(symbol, ranges, repairFn = historySync) {
   const failures = [];

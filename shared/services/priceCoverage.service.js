@@ -172,11 +172,11 @@ function groupMissingRanges(missingDates, mergeDays = 3) {
 }
 
 // 有界缺失区间：合并后最多 MAX_MISSING_RANGES 个，超出截断并标记。
-function boundedMissingRanges(missingDates, mergeDays = 3) {
+function boundedMissingRanges(missingDates, mergeDays = 3, maxRanges = MAX_MISSING_RANGES) {
   const ranges = groupMissingRanges(missingDates, mergeDays);
   return {
-    ranges: ranges.slice(0, MAX_MISSING_RANGES),
-    truncated: ranges.length > MAX_MISSING_RANGES
+    ranges: ranges.slice(0, maxRanges),
+    truncated: ranges.length > maxRanges
   };
 }
 
