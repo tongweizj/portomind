@@ -17,7 +17,9 @@ import { colors } from '../../constants/design-tokens';
 import { useOpsCenterAssets } from '../../hooks/useOpsCenterAssets';
 import { useIntegrityRefresh } from '../../hooks/useIntegrityRefresh';
 import { usePriceSync } from '../../hooks/usePriceSync';
+import { getAllFilteredAssetIds } from '../../services/ops-center.service';
 import AssetBackfillControl from './AssetBackfillControl';
+import BatchBackfillControl from './BatchBackfillControl';
 import { getApiErrorMessage } from '../../services/api.client';
 
 const TODAY_PRICE_VIEW = Object.freeze({
@@ -194,6 +196,10 @@ export default function AssetDataPanel() {
   const [pageSize, setPageSize] = useState(OPS_CENTER_DEFAULT_PAGE_SIZE);
   const [filters, setFilters] = useState({ ...OPS_CENTER_DEFAULT_FILTERS });
   const [searchDraft, setSearchDraft] = useState('');
+  const [selectedIds, setSelectedIds] = useState(() => new Set());
+  const [selectAllFiltered, setSelectAllFiltered] = useState(false);
+  const [selectingAll, setSelectingAll] = useState(false);
+  const [selectionError, setSelectionError] = useState('');
 
   const queryFilters = {
     market: filters.market || undefined,
@@ -209,9 +215,46 @@ export default function AssetDataPanel() {
     ...queryFilters
   });
 
+  const clearSelection = () => {
+    setSelectedIds(new Set());
+    setSelectAllFiltered(false);
+    setSelectionError('');
+  };
+
   const updateFilter = (patch) => {
     setFilters((current) => ({ ...current, ...patch }));
     setPage(1);
+    clearSelection();
+  };
+
+  const toggleSelected = (assetId, checked) => {
+    setSelectAllFiltered(false);
+    setSelectedIds((current) => {
+      const next = new Set(current);
+      if (checked) next.add(assetId);
+      else next.delete(assetId);
+      return next;
+    });
+  };
+
+  const toggleAllFiltered = async (checked) => {
+    if (!checked) {
+      clearSelection();
+      return;
+    }
+    setSelectingAll(true);
+    setSelectionError('');
+    try {
+      const ids = await getAllFilteredAssetIds(queryFilters);
+      setSelectedIds(new Set(ids));
+      setSelectAllFiltered(true);
+    } catch (error) {
+      setSelectionError(getApiErrorMessage(error, '加载筛选资产失败'));
+      setSelectedIds(new Set());
+      setSelectAllFiltered(false);
+    } finally {
+      setSelectingAll(false);
+    }
   };
 
   const submitSearch = (event) => {
@@ -410,6 +453,28 @@ export default function AssetDataPanel() {
         </div>
       )}
 
+      {isAdmin && (
+        <div className="space-y-2" data-testid="ops-batch-selection-control">
+          <div className="flex flex-wrap items-center gap-3 text-sm" style={{ color: colors.textSecondary }}>
+            <label>
+              <input
+                type="checkbox"
+                data-testid="ops-batch-select-all"
+                checked={selectAllFiltered}
+                disabled={selectingAll}
+                onChange={(event) => toggleAllFiltered(event.target.checked)}
+                className="mr-1"
+              />
+              全选当前筛选结果
+            </label>
+            <span>已选 {selectedIds.size} 只</span>
+            {selectingAll && <span>加载中…</span>}
+            {selectionError && <span role="alert" style={{ color: colors.statusBad }}>{selectionError}</span>}
+          </div>
+          <BatchBackfillControl assetIds={[...selectedIds]} />
+        </div>
+      )}
+
       <div className="flex flex-wrap items-center justify-between gap-2 text-sm" style={{ color: colors.textSecondary }}>
         <span>
           共 {total} 只资产{isFetching ? ' · 更新中…' : ''}
@@ -452,10 +517,24 @@ export default function AssetDataPanel() {
               {assets.map((asset) => (
                 <tr key={asset.assetId} data-testid="ops-asset-row" className="hover:bg-gray-50">
                   <td className="px-4 py-2">
-                    <div className="font-semibold" data-testid="ops-asset-symbol">{asset.symbol || UNKNOWN_TEXT}</div>
-                    <div style={{ color: colors.textSecondary }}>{asset.name || UNKNOWN_TEXT}</div>
-                    <div style={{ color: colors.textMuted, fontSize: 11 }}>
-                      {asset.market || UNKNOWN_TEXT} · {asset.currency || UNKNOWN_TEXT}
+                    <div className="flex items-start gap-2">
+                      {isAdmin && (
+                        <input
+                          type="checkbox"
+                          data-testid={`ops-select-${asset.assetId}`}
+                          checked={selectAllFiltered || selectedIds.has(asset.assetId)}
+                          disabled={selectAllFiltered}
+                          onChange={(event) => toggleSelected(asset.assetId, event.target.checked)}
+                          className="mt-1"
+                        />
+                      )}
+                      <div>
+                        <div className="font-semibold" data-testid="ops-asset-symbol">{asset.symbol || UNKNOWN_TEXT}</div>
+                        <div style={{ color: colors.textSecondary }}>{asset.name || UNKNOWN_TEXT}</div>
+                        <div style={{ color: colors.textMuted, fontSize: 11 }}>
+                          {asset.market || UNKNOWN_TEXT} · {asset.currency || UNKNOWN_TEXT}
+                        </div>
+                      </div>
                     </div>
                   </td>
                   <td className="px-4 py-2 whitespace-nowrap">{todayPriceCell(asset.todayPrice)}</td>

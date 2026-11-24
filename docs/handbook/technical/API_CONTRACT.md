@@ -148,6 +148,7 @@ Portfolio 枚举：`type`（风险定位）为 `活钱 | 稳健 | 长期`；`acc
 | `POST /api/ops-center/integrity-check` | 空 Body。非空 Body（对象、数组或标量，如 `{repair:true}`）返回 `400`；手动刷新禁止补采。 | `{runId,taskName,runKey,status:'RUNNING',startedAt}`；任务在后台执行，客户端用 `GET /api/ops-center/task-runs/:id` 轮询。 | `202`; 请求体非空 `400`; 已有活跃运行 `409 TASK_ALREADY_RUNNING`（`details.activeRun` 含 `runId/taskName/runKey/status/startedAt/progress`）; 未登录 `401`。**不创建交易、不自动补采** |
 | `POST /api/ops-center/price-sync` | Body 可省略或用 `{}`（= 全部 active）；或 `{marketGroup:'CN'\|'US_CA'}`。`marketGroup` 只接受这两个值；其他字段/值 `400`。 | `{runId,taskName,runKey,status:'RUNNING',startedAt}`；`taskName='daily-price-sync'`，任务在后台执行，用同一 task-run 详情契约轮询。`result.assets[]` 含逐资产 `status`/`priceDate`/`reason`；不保存原始价格序列。 | `202`; 非法市场组/额外字段 `400`; 已有活跃运行 `409 TASK_ALREADY_RUNNING`; 未登录 `401`。**不修改 cron 调度** |
 | `POST /api/ops-center/assets/:id/price-backfill` | Path: 资产 ObjectId。Body 可省略；或 `{from?,to?}`（`YYYY-MM-DD`）；或 `{year}`（1970–当前市场年）。`year` 与 `from/to` 互斥。缺省为当前年份；区间会裁到 `launchDate` 与目标市场日。 | **同步等待**后返回 `{runId,status,assetId,symbol,market,from,to,expectedCount,missingBeforeCount,missingAfterCount,fetchedCount,failures[]}`；`status` 为 TaskRun 的 `SUCCEEDED`/`PARTIAL`，仍缺日期时 `missingAfterCount > 0`。只补缺失交易日，不保存原始价格序列。 | `200`; 非法资产 id/区间/年份/无 `launchDate` `400`; 资产不存在 `404`; 同资产已有补采 `409 TASK_ALREADY_RUNNING`; 未登录 `401`。**同步等待，可能耗时** |
+| `POST /api/ops-center/price-backfill` | Body: `{assetIds:[ObjectId,...],from?,to?,year?,preview?}`；`assetIds` 非空且 ≤500；`year` 与 `from/to` 互斥。批量选择由客户端传 asset ids；`preview:true` 只读预估，`preview:false`/省略异步执行。 | `preview:true` → `{assetCount,readyCount,skippedCount,missingDateCount,range,assets[]}`，不创建 TaskRun；执行 → `202 {runId,taskName:'asset-history-backfill-batch',runKey,status,startedAt}`，由 task-run 详情读取进度/结果。逐资产结果在父 TaskRun `result.assets`，子任务为 `asset-history-backfill`。 | `200`（预览）; `202`（启动）; 非法 assetIds/区间/年份 `400`; 已有批量运行 `409 TASK_ALREADY_RUNNING`; 未登录 `401`。**预览不写库** |
 | `GET /api/ops-center/task-runs/:id` | Path: `id`（ObjectId） | TaskRun 投影：`{runId,taskName,runKey,trigger,status,stale,startedAt,endedAt,durationMs,progress,counts:{totalCount,successCount,failureCount},failures,result}`。`progress` 为 `{completed,total,updatedAt}|null`；`stale` 由服务端按任务的心跳阈值判定，仅表示 `RUNNING` 超过阈值未更新，不自动改状态。不返回 `lockKey`。 | `200`; 非法 id `400`; 不存在 `404`; 未登录 `401`。只读 |
 
 > `GET /api/ops-center/assets` 的字段口径（TASK-068）：
@@ -167,7 +168,7 @@ Portfolio 枚举：`type`（风险定位）为 `活钱 | 稳健 | 长期`；`acc
 >
 > `GET /api/ops-center/task-runs/:id` 的 `runKey` 对正常记录保持稳定；stale 恢复会把旧 `RUNNING` 记录改为 `FAILED` 并改键为 `interrupted:<id>`，审计关联以 `runId` 为准。该字段不参与前端路由或资源定位。
 
-> `POST /api/ops-center/integrity-check`、`POST /api/ops-center/price-sync` 与单资产补采创建的 TaskRun 的 `result` 形状
+> `POST /api/ops-center/integrity-check`、`POST /api/ops-center/price-sync`、单资产补采与批量补采创建的 TaskRun 的 `result` 形状
 > 由 [CRON_WORKER_DEV.md §5.5](./CRON_WORKER_DEV.md#55-result-字段与跳过观测task-057) 维护；历史完整度读模型由
 > integrity-check 结果派生，客户端不得自行重算。
 

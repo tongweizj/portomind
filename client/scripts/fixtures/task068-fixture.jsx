@@ -138,6 +138,7 @@ function mount({ role = 'admin', nextMode = 'ok' } = {}) {
 const q = (selector) => document.querySelector(selector);
 const qa = (selector) => [...document.querySelectorAll(selector)];
 const text = (selector) => q(selector)?.innerText ?? '';
+const panelText = () => q('[data-testid="ops-batch-selection-control"]')?.innerText ?? '';
 const rowOf = (symbol) => qa('[data-testid="ops-asset-row"]')
   .find((row) => row.querySelector('[data-testid="ops-asset-symbol"]')?.innerText === symbol);
 
@@ -551,11 +552,93 @@ async function runScenarios() {
     text('[data-testid="ops-backfill-failure-a-priced"]').includes('missing 2/10 trading days'));
   await view.unmount();
 
+
+  // ── TASK-074 批量补缺失 ──
+  view = mount();
+  await waitRows();
+  q('[data-testid="ops-batch-select-all"]').click();
+  await waitFor(() => q('[data-testid="ops-batch-select-all"]').checked);
+  check('TASK-074 全选当前筛选结果会选中全部资产',
+    q('[data-testid="ops-batch-select-all"]').checked
+      && panelText().includes('已选 5 只'));
+  q('[data-testid="ops-batch-select-all"]').click();
+  await waitFor(() => !q('[data-testid="ops-batch-select-all"]').checked);
+  check('TASK-074 取消全选会清空选择', panelText().includes('已选 0 只'));
+
+  q('[data-testid="ops-select-a-priced"]').click();
+  q('[data-testid="ops-select-a-missing"]').click();
+  check('TASK-074 可勾选单只资产', panelText().includes('已选 2 只'));
+
+  const batchRequests = [];
+  let batchPolls = 0;
+  api.defaults.adapter = async (config) => {
+    if (config.url === '/ops-center/assets') {
+      return {
+        data: { success: true, data: ITEMS, pagination: { page: 1, pageSize: 50, total: ITEMS.length } },
+        status: 200, statusText: 'OK', headers: {}, config
+      };
+    }
+    if (config.url === '/ops-center/price-backfill') {
+      const body = JSON.parse(config.data);
+      batchRequests.push(body);
+      if (body.preview) {
+        return {
+          data: { success: true, data: {
+            assetCount: 2, readyCount: 2, skippedCount: 0, missingDateCount: 4,
+            range: { from: body.from, to: body.to, year: null }, assets: []
+          } },
+          status: 200, statusText: 'OK', headers: {}, config
+        };
+      }
+      return {
+        data: { success: true, data: { runId: 'run-74', taskName: 'asset-history-backfill-batch', status: 'RUNNING', startedAt: checkedAt } },
+        status: 202, statusText: 'Accepted', headers: {}, config
+      };
+    }
+    if (config.url === '/ops-center/task-runs/run-74') {
+      batchPolls += 1;
+      const done = batchPolls >= 2;
+      return {
+        data: { success: true, data: {
+          runId: 'run-74', taskName: 'asset-history-backfill-batch', runKey: 'manual:x', trigger: 'MANUAL',
+          status: done ? 'SUCCEEDED' : 'RUNNING', stale: false, startedAt: checkedAt,
+          progress: { completed: done ? 2 : 1, total: 2, updatedAt: checkedAt },
+          counts: { totalCount: 2, successCount: done ? 2 : 0, failureCount: 0 },
+          failures: [], result: {
+            assetCount: 2, successCount: 2, failureCount: 0, skippedCount: 0,
+            missingBeforeCount: 4, missingAfterCount: 0, fetchedCount: 4, assets: []
+          }
+        } },
+        status: 200, statusText: 'OK', headers: {}, config
+      };
+    }
+    throw new Error(`Unexpected request ${config.method} ${config.url}`);
+  };
+  q('[data-testid="ops-batch-preview"]').click();
+  await waitFor(() => text('[data-testid="ops-batch-preview-summary"]').includes('缺失 4 天'));
+  check('TASK-074 预览显示资产数/缺失天数且不执行',
+    batchRequests.length === 1 && batchRequests[0].preview === true
+      && text('[data-testid="ops-batch-preview-summary"]').includes('资产 2 个'));
+  q('[data-testid="ops-batch-start"]').click();
+  await waitFor(() => Boolean(q('[data-testid="ops-batch-progress"]')));
+  check('TASK-074 确认后异步启动并显示进度',
+    batchRequests.length === 2 && batchRequests[1].preview === false
+      && batchRequests[1].assetIds.length === 2);
+  await waitFor(() => text('[data-testid="ops-batch-result"]').includes('批量补采完成'), 6000);
+  await waitFor(() => text('[data-testid="ops-batch-result-detail"]').includes('补充 4 天'));
+  check('TASK-074 终态显示逐资产汇总并回读资产总表',
+    text('[data-testid="ops-batch-result"]').includes('批量补采完成'));
+  await view.unmount();
+
   view = mount({ role: 'member' });
   await waitRows();
   check('TASK-070 member 看不到刷新按钮', !q('[data-testid="ops-integrity-refresh"]'));
   check('TASK-071 member 看不到价格同步按钮', !q('[data-testid="ops-price-sync"]'));
   check('TASK-072 member 看不到补采入口', !q('[data-testid="ops-backfill-a-priced"]'));
+  check('TASK-074 member 看不到批量选择与批量补采',
+    !q('[data-testid="ops-batch-select-all"]')
+      && !q('[data-testid="ops-select-a-priced"]')
+      && !q('[data-testid="ops-batch-preview"]'));
   await view.unmount();
 }
 

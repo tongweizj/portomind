@@ -25,6 +25,7 @@ const {
 
 const RUN_ID = '64b000000000000000000070';
 const ASSET_ID = '64b0000000000000000000a1';
+const ASSET_ID_2 = '64b0000000000000000000a2';
 let server;
 let baseUrl;
 
@@ -107,6 +108,10 @@ test('未登录触发/读取均返回 401', async () => {
     method: 'POST', body: '{}'
   }, { authenticated: false });
   assert.equal(backfill.status, 401);
+  const batch = await request('/api/ops-center/price-backfill', {
+    method: 'POST', body: '{}'
+  }, { authenticated: false });
+  assert.equal(batch.status, 401);
   const detail = await request(`/api/ops-center/task-runs/${RUN_ID}`, {}, { authenticated: false });
   assert.equal(detail.status, 401);
 });
@@ -240,6 +245,100 @@ test('单资产补采：非法 id 400、资产不存在 404、无 launchDate/非
     });
     assert.equal(badYear.status, 400);
   }
+});
+
+function stubBatchAssets(t) {
+  const assets = [
+    { _id: ASSET_ID, symbol: 'VOO.US', market: 'US', launchDate: new Date('2020-01-01T12:00:00Z') },
+    { _id: ASSET_ID_2, symbol: 'VTI.US', market: 'US', launchDate: new Date('2020-01-01T12:00:00Z') }
+  ];
+  t.mock.method(Asset, 'findById', async (id) => assets.find((asset) => asset._id === id) || null);
+  t.mock.method(Price, 'find', () => ({
+    lean: async () => [{ timestamp: dateBounds('2026-11-20').start }]
+  }));
+  return assets;
+}
+
+function stubBatchTaskRuns(t) {
+  t.mock.method(TaskRun, 'init', async () => TaskRun);
+  let child = 0;
+  t.mock.method(TaskRun, 'create', async (doc) => {
+    const id = doc.taskName === 'asset-history-backfill-batch' ? 'batch-run' : `child-${child += 1}`;
+    return { ...doc, _id: id };
+  });
+  const updates = [];
+  t.mock.method(TaskRun, 'updateOne', async (filter, update) => {
+    updates.push(update);
+    return { modifiedCount: 1 };
+  });
+  return updates;
+}
+
+test('批量补采预览返回资产数/缺失天数且不创建 TaskRun', async (t) => {
+  stubBatchAssets(t);
+  const taskRunCreate = t.mock.method(TaskRun, 'create', async () => assert.fail('preview must not create TaskRun'));
+
+  const response = await request('/api/ops-center/price-backfill', {
+    method: 'POST', headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ assetIds: [ASSET_ID, ASSET_ID_2], from: '2026-11-20', to: '2026-11-20', preview: true })
+  });
+
+  assert.equal(response.status, 200);
+  assert.equal(response.body.data.assetCount, 2);
+  assert.equal(response.body.data.readyCount, 2);
+  assert.equal(response.body.data.missingDateCount, 0);
+  assert.equal(taskRunCreate.mock.callCount(), 0);
+});
+
+test('批量补采异步返回 202，父 TaskRun 汇总逐资产结果', async (t) => {
+  stubBatchAssets(t);
+  const updates = stubBatchTaskRuns(t);
+
+  const response = await request('/api/ops-center/price-backfill', {
+    method: 'POST', headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ assetIds: [ASSET_ID, ASSET_ID_2], from: '2026-11-20', to: '2026-11-20' })
+  });
+  assert.equal(response.status, 202);
+  assert.equal(response.body.data.taskName, 'asset-history-backfill-batch');
+
+  await waitFor(() => updates.some((update) => update.$set?.result?.assetCount === 2));
+  const final = updates.find((update) => update.$set?.result?.assetCount === 2);
+  assert.equal(final.$set.status, 'SUCCEEDED');
+  assert.equal(final.$set.result.successCount, 2);
+  assert.equal(final.$set.result.assets.length, 2);
+});
+
+test('批量补采：空/非法 assetIds 400，活跃批量运行 409', async (t) => {
+  for (const body of [
+    {}, { assetIds: [] }, { assetIds: ['not-an-id'] },
+    { assetIds: [ASSET_ID], from: '2026-11-20', to: '2026-11-01' }
+  ]) {
+    const response = await request('/api/ops-center/price-backfill', {
+      method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body)
+    });
+    assert.equal(response.status, 400);
+  }
+
+  stubBatchAssets(t);
+  t.mock.method(TaskRun, 'init', async () => TaskRun);
+  t.mock.method(TaskRun, 'create', async () => {
+    throw Object.assign(new Error('duplicate lock'), { code: 11000 });
+  });
+  t.mock.method(TaskRun, 'findOne', () => ({
+    sort() { return this; },
+    lean: async () => ({
+      _id: 'active-batch', taskName: 'asset-history-backfill-batch', runKey: 'manual:old',
+      status: 'RUNNING', startedAt: new Date(), progress: { completed: 1, total: 2, updatedAt: new Date() }
+    })
+  }));
+  t.mock.method(TaskSkip, 'create', async () => ({ _id: 'skip-batch' }));
+
+  const conflict = await request('/api/ops-center/price-backfill', {
+    method: 'POST', headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ assetIds: [ASSET_ID], from: '2026-11-20', to: '2026-11-20' })
+  });
+  assert.equal(conflict.status, 409);
+  assert.equal(conflict.body.code, 'TASK_ALREADY_RUNNING');
 });
 
 test('单资产补采已有活跃运行时返回 409 + 当前运行信息', async (t) => {

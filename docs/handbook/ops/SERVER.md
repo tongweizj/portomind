@@ -97,6 +97,7 @@ curl "http://localhost:8080/api/prices/date/$(date +%F)?page=1&pageSize=20"
 | `POST` | `/api/ops-center/integrity-check` | 异步刷新价格完整性检查（`price-integrity-check`）：空 Body，成功 `202 + runId`，已有运行 `409 TASK_ALREADY_RUNNING`；手动刷新固定 `repair:false` |
 | `POST` | `/api/ops-center/price-sync` | 异步同步今日价格（`daily-price-sync`）：空 Body/`{}` = 全部 active，`{marketGroup:'CN'\|'US_CA'}` 指定市场组；成功 `202 + runId`，非法组 `400`，已有运行 `409` |
 | `POST` | `/api/ops-center/assets/<id>/price-backfill` | 同步补采单资产历史：Body `{from?,to?}` 或 `{year}`，默认当前年份；返回 `200 + 摘要`，非法区间 `400`，资产不存在 `404`，同资产运行中 `409` |
+| `POST` | `/api/ops-center/price-backfill` | 批量补缺失：Body `{assetIds,from?,to?,year?,preview?}`；`preview:true` 返回 `200` 预估，否则 `202 + runId`；非法选择/区间 `400`，已有批量运行 `409` |
 | `GET` | `/api/ops-center/task-runs/<id>` | **只读**任务运行详情：状态、`stale`、进度、计数、失败与 `result`；不返回内部 `lockKey` |
 | `POST` | `/api/alerts/evaluate` | 手动跑一次提醒规则评估（界面「立即评估」按钮同效） |
 | `POST` | `/api/family/fx/sync` | 手动同步汇率（USD/CAD/HKD → CNY）。采集源以 CNY 为 base，入库前取倒数转成 `rateToCny` =「1 外币 = X CNY」 |
@@ -117,6 +118,7 @@ curl 'http://localhost:8080/api/cron/status?detail=rebalance&date=2026-10-26'
 curl -X POST http://localhost:8080/api/ops-center/integrity-check -H 'Content-Type: application/json' -d '{}'
 curl -X POST http://localhost:8080/api/ops-center/price-sync -H 'Content-Type: application/json' -d '{"marketGroup":"CN"}'
 curl -X POST http://localhost:8080/api/ops-center/assets/<assetId>/price-backfill -H 'Content-Type: application/json' -d '{"year":2026}'
+curl -X POST http://localhost:8080/api/ops-center/price-backfill -H 'Content-Type: application/json' -d '{"assetIds":["<id1>","<id2>"],"year":2026,"preview":true}'
 curl http://localhost:8080/api/ops-center/task-runs/<runId>
 ```
 
