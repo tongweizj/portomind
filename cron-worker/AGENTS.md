@@ -46,7 +46,7 @@ node src/tasks/integrityCheck.js [--symbols ...] [--from ...] [--to ...] [--no-r
 ## 任务约定
 
 - 任务函数支持依赖注入（`options.dependencies`，默认回退到真实实现），用于测试。
-- 防重两层：`TaskRun` 的 `(taskName, runKey)` 唯一索引 + 进程内 Map 锁。runKey：SCHEDULED 用市场日期（`marketDate()`），MANUAL 用 `manual:<ISO时间>`。
+- 防重三层：进程内 Map 锁、`TaskRun` 的 `(taskName, runKey)` 唯一索引，以及仅约束 `RUNNING` 的 `lockKey` 部分唯一索引（运维中心任务跨进程互斥，TASK-070）。runKey：SCHEDULED 用市场日期（`marketDate()`），MANUAL 用 `manual:<ISO时间>`。
 - **`taskName` 必须稳定**：`daily-price-sync`、`price-integrity-check`、`alert-evaluate`、`fx-rate-sync`、`rebalance-suggestions:<portfolioId>`。改名会导致 `taskruns` 历史断代。
 - 结果状态：`SUCCEEDED` / `PARTIAL`（有失败）/ `FAILED` / `SKIPPED`（重复或已在跑）。
 - 逐资产故障隔离：单个资产失败只记录 `{item, category, provider, retryable, message}` 进 `failures`，不中断其余同步，最终返回 `{totalCount, successCount, failureCount, failures}`。

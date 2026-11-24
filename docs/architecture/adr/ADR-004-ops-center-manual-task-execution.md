@@ -150,7 +150,7 @@ progress: { completed: Number, total: Number, updatedAt: Date }
 
 | status | 条件 | 字段 |
 |---|---|---|
-| `unavailable` | 没有可用的 `price-integrity-check` 运行（`SUCCEEDED`/`PARTIAL` 且已结束） | `checkedAt/expected/actual/missing/ratio` 全为 `null` |
+| `unavailable` | 没有可用的 `price-integrity-check` 运行（`SUCCEEDED`/`PARTIAL`、已结束且 `result.assets` 为数组） | `checkedAt/expected/actual/missing/ratio` 全为 `null` |
 | `checked` | 最近可用运行中资产为 `OK`/`GAP`，且 `expected >= 3`、计数与比例完整 | `checkedAt` = 运行 `endedAt`；`expected` = 理论交易日；`actual` = 匹配理论日的实际有价日；`missing` = 差额；`ratio = actual / expected` |
 | `unknown` | 运行中无该资产条目，或条目为 `SKIPPED_NO_LAUNCH_DATE` / `INSUFFICIENT_SAMPLE` / `ERROR`，或关键字段缺失、`expected < 3` | 除 `checkedAt` 外计数为 `null` |
 

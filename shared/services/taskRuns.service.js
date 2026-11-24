@@ -5,21 +5,12 @@
 
 const TaskRun = require('../models/taskRun');
 const { OPS_TASK_CONFIG } = require('../config/opsTasks');
-const { isStaleRun } = require('./taskRunner');
+const { isStaleRun, normalizeProgress } = require('./taskRunner');
 
 const INTEGRITY_TASK_NAME = OPS_TASK_CONFIG.priceIntegrity.taskName;
 
 function runIdOf(doc) {
   return doc && doc._id !== undefined && doc._id !== null ? String(doc._id) : null;
-}
-
-function progressOf(doc) {
-  if (!doc || !doc.progress) return null;
-  return {
-    completed: Number.isFinite(doc.progress.completed) ? doc.progress.completed : 0,
-    total: Number.isFinite(doc.progress.total) ? doc.progress.total : null,
-    updatedAt: doc.progress.updatedAt ?? null
-  };
 }
 
 /** TaskRun 的 HTTP 投影；不返回 lockKey，不暴露原始价格序列。 */
@@ -35,7 +26,7 @@ function serializeTaskRun(doc, { now = new Date(), staleAfterMs = OPS_TASK_CONFI
     startedAt: doc.startedAt ?? null,
     endedAt: doc.endedAt ?? null,
     durationMs: Number.isFinite(doc.durationMs) ? doc.durationMs : null,
-    progress: progressOf(doc),
+    progress: normalizeProgress(doc.progress),
     counts: {
       totalCount: Number.isFinite(doc.totalCount) ? doc.totalCount : 0,
       successCount: Number.isFinite(doc.successCount) ? doc.successCount : 0,
@@ -58,7 +49,8 @@ async function findLatestUsableIntegrityRun() {
   return TaskRun.findOne({
     taskName: INTEGRITY_TASK_NAME,
     status: { $in: ['SUCCEEDED', 'PARTIAL'] },
-    endedAt: { $ne: null }
+    endedAt: { $ne: null },
+    'result.assets': { $type: 'array' }
   }).sort({ startedAt: -1 }).lean();
 }
 

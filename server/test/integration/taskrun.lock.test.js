@@ -69,6 +69,47 @@ test('startTrackedTask 立即返回 runId，执行完成后写终态与 progress
   assert.equal(final.$unset.lockKey, 1);
 });
 
+test('同进程活跃锁冲突也返回当前运行信息与 TaskSkip', async (t) => {
+  t.mock.method(TaskRun, 'init', async () => TaskRun);
+  t.mock.method(TaskRun, 'create', async (doc) => ({ ...doc, _id: 'run-active' }));
+  t.mock.method(TaskRun, 'updateOne', async () => ({ modifiedCount: 1 }));
+  t.mock.method(TaskRun, 'findOne', () => ({
+    sort() { return this; },
+    lean: async () => activeRun({ _id: 'run-active', runKey: 'manual:first' })
+  }));
+  const skips = [];
+  t.mock.method(TaskSkip, 'create', async (doc) => { skips.push(doc); return { _id: 'skip-2' }; });
+
+  let release;
+  const gate = new Promise((resolve) => { release = resolve; });
+  const first = await startTrackedTask({
+    taskName: 'price-integrity-check',
+    runKey: 'manual:first',
+    trigger: 'MANUAL',
+    lockKey: 'ops:price-integrity-check',
+    execute: async () => {
+      await gate;
+      return { totalCount: 1, successCount: 1, failureCount: 0, result: {} };
+    }
+  });
+  const second = await startTrackedTask({
+    taskName: 'price-integrity-check',
+    runKey: 'manual:second',
+    trigger: 'MANUAL',
+    lockKey: 'ops:price-integrity-check',
+    execute: async () => assert.fail('冲突时不得执行')
+  });
+
+  assert.equal(second.ok, false);
+  assert.equal(second.reason, 'ALREADY_RUNNING');
+  assert.equal(second.activeRun.runId, 'run-active');
+  assert.equal(second.activeRun.progress.completed, 1);
+  assert.equal(skips.length, 1);
+
+  release();
+  await first.promise;
+});
+
 test('lockKey 冲突且活跃运行未过期时返回冲突信息并写 TaskSkip', async (t) => {
   t.mock.method(TaskRun, 'init', async () => TaskRun);
   t.mock.method(TaskRun, 'create', async () => {

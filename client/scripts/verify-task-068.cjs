@@ -50,8 +50,11 @@ function staticChecks() {
       && !/activeTab !== DEFAULT_LOG_TAB/.test(viewer));
 
   const service = read('src/services/ops-center.service.js');
+  const postCalls = (service.match(/\bapi\.post\(/g) || []).length;
+  const getCalls = (service.match(/\bapi\.get\(/g) || []).length;
   check('TASK-070 数据层只含资产 GET 与白名单任务端点',
-    /api\.get\(OPS_CENTER_ASSETS_ENDPOINT/.test(service)
+    getCalls === 2 && postCalls === 1
+      && /api\.get\(OPS_CENTER_ASSETS_ENDPOINT/.test(service)
       && /api\.post\(INTEGRITY_CHECK_ENDPOINT, \{\}\)/.test(service)
       && /api\.get\(`\$\{TASK_RUNS_ENDPOINT\}\/\$\{runId\}`\)/.test(service)
       && !/api\.(put|patch|delete)/.test(service));

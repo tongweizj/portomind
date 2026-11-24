@@ -84,6 +84,7 @@ function buildResult(report) {
  */
 async function runIntegrityReport(options = {}) {
   const dependencies = options.dependencies || {};
+  // 兼容既有 cron-worker CLI/测试的顶层注入名；新调用方统一走 dependencies。
   const loadAssets = dependencies.getActiveAssets || options.getActiveAssets || getActiveAssets;
   const loadBySymbols = dependencies.getAssetsBySymbols || options.getAssetsBySymbols || getAssetsBySymbols;
   const countFn = dependencies.countAssetCoverage || options.countAsset || countAssetCoverage;
@@ -129,7 +130,7 @@ async function runIntegrityReport(options = {}) {
     assets: [],
     totals: { expectedCount: 0, actualCount: 0, missingCount: 0 }
   };
-  reportProgress(0, report.totalCount);
+  await reportProgress(0, report.totalCount);
 
   taskLogger.info('INTEGRITY_CHECK_START', {
     totalCount: report.totalCount,
@@ -162,7 +163,7 @@ async function runIntegrityReport(options = {}) {
         entry.status = 'SKIPPED_NO_LAUNCH_DATE';
         report.skippedCount += 1;
         report.assets.push(entry);
-        reportProgress(report.assets.length, report.totalCount);
+        await reportProgress(report.assets.length, report.totalCount);
         continue;
       }
       const to = toOption || targetMarketDay(market, now);
@@ -177,7 +178,7 @@ async function runIntegrityReport(options = {}) {
         entry.status = 'INSUFFICIENT_SAMPLE';
         report.skippedCount += 1;
         report.assets.push(entry);
-        reportProgress(report.assets.length, report.totalCount);
+        await reportProgress(report.assets.length, report.totalCount);
         continue;
       }
 
@@ -235,7 +236,7 @@ async function runIntegrityReport(options = {}) {
       report.assets.push(entry);
       taskLogger.error('INTEGRITY_ASSET_FAILED', { symbol, market, ...failure });
     }
-    reportProgress(report.assets.length, report.totalCount);
+    await reportProgress(report.assets.length, report.totalCount);
   }
 
   report.allSkipped = allItemsSkipped(report);

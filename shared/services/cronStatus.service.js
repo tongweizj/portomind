@@ -425,9 +425,14 @@ function buildIntegrityDataState(doc) {
   const completenessRatio = expectedCount !== null && expectedCount > 0 && actualCount !== null
     ? actualCount / expectedCount
     : null;
-  const skippedNoLaunchDate = numOrNull(result.skippedCount ?? result.skippedNoLaunchDate);
+  // TASK-070 起 result.assets 区分“无 launchDate”和“样本不足”，
+  // 不能再用总 skippedCount 冒充 skippedNoLaunchDate。
+  const skippedNoLaunchDate = Array.isArray(result.assets)
+    ? result.assets.filter((item) => item && item.status === 'SKIPPED_NO_LAUNCH_DATE').length
+    : numOrNull(result.skippedCount ?? result.skippedNoLaunchDate);
+  const skippedCount = numOrNull(result.skippedCount ?? result.skippedNoLaunchDate);
   const allSkipped = result.allSkipped ?? (
-    result.checkedCount === 0 && allItemsSkipped({ totalCount: doc.totalCount, skippedCount: skippedNoLaunchDate })
+    result.checkedCount === 0 && allItemsSkipped({ totalCount: doc.totalCount, skippedCount })
   );
 
   let gapAssets = [];
@@ -441,8 +446,8 @@ function buildIntegrityDataState(doc) {
   } else if (Array.isArray(result.assets)) {
     gapAssets = result.assets
       .filter((item) => item && typeof item === 'object')
-      .filter((item) => (numOrNull(item.missingCount) ?? 0) > 0)
-      .map((item) => ({ symbol: item.symbol ?? null, missingCount: numOrNull(item.missingCount) }));
+      .filter((item) => (numOrNull(item.missingCount ?? item.missing) ?? 0) > 0)
+      .map((item) => ({ symbol: item.symbol ?? null, missingCount: numOrNull(item.missingCount ?? item.missing) }));
   }
 
   const contractReady = expectedCount !== null && actualCount !== null && missingCount !== null;

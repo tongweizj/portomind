@@ -84,7 +84,7 @@
 
 > 本节只回答「这条线现在具备什么能力」。**能力如何实现**不在产品文档里：
 >
-> - **M0.1 调度与数据质量** → [CRON_WORKER.md §2](../../ops/CRON_WORKER.md)（功能地图）· [CRON_WORKER_DEV.md](../../technical/CRON_WORKER_DEV.md)（调度引擎、两层防重、TaskRun 契约、日历与归桶）· [CRON_WORKER_OPS.md](../../ops/CRON_WORKER_OPS.md)（CLI、巡检、排障）
+> - **M0.1 调度与数据质量** → [CRON_WORKER.md §2](../../ops/CRON_WORKER.md)（功能地图）· [CRON_WORKER_DEV.md](../../technical/CRON_WORKER_DEV.md)（调度引擎、防重与跨进程互斥、TaskRun 契约、日历与归桶）· [CRON_WORKER_OPS.md](../../ops/CRON_WORKER_OPS.md)（CLI、巡检、排障）
 > - **M0.2 系统运维** → [SERVER.md](../../ops/SERVER.md)（响应格式、traceId、请求日志、错误处理、日志脱敏与切割）· [DEPLOYMENT.md §9](../../ops/DEPLOYMENT.md)（CORS 与认证边界）
 > - **M0.3 设计系统** → [CLIENT_DEV.md](../../technical/CLIENT_DEV.md)（组件清单、Query 数据层、设计 token、双轨样式现状）
 
@@ -184,7 +184,7 @@
 - [ARCHITECTURE.md](../../../architecture/ARCHITECTURE.md) — 架构风格、技术栈、外部集成、模块边界、架构约束与架构债
 - [DEPLOYMENT.md](../../ops/DEPLOYMENT.md) — 系统总览与运行时拓扑（§1）、环境变量全表（§4）、部署（§6）、安全边界（§9）
 - [CRON_WORKER.md](../../ops/CRON_WORKER.md) — 调度功能地图；运维 / 产品 / 开发三视角见其导航
-- [CRON_WORKER_DEV.md](../../technical/CRON_WORKER_DEV.md) — 调度引擎、两层防重、TaskRun 契约、日历与市场时区归桶
+- [CRON_WORKER_DEV.md](../../technical/CRON_WORKER_DEV.md) — 调度引擎、防重与跨进程互斥、TaskRun 契约、日历与市场时区归桶
 - [CRON_WORKER_OPS.md](../../ops/CRON_WORKER_OPS.md) — CLI 手动入口、巡检与排障
 - [SERVER.md](../../ops/SERVER.md) — 服务端响应格式、日志、错误处理与排障
 - [CLIENT.md](../../manual/CLIENT.md) — 界面操作与**业务口径**（§5）

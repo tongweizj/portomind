@@ -14,17 +14,15 @@ mongoose.set('strictQuery', true);
 const minimist = require('minimist');
 
 const { taskLogger } = require('@portomind/shared/config/logger');
-const { dateBounds, marketDate } = require('@portomind/shared/utils/marketTime');
+const { dateBounds } = require('@portomind/shared/utils/marketTime');
 const { expectedBucketCandidates } = require('@portomind/shared/services/marketDay.service');
 const {
   countAssetCoverage,
   expectedTradingDates,
-  storedBucketDates,
   groupMissingRanges,
   clipRepairRanges
 } = require('@portomind/shared/services/priceCoverage.service');
 const {
-  TASK_NAME,
   runIntegrityReport,
   priceIntegrityCheck
 } = require('@portomind/shared/tasks/priceIntegrityCheck');
@@ -71,9 +69,7 @@ async function runFromCommandLine() {
   const from = argv.from || null;
   const to = argv.to || null;
   const dryRun = Boolean(argv['dry-run']);
-  const repair = dryRun
-    ? false
-    : (argv.repair !== undefined ? Boolean(argv.repair) : process.env.INTEGRITY_AUTO_REPAIR !== 'false');
+  const repair = resolveRepair({ dryRun, repair: argv.repair });
 
   if (!process.env.MONGO_URI) throw new Error('MONGO_URI is required');
   if (from) dateBounds(from);
@@ -100,9 +96,5 @@ module.exports.runIntegrityCheck = runIntegrityReport;
 module.exports.countAsset = countAssetCoverage;
 module.exports.expectedTradingDates = expectedTradingDates;
 module.exports.expectedBucketCandidates = expectedBucketCandidates;
-module.exports.storedBucketDates = storedBucketDates;
 module.exports.groupMissingRanges = groupMissingRanges;
 module.exports.clipRepairRanges = clipRepairRanges;
-module.exports.repairAsset = repairAsset;
-module.exports.marketDate = marketDate;
-module.exports.TASK_NAME = TASK_NAME;

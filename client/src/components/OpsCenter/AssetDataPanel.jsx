@@ -66,7 +66,7 @@ const UNKNOWN_TEXT = '—';
 
 const REFRESH_RESULT_VIEW = Object.freeze({
   SUCCEEDED: { label: '检查完成', color: colors.statusOk },
-  PARTIAL: { label: '检查完成（部分资产失败）', color: colors.statusWarn },
+  PARTIAL: { label: '检查完成（存在缺口或异常）', color: colors.statusWarn },
   FAILED: { label: '检查失败', color: colors.statusBad }
 });
 

@@ -191,7 +191,7 @@ test('服务端筛选：market、active、symbol/name 搜索', async (t) => {
   assert.equal(calls.queries[3].$or.length, 2);
 });
 
-test('缺失类型筛选：validity / today_price / basic_info；history unavailable 不算缺口', async (t) => {
+test('缺失类型筛选：validity / today_price / basic_info；history unavailable/unknown 不算缺口', async (t) => {
   const assets = [
     asset({ _id: 'm1', symbol: 'BAD.US', name: 'Bad Validity' }),
     asset({ _id: 'm2', symbol: 'MISS.US', name: 'Missing Price' }),
@@ -376,4 +376,21 @@ test('历史完整度：checked / unknown / unavailable 三态与计数', async 
   assert.deepEqual(byId(result.data, 'h3').history, {
     status: 'unknown', checkedAt: endedAt, expected: null, actual: null, missing: null, ratio: null
   }, '有可用运行但无该资产条目时是 unknown，不是未检查');
+});
+
+test('历史运行查询失败降级为 unknown，不谎报尚未检查', async (t) => {
+  const assets = [asset({ _id: 'f1', symbol: 'FAIL.US' })];
+  stubAssets(t, assets);
+  stubPrices(t, []);
+
+  const result = await getAssetsOverview({
+    now: NOW_SYNCED,
+    dependencies: {
+      loadLatestIntegrityRun: async () => { throw new Error('taskruns unavailable'); }
+    }
+  });
+
+  assert.deepEqual(byId(result.data, 'f1').history, {
+    status: 'unknown', checkedAt: null, expected: null, actual: null, missing: null, ratio: null
+  });
 });

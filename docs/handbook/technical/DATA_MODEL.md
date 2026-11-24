@@ -287,7 +287,7 @@ AlertRule ──_id──> AlertEvent.ruleId（**可空**：再平衡通知没�
 | `createdAt` / `updatedAt` | `timestamps: true` |
 
 - 索引：`{taskName: 1, runKey: 1}` **unique**（防重键）；`{startedAt: -1, taskName: 1}`（按时间倒序巡检）；`{lockKey: 1}` **unique partial**，`partialFilterExpression: {status:'RUNNING', lockKey:{$type:'string'}}`（`taskrun_active_lock_unique`，TASK-070 跨进程互斥）。
-- **锁语义**：只约束活跃且带锁的任务；终态记录即使残留 `lockKey` 也不参与唯一约束，正常路径仍会 `$unset` 释放。旧记录没有 `lockKey`，无需迁移。stale 只由读侧按心跳判定，不自动释放；下一次触发才会条件恢复过期运行（置 `FAILED`、`runKey=interrupted:<id>`、释放锁）后创建新运行。
+- **锁语义**：只约束活跃且带锁的任务；终态记录即使残留 `lockKey` 也不参与唯一约束，正常路径仍会 `$unset` 释放。旧记录没有 `lockKey`，无需迁移。stale 只由读侧按心跳判定，不自动释放；下一次触发才会条件恢复过期运行（置 `FAILED`、`runKey=interrupted:<id>`、释放锁）后创建新运行。`runKey` 的稳定契约以正常记录为准；`interrupted:*` 是恢复专用的审计改键，必须以 `runId` 关联原运行。
 - **语义边界**：`successCount` 计的是「处理动作调用成功」，**不等于「有新数据入库」**——见 §5.6。
 - 契约细节（runKey 构造、四态含义、退出码、result 形状）的唯一归属是 [CRON_WORKER_DEV.md §5](./CRON_WORKER_DEV.md)，此处不重复。
 

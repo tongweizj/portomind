@@ -11,7 +11,7 @@
 |---|---|
 | 系统总览与三进程运行时拓扑 | [DEPLOYMENT.md §1](../handbook/ops/DEPLOYMENT.md) |
 | 定时任务清单与时间表 | [CRON_WORKER.md §2](../handbook/ops/CRON_WORKER.md) |
-| 调度引擎 / 两层防重 / TaskRun 契约 | [CRON_WORKER_DEV.md](../handbook/technical/CRON_WORKER_DEV.md) |
+| 调度引擎 / 防重与跨进程互斥 / TaskRun 契约 | [CRON_WORKER_DEV.md](../handbook/technical/CRON_WORKER_DEV.md) |
 | 模型字段 / 枚举 / 索引 / 契约缺口 | [DATA_MODEL.md](../handbook/technical/DATA_MODEL.md) |
 | 前端路由 / 组件 / 数据层 / 设计 token | [CLIENT_DEV.md](../handbook/technical/CLIENT_DEV.md) |
 | HTTP 端点契约 | [API_CONTRACT.md](../handbook/technical/API_CONTRACT.md) |
@@ -133,7 +133,7 @@ cron-worker ──────────────┘
 | 模块 | 禁止 |
 |---|---|
 | `client` | 直连数据库 · 存密钥 · 引入 `@portomind/shared` · 自算百分比阈值 |
-| `server` | 注册 cron · 承载业务规则 · 托管静态文件（生产由 Nginx） · 暴露触发/写操作类调度接口。`GET /api/cron/status` 是只读查询。TASK-073 已退休 TASK-076 的资产信息检查例外 |
+| `server` | 注册 cron · 承载业务规则 · 托管静态文件（生产由 Nginx） · 暴露触发/写操作类调度接口。`GET /api/cron/status` 是只读查询。例外：运维中心白名单手动任务端点（`POST /api/ops-center/integrity-check`）只启动 `shared` 任务、不注册 cron，见 [ADR-004](./adr/ADR-004-ops-center-manual-task-execution.md)；TASK-073 已退休 TASK-076 的资产信息检查例外 |
 | `cron-worker` | 引入 Web 框架 · 监听端口 · 直接改业务数据而不经 `shared` 服务层 |
 | `shared` | 依赖进程环境（已核：无 `process.exit`、不读 CLI 参数、不注册信号） · 引用任何外壳模块 |
 
@@ -223,7 +223,7 @@ cron-worker/index.js
 | 7 | **无数据库事务** | 见 §6 | 多集合写入非原子，中断会留下半完成状态（靠幂等键兜底，但并非全覆盖） |
 | 8 | **枚举双份定义** | 见 §7 第 8 条 | 新增市场/类型时极易漏同步，前后端表现不一致 |
 | 9 | **controller 未完全下沉** | 10 个 controller 中 3 个直接 `require('@portomind/shared/models/*')` 并自行查询 | 与 §7 第 1 条「规则只在 shared」冲突；新功能应走 `shared/service`（新增的 `cronStatus` 即如此），旧的可增量收敛 |
-| 10 | **运行态查询只读且尚不完整** | `GET /api/cron/status`（TASK-054）已提供 TaskRun 只读聚合，但 `server` 仍**不提供**触发 / 写操作端点；数据态可视化还需前端（TASK-053/055） | 数据是否「按时到位」目前只能靠接口/日志判断，看板尚未落地 |
+| 10 | **运行态查询只读且尚不完整** | `GET /api/cron/status`（TASK-054）已提供 TaskRun 只读聚合；除运维中心白名单手动任务端点（见 ADR-004）外，`server` 不提供触发 / 写操作端点；数据态可视化还需前端（TASK-053/055） | 数据是否「按时到位」目前只能靠接口/日志判断，看板尚未落地 |
 
 ---
 

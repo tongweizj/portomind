@@ -7,7 +7,7 @@
 const TaskRun = require('../models/taskRun');
 const TaskSkip = require('../models/taskSkip');
 const { taskLogger } = require('../config/logger');
-const { PROGRESS_THROTTLE_MS } = require('../config/opsTasks');
+const { PROGRESS_THROTTLE_MS, DEFAULT_STALE_MS } = require('../config/opsTasks');
 
 const activeTasks = new Map();
 
@@ -58,6 +58,18 @@ function isStaleRun(doc, staleAfterMs, now = new Date()) {
 async function findActiveRunByLockKey(lockKey) {
   if (!lockKey) return null;
   return TaskRun.findOne({ lockKey, status: 'RUNNING' }).sort({ startedAt: -1 }).lean();
+}
+
+async function lookupActiveRunForSkip(lockKey) {
+  try {
+    return await findActiveRunByLockKey(lockKey);
+  } catch (error) {
+    taskLogger.warn('TASK_ACTIVE_RUN_LOOKUP_FAILED', {
+      lockKey,
+      message: error && error.message ? error.message : 'unknown'
+    });
+    return null;
+  }
 }
 
 async function findRunByKey(taskName, runKey) {
@@ -132,7 +144,21 @@ function createTrackedRun(doc, { lockKey, exclusiveRunKey, staleAfterMs, now }) 
       const activeRun = await findActiveRunByLockKey(lockKey);
       if (activeRun && isStaleRun(activeRun, staleAfterMs, now)) {
         const recovered = await recoverStaleRun(activeRun, now);
-        if (recovered) return TaskRun.create(doc);
+        if (recovered) {
+          try {
+            return await TaskRun.create(doc);
+          } catch (retryError) {
+            if (retryError.code !== 11000) throw retryError;
+            // 恢复后另一个进程抢到了锁：返回冲突，不要把它升级成 500。
+            const currentRun = await findActiveRunByLockKey(lockKey);
+            const existing = currentRun ? null : await findRunByKey(doc.taskName, doc.runKey);
+            return {
+              conflict: currentRun
+                ? { reason: 'ALREADY_RUNNING', activeRun: currentRun }
+                : { reason: 'DUPLICATE_RUN_KEY', activeRun: existing }
+            };
+          }
+        }
       }
       if (activeRun) return { conflict: { reason: 'ALREADY_RUNNING', activeRun } };
       const existing = await findRunByKey(doc.taskName, doc.runKey);
@@ -156,21 +182,24 @@ function createTrackedRun(doc, { lockKey, exclusiveRunKey, staleAfterMs, now }) 
 }
 
 
+function normalizeProgress(progress) {
+  if (!progress) return null;
+  return {
+    completed: Number.isFinite(progress.completed) ? progress.completed : 0,
+    total: Number.isFinite(progress.total) ? progress.total : null,
+    updatedAt: progress.updatedAt ?? null
+  };
+}
+
 function activeRunInfo(activeRun) {
   if (!activeRun) return null;
   return {
-    runId: activeRun._id === undefined ? null : String(activeRun._id),
+    runId: activeRun._id === undefined || activeRun._id === null ? null : String(activeRun._id),
     taskName: activeRun.taskName ?? null,
     runKey: activeRun.runKey ?? null,
     status: activeRun.status ?? null,
     startedAt: activeRun.startedAt ?? null,
-    progress: activeRun.progress
-      ? {
-          completed: activeRun.progress.completed ?? 0,
-          total: activeRun.progress.total ?? null,
-          updatedAt: activeRun.progress.updatedAt ?? null
-        }
-      : null
+    progress: normalizeProgress(activeRun.progress)
   };
 }
 
@@ -189,13 +218,14 @@ async function startTrackedTask({
   execute,
   exclusiveRunKey,
   lockKey,
-  staleAfterMs = 30 * 60 * 1000,
+  staleAfterMs = DEFAULT_STALE_MS,
   progressThrottleMs = PROGRESS_THROTTLE_MS
 }) {
   const activeKey = activeKeyOf({ lockKey, taskName });
   if (activeTasks.has(activeKey)) {
     const activeRunKey = activeTasks.get(activeKey);
     taskLogger.warn('TASK_SKIPPED_ALREADY_RUNNING', { taskName, runKey, trigger, activeRunKey });
+    const activeRun = await lookupActiveRunForSkip(lockKey);
     const persisted = await recordSkip({
       taskName, runKey, trigger, reason: 'ALREADY_RUNNING', activeRunKey
     });
@@ -207,7 +237,7 @@ async function startTrackedTask({
       status: 'SKIPPED',
       reason: 'ALREADY_RUNNING',
       activeRunKey,
-      activeRun: null,
+      activeRun: activeRunInfo(activeRun),
       ...persisted
     };
   }
@@ -252,11 +282,10 @@ async function startTrackedTask({
   }
 
   const runId = String(taskRun._id);
-  const storedKey = storedRunKey;
   const finishedKey = exclusiveRunKey ? `${runKey}:${runId}` : runKey;
   const filter = lockKey
     ? { _id: taskRun._id, lockKey }
-    : (exclusiveRunKey ? { _id: taskRun._id, runKey: storedKey } : { _id: taskRun._id });
+    : (exclusiveRunKey ? { _id: taskRun._id, runKey: storedRunKey } : { _id: taskRun._id });
 
   let lastProgress = lockKey ? { completed: 0, total: null } : null;
   let lastProgressWriteAt = 0;
@@ -397,5 +426,6 @@ module.exports = {
   normalizeCounts,
   recordSkip,
   isStaleRun,
-  findActiveRunByLockKey
+  findActiveRunByLockKey,
+  normalizeProgress
 };

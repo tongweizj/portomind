@@ -306,6 +306,8 @@ async function getAssetsOverview({
       };
     }
   } catch (error) {
+    // 查询失败不等于“从未检查”：保留“无法判断”，避免把降级误报成 unavailable。
+    historyContext = { checkedAt: null, entries: new Map() };
     logger.warn('OPS_CENTER_HISTORY_QUERY_FAILED', { error: error.message });
   }
   const rows = await buildRows(Array.isArray(assets) ? assets : [], now, historyContext);

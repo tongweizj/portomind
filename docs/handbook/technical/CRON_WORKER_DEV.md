@@ -1,6 +1,6 @@
 # cron-worker 开发文档
 
-> 受众：**开发者**。覆盖 cron-worker 的**调度引擎实现、再平衡分发算法、两层防重、TaskRun 数据契约、
+> 受众：**开发者**。覆盖 cron-worker 的**调度引擎实现、再平衡分发算法、防重与跨进程互斥、TaskRun 数据契约、
 > 如何新增调度器、目录结构**。
 >
 > - 进程运行 / 配置 / 监控见 [运维手册](../ops/CRON_WORKER_OPS.md)；任务功能介绍见
@@ -133,6 +133,8 @@ module.exports = { startXxxScheduler };
 
 `price-integrity-check` 的手动与定时触发共享同一 `lockKey`，因此 `runKey` 不同也不能并发；手动触发冲突返回 `409 TASK_ALREADY_RUNNING`，定时触发写 `taskskips` 后跳过。
 
+**唯一例外**：stale 运行被下一次触发恢复时，旧 RUNNING 记录的 `runKey` 会改为 `interrupted:<id>`、状态改为 `FAILED`、释放 `lockKey`，以便同一防重键可以重新运行；正常完成/失败的记录不改 `runKey`。审计以 `runId` 为准，`interrupted:*` 仍保留原任务名与结束时间。
+
 价格同步的两个定时批次沿用 `daily-price-sync`，在同一进程顺序进入任务锁。分组日期按触发时点确定。CN 批次以该日期查询亚洲市场交易日历，避免 ET 中午已跨亚洲午夜时采用次日的开市状态。两组 cron 配置见 [运维手册 §2](../ops/CRON_WORKER_OPS.md#2-配置环境变量)。
 
 CN 定时批次只写入日期与批次目标日相符的场外基金净值。日期不符时，保留已存价格，将该标的记入 `failures`，并在消息中记录目标日和返回日。手动同步继续按上游净值日期入桶。
@@ -171,9 +173,9 @@ TASK-070 起，带 `lockKey` 的任务在 `RUNNING` 期间维护 `progress: {com
 | `fx-rate-sync` | `{ fxCount, currencies:{ USD:{ok:true,rateToCny}, CAD:{…}, HKD:{…} } }`；`ok:true` 仅表示该币种本次真实写入完成，失败运行记 `FAILED` 且不补造成功标志 |
 | `rebalance-check` | `{ totalPortfolios, dueCount, skippedCount, perPortfolio:[{portfolioId,due,needsRebalance,suggestionsCount,recordId,status,failureReason?,skipReason?}] }` |
 
-价格完整性检查在资产总数大于零且全部跳过时记录 `allSkipped: true`、`checkedCount: 0` 和 `completenessRatio: null`。这些字段表示本次未检查，同样用于结束日志。TaskRun 运行状态沿用现有判定。
+价格完整性检查在资产总数大于零且全部跳过时记录 `allSkipped: true`、`checkedCount: 0` 和 `completenessRatio: null`。这些字段表示本次未检查，同样用于结束日志。TaskRun 运行状态沿用现有判定。TASK-070 起 `skippedCount` 是未检查总数（无 `launchDate` + 样本不足）；看板的 `skippedNoLaunchDate` 从 `result.assets[].status` 派生，不再用 `skippedCount` 代替。
 
-TASK-070 起，`result.assets` 是运维中心历史完整度的唯一回读来源：`expected` 以目标市场日的理论交易日计算，`actual` 只计与理论交易日匹配的落库日；`expected < 3` 记 `INSUFFICIENT_SAMPLE`，不进入 `checked` 口径。读侧只取最近一次 `SUCCEEDED` / `PARTIAL` 且 `endedAt` 非空的运行，映射为 `unavailable` / `checked` / `unknown`（字段契约见 [API_CONTRACT.md](./API_CONTRACT.md)）。`GAP` 只表示检测到缺失交易日，**不推断**停牌、采集失败或供应商异常。server 手动触发固定 `repair: false`；定时任务仍按 `INTEGRITY_AUTO_REPAIR` 决定是否补采。
+TASK-070 起，`result.assets` 是运维中心历史完整度的唯一回读来源：`expected` 以目标市场日的理论交易日计算，`actual` 只计与理论交易日匹配的落库日；`expected < 3` 记 `INSUFFICIENT_SAMPLE`，不进入 `checked` 口径。读侧只取最近一次 `SUCCEEDED` / `PARTIAL`、`endedAt` 非空且 `result.assets` 为数组的运行，映射为 `unavailable` / `checked` / `unknown`（字段契约见 [API_CONTRACT.md](./API_CONTRACT.md)）。`GAP` 只表示检测到缺失交易日，**不推断**停牌、采集失败或供应商异常。server 手动触发固定 `repair: false`；定时任务仍按 `INTEGRITY_AUTO_REPAIR` 决定是否补采。
 
 日价写入成功后发出 `PRICE_UPSERT_PREVIOUS` 与 `PRICE_UPSERTED`，共享标准键、日桶时间戳、来源、批次和写入时刻。前一条含 `existing`（首次为空），后一条含 `price` 和 `overwritten`。并发改价时重新读取并条件更新，日志记录本次生效的前值。
 

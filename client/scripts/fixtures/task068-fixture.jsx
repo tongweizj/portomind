@@ -390,14 +390,19 @@ async function runScenarios() {
     }
     throw new Error(`Unexpected request ${config.method} ${config.url}`);
   };
+  const assetsBeforeRefresh = refreshRequests.filter((request) => request.url === '/ops-center/assets').length;
   q('[data-testid="ops-integrity-refresh"]').click();
   await waitFor(() => Boolean(q('[data-testid="ops-integrity-progress"]')));
   check('TASK-070 admin 可触发刷新并显示进度',
     refreshRequests.some((request) => request.url === '/ops-center/integrity-check')
       && text('[data-testid="ops-integrity-progress"]').includes('已完成 1 / 2'));
   await waitFor(() => text('[data-testid="ops-integrity-result"]').includes('检查完成'), 6000);
+  await waitFor(
+    () => refreshRequests.filter((request) => request.url === '/ops-center/assets').length > assetsBeforeRefresh,
+    4000
+  );
   check('TASK-070 刷新终态后显示完成并回读资产总表',
-    refreshRequests.filter((request) => request.url === '/ops-center/assets').length >= 1);
+    refreshRequests.filter((request) => request.url === '/ops-center/assets').length > assetsBeforeRefresh);
   await view.unmount();
 
   // 409 冲突可辨识
