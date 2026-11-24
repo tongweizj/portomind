@@ -193,7 +193,7 @@ async function runScenarios() {
   check('TASK-068 表格不出现 0 兜底',
     !/缺失\/无效：0|无法判断 0|— 0/.test(text('[data-testid="ops-asset-table"]')));
   check('TASK-068 总数取自服务端分页元数据',
-    document.body.innerText.includes(`共 ${ITEMS.length} 只 active 资产`));
+    document.body.innerText.includes(`共 ${ITEMS.length} 只资产`));
 
   await view.unmount();
 
@@ -225,6 +225,83 @@ async function runScenarios() {
   release?.();
   await waitRows();
   check('TASK-068 加载完成后渲染总表', qa('[data-testid="ops-asset-row"]').length === ITEMS.length);
+  await view.unmount();
+
+  // ── TASK-069 筛选/搜索/排序/分页：只发服务端参数 ──
+  view = mount();
+  await waitRows();
+  const requests = [];
+  api.defaults.adapter = async (config) => {
+    const params = config.params || {};
+    requests.push({ ...params });
+    const empty = params.search === 'NONE';
+    const data = empty ? [] : ITEMS.slice(0, 1);
+    const total = empty ? 0 : 120;
+    return {
+      data: {
+        success: true,
+        data,
+        pagination: {
+          page: Number(params.page || 1),
+          pageSize: Number(params.pageSize || 50),
+          total
+        }
+      },
+      status: 200,
+      statusText: 'OK',
+      headers: {},
+      config
+    };
+  };
+  const setSelect = (testid, value) => {
+    const element = q(`[data-testid="${testid}"]`);
+    Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype, 'value').set.call(element, value);
+    element.dispatchEvent(new Event('change', { bubbles: true }));
+  };
+  const setInput = (testid, value) => {
+    const element = q(`[data-testid="${testid}"]`);
+    Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value').set.call(element, value);
+    element.dispatchEvent(new Event('input', { bubbles: true }));
+  };
+
+  setSelect('ops-filter-market', 'CN-SH');
+  await waitFor(() => requests.length >= 1 && requests.at(-1).market === 'CN-SH');
+  check('TASK-069 市场筛选进入服务端参数且回到第 1 页',
+    requests.at(-1).market === 'CN-SH' && requests.at(-1).page === 1);
+
+  setInput('ops-search-input', 'VOO');
+  q('form').requestSubmit();
+  await waitFor(() => requests.length >= 2 && requests.at(-1).search === 'VOO');
+  check('TASK-069 搜索进入服务端参数', requests.at(-1).search === 'VOO' && requests.at(-1).page === 1);
+
+  setSelect('ops-filter-missing-type', 'validity');
+  await waitFor(() => requests.length >= 3 && requests.at(-1).missingType === 'validity');
+  check('TASK-069 缺失类型筛选进入服务端参数', requests.at(-1).missingType === 'validity');
+
+  setSelect('ops-sort-by', 'symbol');
+  await waitFor(() => requests.length >= 4 && requests.at(-1).sortBy === 'symbol');
+  setSelect('ops-sort-order', 'desc');
+  await waitFor(() => requests.length >= 5 && requests.at(-1).sortOrder === 'desc');
+  check('TASK-069 排序字段与方向进入服务端参数',
+    requests.at(-1).sortBy === 'symbol' && requests.at(-1).sortOrder === 'desc');
+
+  setSelect('ops-filter-active', 'all');
+  await waitFor(() => requests.length >= 6 && requests.at(-1).active === 'all');
+  check('TASK-069 启用状态筛选进入服务端参数', requests.at(-1).active === 'all');
+
+  setSelect('ops-page-size', '10');
+  await waitFor(() => requests.length >= 7 && requests.at(-1).pageSize === 10);
+  await waitFor(() => text('[data-testid="ops-pagination-info"]').includes('第 1 / 12 页'));
+  q('[data-testid="ops-pagination-next"]').click();
+  await waitFor(() => requests.length >= 8 && requests.at(-1).page === 2);
+  check('TASK-069 翻页只改 page 参数并渲染服务端分页元数据',
+    requests.at(-1).page === 2 && text('[data-testid="ops-pagination-info"]').includes('第 2 / 12 页'));
+
+  setInput('ops-search-input', 'NONE');
+  q('form').requestSubmit();
+  await waitFor(() => Boolean(q('[data-testid="ops-assets-empty"]')));
+  check('TASK-069 筛选无结果时显示可辨识空态',
+    text('[data-testid="ops-assets-empty"]').includes('没有匹配的资产'));
   await view.unmount();
 }
 

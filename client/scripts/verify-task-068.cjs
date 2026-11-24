@@ -63,9 +63,9 @@ function staticChecks() {
     /'unavailable'/.test(panel) && panel.includes('尚未检查'));
 
   const hook = read('src/hooks/useOpsCenterAssets.js');
-  check('TASK-068 分页参数进入 queryKey 与服务端请求',
-    /queryKey: \['ops-center-assets', \{ page, pageSize \}\]/.test(hook)
-      && /getAssetsOverview\(\{ page, pageSize \}\)/.test(hook));
+  check('TASK-069 查询参数进入 queryKey 与服务端请求',
+    /queryKey: \['ops-center-assets', params\]/.test(hook)
+      && /getAssetsOverview\(params\)/.test(hook));
 }
 
 function findFreePort() {
