@@ -12,6 +12,8 @@ const app = require('../../app');
 const TaskRun = require('@portomind/shared/models/taskRun');
 const TaskSkip = require('@portomind/shared/models/taskSkip');
 const Asset = require('@portomind/shared/models/asset');
+const Price = require('@portomind/shared/models/price');
+const { dateBounds } = require('@portomind/shared/utils/marketTime');
 const {
   installAdminSession,
   uninstallSessionStub,
@@ -22,6 +24,7 @@ const {
 } = require('../helpers/auth');
 
 const RUN_ID = '64b000000000000000000070';
+const ASSET_ID = '64b0000000000000000000a1';
 let server;
 let baseUrl;
 
@@ -100,6 +103,10 @@ test('未登录触发/读取均返回 401', async () => {
   assert.equal(start.status, 401);
   const priceSync = await request('/api/ops-center/price-sync', { method: 'POST', body: '{}' }, { authenticated: false });
   assert.equal(priceSync.status, 401);
+  const backfill = await request(`/api/ops-center/assets/${ASSET_ID}/price-backfill`, {
+    method: 'POST', body: '{}'
+  }, { authenticated: false });
+  assert.equal(backfill.status, 401);
   const detail = await request(`/api/ops-center/task-runs/${RUN_ID}`, {}, { authenticated: false });
   assert.equal(detail.status, 401);
 });
@@ -159,6 +166,106 @@ test('价格同步非法市场组/额外字段返回 400', async () => {
     assert.equal(response.status, 400);
     assert.equal(response.body.success, false);
   }
+});
+
+function stubBackfillAsset(t, over = {}) {
+  const asset = {
+    _id: ASSET_ID, symbol: 'VOO.US', market: 'US',
+    launchDate: new Date('2020-01-01T12:00:00Z'), ...over
+  };
+  t.mock.method(Asset, 'findById', async () => asset);
+  return asset;
+}
+
+function stubBackfillPrice(t, timestamp = dateBounds('2026-11-20').start) {
+  t.mock.method(Price, 'find', () => ({
+    lean: async () => [{ timestamp }]
+  }));
+}
+
+function stubBackfillTaskRun(t) {
+  t.mock.method(TaskRun, 'init', async () => TaskRun);
+  t.mock.method(TaskRun, 'create', async (doc) => ({ ...doc, _id: RUN_ID }));
+  t.mock.method(TaskRun, 'updateOne', async () => ({ modifiedCount: 1 }));
+}
+
+test('单资产补采同步等待并返回 200 + 摘要', async (t) => {
+  stubBackfillAsset(t);
+  stubBackfillPrice(t);
+  stubBackfillTaskRun(t);
+
+  const response = await request(`/api/ops-center/assets/${ASSET_ID}/price-backfill`, {
+    method: 'POST', headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ from: '2026-11-20', to: '2026-11-20' })
+  });
+
+  assert.equal(response.status, 200);
+  assert.equal(response.body.data.status, 'SUCCEEDED');
+  assert.equal(response.body.data.assetId, ASSET_ID);
+  assert.equal(response.body.data.symbol, 'VOO.US');
+  assert.equal(response.body.data.from, '2026-11-20');
+  assert.equal(response.body.data.missingBeforeCount, 0);
+  assert.equal(response.body.data.missingAfterCount, 0);
+  assert.equal(response.body.data.fetchedCount, 0);
+});
+
+test('单资产补采：非法 id 400、资产不存在 404、无 launchDate/非法区间 400', async (t) => {
+  const invalidId = await request('/api/ops-center/assets/not-an-object-id/price-backfill', {
+    method: 'POST', headers: { 'content-type': 'application/json' }, body: '{}'
+  });
+  assert.equal(invalidId.status, 400);
+
+  t.mock.method(Asset, 'findById', async () => null);
+  const missing = await request(`/api/ops-center/assets/${ASSET_ID}/price-backfill`, {
+    method: 'POST', headers: { 'content-type': 'application/json' }, body: '{}'
+  });
+  assert.equal(missing.status, 404);
+
+  stubBackfillAsset(t, { launchDate: null });
+  const noLaunch = await request(`/api/ops-center/assets/${ASSET_ID}/price-backfill`, {
+    method: 'POST', headers: { 'content-type': 'application/json' }, body: '{}'
+  });
+  assert.equal(noLaunch.status, 400);
+
+  stubBackfillAsset(t);
+  const badRange = await request(`/api/ops-center/assets/${ASSET_ID}/price-backfill`, {
+    method: 'POST', headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ from: '2026-11-20', to: '2026-11-01' })
+  });
+  assert.equal(badRange.status, 400);
+
+  for (const body of [{ year: 9999 }, { year: 2026, from: '2026-01-01' }]) {
+    const badYear = await request(`/api/ops-center/assets/${ASSET_ID}/price-backfill`, {
+      method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body)
+    });
+    assert.equal(badYear.status, 400);
+  }
+});
+
+test('单资产补采已有活跃运行时返回 409 + 当前运行信息', async (t) => {
+  stubBackfillAsset(t);
+  t.mock.method(TaskRun, 'init', async () => TaskRun);
+  t.mock.method(TaskRun, 'create', async () => {
+    throw Object.assign(new Error('duplicate lock'), { code: 11000 });
+  });
+  const active = {
+    _id: 'active-backfill', taskName: 'asset-history-backfill', runKey: 'manual:old',
+    status: 'RUNNING', startedAt: new Date(),
+    progress: { completed: 0, total: 1, updatedAt: new Date() }
+  };
+  t.mock.method(TaskRun, 'findOne', () => ({
+    sort() { return this; },
+    lean: async () => active
+  }));
+  t.mock.method(TaskSkip, 'create', async () => ({ _id: 'skip-backfill' }));
+
+  const response = await request(`/api/ops-center/assets/${ASSET_ID}/price-backfill`, {
+    method: 'POST', headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ from: '2026-11-20', to: '2026-11-20' })
+  });
+  assert.equal(response.status, 409);
+  assert.equal(response.body.code, 'TASK_ALREADY_RUNNING');
+  assert.equal(response.body.details.activeRun.runId, 'active-backfill');
 });
 
 test('价格同步已有活跃运行时返回 409 + 当前运行信息', async (t) => {

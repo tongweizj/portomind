@@ -1,8 +1,7 @@
 #!/usr/bin/env node
 // cron-worker/src/tasks/historySync.cjs
-// 历史 K 线回补：--from 必填、--to 可选（默认今天）；--symbols 指定逗号分隔列表，
-// 留空则同步全部激活资产（传入资产对象以启用 market 路由）。
-// 用 p-limit 限制并发抓取（默认 3），避免触发上游限流；单符号失败不中断其余。
+// 历史 K 线回补 CLI 薄壳：--from 必填、--to 可选（默认今天）；--symbols 指定逗号分隔列表。
+// 业务实现在 @portomind/shared/tasks/historySync；本文件只负责 .env、连接、参数与退出码。
 
 require('../config/env');
 
@@ -10,76 +9,8 @@ const mongoose = require('mongoose');
 mongoose.set('strictQuery', true);
 const minimist = require('minimist');
 const dayjs = require('dayjs');
-const pLimit = require('p-limit').default || require('p-limit');
 const { taskLogger } = require('@portomind/shared/config/logger');
-const { getActiveAssets, getAssetsBySymbols } = require('@portomind/shared/services/asset.service');
-const { fetchHistory } = require('@portomind/shared/services/priceFetch.service');
-const { saveHistory } = require('@portomind/shared/services/priceStorage.service');
-
-const { normalizeSymbol } = require('@portomind/shared/utils/symbol');
-
-const DEFAULT_CONCURRENCY = 3;
-
-// 符号列表解析：优先用 DB 资产对象（启用 market 路由，如 CN-FUND → 天天基金），
-// DB 中不存在的符号退化为原始 symbol 字符串（按 Symbol 特征推断路由）。
-async function resolveItems({ symbols, loadAssets, loadBySymbols }) {
-  if (symbols && symbols.length) {
-    const rawSymbols = symbols.map(normalizeSymbol);
-    const assets = await loadBySymbols(rawSymbols);
-    const bySymbol = new Map(assets.map(asset => [asset.symbol, asset]));
-    return rawSymbols.map(symbol => bySymbol.get(symbol) || symbol);
-  }
-  return (await loadAssets()).map(asset => ({ symbol: asset.symbol, market: asset.market }));
-}
-
-async function historySync(from, to, options = {}) {
-  const loadAssets = options.getActiveAssets || getActiveAssets;
-  const loadHistory = options.fetchHistory || fetchHistory;
-  const persistHistory = options.saveHistory || saveHistory;
-  const loadBySymbols = options.getAssetsBySymbols || getAssetsBySymbols;
-  const concurrency = options.concurrency || DEFAULT_CONCURRENCY;
-  const limit = pLimit(concurrency);
-
-  const items = await resolveItems({ symbols: options.symbols, loadAssets, loadBySymbols });
-
-  if (items.length === 0) {
-    taskLogger.warn('HISTORY_SYNC_EMPTY', { reason: 'no symbols and no active assets' });
-    return [];
-  }
-
-  const symbolOf = item => (typeof item === 'string' ? item : item.symbol);
-  taskLogger.info('HISTORY_SYNC_START', {
-    count: items.length,
-    concurrency,
-    from: from.toISOString(),
-    to: to.toISOString()
-  });
-
-  const results = await Promise.all(items.map(item =>
-    limit(async () => {
-      const symbol = symbolOf(item);
-      try {
-        const records = await loadHistory(item, from, to);
-        await persistHistory(records);
-        taskLogger.info('HISTORY_SYNC_ASSET_SUCCEEDED', { symbol, count: records.length });
-        return { symbol, count: records.length };
-      } catch (error) {
-        const failure = {
-          category: error.category || 'INTERNAL',
-          provider: error.provider,
-          retryable: Boolean(error.retryable),
-          message: error.message
-        };
-        taskLogger.error('HISTORY_SYNC_ASSET_FAILED', { symbol, ...failure });
-        return { symbol, error: failure };
-      }
-    })
-  ));
-
-  const failureCount = results.filter(result => result.error).length;
-  taskLogger.info('HISTORY_SYNC_END', { total: results.length, failureCount });
-  return results;
-}
+const historySync = require('@portomind/shared/tasks/historySync');
 
 if (require.main === module) {
   // string: 显式声明，避免 minimist 把 000191 之类数字符号强转为 191。
@@ -92,7 +23,7 @@ if (require.main === module) {
   const parsedConcurrency = Number(argv.concurrency);
   const concurrency = Number.isInteger(parsedConcurrency) && parsedConcurrency > 0
     ? parsedConcurrency
-    : DEFAULT_CONCURRENCY;
+    : historySync.DEFAULT_CONCURRENCY;
 
   if (!from || !from.isValid()) {
     console.error('Error: 参数 --from 必须为 YYYY-MM-DD 格式');
@@ -129,4 +60,4 @@ if (require.main === module) {
 }
 
 module.exports = historySync;
-module.exports.resolveItems = resolveItems;
+module.exports.resolveItems = historySync.resolveItems;

@@ -1,7 +1,7 @@
 "use strict";
 const { test } = require('node:test');
 const assert = require('node:assert');
-const historySync = require('../src/tasks/historySync.cjs');
+const historySync = require('@portomind/shared/tasks/historySync');
 
 test('historySync 按符号列表抓取并限制并发', async () => {
   let active = 0;

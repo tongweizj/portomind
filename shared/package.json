@@ -10,6 +10,7 @@
     "axios": "^1.19.0",
     "dayjs": "^1.11.23",
     "mongoose": "^6.13.11",
+    "p-limit": "^4.0.0",
     "winston": "^3.19.0",
     "winston-daily-rotate-file": "^5.0.0"
   }

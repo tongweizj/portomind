@@ -190,6 +190,9 @@ Unaffected areas:
   > `cron-worker/src/tasks/integrityCheck.js` 退化为 `.env` / 连接 / CLI / 修复注入的薄壳。
   > `historySync` 仍留在 `cron-worker`。本 ADR 的「`cron-worker` 唯一调度所有者、`server` 不注册 cron」
   > 结论不变；手动端点只启动共享任务，不产生定时触发。
+  > **2026-11-24 后续（TASK-072）**：`historySync` 的业务实现也已抽入
+  > `shared/tasks/historySync.js`，cron-worker 的 `historySync.cjs` 仅保留 CLI 薄壳；
+  > 单资产补采复用同一实现。
 - **调度触发权 ≠ 业务能力**：`alertEngine` / `fxRate` / `rebalance` 引擎留在 `shared` 并被两个进程共享；`server` 的手动端点因此与定时调度结果口径一致。
 - **再平衡的单日分发**：`cron-worker/src/schedulers/rebalanceScheduler.js` 每日 00:00 读取未归档组合，按 `rebalanceSchedule` 判断到期（`daily`=每日 / `weekly`=周一 / `monthly`=1 日）。原因：调度迁出 API 进程后无法跨进程动态注册；分发器让组合新增/改动/归档在下一周期自动生效，且 `taskName`/`runKey` 语义与迁移前一致。
 - **不变量**：AUTO 再平衡只生成建议 + 提醒，**永不自动交易**。

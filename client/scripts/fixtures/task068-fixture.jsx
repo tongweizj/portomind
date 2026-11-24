@@ -480,10 +480,82 @@ async function runScenarios() {
       && syncRequests.filter((request) => request.url === '/ops-center/assets').length > assetsBeforeSync);
   await view.unmount();
 
+
+  // ── TASK-072 单资产历史补采 ──
+  view = mount();
+  await waitRows();
+  const backfillRequests = [];
+  api.defaults.adapter = async (config) => {
+    if (config.url === '/ops-center/assets') {
+      return {
+        data: { success: true, data: ITEMS, pagination: { page: 1, pageSize: 50, total: ITEMS.length } },
+        status: 200, statusText: 'OK', headers: {}, config
+      };
+    }
+    if (config.url === '/ops-center/assets/a-priced/price-backfill') {
+      backfillRequests.push(JSON.parse(config.data));
+      return {
+        data: { success: true, data: {
+          runId: 'run-72', status: 'SUCCEEDED', assetId: 'a-priced', symbol: 'VOO.US',
+          market: 'US', from: '2026-01-01', to: '2026-11-20',
+          expectedCount: 10, missingBeforeCount: 3, missingAfterCount: 0,
+          fetchedCount: 3, failures: []
+        } },
+        status: 200, statusText: 'OK', headers: {}, config
+      };
+    }
+    throw new Error(`Unexpected request ${config.method} ${config.url}`);
+  };
+  q('[data-testid="ops-backfill-a-priced"] summary').click();
+  setSelect('ops-backfill-year-a-priced', '2025');
+  check('TASK-072 可按年份选择补采区间',
+    q('[data-testid="ops-backfill-from-a-priced"]').value === '2025-01-01'
+      && q('[data-testid="ops-backfill-to-a-priced"]').value === '2025-12-31');
+  setInput('ops-backfill-from-a-priced', '2026-01-01');
+  setInput('ops-backfill-to-a-priced', '2026-11-20');
+  q('[data-testid="ops-backfill-submit-a-priced"]').click();
+  await waitFor(() => text('[data-testid="ops-backfill-result-a-priced"]').includes('补采完成：补充 3 天'));
+  check('TASK-072 admin 可按区间补采并显示成功摘要',
+    JSON.stringify(backfillRequests[0]) === JSON.stringify({ from: '2026-01-01', to: '2026-11-20' })
+      && q('[data-testid="ops-backfill-history-link-a-priced"]')?.getAttribute('href')
+        === '/prices/VOO.US/history?year=2026');
+  await view.unmount();
+
+  view = mount();
+  await waitRows();
+  api.defaults.adapter = async (config) => {
+    if (config.url === '/ops-center/assets') {
+      return {
+        data: { success: true, data: ITEMS, pagination: { page: 1, pageSize: 50, total: ITEMS.length } },
+        status: 200, statusText: 'OK', headers: {}, config
+      };
+    }
+    if (config.url !== '/ops-center/assets/a-priced/price-backfill') {
+      throw new Error(`Unexpected request ${config.method} ${config.url}`);
+    }
+    return {
+      data: { success: true, data: {
+        runId: 'run-72b', status: 'PARTIAL', assetId: 'a-priced', symbol: 'VOO.US',
+        market: 'US', from: '2026-01-01', to: '2026-11-20',
+        expectedCount: 10, missingBeforeCount: 3, missingAfterCount: 2,
+        fetchedCount: 1,
+        failures: [{ item: 'VOO.US', category: 'HISTORY_GAP', message: 'missing 2/10 trading days after backfill' }]
+      } },
+      status: 200, statusText: 'OK', headers: {}, config
+    };
+  };
+  q('[data-testid="ops-backfill-a-priced"] summary').click();
+  q('[data-testid="ops-backfill-submit-a-priced"]').click();
+  await waitFor(() => Boolean(q('[data-testid="ops-backfill-failure-a-priced"]')));
+  check('TASK-072 补采部分失败原因可见',
+    text('[data-testid="ops-backfill-failure-a-priced"]').includes('missing 2/10 trading days'));
+  await view.unmount();
+
   view = mount({ role: 'member' });
   await waitRows();
   check('TASK-070 member 看不到刷新按钮', !q('[data-testid="ops-integrity-refresh"]'));
   check('TASK-071 member 看不到价格同步按钮', !q('[data-testid="ops-price-sync"]'));
+  check('TASK-072 member 看不到补采入口', !q('[data-testid="ops-backfill-a-priced"]'));
   await view.unmount();
 }
 

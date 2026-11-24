@@ -2,11 +2,15 @@
 //
 // TASK-070：运维中心 task-run 读取与手动 integrity-check 触发。
 // TASK-071：手动 daily-price-sync 触发。
+// TASK-072：单资产历史补采（同步等待 200 + 摘要）。
 // 协议层只做参数/状态码/响应包装；业务与 TaskRun 生命周期在 shared。
 
 const mongoose = require('mongoose');
 const { startPriceIntegrityCheck } = require('@portomind/shared/tasks/priceIntegrityCheck');
 const { startDailySync } = require('@portomind/shared/tasks/dailySync');
+const {
+  startAssetHistoryBackfill: startAssetHistoryBackfillTask
+} = require('@portomind/shared/tasks/assetHistoryBackfill');
 const {
   getTaskRunById,
   serializeTaskRun
@@ -30,6 +34,36 @@ function parseMarketGroupBody(body) {
   }
   // 市场组取值由 shared 的 assertMarketGroup 统一校验，避免在此复制 PRICE_SYNC_GROUPS。
   return { ok: true, marketGroup: body.marketGroup };
+}
+
+function parseBackfillBody(body) {
+  if (body === undefined || body === null) return { ok: true, value: {} };
+  if (typeof body !== 'object' || Array.isArray(body)) {
+    return { ok: false, message: 'price-backfill accepts a JSON object' };
+  }
+  const allowed = new Set(['from', 'to', 'year']);
+  if (Object.keys(body).some((key) => !allowed.has(key))) {
+    return { ok: false, message: 'price-backfill only accepts from, to or year' };
+  }
+  return { ok: true, value: body };
+}
+
+function backfillResponse(summary) {
+  const result = summary.result || {};
+  return {
+    runId: summary.runId,
+    status: summary.status,
+    assetId: result.assetId ?? null,
+    symbol: result.symbol ?? null,
+    market: result.market ?? null,
+    from: result.from ?? null,
+    to: result.to ?? null,
+    expectedCount: result.expectedCount ?? null,
+    missingBeforeCount: result.missingBeforeCount ?? null,
+    missingAfterCount: result.missingAfterCount ?? null,
+    fetchedCount: result.fetchedCount ?? null,
+    failures: Array.isArray(summary.failures) ? summary.failures : []
+  };
 }
 
 function acceptedRun(res, handle) {
@@ -76,6 +110,30 @@ exports.startPriceSync = async (req, res, next) => {
     return acceptedRun(res, handle);
   } catch (error) {
     if (error instanceof RangeError) return failure(req, res, 400, error.message);
+    return next(error);
+  }
+};
+
+exports.startAssetHistoryBackfill = async (req, res, next) => {
+  if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
+    return failure(req, res, 400, 'Invalid asset ID');
+  }
+  const parsed = parseBackfillBody(req.body);
+  if (!parsed.ok) return failure(req, res, 400, parsed.message);
+  try {
+    const handle = await startAssetHistoryBackfillTask({
+      assetId: req.params.id,
+      from: parsed.value.from,
+      to: parsed.value.to,
+      year: parsed.value.year,
+      trigger: 'MANUAL'
+    });
+    if (!handle.ok) return conflictRun(req, res, handle);
+    const summary = await handle.promise;
+    return success(res, backfillResponse(summary));
+  } catch (error) {
+    if (error.status === 400) return failure(req, res, 400, error.message);
+    if (error.status === 404) return failure(req, res, 404, error.message);
     return next(error);
   }
 };
