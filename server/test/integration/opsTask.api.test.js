@@ -290,6 +290,26 @@ test('批量补采预览返回资产数/缺失天数且不创建 TaskRun', async
   assert.equal(taskRunCreate.mock.callCount(), 0);
 });
 
+test('批量补采支持 year 参数，并在 501 个资产时返回 400', async (t) => {
+  stubBatchAssets(t);
+  const yearPreview = await request('/api/ops-center/price-backfill', {
+    method: 'POST', headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ assetIds: [ASSET_ID], year: 2025, preview: true })
+  });
+  assert.equal(yearPreview.status, 200);
+  assert.equal(yearPreview.body.data.range.year, 2025);
+  assert.equal(yearPreview.body.data.range.from, '2025-01-01');
+  assert.equal(yearPreview.body.data.range.to, '2025-12-31');
+
+  const tooMany = Array.from({ length: 501 }, (_, index) => index.toString(16).padStart(24, '0'));
+  const response = await request('/api/ops-center/price-backfill', {
+    method: 'POST', headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ assetIds: tooMany, preview: true })
+  });
+  assert.equal(response.status, 400);
+  assert.match(response.body.message, /cannot exceed 500/);
+});
+
 test('批量补采异步返回 202，父 TaskRun 汇总逐资产结果', async (t) => {
   stubBatchAssets(t);
   const updates = stubBatchTaskRuns(t);

@@ -25,6 +25,7 @@ test('previewBatchAssetHistoryBackfill 汇总缺失日期且不写库', async ()
     to: '2026-11-05',
     now: new Date('2026-11-24T15:00:00Z'),
     getAssetById: loader(),
+    historySync: async () => assert.fail('preview must not write price history'),
     countAssetCoverage: async (asset) => ({
       expectedCount: 5,
       actualCount: asset._id === 'a1' ? 3 : 4,
@@ -43,6 +44,60 @@ test('previewBatchAssetHistoryBackfill 汇总缺失日期且不写库', async ()
   assert.equal(preview.assets[2].reason, 'ASSET_LAUNCH_DATE_REQUIRED');
 });
 
+test('previewBatchAssetHistoryBackfill 对超出目标市场年的 year 返回 INVALID_YEAR', async () => {
+  await assert.rejects(
+    previewBatchAssetHistoryBackfill({
+      assetIds: ['a1'],
+      year: 2026,
+      now: new Date('2026-01-01T02:00:00Z'),
+      getAssetById: loader()
+    }),
+    (error) => error.status === 400 && error.code === 'INVALID_YEAR'
+  );
+});
+
+test('previewBatchAssetHistoryBackfill 未传区间时回填当前市场年有效窗口', async () => {
+  const preview = await previewBatchAssetHistoryBackfill({
+    assetIds: ['a1'],
+    now: new Date('2026-11-24T15:00:00Z'),
+    getAssetById: loader(),
+    countAssetCoverage: async () => ({ expectedCount: 0, actualCount: 0, missingCount: 0, missingDates: [] })
+  });
+  assert.deepEqual(preview.range, { from: '2026-01-01', to: '2026-11-23', year: null });
+});
+
+test('previewBatchAssetHistoryBackfill 支持 year 参数并回显年份', async () => {
+  const preview = await previewBatchAssetHistoryBackfill({
+    assetIds: ['a1'],
+    year: 2025,
+    now: new Date('2026-11-24T15:00:00Z'),
+    getAssetById: loader(),
+    countAssetCoverage: async () => ({ expectedCount: 0, actualCount: 0, missingCount: 0, missingDates: [] })
+  });
+  assert.equal(preview.range.year, 2025);
+  assert.equal(preview.range.from, '2025-01-01');
+  assert.equal(preview.range.to, '2025-12-31');
+});
+
+test('批量资产上限 500：恰好 500 可预览，501 返回 TOO_MANY_ASSETS', async () => {
+  const many = (count) => Array.from({ length: count }, (_, index) => `a-${index}`);
+  const preview = await previewBatchAssetHistoryBackfill({
+    assetIds: many(500),
+    from: '2026-11-01',
+    to: '2026-11-05',
+    now: new Date('2026-11-24T15:00:00Z'),
+    getAssetById: async (id) => ({ _id: id, symbol: `${id}.US`, market: 'US', launchDate: new Date('2020-01-01T12:00:00Z') }),
+    countAssetCoverage: async () => ({ expectedCount: 0, actualCount: 0, missingCount: 0, missingDates: [] })
+  });
+  assert.equal(preview.assetCount, 500);
+  assert.equal(preview.readyCount, 500);
+
+  await assert.rejects(
+    previewBatchAssetHistoryBackfill({ assetIds: many(501), getAssetById: async () => null }),
+    (error) => error.status === 400 && error.code === 'TOO_MANY_ASSETS'
+  );
+});
+
 test('runBatchAssetHistoryBackfill 逐资产复用子任务并保留部分失败', async () => {
   const calls = [];
   const progress = [];
@@ -52,6 +107,7 @@ test('runBatchAssetHistoryBackfill 逐资产复用子任务并保留部分失败
       return { ok: true, promise: Promise.resolve({
         status: 'PARTIAL',
         failureCount: 1,
+        failures: [{ item: 'VTI.US', category: 'UPSTREAM', provider: 'YAHOO', message: 'quote unavailable' }],
         result: { from: '2026-11-01', to: '2026-11-05', missingBeforeCount: 2, missingAfterCount: 1, fetchedCount: 1 }
       }) };
     }
@@ -77,7 +133,39 @@ test('runBatchAssetHistoryBackfill 逐资产复用子任务并保留部分失败
   assert.equal(summary.result.missingAfterCount, 1);
   assert.equal(summary.result.fetchedCount, 3);
   assert.deepEqual(summary.result.assets.map((asset) => asset.status), ['succeeded', 'partial', 'skipped']);
+  assert.equal(summary.result.assets[1].reason, 'UPSTREAM');
+  assert.equal(summary.result.assets[1].message, 'quote unavailable');
+  // 父任务失败项透传子任务真实原因，而不是合成文案。
+  assert.equal(summary.failures[0].category, 'UPSTREAM');
+  assert.equal(summary.failures[0].message, 'quote unavailable');
   assert.deepEqual(progress.at(-1), [3, 3]);
+});
+
+test('startBatchAssetHistoryBackfill 遇到部分失败时父任务为 PARTIAL', async (t) => {
+  t.mock.method(TaskRun, 'init', async () => TaskRun);
+  t.mock.method(TaskRun, 'create', async (doc) => ({ ...doc, _id: 'batch-partial' }));
+  t.mock.method(TaskRun, 'updateOne', async () => ({ modifiedCount: 1 }));
+
+  const handle = await startBatchAssetHistoryBackfill({
+    assetIds: ['a1'],
+    from: '2026-11-01',
+    to: '2026-11-05',
+    now: new Date('2026-11-24T15:00:00Z'),
+    getAssetById: loader(),
+    startAssetHistoryBackfill: async () => ({
+      ok: true,
+      promise: Promise.resolve({
+        status: 'PARTIAL',
+        failureCount: 1,
+        result: { from: '2026-11-01', to: '2026-11-05', missingBeforeCount: 2, missingAfterCount: 1, fetchedCount: 1 }
+      })
+    })
+  });
+
+  const summary = await handle.promise;
+  assert.equal(summary.status, 'PARTIAL');
+  assert.equal(summary.failureCount, 1);
+  assert.equal(summary.result.assets[0].status, 'partial');
 });
 
 test('startBatchAssetHistoryBackfill 使用批量锁并创建父 TaskRun', async (t) => {

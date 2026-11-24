@@ -12,7 +12,11 @@ import { Link } from 'react-router';
 import { useAuth } from '../auth/authContext';
 import { EmptyState, ErrorState, LoadingState } from '../DataState';
 import { ASSET_MARKETS } from '../../constants/enums';
-import { OPS_CENTER_DEFAULT_FILTERS, OPS_CENTER_DEFAULT_PAGE_SIZE } from '../../constants/opsCenter';
+import {
+  OPS_BATCH_MAX_ASSETS,
+  OPS_CENTER_DEFAULT_FILTERS,
+  OPS_CENTER_DEFAULT_PAGE_SIZE
+} from '../../constants/opsCenter';
 import { colors } from '../../constants/design-tokens';
 import { useOpsCenterAssets } from '../../hooks/useOpsCenterAssets';
 import { useIntegrityRefresh } from '../../hooks/useIntegrityRefresh';
@@ -229,6 +233,7 @@ export default function AssetDataPanel() {
 
   const toggleSelected = (assetId, checked) => {
     setSelectAllFiltered(false);
+    setSelectionError('');
     setSelectedIds((current) => {
       const next = new Set(current);
       if (checked) next.add(assetId);
@@ -245,9 +250,17 @@ export default function AssetDataPanel() {
     setSelectingAll(true);
     setSelectionError('');
     try {
-      const ids = await getAllFilteredAssetIds(queryFilters);
-      setSelectedIds(new Set(ids));
-      setSelectAllFiltered(true);
+      const ids = await getAllFilteredAssetIds(queryFilters, { maxIds: OPS_BATCH_MAX_ASSETS });
+      if (ids.length > OPS_BATCH_MAX_ASSETS) {
+        setSelectedIds(new Set(ids.slice(0, OPS_BATCH_MAX_ASSETS)));
+        setSelectAllFiltered(false);
+        setSelectionError(
+          `筛选结果超过 ${OPS_BATCH_MAX_ASSETS} 只，已选择前 ${OPS_BATCH_MAX_ASSETS} 只；请缩小筛选范围后重试`
+        );
+      } else {
+        setSelectedIds(new Set(ids));
+        setSelectAllFiltered(true);
+      }
     } catch (error) {
       setSelectionError(getApiErrorMessage(error, '加载筛选资产失败'));
       setSelectedIds(new Set());

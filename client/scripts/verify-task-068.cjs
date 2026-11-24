@@ -52,7 +52,7 @@ function staticChecks() {
   const service = read('src/services/ops-center.service.js');
   const postCalls = (service.match(/\bapi\.post\(/g) || []).length;
   const getCalls = (service.match(/\bapi\.get\(/g) || []).length;
-  check('TASK-070/071/072 数据层只含资产 GET 与白名单任务端点',
+  check('TASK-070/071/072/074 数据层只含资产 GET 与白名单任务端点',
     getCalls === 2 && postCalls === 4
       && /api\.get\(OPS_CENTER_ASSETS_ENDPOINT/.test(service)
       && /api\.post\(INTEGRITY_CHECK_ENDPOINT, \{\}\)/.test(service)
@@ -66,7 +66,7 @@ function staticChecks() {
   const backfillHook = read('src/hooks/useAssetBackfill.js');
   const batchControl = read('src/components/OpsCenter/BatchBackfillControl.jsx');
   const batchHook = read('src/hooks/useBatchBackfill.js');
-  check('TASK-070/071/072 资产面板不直接写 API，刷新/同步/补采经专用入口',
+  check('TASK-070/071/072/074 资产面板不直接写 API，刷新/同步/补采经专用入口',
     !/useMutation|api\.(post|put|patch|delete)/.test(panel)
       && /useIntegrityRefresh\(\)/.test(panel)
       && /usePriceSync\(\)/.test(panel)

@@ -22,7 +22,18 @@ export default function BatchBackfillControl({ assetIds }) {
   const run = batch.run;
   const resultView = RESULT_VIEW[run?.status] || null;
   const error = batch.previewError || batch.startError || batch.runError;
-  const failureText = run?.failures?.length ? run.failures[0].message : null;
+  const failedAssets = (run?.result?.assets || [])
+    .filter((item) => item.status !== 'succeeded')
+    .map((item) => {
+      const message = item.message || item.reason || '未完成';
+      const prefix = item.symbol || item.assetId;
+      return prefix && message.startsWith(prefix) ? message : `${prefix || '资产'}: ${message}`;
+    });
+  const failureText = failedAssets.length > 0
+    ? `${failedAssets.slice(0, 5).join('；')}${failedAssets.length > 5 ? `；等 ${failedAssets.length} 个资产` : ''}`
+    : (run?.failures?.length
+      ? `${run.failures.slice(0, 5).map((item) => item.message).join('；')}${run.failures.length > 5 ? `；等 ${run.failures.length} 项` : ''}`
+      : null);
   const rangeText = preview?.range?.year
     ? `年份 ${preview.range.year}`
     : (preview?.range?.from ? `${preview.range.from} ~ ${preview.range.to}` : '');
@@ -31,9 +42,9 @@ export default function BatchBackfillControl({ assetIds }) {
     : (error.code === 'TASK_ALREADY_RUNNING'
       ? '已有批量补采在运行，请稍后重试'
       : getApiErrorMessage(error, '批量补采失败'));
-  const canPreview = assetIds.length > 0 && !batch.isPreviewing && !batch.isStarting && !batch.isRunning;
+  const canPreview = assetIds.length > 0 && !batch.isPreviewing && !batch.isStarting && !batch.isRunning && !batch.isLoadingRun;
   const canStart = Boolean(preview && preview.missingDateCount > 0)
-    && !batch.isPreviewing && !batch.isStarting && !batch.isRunning;
+    && !batch.isPreviewing && !batch.isStarting && !batch.isRunning && !batch.isLoadingRun;
 
   const previewNow = () => {
     const current = signature;

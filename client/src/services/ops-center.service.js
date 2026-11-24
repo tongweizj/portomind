@@ -60,7 +60,7 @@ export async function backfillAsset(assetId, { from, to, year } = {}) {
 }
 
 /** TASK-074：按当前服务端筛选结果取全部资产 id（仅用于批量选择）。 */
-export async function getAllFilteredAssetIds(filters = {}) {
+export async function getAllFilteredAssetIds(filters = {}, { maxIds } = {}) {
   const ids = [];
   let page = 1;
   let total = Infinity;
@@ -70,6 +70,8 @@ export async function getAllFilteredAssetIds(filters = {}) {
     ids.push(...rows.map((row) => row.assetId).filter(Boolean));
     total = Number(result.pagination?.total) || rows.length;
     if (rows.length === 0) break;
+    // 调用方只需知道是否超过上限时，早停避免无谓翻页。
+    if (Number.isFinite(maxIds) && ids.length > maxIds) break;
     page += 1;
   }
   return [...new Set(ids)];

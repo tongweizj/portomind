@@ -571,8 +571,10 @@ async function runScenarios() {
 
   const batchRequests = [];
   let batchPolls = 0;
+  let batchAssetsRequests = 0;
   api.defaults.adapter = async (config) => {
     if (config.url === '/ops-center/assets') {
+      batchAssetsRequests += 1;
       return {
         data: { success: true, data: ITEMS, pagination: { page: 1, pageSize: 50, total: ITEMS.length } },
         status: 200, statusText: 'OK', headers: {}, config
@@ -601,12 +603,21 @@ async function runScenarios() {
       return {
         data: { success: true, data: {
           runId: 'run-74', taskName: 'asset-history-backfill-batch', runKey: 'manual:x', trigger: 'MANUAL',
-          status: done ? 'SUCCEEDED' : 'RUNNING', stale: false, startedAt: checkedAt,
+          status: done ? 'PARTIAL' : 'RUNNING', stale: false, startedAt: checkedAt,
           progress: { completed: done ? 2 : 1, total: 2, updatedAt: checkedAt },
-          counts: { totalCount: 2, successCount: done ? 2 : 0, failureCount: 0 },
-          failures: [], result: {
-            assetCount: 2, successCount: 2, failureCount: 0, skippedCount: 0,
-            missingBeforeCount: 4, missingAfterCount: 0, fetchedCount: 4, assets: []
+          counts: { totalCount: 2, successCount: done ? 1 : 0, failureCount: done ? 1 : 0 },
+          failures: done
+            ? [{ item: 'VTI.US', category: 'UPSTREAM', message: 'quote unavailable' }]
+            : [],
+          result: {
+            assetCount: 2, successCount: done ? 1 : 0, failureCount: done ? 1 : 0, skippedCount: 0,
+            missingBeforeCount: 4, missingAfterCount: done ? 1 : 4, fetchedCount: done ? 3 : 0,
+            assets: done
+              ? [
+                { assetId: 'a-priced', symbol: 'VOO.US', status: 'succeeded' },
+                { assetId: 'a-missing', symbol: 'VTI.US', status: 'partial', reason: 'UPSTREAM', message: 'quote unavailable' }
+              ]
+              : []
           }
         } },
         status: 200, statusText: 'OK', headers: {}, config
@@ -619,15 +630,21 @@ async function runScenarios() {
   check('TASK-074 预览显示资产数/缺失天数且不执行',
     batchRequests.length === 1 && batchRequests[0].preview === true
       && text('[data-testid="ops-batch-preview-summary"]').includes('资产 2 个'));
+  const assetsBeforeBatchStart = batchAssetsRequests;
   q('[data-testid="ops-batch-start"]').click();
   await waitFor(() => Boolean(q('[data-testid="ops-batch-progress"]')));
   check('TASK-074 确认后异步启动并显示进度',
     batchRequests.length === 2 && batchRequests[1].preview === false
       && batchRequests[1].assetIds.length === 2);
-  await waitFor(() => text('[data-testid="ops-batch-result"]').includes('批量补采完成'), 6000);
-  await waitFor(() => text('[data-testid="ops-batch-result-detail"]').includes('补充 4 天'));
-  check('TASK-074 终态显示逐资产汇总并回读资产总表',
-    text('[data-testid="ops-batch-result"]').includes('批量补采完成'));
+  await waitFor(() => text('[data-testid="ops-batch-result"]').includes('批量补采部分完成'), 6000);
+  await waitFor(() => text('[data-testid="ops-batch-result-detail"]').includes('补充 3 天'));
+  await waitFor(() => text('[data-testid="ops-batch-failure"]').includes('quote unavailable'));
+  await waitFor(() => batchAssetsRequests > assetsBeforeBatchStart);
+  check('TASK-074 终态显示逐资产汇总、失败原因并回读资产总表',
+    text('[data-testid="ops-batch-result"]').includes('批量补采部分完成')
+      && text('[data-testid="ops-batch-failure"]').includes('VTI.US')
+      && text('[data-testid="ops-batch-failure"]').includes('quote unavailable')
+      && batchAssetsRequests > assetsBeforeBatchStart);
   await view.unmount();
 
   view = mount({ role: 'member' });

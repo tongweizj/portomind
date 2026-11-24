@@ -41,10 +41,6 @@ function validateRangeOptions(options = {}) {
     if (options.from !== undefined || options.to !== undefined) {
       throw badRequest('year and from/to are mutually exclusive', 'INVALID_RANGE');
     }
-    const currentYear = new Date(options.now || new Date()).getUTCFullYear();
-    if (options.year > currentYear) {
-      throw badRequest('year must not exceed the current year', 'INVALID_YEAR');
-    }
   }
   if (options.from !== undefined && !isDateString(options.from)) {
     throw badRequest('from must be YYYY-MM-DD', 'INVALID_RANGE');
@@ -226,6 +222,7 @@ async function startAssetHistoryBackfill(options = {}) {
 }
 
 module.exports = {
+  badRequest,
   startAssetHistoryBackfill,
   previewAssetBackfill,
   validateRangeOptions,

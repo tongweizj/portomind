@@ -34,5 +34,5 @@ export function useBackfillRange() {
     setYear('');
   };
 
-  return { today, currentYear, years, year, from, to, changeYear, changeFrom, changeTo };
+  return { years, year, from, to, changeYear, changeFrom, changeTo };
 }

@@ -7,27 +7,22 @@ const { getAssetById } = require('../services/asset.service');
 const { OPS_TASK_CONFIG } = require('../config/opsTasks');
 const { startTrackedTask } = require('../services/taskRunner');
 const {
+  badRequest,
   startAssetHistoryBackfill,
   previewAssetBackfill,
-  validateRangeOptions
+  validateRangeOptions,
+  resolveWindow
 } = require('./assetHistoryBackfill');
 
 const MAX_BATCH_ASSETS = 500;
 
-function invalidRequest(message, code = 'INVALID_BATCH') {
-  const error = new RangeError(message);
-  error.status = 400;
-  error.code = code;
-  return error;
-}
-
 function normalizeAssetIds(assetIds) {
   if (!Array.isArray(assetIds) || assetIds.length === 0) {
-    throw invalidRequest('assetIds must be a non-empty array', 'INVALID_ASSET_IDS');
+    throw badRequest('assetIds must be a non-empty array', 'INVALID_ASSET_IDS');
   }
   const ids = [...new Set(assetIds.map((id) => String(id)))];
   if (ids.length > MAX_BATCH_ASSETS) {
-    throw invalidRequest(`assetIds cannot exceed ${MAX_BATCH_ASSETS}`, 'TOO_MANY_ASSETS');
+    throw badRequest(`assetIds cannot exceed ${MAX_BATCH_ASSETS}`, 'TOO_MANY_ASSETS');
   }
   return ids;
 }
@@ -39,12 +34,12 @@ async function loadBatchAssets(assetIds, options = {}) {
     try {
       return { id, asset: await loadAsset(id) };
     } catch (error) {
-      if (error.name === 'CastError') throw invalidRequest(`Invalid asset ID: ${id}`, 'INVALID_ASSET');
+      if (error.name === 'CastError') throw badRequest(`Invalid asset ID: ${id}`, 'INVALID_ASSET');
       throw error;
     }
   }));
   for (const { id, asset } of assets) {
-    if (!asset) throw invalidRequest(`Asset not found: ${id}`, 'ASSET_NOT_FOUND');
+    if (!asset) throw badRequest(`Asset not found: ${id}`, 'ASSET_NOT_FOUND');
   }
   return assets.map(({ asset }) => asset);
 }
@@ -80,19 +75,25 @@ async function previewBatchAssetHistoryBackfill(options = {}) {
       missingDateCount += preview.missingCount;
       results.push({ ...preview, status: 'ready' });
     } catch (error) {
-      if (error.status !== 400) throw error;
+      if (error.status !== 400 || error.code === 'INVALID_YEAR') throw error;
       results.push(skippedPreview(asset, error));
     }
   }
   const ready = results.filter((item) => item.status === 'ready');
+  // 未显式传区间时，用可预览资产的实际窗口回填，避免默认范围显示为空。
+  const effectiveRange = (pick) => {
+    const days = ready.map((item) => item[pick]).filter(Boolean).sort();
+    if (days.length === 0) return null;
+    return pick === 'from' ? days[0] : days[days.length - 1];
+  };
   return {
     assetCount: assets.length,
     readyCount: ready.length,
     skippedCount: results.length - ready.length,
     missingDateCount,
     range: {
-      from: options.from ?? null,
-      to: options.to ?? null,
+      from: options.from ?? effectiveRange('from'),
+      to: options.to ?? effectiveRange('to'),
       year: options.year ?? null
     },
     assets: results
@@ -101,6 +102,23 @@ async function previewBatchAssetHistoryBackfill(options = {}) {
 
 function assetFailure(asset, category, message) {
   return { item: asset.symbol, category, message };
+}
+
+function childFailure(summary, asset) {
+  const failures = Array.isArray(summary?.failures) ? summary.failures : [];
+  const first = failures[0];
+  if (first) {
+    const reason = first.category || 'PARTIAL';
+    return {
+      reason,
+      message: first.message || `${asset.symbol} backfill did not complete`
+    };
+  }
+  const remaining = summary?.result?.missingAfterCount;
+  return {
+    reason: 'HISTORY_GAP',
+    message: `${asset.symbol}: ${summary?.failureCount ?? 1} failure(s), ${remaining ?? '?'} day(s) remain`
+  };
 }
 
 function buildAssetSummary(asset, status, summary, extra = {}) {
@@ -139,20 +157,18 @@ async function runBatchAssetHistoryBackfill(assets, options = {}) {
         trigger: 'MANUAL'
       });
       if (!handle.ok) {
-        results.push(buildAssetSummary(asset, 'skipped', null, {
-          reason: handle.reason || 'ALREADY_RUNNING'
-        }));
-        failures.push(assetFailure(asset, 'ALREADY_RUNNING', `${asset.symbol} is already being backfilled`));
+        const reason = handle.reason || 'ALREADY_RUNNING';
+        results.push(buildAssetSummary(asset, 'skipped', null, { reason }));
+        failures.push(assetFailure(asset, reason, `${asset.symbol} is already being backfilled`));
       } else {
         const summary = await handle.promise;
         const status = summary.status === 'SUCCEEDED' ? 'succeeded' : 'partial';
-        results.push(buildAssetSummary(asset, status, summary));
-        if (status !== 'succeeded') {
-          failures.push(assetFailure(
-            asset,
-            'PARTIAL',
-            `${asset.symbol}: ${summary.failureCount} failure(s), ${summary.result?.missingAfterCount ?? '?'} day(s) remain`
-          ));
+        if (status === 'succeeded') {
+          results.push(buildAssetSummary(asset, status, summary));
+        } else {
+          const failure = childFailure(summary, asset);
+          results.push(buildAssetSummary(asset, status, summary, failure));
+          failures.push(assetFailure(asset, failure.reason, failure.message));
         }
       }
     } catch (error) {
@@ -207,14 +223,20 @@ function trackedOptions(options, assets, now) {
 async function startBatchAssetHistoryBackfill(options = {}) {
   validateRangeOptions(options);
   const assets = await loadBatchAssets(options.assetIds, options);
-  if (assets.length === 0) throw invalidRequest('No assets selected', 'NO_ASSETS');
+  if (assets.length === 0) throw badRequest('No assets selected', 'NO_ASSETS');
   const now = options.now || new Date();
+  // 年份超过某个资产的目标市场年时，批量端点也返回 400，而不是静默跳过。
+  for (const asset of assets) {
+    try {
+      resolveWindow(asset, { ...options, now });
+    } catch (error) {
+      if (error.code === 'INVALID_YEAR') throw error;
+    }
+  }
   return startTrackedTask(trackedOptions(options, assets, now));
 }
 
 module.exports = {
-  MAX_BATCH_ASSETS,
-  loadBatchAssets,
   previewBatchAssetHistoryBackfill,
   runBatchAssetHistoryBackfill,
   startBatchAssetHistoryBackfill
