@@ -31,7 +31,7 @@ API 前缀为 `/api`。客户端只通过 `VITE_API_URL` 配置此前缀；变�
 
 Asset 枚举：`type` 为 `stock | etf | fund | bond | cash`，`market` 为 `US | CA | CN-SH | CN-SZ | CN-FUND | HK`，`currency` 为 `USD | CAD | CNY | HKD`（港股 AS-08：market=HK，Yahoo 代码形如 `0700.HK`），`assetClass` 为 `equity | bond | gold | cash | null`（AS-09：大类与 type 正交，null=未分类）。`active` 控制资产能否进入交易选择、行情同步等业务流程；`watchlist` 仅表示用户关注偏好，二者互不替代。
 
-资产建档时，`symbol` 按请求中的 `market` 派生为标准大写存储键，已知后缀可以省略或写错，服务端在查重前按市场纠正。编辑时 `symbol` 与 `market` 均不可变，回传等价键允许保留，修改返回 `400`。后缀表见 [ADR-003](../../os/architecture/adr/ADR-003-symbol-suffix-contract.md)。
+资产建档时，`symbol` 按请求中的 `market` 派生为标准大写存储键，已知后缀可以省略或写错，服务端在查重前按市场纠正。编辑时 `symbol` 与 `market` 均不可变，回传等价键允许保留，修改返回 `400`。后缀表见 [ADR-003](../../architecture/adr/ADR-003-symbol-suffix-contract.md)。
 
 手动写价时，提供 `market` 即按该市场派生 symbol。新建可省略 market，此时使用标准后缀或资产主数据中唯一匹配的市场。缺少确定市场时保留清洗后的原键。更新 symbol 或 market 时，省略的字段沿用该价格记录的值；仅更新价格等字段时保留原键。手动写价沿用请求时间戳。
 
@@ -91,14 +91,14 @@ Portfolio 枚举：`type`（风险定位）为 `活钱 | 稳健 | 长期`；`acc
 | `POST /api/users` | Body: `{username,password,role}`（admin） | `{user:{…}}`；`mustChangePassword=true`，对方首登强制改密 | `201`; 校验失败 `400`；重名 `409 USERNAME_TAKEN`；非 admin `403` |
 | `PATCH /api/users/:id` | Path: `id`; Body: `{username?,role?,active?}`（admin） | `{user:{…}}`；停用时该用户现存会话立即删除 | `200`; 非法 id `400 INVALID_ID`; 不变量冲突 `409 LAST_ADMIN_PROTECTED` / `CANNOT_DEACTIVATE_SELF`; 非 admin `403` |
 | `POST /api/users/:id/password` | Path: `id`; Body: `{newPassword}`（admin；**不能对自己**，D9） | `{ok:true}`；目标用户全部会话失效 + `mustChangePassword=true` | `200`; 对自己 `409 SELF_RESET_FORBIDDEN`; 校验失败 `400`; 非 admin `403` |
-| `GET /api/assets` | Query: `page,pageSize,search?,sortBy?,sortOrder?,active?,watchlist?,assetClass?`；search 匹配代码、名称、标签，状态过滤值为 true/false，assetClass 取 `equity/bond/gold/cash/unclassified`（unclassified 匹配 null=未分类） | Asset 数组 + 分页，返回的 `symbol` 遵循 [ADR-003 存储格式](../../os/architecture/adr/ADR-003-symbol-suffix-contract.md) | `200`; 查询参数无效 `400` |
+| `GET /api/assets` | Query: `page,pageSize,search?,sortBy?,sortOrder?,active?,watchlist?,assetClass?`；search 匹配代码、名称、标签，状态过滤值为 true/false，assetClass 取 `equity/bond/gold/cash/unclassified`（unclassified 匹配 null=未分类） | Asset 数组 + 分页，返回的 `symbol` 遵循 [ADR-003 存储格式](../../architecture/adr/ADR-003-symbol-suffix-contract.md) | `200`; 查询参数无效 `400` |
 | `POST /api/assets` | Body: `{symbol,name,market,currency,type,assetClass?,tags?,watchlist?,active?,launchDate?}`（assetClass 空串/省略 = 未分类） | 新 Asset | `201`; `400`; symbol 重复 `409` |
 | `GET /api/assets/:id` | Path: `id` | Asset | `200`; `400`; `404` |
 | `PUT /api/assets/:id` | Path: `id`; Body: Asset 可更新字段。`launchDate` 接受非未来的 `YYYY-MM-DD` 或 `null`（清空）。省略保留原值 | 更新后 Asset | `200`; `400`; `404`; `409` |
 | `DELETE /api/assets/:id` | Path: `id` | 删除的 Asset | `200`; `404` |
 | `POST /api/prices` | Body: `{symbol,price,name?,currency?,market?,timestamp?}` | 新 Price | `201`; `400` |
 | `GET /api/prices/today` | Query: `page,pageSize` | 当前市场日各 symbol 最新 Price 数组 + 分页 | `200`; `400` |
-| `GET /api/prices/date/:date` | Path: `date` (`YYYY-MM-DD`); Query: `page,pageSize` | 指定市场日 Price 数组 + 分页，返回的 `symbol` 遵循 [ADR-003 存储格式](../../os/architecture/adr/ADR-003-symbol-suffix-contract.md) | `200`; 日期格式错误 `400` |
+| `GET /api/prices/date/:date` | Path: `date` (`YYYY-MM-DD`); Query: `page,pageSize` | 指定市场日 Price 数组 + 分页，返回的 `symbol` 遵循 [ADR-003 存储格式](../../architecture/adr/ADR-003-symbol-suffix-contract.md) | `200`; 日期格式错误 `400` |
 | `GET /api/prices/symbol/:symbol/history` | Path: `symbol`; Query: `year?,month?` 或 `from?,to?`，以及 `page,pageSize` | 历史 Price 数组 + 分页 | `200`; 过滤条件无效或冲突 `400` |
 | `GET /api/prices/:id` | Path: `id` | Price | `200`; `400`; `404` |
 | `PUT /api/prices/:id` | Path: `id`; Body: Price 可更新字段 | 更新后 Price | `200`; `404` |
@@ -145,7 +145,7 @@ Portfolio 枚举：`type`（风险定位）为 `活钱 | 稳健 | 长期`；`acc
 | `GET /api/logs/tasks` | Query: `date?` (`YYYY-MM-DD`，默认市场当日), `level?`, `page,pageSize` | 任务日志条目数组 + 分页 | `200`; 查询参数无效 `400`; `500` |
 | `GET /api/cron/status` | Query: `detail?`（缺省＝主视图；`rebalance`＝再平衡逐组合明细；其它非空值 `400`）、`date?`（`YYYY-MM-DD`，**仅 detail 校验/使用**；detail 下非法 `400`，主视图忽略该参数）、`portfolioId?`（ObjectId，仅 detail；非法/不存在仍 `200` + 空 `rows` + `notes[].code`） | **只读**聚合快照：`{generatedAt,timezone,staleThresholdHours,tasks:[5]}`。每项含 `taskName/lastRun(无记录 null)/stale/contractReady/dataState/dataStateLevel(ok\|warn\|bad\|unknown)/notes[]`。价格数据态：`{targetMarketDate,calendarPrevOpenDay,expected,fetched,missing[],byMarket,notListed[],unsupportedMarkets[],dayPriceSymbolCount}`；完整性/提醒/汇率/再平衡的 `result` 派生值在缺失时为 `null`（`contractReady=false` + `CONTRACT_NOT_READY`）；TASK-057 落地后按冻结 `result` 归一化。detail 形态：`{date,contractReady,generatedAt,summary:{totalPortfolios,due,generated,failed,skipped},rows[],notes[]}` | `200`; `detail` 非法 `400`；detail 下 `date` 非法 `400`；`portfolioId` 非法/不存在不报错（`200` + 空结果）。**不触发任何任务、不写任何集合** |
 
-> `GET /api/cron/status` 是**只读聚合**端点。价格覆盖按 `byMarket` 的目标日分别查价，顶层 `targetMarketDate` 取最晚目标日，`expected` 和 `fetched` 为各市场的合计。TASK-078 更新了[分组目标日规则](../../development/requirements/specs/FS-cron-worker-status-board.md#4-看板设计)。其余字段定义见 [TASK-054 ExecPlan](../../development/tasks/completed/TASK-054-cron-status-aggregate-api-plan.md) §4.3/§4.4。
+> `GET /api/cron/status` 是**只读聚合**端点。价格覆盖按 `byMarket` 的目标日分别查价，顶层 `targetMarketDate` 取最晚目标日，`expected` 和 `fetched` 为各市场的合计。TASK-078 更新了分组目标日规则。其余字段定义见 TASK-054 ExecPlan §4.3/§4.4。
 
 TASK-076 在看板主视图的 `data` 顶层增加 `assetCompleteness`，原 `tasks` 仍为五项。检查快照包含 `contractReady`、`checkedAt`、`dataStateLevel`、`total`、`complete`、`incomplete`、`launchDateMissing`、`priceEmpty3MarketDays`、`missingByReason`、`incompleteAssets` 和 `notes`。不完整清单每项返回 `{assetId,symbol,name,market,reasons}`。读回时按上次受检资产的当前上市／成立日期更新该项理由和计数，包含检查后已停用的资产。受检范围、价格、其它字段理由和 `checkedAt` 取自上次手动检查。无可用检查结果时计数为 `null`，清单为空。
 
@@ -155,7 +155,7 @@ TASK-076 在看板主视图的 `data` 顶层增加 `assetCompleteness`，原 `ta
 
 `POST /api/asset-integrity/check` 需要登录，接受空请求体 `{}`，同步返回 `{taskName,runKey,status,startedAt?,endedAt?,reason?,summary?}`。成功时 `summary` 是本次检查的计数和清单。重复运行返回 `SKIPPED` 及原因。该端点只读资产和价格，仅写任务观测记录。
 
-价格同步 `notes` 可包含 `PRICE_NO_NEW_DATA`、`PRICE_STALE`、`PRICE_NOT_FOUND_STREAK`，见 [TASK-074 的阈值裁决](../../development/tasks/completed/TASK-074-price-pipeline-observability-and-robustness-plan.md#6-decisions)。提示按服务端的市场日历及已完成的应采批次派生。旧价为提示，估值仍消费原价格值或缺价 `null`。
+价格同步 `notes` 可包含 `PRICE_NO_NEW_DATA`、`PRICE_STALE`、`PRICE_NOT_FOUND_STREAK`，见 TASK-074 的阈值裁决。提示按服务端的市场日历及已完成的应采批次派生。旧价为提示，估值仍消费原价格值或缺价 `null`。
 
 > **TASK-064（读侧契约兼容，2026-11-05）**：
 > - 每个 task 条目新增**可选** `lastSkip: {taskName,runKey,reason,skippedAt,trigger} | null`，来源为 `taskskips` 最近一次事件；`lastSkip` 与 `lastRun` **分离**，不替换、不冒充成功，无集合/无记录时为 `null`。

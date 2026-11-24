@@ -82,7 +82,7 @@ client/src/
 
 **已下线**：`/family`（原家庭视图页）已删除，**不设显式重定向**，书签由 `*` 通配承接落到 `/portfolios`。后端 `/api/family/*` 端点全部保留——它们仍供 Dashboard 与组合列表页取数，**不是死代码**。
 
-> **账号与访问控制（TASK-058 U2/U3，2026-10-27 已实施）**：`/login`（不套 `AppLayout`）、`/account`、`/account/users`（独立页，仅 admin）；`AuthProvider`（`queryKey: ['session']`）提供会话；`RequireAuth` 做未登录守卫（→ `/login?next=<原路径>`，`next` 经 `utils/safeNext.js` 净化）；`AppLayout` 在 `mustChangePassword=true` 时把 `/account` 以外的页面替换为「需要修改密码后才能继续」屏；axios 401 拦截 → 清业务缓存 → 跳登录（排除 `/auth/login`、`/auth/session`、`/auth/logout`，否则密码错误会被误判为会话失效）。侧栏无账户入口；账户设置 / 系统设置（仅 admin）/ 提醒规则 / 退出登录都在顶栏头像下拉。契约见 [API_CONTRACT](./API_CONTRACT.md)「认证与错误码」与 [FS-authentication](../../development/requirements/specs/completed/FS-authentication.md)。
+> **账号与访问控制（TASK-058 U2/U3，2026-10-27 已实施）**：`/login`（不套 `AppLayout`）、`/account`、`/account/users`（独立页，仅 admin）；`AuthProvider`（`queryKey: ['session']`）提供会话；`RequireAuth` 做未登录守卫（→ `/login?next=<原路径>`，`next` 经 `utils/safeNext.js` 净化）；`AppLayout` 在 `mustChangePassword=true` 时把 `/account` 以外的页面替换为「需要修改密码后才能继续」屏；axios 401 拦截 → 清业务缓存 → 跳登录（排除 `/auth/login`、`/auth/session`、`/auth/logout`，否则密码错误会被误判为会话失效）。侧栏无账户入口；账户设置 / 系统设置（仅 admin）/ 提醒规则 / 退出登录都在顶栏头像下拉。契约见 [API_CONTRACT](./API_CONTRACT.md)「认证与错误码」与 FS-authentication。
 
 ### 2.3 组合详情 Tab
 
@@ -308,7 +308,7 @@ mutation hooks：`useUpsertFxRate` / `useSyncFxRates` / `useCreateAlertRule` / `
 
 ### 8.6 组合详情无「概览」Tab
 
-4 个 Tab 都是明细视角，缺一个汇总视角（KPI + 目标 vs 实际 + 触发原因 + 最近再平衡）。IA 调整方案已批准但未实施，见 [FS-portfolio-ia-cleanup](../../development/requirements/specs/FS-portfolio-ia-cleanup.md)。
+4 个 Tab 都是明细视角，缺一个汇总视角（KPI + 目标 vs 实际 + 触发原因 + 最近再平衡）。IA 调整方案已批准但未实施，见 FS-portfolio-ia-cleanup。
 
 ### 8.7 删除组合没有界面入口
 

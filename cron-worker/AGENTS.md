@@ -1,7 +1,7 @@
 # AGENTS.md — PortoMind Cron Worker
 
 PortoMind **唯一的调度进程**（CommonJS、纯 Node、无 Web 框架）。注释与日志字段风格使用简体中文。
-架构决策见 [`docs/os/architecture/adr/ADR-002-single-scheduler.md`](../docs/os/architecture/adr/ADR-002-single-scheduler.md)。
+架构决策见 [`docs/architecture/adr/ADR-002-single-scheduler.md`](../docs/architecture/adr/ADR-002-single-scheduler.md)。
 
 ## 当前状态：5 类调度全部由本进程注册
 

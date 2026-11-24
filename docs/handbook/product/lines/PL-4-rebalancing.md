@@ -4,7 +4,7 @@
 > 归属：[PRODUCT_LINES.md](../PRODUCT_LINES.md)「产品线 INDEX」中 **PL-4** 的明细子文件
 > v1.1 修订：§1 开头补一句指向 [PRODUCT_LINES.md §1](../PRODUCT_LINES.md) 的链接（产品级定义唯一归属，路线 B）；本线内容未动。
 > 内容范围：① 成熟度快评（总表 §2.4） ② 产品线 → 产品模块归属（总表 §3） ③ 全量功能评估 ④ 已实现功能点清单 ⑤ 架构实现明细（合并自原 `os/architecture/functions.md` §4.6，原文件已归档）
-> 功能编码：`RB-01~12`，沿用 [PRD](../../../development/requirements/PRD.md)。`CM-09`（阈值）/`CM-10`（频率）的**声明**已归 PL-3（2026-10-26 裁决），本文仅在 §5 保留交叉引用行并注明归属；本文只承载**运行时**（判定 → 建议 → 执行 → 巡检 → 通知投递）。
+> 功能编码：`RB-01~12`，沿用 PRD。`CM-09`（阈值）/`CM-10`（频率）的**声明**已归 PL-3（2026-10-26 裁决），本文仅在 §5 保留交叉引用行并注明归属；本文只承载**运行时**（判定 → 建议 → 执行 → 巡检 → 通知投递）。
 
 ---
 
@@ -61,7 +61,7 @@
 | RB-06 | 撤销 | 保留 | 倒序生成反向交易，可回退 | — | — |
 | RB-07 | 重做 | 保留 | `sourceRecordId` 链，闭环完整 | — | — |
 | RB-08 | AUTO 调度 | 保留 | 「只生成建议、绝不自动交易」的安全边界是产品亮点 | — | — |
-| RB-09 | 前端可视化 | **强化** | 双环饼图直观，但 ① 建议**不可手动微调**（改数量 / 跳过某条）后再执行；② 3 个子 Tab 状态是 `useState`，刷新回「建议」、不可深链，通知只能落到默认子 Tab | ① 建议项行内编辑与勾选后再提交（P1）；② 子 Tab 改 URL `?sub=`，阈值设置移出（见 [FS-portfolio-ia-cleanup](../../../development/requirements/specs/FS-portfolio-ia-cleanup.md)）| **P1** |
+| RB-09 | 前端可视化 | **强化** | 双环饼图直观，但 ① 建议**不可手动微调**（改数量 / 跳过某条）后再执行；② 3 个子 Tab 状态是 `useState`，刷新回「建议」、不可深链，通知只能落到默认子 Tab | ① 建议项行内编辑与勾选后再提交（P1）；② 子 Tab 改 URL `?sub=`，阈值设置移出（见 FS-portfolio-ia-cleanup）| **P1** |
 | RB-10 | 费用口径 | 保留 | 建议费用 = 执行 fee，可对账 | — | — |
 | RB-11 | 大类层再平衡 | 保留 | 类内摊分保持结构，边界告警到位 | 同样依赖资产补分类 | — |
 | RB-12 | 再平衡通知（异步投递） | **补归属** | AUTO 巡检产出的 `AlertEvent`（`ruleId = null`）**不属于 PL-5 的规则体系**：无 `active` / `cooldownDays` / 静默能力，不可配、不可静音。三份文档（本文 §5 止于 RB-11、PL-5 的 `AL-01~10`、PRD §4.4）都不认领 | ① 正式登记为本线出口（载体 PL-5 `AlertEvent`）；② **不纳入 `AlertRule`**（避免两套触发源）写为 Non-goal；③ 是否支持静音需重新评估 | P2 |
@@ -125,7 +125,7 @@
 
 > ⚠️ **两处 `needsRebalance` 语义不同，勿合**：本函数的 `needsRebalance` **含时间维度**（`timeInterval` 触发也算）；而 `shared/services/portfolio/summary.js` 的 `drift.needsRebalance` **只含绝对/相对偏离**（它显式过滤掉了 `timeInterval`）。前者用于组合详情「总览」与「去再平衡」判断，后者用于列表页/卡片徽标。详见 [PL-3](./PL-3-portfolio.md) §6.3。
 >
-> 同一原因导致一个产品级盲点：**「超过 N 天没动过」在列表页不显示为异常**。修法是在 `summary` 侧补 `drift.dueByTime`（不改既有语义），见 [FS-portfolio-ia-cleanup](../../../development/requirements/specs/FS-portfolio-ia-cleanup.md) B3。
+> 同一原因导致一个产品级盲点：**「超过 N 天没动过」在列表页不显示为异常**。修法是在 `summary` 侧补 `drift.dueByTime`（不改既有语义），见 FS-portfolio-ia-cleanup B3。
 
 ### 6.2 建议生成（RB-02 ~ RB-04, RB-11）
 
@@ -221,7 +221,7 @@
 - [PRODUCT_LINES.md](../PRODUCT_LINES.md) — 产品线总览与 INDEX（本文件的上级）
 - [PL-3 组合与配置线](./PL-3-portfolio.md) — 本线上游：目标配置与**阈值/频率声明**（`CM-09/10` 归此）
 - [PL-5 提醒与通知线](./PL-5-alerting.md) — `RB-12` 的**通道**（事件表 / 通知中心 / 未读数）；本线是其外部写入方之一
-- [FS-portfolio-ia-cleanup](../../../development/requirements/specs/FS-portfolio-ia-cleanup.md) — 组合详情「总览」、子视图 URL 化、阈值入口迁移、首屏健康表
+- FS-portfolio-ia-cleanup — 组合详情「总览」、子视图 URL 化、阈值入口迁移、首屏健康表
 - [PL-0 平台基座线](./PL-0-platform-foundation.md) — 调度清单与硬编码风险
-- [PRD.md](../../../development/requirements/PRD.md) — 需求基线（功能编码来源）
+- PRD.md — 需求基线（功能编码来源）
 - functions.md（已归档） — 本文 §6 的原始来源

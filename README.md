@@ -61,34 +61,34 @@ Features are organized into 7 product lines, evaluated against three value pilla
 
 ## 🖼 The product at a glance
 
-![Dashboard — home screen](./docs/development/prototypes/en/en-dashboard.png)
+![Dashboard — home screen](./docs/prototypes/en/en-dashboard.png)
 
 *Household total assets, per-portfolio health table (issues sorted to the top), and the live alert feed.*
 
 ### Portfolios & allocation
 
-![Portfolio list](./docs/development/prototypes/en/en-portfolio-list.png)
+![Portfolio list](./docs/prototypes/en/en-portfolio-list.png)
 
 *Each portfolio as a card with a drift badge, market value, pending actions, and last-rebalance date.*
 
 ### Rebalancing
 
-![Portfolio overview](./docs/development/prototypes/en/en-portfolio-overview.png)
-![Rebalance advice](./docs/development/prototypes/en/en-rebalance.png)
+![Portfolio overview](./docs/prototypes/en/en-portfolio-overview.png)
+![Rebalance advice](./docs/prototypes/en/en-rebalance.png)
 
 *Overview KPIs + target-vs-actual, then a sell-then-buy suggestion you confirm (never auto-executed).*
 
 ### Ledger
 
-![Positions](./docs/development/prototypes/en/en-portfolio-positions.png)
-![Transactions](./docs/development/prototypes/en/en-transactions.png)
+![Positions](./docs/prototypes/en/en-portfolio-positions.png)
+![Transactions](./docs/prototypes/en/en-transactions.png)
 
 *Holdings table and the cross-portfolio transaction ledger (CSV batch import supported).*
 
 ### Market data
 
-![Instruments](./docs/development/prototypes/en/en-instruments.png)
-![Price history](./docs/development/prototypes/en/en-price-history.png)
+![Instruments](./docs/prototypes/en/en-instruments.png)
+![Price history](./docs/prototypes/en/en-price-history.png)
 
 *Instrument master (asset metadata) and price history — the single source of truth feeding every upstream view.*
 
@@ -224,7 +224,7 @@ Full setup, production deployment (PM2 + Nginx), the full environment-variable t
 | [Server manual](./docs/handbook/ops/SERVER.md) | API process, manual endpoints |
 | [cron-worker (overview / ops / product / dev)](./docs/handbook/ops/CRON_WORKER.md) | Scheduler from three viewpoints |
 | [Deployment manual](./docs/handbook/ops/DEPLOYMENT.md) | Local dev, prod, env vars, security |
-| [Architecture](./docs/os/architecture/ARCHITECTURE.md) | Stack, boundaries, data flow, ADRs |
+| [Architecture](./docs/architecture/ARCHITECTURE.md) | Stack, boundaries, data flow, ADRs |
 | [API contract](./docs/handbook/technical/API_CONTRACT.md) · [Data model](./docs/handbook/technical/DATA_MODEL.md) · [Client dev](./docs/handbook/technical/CLIENT_DEV.md) | Developer references |
 | [Product lines](./docs/handbook/product/PRODUCT_LINES.md) | Feature panorama & roadmap |
 

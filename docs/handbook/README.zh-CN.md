@@ -62,34 +62,34 @@ PortoMind 是一个**家庭 ETF / 基金 / 股票组合账本 + 决策辅助系�
 ## 🖼 产品一览
 ### 首屏
 
-![仪表盘 — 主页](../development/prototypes/en/en-dashboard.png)
+![仪表盘 — 主页](../prototypes/en/en-dashboard.png)
 
 *家庭总资产、组合健康表（按「有事的在上」排序）、实时提醒流。*
 
 ### 组合与配置
 
-![组合列表](../development/prototypes/en/en-portfolio-list.png)
+![组合列表](../prototypes/en/en-portfolio-list.png)
 
 *每个组合一张卡片，带漂移徽标、市值、待办、上次再平衡日期。*
 
 ### 再平衡
 
-![组合总览](../development/prototypes/en/en-portfolio-overview.png)
-![再平衡建议](../development/prototypes/en/en-rebalance.png)
+![组合总览](../prototypes/en/en-portfolio-overview.png)
+![再平衡建议](../prototypes/en/en-rebalance.png)
 
 *总览 KPI + 目标 vs 实际，再给出先卖后买的建议，由你确认（绝不自动执行）。*
 
 ### 账本
 
-![持仓](../development/prototypes/en/en-portfolio-positions.png)
-![交易](../development/prototypes/en/en-transactions.png)
+![持仓](../prototypes/en/en-portfolio-positions.png)
+![交易](../prototypes/en/en-transactions.png)
 
 *持仓表与跨组合交易账本（支持 CSV 批量导入）。*
 
 ### 行情数据
 
-![标的](../development/prototypes/en/en-instruments.png)
-![价格历史](../development/prototypes/en/en-price-history.png)
+![标的](../prototypes/en/en-instruments.png)
+![价格历史](../prototypes/en/en-price-history.png)
 
 *标的主数据（资产元数据）与价格历史 —— 驱动所有上游视图的唯一事实来源。*
 
@@ -225,7 +225,7 @@ npm run test:worker
 | [服务端手册](./ops/SERVER.md) | API 进程、手动端点 |
 | [cron-worker（总览 / 运维 / 产品 / 开发）](./ops/CRON_WORKER.md) | 调度进程三视角 |
 | [部署手册](./ops/DEPLOYMENT.md) | 本地开发、生产、环境变量、安全 |
-| [架构总览](../os/architecture/ARCHITECTURE.md) | 技术栈、边界、数据流、ADR |
+| [架构总览](../architecture/ARCHITECTURE.md) | 技术栈、边界、数据流、ADR |
 | [API 契约](./technical/API_CONTRACT.md) · [数据模型](./technical/DATA_MODEL.md) · [前端开发](./technical/CLIENT_DEV.md) | 开发者参考 |
 | [产品线总览](./product/PRODUCT_LINES.md) | 功能全景与路线图 |
 

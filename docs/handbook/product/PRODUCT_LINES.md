@@ -1,7 +1,7 @@
 # PortoMind 产品线总览与 INDEX
 
 > 版本：v2.1 · 日期：2026-10-26 · 视角：产品管理（Product Management）
-> 输入依据：[PRD.md](../../development/requirements/PRD.md)（需求基线）、[CLIENT.md](../manual/CLIENT.md)（用户手册）、[BOARD.md](../../BOARD.md)（任务板与阶段路线）、原 `os/architecture/functions.md`（源码级功能清单，已归档）
+> 输入依据：PRD.md（需求基线）、[CLIENT.md](../manual/CLIENT.md)（用户手册）、BOARD.md（任务板与阶段路线）、原 `os/architecture/functions.md`（源码级功能清单，已归档）
 > 本文件定位：**产品线的总览与索引**——只保留跨线共用的结构与判断（产品定位、划分原则、总表、依赖图、评估框架、任务板路线），**每条产品线的明细下沉到独立子文件**。
 > 边界声明：本文档组只做「产品结构 + 取舍判断」，不含技术实现方案；字段级、接口级细节以 [API_CONTRACT.md](../technical/API_CONTRACT.md) 与代码为准。功能编号（AS/TR/CM/RB/AL/FAM）沿用 PRD 编码以便双向追溯。
 
@@ -9,13 +9,13 @@
 > - §1 由「一句定位 + 闭环图 + 价值主线表」扩为 4 小节：**1.1 这个产品是什么**（一句话 + 替掉的三件手工活 + 「它是 / 它不是」）→ **1.2 核心业务闭环与使用形态**（闭环图 + 日常节奏 + 三组合 + 家庭层）→ **1.3 三条不可让渡的边界**→ **1.4 三条价值主线**（原表保留）。
 > - 内容来源：原 PL-0 §1.1 / §1.2（v1.2 新写、已验证有效），**上移而非新增**，PL-0 侧同步收敛为与其他 6 条同构的结构。
 > - `1.3` 的「失效后果」列由 PL-0 版的「对 PL-0 的硬约束」改写为**产品级后果**，避免总览文件出现单线专属视角。
-> - 顺带修掉一条既有死链：输入依据中的 `ROADMAP.md` 从未建立，改为 [BOARD.md](../../BOARD.md)。
+> - 顺带修掉一条既有死链：输入依据中的 `ROADMAP.md` 从未建立，改为 BOARD.md。
 
 > **2026-10-15 修订（v2.0，结构重组）**：原单文件「PRODUCT_LINES.md + FUNCTION_INVENTORY.md + os/architecture/functions.md」三份内容**合并重组**为「1 份总览 + 7 份产品线子文件」。
 > - 原 §2.4 成熟度快评 / §3 产品线 → 产品模块归属 / §4 全量功能评估 → **下沉到各产品线子文件**；
 > - 原 `FUNCTION_INVENTORY.md`（功能点清单）→ **按产品线拆入子文件**，原文件移除；
 > - 原 `os/architecture/functions.md`（功能架构清单）→ **按功能域并入子文件**（跨线的总览与附录归入 PL-0），原文件归档。
-> - v1.0 已按 TASK-005（[ADR-002](../../os/architecture/adr/ADR-002-single-scheduler.md)）校正：双份调度实现 / 三份枚举复制两项 P0 已清偿，相关行就地标注 ✅ 并保留原判定作为「曾识别 → 已解决」的记录。
+> - v1.0 已按 TASK-005（[ADR-002](../../architecture/adr/ADR-002-single-scheduler.md)）校正：双份调度实现 / 三份枚举复制两项 P0 已清偿，相关行就地标注 ✅ 并保留原判定作为「曾识别 → 已解决」的记录。
 
 ---
 
@@ -170,7 +170,7 @@ PL-0 平台基座 ──横切驱动──> PL-1 / PL-2 / PL-3 / PL-4 / PL-5 / P
 | `server/` | 进程 | REST API；**不注册任何 cron**，调度 / TaskRun 仅暴露**只读聚合查询**（`GET /api/cron/status`），**不暴露触发 / 写操作** |
 | `cron-worker/` | 进程 | **全项目唯一调度所有者**，注册全部 5 类定时任务 |
 
-> 详细运行时形态见 [DEPLOYMENT.md §1](../ops/DEPLOYMENT.md)；技术栈与外部集成见 [ARCHITECTURE.md §2 / §3](../../os/architecture/ARCHITECTURE.md)。
+> 详细运行时形态见 [DEPLOYMENT.md §1](../ops/DEPLOYMENT.md)；技术栈与外部集成见 [ARCHITECTURE.md §2 / §3](../../architecture/ARCHITECTURE.md)。
 
 ---
 
@@ -278,11 +278,11 @@ PL-0 平台基座 ──横切驱动──> PL-1 / PL-2 / PL-3 / PL-4 / PL-5 / P
 ### 6.3 相关文档
 
 - 产品线子文件：[PL-0](./lines/PL-0-platform-foundation.md) · [PL-1](./lines/PL-1-ledger.md) · [PL-2](./lines/PL-2-market-data.md) · [PL-3](./lines/PL-3-portfolio.md) · [PL-4](./lines/PL-4-rebalancing.md) · [PL-5](./lines/PL-5-alerting.md) · [PL-6](./lines/PL-6-household.md)
-- [PRD.md](../../development/requirements/PRD.md) — 需求基线（功能编码来源）
-- [USER_RESEARCH.md](../../development/requirements/USER_RESEARCH.md) — 配套用户研究报告
-- [BOARD.md](../../BOARD.md) — 任务板与阶段路线（原计划中的 `ROADMAP.md` 未建立，勿再引用）
-- [PRODUCT.md](../../development/requirements/PRODUCT.md) — 产品定义模板（建议按本报告补全）
-- [架构总览 ARCHITECTURE.md](../../os/architecture/ARCHITECTURE.md) — 分层与模块边界
+- PRD.md — 需求基线（功能编码来源）
+- USER_RESEARCH.md — 配套用户研究报告
+- BOARD.md — 任务板与阶段路线（原计划中的 `ROADMAP.md` 未建立，勿再引用）
+- PRODUCT.md — 产品定义模板（建议按本报告补全）
+- [架构总览 ARCHITECTURE.md](../../architecture/ARCHITECTURE.md) — 分层与模块边界
 - functions.md（已归档） — 原功能架构清单，内容已并入各产品线子文件
 
 > 本方案为产品设计参考，具体实施请结合项目实际与安全 / 合规要求确认。

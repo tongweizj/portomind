@@ -83,5 +83,5 @@
 - [server 使用手册](./SERVER.md) — API 进程、手动 API 端点
 - [client 使用手册](../manual/CLIENT.md) — 界面业务操作
 - [系统部署手册](./DEPLOYMENT.md) — 安装 / 启动 / 生产部署 / 环境变量 / 安全边界 / 备份
-- [ADR-002 单一调度器](../../os/architecture/adr/ADR-002-single-scheduler.md) — 架构决策与备选方案
+- [ADR-002 单一调度器](../../architecture/adr/ADR-002-single-scheduler.md) — 架构决策与备选方案
 - [API 契约](../technical/API_CONTRACT.md) — REST API 详细定义

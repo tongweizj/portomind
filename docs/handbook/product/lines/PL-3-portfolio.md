@@ -4,7 +4,7 @@
 > 归属：[PRODUCT_LINES.md](../PRODUCT_LINES.md)「产品线 INDEX」中 **PL-3** 的明细子文件
 > v1.1 修订：§1 开头补一句指向 [PRODUCT_LINES.md §1](../PRODUCT_LINES.md) 的链接（产品级定义唯一归属，路线 B）；本线内容未动。
 > 内容范围：① 成熟度快评（总表 §2.4） ② 产品线 → 产品模块归属（总表 §3） ③ 全量功能评估 ④ 已实现功能点清单 ⑤ 架构实现明细（合并自原 `os/architecture/functions.md` §4.5，原文件已归档）
-> 功能编码：`CM-01~20`，沿用 [PRD](../../../development/requirements/PRD.md)。**`CM-09`（再平衡阈值）与 `CM-10`（检查频率）的「声明」部分归本线**——变更频率低、无副作用、与配置意图同源；其「运行时」判定与执行归 PL-4（2026-10-26 裁决，见 [FS-portfolio-ia-cleanup](../../../development/requirements/specs/FS-portfolio-ia-cleanup.md) HD-1/HD-2 与 §4.5.3 归属说明）。
+> 功能编码：`CM-01~20`，沿用 PRD。**`CM-09`（再平衡阈值）与 `CM-10`（检查频率）的「声明」部分归本线**——变更频率低、无副作用、与配置意图同源；其「运行时」判定与执行归 PL-4（2026-10-26 裁决，见 FS-portfolio-ia-cleanup HD-1/HD-2 与 §4.5.3 归属说明）。
 
 ---
 
@@ -63,7 +63,7 @@
 | CM-10 | 检查频率 | **保留（归属本线）** | `daily/weekly/monthly` 够用；`SCHEDULE_DUE_RULES` 硬编码的隐式契约属 PL-4 运行时（见 PL-4 §6.5） | 随 CM-09 一并移入总览配置区 | **P1** |
 | CM-11 | 列表卡片 | **合并** | 与 CM-12 描述同一组件，属拆条描述 | 与 CM-12 合并为「组合卡片」一个条目 | P3 |
 | CM-12 | 卡片增强 | **强化** | 缺趋势（需快照模型）；更实际的问题是**「到期该再平衡」在卡片上不可见**——`summary.js` 的 `drift` 显式过滤掉 `timeInterval`，只有绝对/相对偏离才亮徽标 | ① 数据侧补 `drift.dueByTime`（FS B3）；② 徽标按 `dueByTime` 区分「偏离阈值」/「待再平衡」（P1-1，另立） | **P1** |
-| CM-13 | 详情 Tab | **强化** | 原判「修改：概览与持仓概念重叠」。实码只有 4 个 Tab 且**没有「概览」**（`Detail.jsx` 的 `TABS`），导致卡片说「偏离」、点进去第一屏却看不到「哪偏了、偏多少、为什么判偏」，必须再切 Tab | 首 Tab 改为「总览」（KPI + 目标 vs 实际 + 偏离原因 + 最近再平衡），持仓明细下沉为第二 Tab；见 [FS-portfolio-ia-cleanup](../../../development/requirements/specs/FS-portfolio-ia-cleanup.md) | **P1** |
+| CM-13 | 详情 Tab | **强化** | 原判「修改：概览与持仓概念重叠」。实码只有 4 个 Tab 且**没有「概览」**（`Detail.jsx` 的 `TABS`），导致卡片说「偏离」、点进去第一屏却看不到「哪偏了、偏多少、为什么判偏」，必须再切 Tab | 首 Tab 改为「总览」（KPI + 目标 vs 实际 + 偏离原因 + 最近再平衡），持仓明细下沉为第二 Tab；见 FS-portfolio-ia-cleanup | **P1** |
 | CM-14 | 实时比例 | 保留 | 支持大类级视角；但返回 `{symbol,currency,ratio}` **不含 target**，不能直接用于「目标 vs 实际」对比（偏离判定须走 `check`，见 FS A3，避免第二套口径） | — | — |
 | CM-15 | 汇总统计 | 保留 | — | — | — |
 | CM-16 | 持仓概览 | **强化** | 9 列信息密度高，但缺汇总行 / 排序记忆 / 导出 | 增加合计行、列排序持久化、导出 CSV | P2 |
@@ -176,7 +176,7 @@
 > - 列表页 / 卡片徽标 / 首屏健康表 → 用 `drift.needsRebalance`（偏离）+ `drift.dueByTime`（到期），**两个信号分开表达**；文案里的 N 一律取 `drift.overThresholdCount`（标的数），**不要**用 `triggeredThresholds.length`（阈值类型数）冒充；
 > - 组合详情「总览」→ 用 `check` 的完整结果（偏离 + 到期 + `details`）。
 
-**目标态字段（待实施，[FS-portfolio-ia-cleanup](../../../development/requirements/specs/FS-portfolio-ia-cleanup.md) 交付单元 B）**：
+**目标态字段（待实施，FS-portfolio-ia-cleanup 交付单元 B）**：
 
 | 字段 | 位置 | 说明 |
 |---|---|---|
@@ -232,7 +232,7 @@
 - [PRODUCT_LINES.md](../PRODUCT_LINES.md) — 产品线总览与 INDEX（本文件的上级）
 - [PL-1 投资账本线](./PL-1-ledger.md) — 本线上游：持仓与成本
 - [PL-4 再平衡决策线](./PL-4-rebalancing.md) — 本线下游：目标基准 + 阈值声明 → 建议生成与执行
-- [FS-portfolio-ia-cleanup](../../../development/requirements/specs/FS-portfolio-ia-cleanup.md) — 组合详情 IA 收尾（首 Tab「总览」/ 阈值入口 / 删除入口）+ Dashboard 组合健康表
+- FS-portfolio-ia-cleanup — 组合详情 IA 收尾（首 Tab「总览」/ 阈值入口 / 删除入口）+ Dashboard 组合健康表
 - [PL-6 家庭总览线](./PL-6-household.md) — 组合是家庭汇总的聚合单元
-- [PRD.md](../../../development/requirements/PRD.md) — 需求基线（功能编码来源）
+- PRD.md — 需求基线（功能编码来源）
 - functions.md（已归档） — 本文 §6 的原始来源
