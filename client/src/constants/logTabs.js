@@ -17,14 +17,16 @@ export const LOG_TAB_ASSETS = 'assets';
 export const LOG_TABS = Object.freeze([
   { key: 'board', label: '任务运行看板' },
   { key: LOG_TAB_ASSETS, label: '资产数据' },
-  { key: 'server', label: '服务器日志' },
-  { key: 'task', label: '任务日志' },
+  { key: 'server', label: '服务器日志', rawLog: true },
+  { key: 'task', label: '任务日志', rawLog: true },
 ]);
 
 export const DEFAULT_LOG_TAB = 'board';
 
-/** 仍由 <RawLogView> 承载的 tab；其余 tab 各自有专属面板。 */
-export const RAW_LOG_TAB_KEYS = Object.freeze(['server', 'task']);
+/** 仍由 <RawLogView> 承载的 tab；从 LOG_TABS 派生，避免 key 两份清单漂移。 */
+export const RAW_LOG_TAB_KEYS = Object.freeze(
+  LOG_TABS.filter((tab) => tab.rawLog).map((tab) => tab.key)
+);
 
 /** 合法 tab key 集合。用于把 URL 上的任意输入收敛到白名单。 */
 export const LOG_TAB_KEYS = Object.freeze(LOG_TABS.map((t) => t.key));

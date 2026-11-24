@@ -106,7 +106,7 @@ const LogsPage = () => {
         若把它们留在子组件内、靠 key 重挂，就会被静默清空 —— 那是行为回归。
       */}
       {RAW_LOG_TAB_KEYS.includes(activeTab) && (
-        <section role="tabpanel" aria-label={activeTab === 'server' ? '服务器日志' : '任务日志'}>
+        <section role="tabpanel" aria-label={LOG_TABS.find((tab) => tab.key === activeTab)?.label}>
           <RawLogView
             key={activeTab}
             logType={activeTab}

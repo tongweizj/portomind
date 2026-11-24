@@ -147,10 +147,12 @@ Portfolio 枚举：`type`（风险定位）为 `活钱 | 稳健 | 长期`；`acc
 | `GET /api/ops-center/assets` | Query: `page,pageSize`（默认 `1/50`，上限 100）。TASK-068 只提供默认页；筛选/排序参数在 Ticket 03 增加前**不接收**。 | 资产总表数组 + 分页。每项 `{assetId,symbol,name,market,currency,launchDate,todayPrice:{marketDay,status,priceDate},basicInfo:{complete,missingFields},validity:{status},history:{status:'unavailable'}}`。默认只取 `active`，按 `symbol` 升序。缺失/未知值为 `null`，不补 0。 | `200`; 非法分页参数 `400`; 未登录 `401`。**只读，不触发任务、不写集合** |
 
 > `GET /api/ops-center/assets` 的字段口径（TASK-068）：
-> - `todayPrice.marketDay` 是 `marketDay.service` 计算的目标市场日，不是自然日；`todayPrice.status ∈ priced | missing | market_closed | not_due | not_listed | unknown`。`priced` 表示目标市场日已有价格；`missing` 表示已到同步点、市场开市且无价格；`market_closed` 表示当前市场日休市；`not_due` 表示尚未到该市场当日同步点；`not_listed` 表示目标市场日早于资产 `launchDate`；`unknown` 表示市场不受支持或无法确定目标日。`priceDate` 仅在 `priced` 时返回实际价格入桶日期（`MARKET_TIMEZONE`），否则为 `null`。
+> - `todayPrice.marketDay` 是 `marketDay.service` 计算的市场日，不是自然日。`priced` / `missing` / `not_listed` 时为目标市场日；`market_closed` / `not_due` 时为状态所指的当前市场日（`todayStr`），避免把上一目标日误标为休市/未到点；`unknown` 时若可确定为目标市场日则返回，否则为 `null`。
+> - `todayPrice.status ∈ priced | missing | market_closed | not_due | not_listed | unknown`：`priced` 表示目标市场日已有价格；`missing` 表示已到同步点、市场开市且无价格；`market_closed` 表示当前市场日休市；`not_due` 表示尚未到该市场当日同步点；`not_listed` 表示目标市场日早于资产 `launchDate`；`unknown` 表示市场不受支持、无法确定目标日或价格源不可用。`priceDate` 仅在 `priced` 时返回实际价格入桶日期（`MARKET_TIMEZONE`），否则为 `null`。
 > - `basicInfo` 只检查 `symbol/name/market/currency/launchDate` 五个元数据字段；`missingFields` 取 `symbol|name|market|currency|launchDate`（含格式非法），不包含价格、类型、标签或启用状态。
 > - `validity.status` 按最近 3 个目标市场日判断：任一有价 `normal`；全空 `needs_review`（表示资产资料可能有问题，**不是采集失败**）；无 `launchDate`、上市不足 3 个市场日或市场不受支持为 `unknown`。休市日不计入 3 个市场日。
 > - `history.status = unavailable` 是本票的占位契约（历史完整度由 Ticket 04 填充），客户端显示「尚未检查」。
+> - 价格源查询失败时，受影响资产的 `todayPrice.status` 与 `validity.status` 降级为 `unknown`，不得伪造 `missing` / `needs_review`；市场日历计算失败也降级为 `unknown` 并记录 `OPS_CENTER_*_FAILED` 日志。
 > - 端点只要求登录，不新增 admin 校验；admin 可见的资产编辑链接是 UI 约定，不是安全边界。
 
 > `GET /api/cron/status` 是**只读聚合**端点。价格覆盖按 `byMarket` 的目标日分别查价，顶层 `targetMarketDate` 取最晚目标日，`expected` 和 `fetched` 为各市场的合计。TASK-078 更新了分组目标日规则。其余字段定义见 TASK-054 ExecPlan §4.3/§4.4。

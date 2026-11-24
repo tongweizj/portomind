@@ -1,7 +1,13 @@
 const Asset = require('../models/asset');
 const { ASSET_MARKETS } = require('../constants/asset.constants');
-const { marketDate, MARKET_TIMEZONE } = require('../utils/marketTime');
-const { MARKET_DAY_COUNT, priceWindow, loadPrices } = require('./priceCoverage.service');
+const { MARKET_TIMEZONE } = require('../utils/marketTime');
+const {
+  MARKET_DAY_COUNT,
+  priceWindow,
+  loadPrices,
+  pricedDaysBySymbol,
+  anyPriceInWindow
+} = require('./priceCoverage.service');
 const { DATE_REASONS, launchDateReason, metadataReasons } = require('./assetMetadata.service');
 
 const TASK_NAME = 'asset-integrity-check';
@@ -31,19 +37,14 @@ async function inspectAssetIntegrity({ now = new Date(), dependencies = {} } = {
     .filter(market => ASSET_MARKETS.includes(market)).map(market => [market, priceWindow(market, now, tz)]));
   const buckets = new Set([...windows.values()].flatMap(window => [...window.buckets]));
   const prices = await (dependencies.loadPrices || loadPrices)(assets.map(asset => asset.symbol).filter(Boolean), buckets);
-  const pricedDays = new Map();
-  for (const { symbol, price, timestamp } of prices) {
-    if (!Number.isFinite(price) || !(timestamp instanceof Date) || !Number.isFinite(timestamp.getTime())) continue;
-    if (!pricedDays.has(symbol)) pricedDays.set(symbol, new Set());
-    pricedDays.get(symbol).add(marketDate(timestamp, MARKET_TIMEZONE));
-  }
+  const pricedDays = pricedDaysBySymbol(prices);
 
   const incompleteAssets = [];
   for (const asset of assets) {
     const reasons = metadataReasons(asset, now);
     const window = windows.get(asset.market);
     if (window && window.dates.length < MARKET_DAY_COUNT) reasons.push('INSUFFICIENT_MARKET_DAYS');
-    else if (window && ![...window.buckets].some(day => pricedDays.get(asset.symbol)?.has(day))) {
+    else if (window && !anyPriceInWindow(window, pricedDays.get(asset.symbol))) {
       reasons.push('PRICE_EMPTY_3_MARKET_DAYS');
     }
     if (reasons.length) incompleteAssets.push(incompleteEntry(asset, reasons));

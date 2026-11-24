@@ -71,8 +71,10 @@ function matchedPriceDate(pricedDays, market, date) {
   return expectedBucketCandidates(market, date).find((candidate) => pricedDays.has(candidate)) || null;
 }
 
-function dateHasPrice(pricedDays, market, date) {
-  return matchedPriceDate(pricedDays, market, date) !== null;
+// 窗口内任一日有价即视为有覆盖；与 asset-integrity-check 的 PRICE_EMPTY_3_MARKET_DAYS 同口径。
+function anyPriceInWindow(window, pricedDays) {
+  if (!window || !pricedDays) return false;
+  return [...window.buckets].some((day) => pricedDays.has(day));
 }
 
 module.exports = {
@@ -81,5 +83,5 @@ module.exports = {
   loadPrices,
   pricedDaysBySymbol,
   matchedPriceDate,
-  dateHasPrice
+  anyPriceInWindow
 };

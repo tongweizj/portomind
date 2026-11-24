@@ -8,39 +8,24 @@
 
 import { Link } from 'react-router';
 import { useAuth } from '../auth/authContext';
-import { LoadingState } from '../DataState';
+import { EmptyState, ErrorState, LoadingState } from '../DataState';
 import { colors } from '../../constants/design-tokens';
 import { useOpsCenterAssets } from '../../hooks/useOpsCenterAssets';
 import { getApiErrorMessage } from '../../services/api.client';
 
-const TODAY_PRICE_LABELS = Object.freeze({
-  priced: '有价',
-  missing: '缺价',
-  market_closed: '休市',
-  not_due: '未到点',
-  not_listed: '未上市',
-  unknown: '无法判断'
+const TODAY_PRICE_VIEW = Object.freeze({
+  priced: { label: '有价', color: colors.statusOk },
+  missing: { label: '缺价', color: colors.statusBad },
+  market_closed: { label: '休市', color: colors.statusIdle },
+  not_due: { label: '未到点', color: colors.statusIdle },
+  not_listed: { label: '未上市', color: colors.statusIdle },
+  unknown: { label: '无法判断', color: colors.statusIdle }
 });
 
-const TODAY_PRICE_COLORS = Object.freeze({
-  priced: colors.statusOk,
-  missing: colors.statusBad,
-  market_closed: colors.statusIdle,
-  not_due: colors.statusIdle,
-  not_listed: colors.statusIdle,
-  unknown: colors.statusIdle
-});
-
-const VALIDITY_LABELS = Object.freeze({
-  normal: '正常',
-  needs_review: '待核查',
-  unknown: '无法判断'
-});
-
-const VALIDITY_COLORS = Object.freeze({
-  normal: colors.statusOk,
-  needs_review: colors.statusWarn,
-  unknown: colors.statusIdle
+const VALIDITY_VIEW = Object.freeze({
+  normal: { label: '正常', color: colors.statusOk },
+  needs_review: { label: '待核查', color: colors.statusWarn },
+  unknown: { label: '无法判断', color: colors.statusIdle }
 });
 
 const FIELD_LABELS = Object.freeze({
@@ -57,15 +42,16 @@ function todayPriceCell(todayPrice) {
   const status = todayPrice?.status;
   const marketDay = todayPrice?.marketDay;
   const priceDate = todayPrice?.priceDate;
+  const view = TODAY_PRICE_VIEW[status] || TODAY_PRICE_VIEW.unknown;
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
       <span data-testid="ops-today-market-day">{marketDay || UNKNOWN_TEXT}</span>
       <span
         data-testid="ops-today-status"
         data-status={status || 'unknown'}
-        style={{ color: TODAY_PRICE_COLORS[status] || colors.statusIdle, fontSize: 12 }}
+        style={{ color: view.color, fontSize: 12 }}
       >
-        {TODAY_PRICE_LABELS[status] || VALIDITY_LABELS.unknown}
+        {view.label}
       </span>
       {priceDate && (
         <span data-testid="ops-today-price-date" style={{ color: colors.textMuted, fontSize: 11 }}>
@@ -91,11 +77,11 @@ function basicInfoCell(basicInfo) {
 
 function validityCell(validity) {
   const status = validity?.status;
+  const view = VALIDITY_VIEW[status] || VALIDITY_VIEW.unknown;
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-      <span data-testid="ops-validity" data-status={status || 'unknown'}
-        style={{ color: VALIDITY_COLORS[status] || colors.statusIdle }}>
-        {VALIDITY_LABELS[status] || VALIDITY_LABELS.unknown}
+      <span data-testid="ops-validity" data-status={status || 'unknown'} style={{ color: view.color }}>
+        {view.label}
       </span>
       {status === 'needs_review' && (
         <span style={{ color: colors.textMuted, fontSize: 11 }}>资料可能有问题</span>
@@ -125,12 +111,10 @@ export default function AssetDataPanel() {
 
   if (isError) {
     return (
-      <div
-        data-testid="ops-assets-error"
-        role="alert"
-        className="rounded bg-red-50 p-4 text-red-700"
-      >
-        <p>资产数据加载失败：{getApiErrorMessage(error, '请稍后重试')}</p>
+      <div data-testid="ops-assets-error" role="alert">
+        <ErrorState>
+          资产数据加载失败：{getApiErrorMessage(error, '请稍后重试')}
+        </ErrorState>
         <button type="button" className="mt-2 underline" onClick={() => refetch()}>
           重试
         </button>
@@ -140,12 +124,8 @@ export default function AssetDataPanel() {
 
   if (assets.length === 0) {
     return (
-      <div
-        data-testid="ops-assets-empty"
-        className="rounded border border-dashed p-6 text-center"
-        style={{ color: colors.textSecondary }}
-      >
-        暂无 active 资产
+      <div data-testid="ops-assets-empty">
+        <EmptyState>暂无 active 资产</EmptyState>
       </div>
     );
   }

@@ -50,7 +50,7 @@ const ITEMS = [
   {
     assetId: 'a-closed', symbol: 'CLOSED.HK', name: 'Closed Market',
     market: 'HK', currency: 'HKD', launchDate: '2020-01-01T00:00:00.000Z',
-    todayPrice: { marketDay: '2026-11-20', status: 'market_closed', priceDate: null },
+    todayPrice: { marketDay: '2026-11-21', status: 'market_closed', priceDate: null },
     basicInfo: { complete: true, missingFields: [] },
     validity: { status: 'needs_review' },
     history: { status: 'unavailable' }
@@ -58,7 +58,7 @@ const ITEMS = [
   {
     assetId: 'a-notdue', symbol: '510300.CN', name: '沪深300ETF',
     market: 'CN-SH', currency: 'CNY', launchDate: null,
-    todayPrice: { marketDay: '2026-11-20', status: 'not_due', priceDate: null },
+    todayPrice: { marketDay: '2026-11-23', status: 'not_due', priceDate: null },
     basicInfo: { complete: false, missingFields: ['launchDate'] },
     validity: { status: 'unknown' },
     history: { status: 'unavailable' }

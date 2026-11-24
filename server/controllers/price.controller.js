@@ -1,17 +1,12 @@
 const asyncHandler = require('express-async-handler');
 const priceService = require('@portomind/shared/services/price.service');
 const { isDateString, MARKET_TIMEZONE } = require('@portomind/shared/utils/marketTime');
-const { success, failure, pagination, parsePagination } = require('../utils/apiResponse');
+const { success, failure, pagination, parsePagination, validatePaginationQuery } = require('../utils/apiResponse');
 
 function validatePagination(req, res) {
-  for (const field of ['page', 'pageSize']) {
-    if (req.query[field] !== undefined && !/^[1-9]\d*$/.test(req.query[field])) {
-      failure(req, res, 400, `${field} must be a positive integer`);
-      return false;
-    }
-  }
-  if (Number(req.query.pageSize) > 200) {
-    failure(req, res, 400, 'pageSize cannot exceed 200');
+  const queryError = validatePaginationQuery(req.query, 200);
+  if (queryError) {
+    failure(req, res, 400, queryError);
     return false;
   }
   return true;

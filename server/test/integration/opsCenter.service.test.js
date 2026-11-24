@@ -149,11 +149,11 @@ test('休市与未到点不误报为缺价', async (t) => {
 
   const closed = await getAssetsOverview({ now: NOW_CLOSED });
   assert.equal(closed.data[0].todayPrice.status, 'market_closed');
-  assert.equal(closed.data[0].todayPrice.marketDay, '2026-11-19');
+  assert.equal(closed.data[0].todayPrice.marketDay, '2026-11-21', '休市时展示状态所指的当前市场日');
 
   const notDue = await getAssetsOverview({ now: NOW_NOT_DUE });
   assert.equal(notDue.data[0].todayPrice.status, 'not_due');
-  assert.equal(notDue.data[0].todayPrice.marketDay, '2026-11-19');
+  assert.equal(notDue.data[0].todayPrice.marketDay, '2026-11-23', '未到点时展示当前市场日');
   assert.equal(notDue.data[0].todayPrice.priceDate, null);
 });
 
@@ -207,4 +207,33 @@ test('最近 3 个市场日包含任一有价日即视为正常，全空才待�
   const result = await getAssetsOverview({ now: NOW_SYNCED });
   assert.equal(byId(result.data, 'v1').validity.status, 'normal');
   assert.equal(byId(result.data, 'v2').validity.status, 'needs_review');
+});
+
+test('上市不足 3 个市场日（落在窗口内部）判为无法判断，而不是待核查', async (t) => {
+  const assets = [
+    // US 窗口为 2026-11-20 / 19 / 18；11-19 上市只有 2 个市场日样本。
+    asset({ _id: 'r1', symbol: 'RECENT.US', launchDate: new Date('2026-11-19T12:00:00.000Z') }),
+    // 11-18 上市恰好覆盖 3 个市场日，可以判断。
+    asset({ _id: 'r2', symbol: 'EDGE.US', launchDate: new Date('2026-11-18T12:00:00.000Z') })
+  ];
+  stubAssets(t, assets);
+  stubPrices(t, []);
+
+  const result = await getAssetsOverview({ now: NOW_SYNCED });
+  assert.equal(byId(result.data, 'r1').validity.status, 'unknown');
+  assert.equal(byId(result.data, 'r2').validity.status, 'needs_review');
+});
+
+test('价格源查询失败时降级为 unknown，不伪造缺价/待核查', async (t) => {
+  stubAssets(t, [asset({ _id: 'd1' })]);
+  t.mock.method(Price, 'find', () => {
+    throw new Error('price store unavailable');
+  });
+
+  const result = await getAssetsOverview({ now: NOW_SYNCED });
+
+  assert.equal(result.data[0].todayPrice.status, 'unknown');
+  assert.equal(result.data[0].todayPrice.priceDate, null);
+  assert.equal(result.data[0].validity.status, 'unknown');
+  assert.deepEqual(result.data[0].history, { status: 'unavailable' });
 });

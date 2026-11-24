@@ -5,24 +5,17 @@
 // 协议层只做分页校验与响应包装，业务聚合在 shared/services/opsCenter.service.js。
 
 const opsCenterService = require('@portomind/shared/services/opsCenter.service');
-const { success, failure, pagination, parsePagination } = require('../utils/apiResponse');
-
-function validatePagination(req, res) {
-  for (const field of ['page', 'pageSize']) {
-    if (req.query[field] !== undefined && !/^[1-9]\d*$/.test(req.query[field])) {
-      failure(req, res, 400, `${field} must be a positive integer`);
-      return false;
-    }
-  }
-  if (Number(req.query.pageSize) > 100) {
-    failure(req, res, 400, 'pageSize cannot exceed 100');
-    return false;
-  }
-  return true;
-}
+const {
+  success,
+  failure,
+  pagination,
+  parsePagination,
+  validatePaginationQuery
+} = require('../utils/apiResponse');
 
 exports.getAssets = async (req, res, next) => {
-  if (!validatePagination(req, res)) return;
+  const queryError = validatePaginationQuery(req.query, 100);
+  if (queryError) return failure(req, res, 400, queryError);
   try {
     const { page, pageSize } = parsePagination(req.query, { pageSize: opsCenterService.DEFAULT_PAGE_SIZE });
     const result = await opsCenterService.getAssetsOverview({ page, pageSize });

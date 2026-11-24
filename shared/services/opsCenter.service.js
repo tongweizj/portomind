@@ -10,6 +10,7 @@
 
 const assetService = require('./asset.service');
 const { ASSET_MARKETS } = require('../constants/asset.constants');
+const { logger } = require('../config/logger');
 const { marketDate, MARKET_TIMEZONE } = require('../utils/marketTime');
 const { pickTargetInfo, isMarketOpenOn, marketTimezone } = require('./marketDay.service');
 const {
@@ -18,7 +19,7 @@ const {
   loadPrices,
   pricedDaysBySymbol,
   matchedPriceDate,
-  dateHasPrice
+  anyPriceInWindow
 } = require('./priceCoverage.service');
 const { metadataReasons, missingFieldsOf } = require('./assetMetadata.service');
 
@@ -44,7 +45,7 @@ const VALIDITY_STATUS = Object.freeze({
 
 const HISTORY_STATUS = Object.freeze({ UNAVAILABLE: 'unavailable' });
 
-function validDate(value) {
+function parseDateOrNull(value) {
   if (value instanceof Date) return Number.isFinite(value.getTime()) ? value : null;
   if (typeof value === 'string') {
     const date = new Date(value);
@@ -55,63 +56,71 @@ function validDate(value) {
 
 // 资产上市日在目标市场时区下的日期串；缺失/非法/不支持市场一律 null（不猜）。
 function launchDayOf(asset) {
-  const launchDate = validDate(asset.launchDate);
+  const launchDate = parseDateOrNull(asset.launchDate);
   if (!launchDate || !ASSET_MARKETS.includes(asset.market)) return null;
   return marketDate(launchDate, marketTimezone(asset.market));
 }
 
-function targetInfoOf(market, now, tz) {
+// 市场日历/目标日计算失败时降级为 unknown，但必须留痕，不能静默吞掉。
+function targetInfoForMarket(market, now, tz) {
   try {
     return pickTargetInfo(market, now, tz);
-  } catch {
+  } catch (error) {
+    logger.warn('OPS_CENTER_TARGET_INFO_FAILED', { market, error: error.message });
     return null;
   }
 }
 
-function windowOf(market, now, tz) {
+function priceWindowForMarket(market, now, tz) {
   try {
     return priceWindow(market, now, tz);
-  } catch {
+  } catch (error) {
+    logger.warn('OPS_CENTER_PRICE_WINDOW_FAILED', { market, error: error.message });
     return null;
   }
 }
 
-function todayPriceOf(asset, targetInfo, pricedDays) {
-  const marketDay = targetInfo?.targetMarketDate ?? null;
-  if (!ASSET_MARKETS.includes(asset.market) || !targetInfo || !marketDay) {
-    return { marketDay, status: TODAY_PRICE_STATUS.UNKNOWN, priceDate: null };
+function todayPriceOf(asset, targetInfo, pricedDays, priceDataAvailable) {
+  const targetMarketDay = targetInfo?.targetMarketDate ?? null;
+  if (!ASSET_MARKETS.includes(asset.market) || !targetInfo || !targetMarketDay) {
+    return { marketDay: targetMarketDay, status: TODAY_PRICE_STATUS.UNKNOWN, priceDate: null };
   }
 
   const launchDay = launchDayOf(asset);
-  if (launchDay && launchDay > marketDay) {
-    return { marketDay, status: TODAY_PRICE_STATUS.NOT_LISTED, priceDate: null };
+  if (launchDay && launchDay > targetMarketDay) {
+    return { marketDay: targetMarketDay, status: TODAY_PRICE_STATUS.NOT_LISTED, priceDate: null };
   }
-  // 今日休市 / 尚未到当日同步点时，没有新价格可采，不能报成缺价。
+  // 今日休市 / 尚未到当日同步点时，没有新价格可采，不能报成缺价；
+  // 此时 marketDay 展示状态所指的当前市场日，而不是上一目标日。
   if (!isMarketOpenOn(asset.market, targetInfo.todayStr)) {
-    return { marketDay, status: TODAY_PRICE_STATUS.MARKET_CLOSED, priceDate: null };
+    return { marketDay: targetInfo.todayStr, status: TODAY_PRICE_STATUS.MARKET_CLOSED, priceDate: null };
   }
   if (targetInfo.effectiveSyncDay !== targetInfo.todayStr) {
-    return { marketDay, status: TODAY_PRICE_STATUS.NOT_DUE, priceDate: null };
+    return { marketDay: targetInfo.todayStr, status: TODAY_PRICE_STATUS.NOT_DUE, priceDate: null };
+  }
+  if (!priceDataAvailable) {
+    return { marketDay: targetMarketDay, status: TODAY_PRICE_STATUS.UNKNOWN, priceDate: null };
   }
 
-  const priceDate = matchedPriceDate(pricedDays.get(asset.symbol), asset.market, marketDay);
+  const priceDate = matchedPriceDate(pricedDays.get(asset.symbol), asset.market, targetMarketDay);
   return {
-    marketDay,
+    marketDay: targetMarketDay,
     status: priceDate ? TODAY_PRICE_STATUS.PRICED : TODAY_PRICE_STATUS.MISSING,
     priceDate
   };
 }
 
-function validityOf(asset, window, pricedDays) {
+function validityOf(asset, window, pricedDays, priceDataAvailable) {
+  if (!priceDataAvailable) return { status: VALIDITY_STATUS.UNKNOWN };
   const launchDay = launchDayOf(asset);
   if (!window || window.dates.length < MARKET_DAY_COUNT || !launchDay) {
     return { status: VALIDITY_STATUS.UNKNOWN };
   }
-  // 上市不足 3 个市场日 → 无法判断，不能把「样本不足」误判成资料有问题。
-  if (launchDay > window.dates[0]) return { status: VALIDITY_STATUS.UNKNOWN };
-  const days = pricedDays.get(asset.symbol);
+  // dates 按目标日倒序；最早一天才是样本起点，上市晚于它即不足 3 个市场日。
+  const earliestMarketDay = window.dates[window.dates.length - 1];
+  if (launchDay > earliestMarketDay) return { status: VALIDITY_STATUS.UNKNOWN };
   return {
-    status: window.dates.some((date) => dateHasPrice(days, asset.market, date))
+    status: anyPriceInWindow(window, pricedDays.get(asset.symbol))
       ? VALIDITY_STATUS.NORMAL
       : VALIDITY_STATUS.NEEDS_REVIEW
   };
@@ -135,15 +144,23 @@ async function getAssetsOverview({ page = 1, pageSize = DEFAULT_PAGE_SIZE, now =
     .map((asset) => asset.market)
     .filter((market) => ASSET_MARKETS.includes(market)))];
 
-  const targetInfos = new Map(markets.map((market) => [market, targetInfoOf(market, now, tz)]));
-  const windows = new Map(markets.map((market) => [market, windowOf(market, now, tz)]));
+  const targetInfos = new Map(markets.map((market) => [market, targetInfoForMarket(market, now, tz)]));
+  const windows = new Map(markets.map((market) => [market, priceWindowForMarket(market, now, tz)]));
   const buckets = new Set();
   for (const window of windows.values()) {
     if (!window) continue;
     for (const bucket of window.buckets) buckets.add(bucket);
   }
   const symbols = data.map((asset) => asset.symbol).filter((symbol) => typeof symbol === 'string' && symbol.length > 0);
-  const prices = await loadPrices(symbols, buckets);
+  // 价格源失败时整体降级为 unknown；不能把「查不到」当成「缺价/待核查」。
+  let prices = [];
+  let priceDataAvailable = true;
+  try {
+    prices = await loadPrices(symbols, buckets);
+  } catch (error) {
+    priceDataAvailable = false;
+    logger.error('OPS_CENTER_PRICE_QUERY_FAILED', { error: error.message });
+  }
   const pricedDays = pricedDaysBySymbol(prices);
 
   return {
@@ -156,13 +173,13 @@ async function getAssetsOverview({ page = 1, pageSize = DEFAULT_PAGE_SIZE, now =
         name: asset.name ?? null,
         market: asset.market ?? null,
         currency: asset.currency ?? null,
-        launchDate: validDate(asset.launchDate),
-        todayPrice: todayPriceOf(asset, targetInfos.get(asset.market), pricedDays),
+        launchDate: parseDateOrNull(asset.launchDate),
+        todayPrice: todayPriceOf(asset, targetInfos.get(asset.market), pricedDays, priceDataAvailable),
         basicInfo: {
           complete: reasons.length === 0,
           missingFields: missingFieldsOf(reasons)
         },
-        validity: validityOf(asset, windows.get(asset.market), pricedDays),
+        validity: validityOf(asset, windows.get(asset.market), pricedDays, priceDataAvailable),
         history: { status: HISTORY_STATUS.UNAVAILABLE }
       };
     })

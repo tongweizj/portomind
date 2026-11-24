@@ -31,4 +31,20 @@ function parsePagination(query, defaults = {}) {
   return { page, pageSize };
 }
 
-module.exports = { success, failure, pagination, parsePagination };
+/**
+ * 严格校验 page/pageSize（parsePagination 只做收敛）。
+ * 返回错误文案供调用方 failure(res, 400, message)；合法时返回 null。
+ */
+function validatePaginationQuery(query, maxPageSize = 100) {
+  for (const field of ['page', 'pageSize']) {
+    if (query[field] !== undefined && !/^[1-9]\d*$/.test(query[field])) {
+      return `${field} must be a positive integer`;
+    }
+  }
+  if (maxPageSize != null && Number(query.pageSize) > maxPageSize) {
+    return `pageSize cannot exceed ${maxPageSize}`;
+  }
+  return null;
+}
+
+module.exports = { success, failure, pagination, parsePagination, validatePaginationQuery };
