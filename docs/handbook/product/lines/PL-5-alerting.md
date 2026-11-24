@@ -4,7 +4,7 @@
 > 归属：[PRODUCT_LINES.md](../PRODUCT_LINES.md)「产品线 INDEX」中 **PL-5** 的明细子文件
 > v1.1 修订：§1 开头补一句指向 [PRODUCT_LINES.md §1](../PRODUCT_LINES.md) 的链接（产品级定义唯一归属，路线 B）；本线内容未动。
 > 内容范围：① 成熟度快评（总表 §2.4） ② 产品线 → 产品模块归属（总表 §3） ③ 全量功能评估 ④ 已实现功能点清单 ⑤ 架构实现明细（合并自原 `os/architecture/functions.md` §4.7，原文件已归档）
-> 功能编码：`AL-01~10`，沿用 [PRD](../../../development/requirements/PRD.md)
+> 功能编码：`AL-01~10`，沿用 PRD
 
 ---
 
@@ -19,7 +19,7 @@
 - **上游依赖**：PL-2 价格与估值分位、PL-3 漂移、PL-1 盈亏。
 - **下游影响**：通知中心是「待办」的统一入口；家庭总览（PL-6）的提醒入口即本线落地形态。
 - **边界约定**：**恰好等于阈值不触发**，严格大于 / 小于才触发。
-- **角色边界：本线是「通道」，不是「全部事件的作者」**。`AlertEvent` 有两个写入方：① 本线的规则引擎（`AL-05`，事件带 `ruleId`，受 `cooldownDays`/静默/`active` 管控）；② **PL-4 再平衡通知（`RB-12`，`ruleId = null`）**，AUTO 巡检命中后直接投递。后者**不属本线产品能力**：没有规则可配、没有 `active`、没有冷却与静默。本线只负责事件表、去重机制、通知中心渲染与未读数——把 `RB-12` 纳入 `AlertRule` 是明确的 Non-goal（2026-10-26 裁决，见 [FS-portfolio-ia-cleanup](../../../development/requirements/specs/FS-portfolio-ia-cleanup.md) OQ-3）。
+- **角色边界：本线是「通道」，不是「全部事件的作者」**。`AlertEvent` 有两个写入方：① 本线的规则引擎（`AL-05`，事件带 `ruleId`，受 `cooldownDays`/静默/`active` 管控）；② **PL-4 再平衡通知（`RB-12`，`ruleId = null`）**，AUTO 巡检命中后直接投递。后者**不属本线产品能力**：没有规则可配、没有 `active`、没有冷却与静默。本线只负责事件表、去重机制、通知中心渲染与未读数——把 `RB-12` 纳入 `AlertRule` 是明确的 Non-goal（2026-10-26 裁决，见 FS-portfolio-ia-cleanup OQ-3）。
 
 ---
 
@@ -179,6 +179,6 @@
 - [PL-2 行情数据线](./PL-2-market-data.md) — 价格与估值分位输入（AS-11）
 - [PL-4 再平衡决策线](./PL-4-rebalancing.md) — `RB-12` 再平衡通知：本线的**外部写入方**（`ruleId=null`）
 - [PL-6 家庭总览线](./PL-6-household.md) — FAM-03 即本线通知中心的落地形态
-- [FS-portfolio-ia-cleanup](../../../development/requirements/specs/FS-portfolio-ia-cleanup.md) — 明确「再平衡通知不纳入 `AlertRule`」的裁决与 Dashboard 组合健康表
-- [PRD.md](../../../development/requirements/PRD.md) — 需求基线（功能编码来源）
+- FS-portfolio-ia-cleanup — 明确「再平衡通知不纳入 `AlertRule`」的裁决与 Dashboard 组合健康表
+- PRD.md — 需求基线（功能编码来源）
 - functions.md（已归档） — 本文 §6 的原始来源

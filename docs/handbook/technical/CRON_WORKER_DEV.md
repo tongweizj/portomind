@@ -207,5 +207,5 @@ mongosh 'mongodb://127.0.0.1:27017/portomind_dev' \
 - [cron-worker 运维手册](../ops/CRON_WORKER_OPS.md) — 安装 / 启动 / 手动触发 / 监控 / 排障
 - [cron-worker 产品介绍](../manual/CRON_WORKER_PRODUCT.md) — 任务功能介绍（非 PRD）
 - [系统部署手册](../ops/DEPLOYMENT.md) — 安装 / 启动 / 生产部署 / 环境变量 / 安全边界 / 备份
-- [ADR-002 单一调度器](../../os/architecture/adr/ADR-002-single-scheduler.md) — 架构决策与备选方案
+- [ADR-002 单一调度器](../../architecture/adr/ADR-002-single-scheduler.md) — 架构决策与备选方案
 - [API 契约](./API_CONTRACT.md) — REST API 详细定义

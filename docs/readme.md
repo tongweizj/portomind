@@ -1,85 +1,67 @@
 # PortoMind 文档导航
 
-先按用途找目录：**遵守什么规则 → `os/`；要做什么、做到哪里 → `development/`；系统如何使用、接口如何定义 → `handbook/`。**
+本页只索引**留在仓库里、不随任务启闭**的资料。需求、Spec、User Story、Task、执行计划、验收证据等过程文档已迁至 **GitHub Issues**（模板见 [`.github/ISSUE_TEMPLATE/`](../.github/ISSUE_TEMPLATE)），不在仓库内维护。
 
-日常开发从 [BOARD.md](./BOARD.md) 进入；Agent 首次接手从根目录 [AGENTS.md](../AGENTS.md) 进入。目录职责与生命周期的唯一规则见 [DOCS.md](./os/standards/DOCS.md)。
-
-## 快速查找
-
-| 我想找 | 入口 |
-|---|---|
-| 当前开发中 Story 的 n/m 进度、独立 Task 目录导航 | [BOARD.md](./BOARD.md) |
-| 独立 Task 的目录说明与命名规则（**状态只在卡片查**） | [tasks/readme.md](./development/tasks/readme.md) |
-| Story 的价值、范围与验收条件 | [STORIES.md](./development/requirements/stories/STORIES.md) |
-| 各 Story 的详情、下挂 Task 明细与开发进度说明 | [US-001 readme](./development/delivery/completed/US-001/readme.md)、[US-004 readme](./development/delivery/completed/US-004/readme.md)（各 Story 过程目录的 `readme.md`）；已归档 Story 的任务卡与计划见各自交付目录 |
-| 产品方向、需求规格、用户研究 | [PRODUCT.md](./development/requirements/PRODUCT.md)、[PRD.md](./development/requirements/PRD.md)、[specs/](./development/requirements/specs)、[USER_RESEARCH.md](./development/requirements/USER_RESEARCH.md) |
-| 角色职责、状态权限、交付流程 | [roles/](./os/roles)、[STATES.md](./os/process/STATES.md)、[WORKFLOW.md](./os/process/WORKFLOW.md) |
-| 架构边界、技术决策、编码规范 | [ARCHITECTURE.md](./os/architecture/ARCHITECTURE.md)、[adr/](./os/architecture/adr)、[standards/](./os/standards) |
-| API、数据模型、组件开发说明 | [technical/](./handbook/technical) |
-| 界面操作、业务概念、后台任务有什么作用 | [用户手册 manual/](./handbook/manual) |
-| 部署、配置、巡检、排障、验证命令 | [运维手册 ops/](./handbook/ops)；验证命令见 [DEPLOYMENT.md](./handbook/ops/DEPLOYMENT.md) §7 |
-| 产品功能全景、能力边界、产品线说明 | [产品资料 product/](./handbook/product) |
-| 原型、设计稿、截图 | [prototypes/README.md](./development/prototypes/README.md) |
+> 正文中若出现 `PRD.md`、`FS-*`、`TASK-*`、`US-*`、`BOARD.md`、`AGENTS.md`、`DOCS.md`、`SECURITY.md` 等裸文件名，是迁移前的历史引用，已不再是可点击的文档。其中 `DOCS.md`（文档结构）与 `SECURITY.md`（安全条款）已删除，相关规则待启用 Claude 后重建。
 
 ## 目录结构
 
 ```text
 docs/
-├── readme.md                 # 文档导航
-├── BOARD.md                  # 全局调度入口
-├── assets/                   # 文档公共图片等静态资源
-├── os/                       # 工作规则与工程约束
-│   ├── roles/                # 角色职责
-│   ├── architecture/         # 本项目架构与 ADR
-│   ├── process/              # 流程、状态、完成标准
-│   ├── standards/            # 编码、测试、安全、Git、文档规范
-│   └── templates/            # 空白模板
-├── development/              # 需求与交付工作
-│   ├── requirements/         # 产品定义、研究、Spec、场景、Story
-│   ├── delivery/             # Story 过程资料（每目录含 readme.md 详情）
-│   │   └── completed/        # 已完成：每个 Story 一个目录 + readme.md
-│   ├── tasks/                # 独立维护任务（卡 + 同编号 -plan.md 成对）
-│   │   ├── readme.md         # active / completed 计数与清单
-│   │   ├── active/           # 未结案
-│   │   ├── backlog/          # 排队未排期
-│   │   └── completed/        # 已结案
-│   ├── prototypes/           # HTML 交互原型、设计稿与截图
-│   └── issues.md             # 问题记录
-└── handbook/                 # 持续维护的系统资料
-    ├── technical/            # 接口、模型与开发说明
-    ├── manual/               # 用户：界面操作、业务概念、功能说明
-    ├── ops/                  # 运维：部署、巡检、排障、备份
-    ├── product/              # 产品功能全景、能力边界与产品线说明
-    └── README.zh-CN.md       # 中文项目介绍
+├── readme.md              # 文档导航（本页）
+├── architecture/          # 架构真相：分层、边界、技术决策
+│   ├── ARCHITECTURE.md
+│   ├── PRICE-PIPELINE-REVIEW.md
+│   └── adr/               # ADR-001 认证 / ADR-002 单一调度器 / ADR-003 symbol 后缀契约
+├── standards/             # 工程规范：编码 / 测试 / Git（文档与安全规则待重建）
+├── prototypes/            # 设计稿与交互原型：Ardot 视觉稿、HTML 原型、截图基线
+├── handbook/              # 持续维护的系统资料
+│   ├── technical/         # API 契约、数据模型、前端与调度开发说明
+│   ├── manual/            # 用户手册：界面操作、业务概念
+│   ├── ops/               # 运维：部署、服务端、调度、验证命令
+│   ├── product/           # 产品功能全景与产品线明细
+│   └── README.zh-CN.md    # 中文项目介绍
+└── assets/                # 文档公共静态资源
 ```
 
-`os/architecture/` 记录本项目的架构约束与决策，迁用到其他项目时需要重新核对。`handbook/` 随系统行为变化持续更新；Story 完成后，长期需求记录仍留在 `development/requirements/`，专属过程资料按 [DOCS.md §1.1](./os/standards/DOCS.md#11-story-交付目录与文档生命周期) 归档。
+`architecture/` 与 `handbook/` 是技术真相层，随系统行为变化持续更新；`standards/` 现存编码、测试、Git 三份工程约束，文档结构与安全规则已删除、待启用 Claude 后重建；`prototypes/` 是设计资产。四者都不随单个任务启闭。
 
-## 规则入口（os）
+## 快速查找
 
-- 角色：[PM](./os/roles/PRODUCT_MANAGER.md)、[Orchestrator](./os/roles/ORCHESTRATOR.md)、[Planner](./os/roles/PLANNER.md)、[Implementer](./os/roles/IMPLEMENTER.md)、[Reviewer](./os/roles/REVIEWER.md)。
-- 流程：[需求编写](./os/process/REQUIREMENTS.md)、[协作流程](./os/process/WORKFLOW.md)、[状态与权限](./os/process/STATES.md)、[执行计划](./os/process/EXECUTION_PLANS.md)、[完成标准](./os/process/DEFINITION_OF_DONE.md)。
-- 工程：[架构](./os/architecture/ARCHITECTURE.md)、[ADR](./os/architecture/adr)（含 [ADR-003 symbol 后缀统一契约](./os/architecture/adr/ADR-003-symbol-suffix-contract.md)）、[编码](./os/standards/CODING.md)、[测试](./os/standards/TESTING.md)、[安全](./os/standards/SECURITY.md)、[Git](./os/standards/GIT.md)、[文档结构](./os/standards/DOCS.md)。
-- 模板：[Story](./os/templates/STORY_TEMPLATE.md)、[Task](./os/templates/TASK_TEMPLATE.md)、[ExecPlan](./os/templates/EXEC_PLAN_TEMPLATE.md)、[场景](./os/templates/SCN_TEMPLATE.md)。
+| 我想找 | 入口 |
+|---|---|
+| 系统结构、技术栈、模块边界、架构债 | [ARCHITECTURE.md](./architecture/ARCHITECTURE.md) |
+| 某个结构性决策「为什么这么做」 | [adr/](./architecture/adr) |
+| 编码 / 测试 / Git 规范（文档与安全规则待重建） | [standards/](./standards) |
+| 价格链路专项审阅 | [PRICE-PIPELINE-REVIEW.md](./architecture/PRICE-PIPELINE-REVIEW.md) |
+| HTTP 接口与响应 | [API_CONTRACT.md](./handbook/technical/API_CONTRACT.md) |
+| 数据模型字段、枚举、索引 | [DATA_MODEL.md](./handbook/technical/DATA_MODEL.md) |
+| 前端路由、组件、设计 token | [CLIENT_DEV.md](./handbook/technical/CLIENT_DEV.md) |
+| 调度引擎与 TaskRun 契约 | [CRON_WORKER_DEV.md](./handbook/technical/CRON_WORKER_DEV.md) |
+| 部署、环境变量、安全边界、验证命令 | [DEPLOYMENT.md](./handbook/ops/DEPLOYMENT.md) §7 |
+| 界面操作与业务口径 | [CLIENT.md](./handbook/manual/CLIENT.md) |
+| 产品功能全景、能力边界 | [PRODUCT_LINES.md](./handbook/product/PRODUCT_LINES.md) |
+| 设计稿、7 屏 PNG、全屏 PDF、HTML 原型 | [prototypes/README.md](./prototypes/README.md) |
+| 中文项目介绍 | [README.zh-CN.md](./handbook/README.zh-CN.md) |
+| 需求 / Spec / US / Task / 计划 / 证据 | GitHub Issues |
+| 建单模板 | [.github/ISSUE_TEMPLATE/](../.github/ISSUE_TEMPLATE) |
 
-## 开发入口（development）
+## 明细入口
 
-- 需求：[产品总览](./development/requirements/PRODUCT.md)、[PRD](./development/requirements/PRD.md)、[用户研究](./development/requirements/USER_RESEARCH.md)、[Spec](./development/requirements/specs)、[场景索引](./development/requirements/scenarios/SCENARIOS.md)、[Story 索引](./development/requirements/stories/STORIES.md)。
-- 原型与设计：[HTML 原型、设计稿与截图](./development/prototypes/README.md)。
-- 交付：[BOARD.md](./BOARD.md) 只显示当前开发中 Story 的 n/m 进度与独立 Task 的**目录导航**，**不维护独立 Task 状态清单**；各 Story 的详情、下挂 Task 明细与开发进度说明见其过程目录的 `readme.md`（当前无开发中 Story；已归档见 [US-004 readme](./development/delivery/completed/US-004/readme.md)、[US-001 readme](./development/delivery/completed/US-001/readme.md)）；任务卡 TASK-编号.md、计划 TASK-编号-plan.md、按序号命名的交接记录直接平铺。Human 关闭后整体移入 [completed/](./development/delivery/completed)，具体规则见 DOCS.md §1.1。
-- 独立与既有记录：[任务卡与计划](./development/tasks)（计划与同编号任务卡同目录成对存放）、[目录导航与命名规则](./development/tasks/readme.md)（**状态只在卡片正文查，不看板/索引不同步**）、[问题记录](./development/issues.md)。共享资料通过链接复用。独立提案：[TASK-070 DSH Agent Teams 工作流适配提案](./development/tasks/backlog/TASK-070-dsh-agent-teams-workflow-proposal.md)（待 Human 审阅，未生效）。
-
-- 价格链路与资产完整性：[TASK-073～078 开发顺序与交付记录](./development/tasks/completed/DEV-ORDER-073-078.md)。
-- TASK-077 历史 symbol 工具：[使用手册](../scripts/PROBE-SYMBOL-DATA-QUALITY.md)、[隔离库探测报告](./development/tasks/completed/TASK-077-data-quality-report.md)、[核对用迁移清单](./development/tasks/completed/TASK-077-migration-dry-run.json)。
-
-## 资料入口（handbook）
-
+- 架构：[架构总览](./architecture/ARCHITECTURE.md)、[ADR-001 认证](./architecture/adr/ADR-001-authentication.md)、[ADR-002 单一调度器](./architecture/adr/ADR-002-single-scheduler.md)、[ADR-003 symbol 后缀契约](./architecture/adr/ADR-003-symbol-suffix-contract.md)、[价格链路审阅](./architecture/PRICE-PIPELINE-REVIEW.md)。
+- 规范：[编码](./standards/CODING.md)、[测试](./standards/TESTING.md)、[Git](./standards/GIT.md)。文档结构与安全条款已删除，相关规则待启用 Claude 后重建。
 - 开发：[API 契约](./handbook/technical/API_CONTRACT.md)、[数据模型](./handbook/technical/DATA_MODEL.md)、[前端开发](./handbook/technical/CLIENT_DEV.md)、[调度开发](./handbook/technical/CRON_WORKER_DEV.md)。
 - 用户：[客户端操作](./handbook/manual/CLIENT.md)、[业务概念](./handbook/manual/Concept.md)、[后台任务功能介绍](./handbook/manual/CRON_WORKER_PRODUCT.md)。
-- 运维：[系统部署](./handbook/ops/DEPLOYMENT.md)、[服务端运行](./handbook/ops/SERVER.md)、[调度总览](./handbook/ops/CRON_WORKER.md)、[调度运维](./handbook/ops/CRON_WORKER_OPS.md)。
-- 产品：[产品线总览](./handbook/product/PRODUCT_LINES.md)、[产品线明细](./handbook/product/lines)。
-- 项目介绍：[中文项目介绍](./handbook/README.zh-CN.md)。
+- 运维：[系统部署](./handbook/ops/DEPLOYMENT.md)、[服务端运行](./handbook/ops/SERVER.md)、[调度总览](./handbook/ops/CRON_WORKER.md)、[调度运维](./handbook/ops/CRON_WORKER_OPS.md)、[产品线明细](./handbook/product/lines)。
+- 设计：[prototypes/README.md](./prototypes/README.md)。
 
-新增或搬迁文档时同步本索引；同一主题保持一处正文，其余位置链接引用。
+## 校验
 
-仓库配套入口：[项目 README](../README.md)、[client/AGENTS.md](../client/AGENTS.md)、[cron-worker/AGENTS.md](../cron-worker/AGENTS.md)、[server/README.md](../server/README.md)。当前副本已包含这些入口及文档校验脚本的配套修订，迁回真实项目时需与根 AGENTS.md、docs 一并同步；原项目尚未改动。验证方式与文档副本的源码引用说明见 [DOCS.md §5](./os/standards/DOCS.md#5-链接校验)。
+```bash
+npm run docs:check        # 扫描 docs/**/*.md、docs/**/*.html 与仓库根 README
+npm run docs:check:links  # 兼容别名
+```
+
+校验器只检查本地链接、章节锚点与 HTML 资产引用，不校验 Issue 状态、任务卡 Status 或目录生命周期——这些已由 GitHub Issues / Projects 承载。新增或搬迁文档时同步本索引；同一主题保持一处正文，其余位置链接引用。
+
+仓库配套入口：[项目 README](../README.md)、[client/AGENTS.md](../client/AGENTS.md)、[cron-worker/AGENTS.md](../cron-worker/AGENTS.md)、[server/README.md](../server/README.md)。

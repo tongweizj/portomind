@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: 安全问题：不要开公开 Issue
+    url: https://github.com/tongweizj/portomind/security/advisories/new
+    about: 凭据泄露、认证/会话/CORS 缺陷请走私密安全通告，不要写进 Issue 正文或评论。
+  - name: 设计稿与交互原型存档
+    url: https://github.com/tongweizj/portomind/tree/main/docs/prototypes
+    about: Ardot 视觉稿、HTML 交互原型与截图基线；需求与任务正文以 GitHub Issues 为准。

@@ -1,9 +1,16 @@
 #!/usr/bin/env node
-/** Read-only document validation. Exit: 0 pass, 1 errors, 2 warnings.
+/** Read-only document link validation. Exit: 0 pass, 1 errors, 2 warnings.
+ *
  * node scripts/check-docs.cjs [--links-only] [--json]
- * --root PATH: validate another documentation root (also used by fixture tests).
- * --source-root PATH: resolve missing non-docs files from an explicitly named
- * source checkout. Never use that checkout to replace missing docs or anchors.
+ * --root PATH        validate another documentation root (also used by fixture tests).
+ * --source-root PATH resolve missing non-docs files from an explicitly named
+ *                    source checkout. Never use that checkout to replace missing docs or anchors.
+ *
+ * Scope: local links, heading anchors and HTML assets only. Task cards,
+ * delivery directory layout, task status enums and agent routing tables now
+ * live in GitHub Issues / Projects and are intentionally not validated here.
+ * --links-only is kept as a compatibility alias for `npm run docs:check:links`;
+ * every check in this script is a link check.
  */
 const fs = require('fs');
 const path = require('path');
@@ -16,10 +23,9 @@ function option(name) {
 }
 const ROOT = option('--root') || path.resolve(__dirname, '..');
 const SOURCE_ROOT = option('--source-root');
-const linksOnly = args.includes('--links-only');
 const json = args.includes('--json');
-const entries = ['README.md', 'AGENTS.md', ...['client', 'server', 'cron-worker', 'shared'].flatMap(d => [`${d}/README.md`, `${d}/readme.md`, `${d}/AGENTS.md`])];
-const files = [], findings = [], sourceOnly = [], pendingTasks = [];
+const entries = ['README.md', ...['client', 'server', 'cron-worker', 'shared'].flatMap(d => [`${d}/README.md`, `${d}/readme.md`, `${d}/AGENTS.md`])];
+const files = [], findings = [], sourceOnly = [];
 const seen = new Set();
 const relative = f => path.relative(ROOT, f).split(path.sep).join('/');
 function add(file) {
@@ -38,21 +44,6 @@ function walk(dir) {
 walk(path.join(ROOT, 'docs'));
 entries.forEach(f => add(path.join(ROOT, f)));
 function report(level, file, line, rule, message) { findings.push({ level, file: relative(file), line, rule, message }); }
-// The directory layout groups files; status still comes from each card.
-const delivery = path.join(ROOT, 'docs/development/delivery');
-function storyDirectories(parent) {
-  if (!fs.existsSync(parent)) return [];
-  return fs.readdirSync(parent, { withFileTypes: true }).filter(e => e.isDirectory() && /^US-\d+$/.test(e.name)).map(e => path.join(parent, e.name));
-}
-const currentDeliveries = storyDirectories(delivery);
-if (currentDeliveries.length > 2) report('ERROR', delivery, 1, 'multiple-current-deliveries', 'delivery 根目录最多保留两个 Story 目录（一个开发中 + 一个预研）');
-for (const name of ['active', 'archived']) {
-  const old = path.join(delivery, name);
-  if (fs.existsSync(old)) report('ERROR', old, 1, 'legacy-delivery-layout', 'Story 交付目录不再使用 active/ 或 archived/ 层');
-}
-for (const dir of [...currentDeliveries, ...storyDirectories(path.join(delivery, 'completed')), ...storyDirectories(path.join(ROOT, 'docs/development/archive/delivery'))]) {
-  for (const entry of fs.readdirSync(dir, { withFileTypes: true })) if (entry.isDirectory()) report('ERROR', path.join(dir, entry.name), 1, 'nested-story-directory', 'Story 过程文件须平铺，不再建立子目录');
-}
 function resolveTarget(file, target) {
   const local = path.resolve(path.dirname(file), target);
   if (fs.existsSync(local)) return local;
@@ -90,7 +81,7 @@ function anchors(file) {
   anchorCache.set(file, ids);
   return ids;
 }
-let totalLinks = 0, routingRows = 0;
+let totalLinks = 0;
 for (const file of files) {
   const text = fs.readFileSync(file, 'utf8');
   const inMarkdown = file.endsWith('.md');
@@ -114,53 +105,14 @@ for (const file of files) {
     const resolved = target ? resolveTarget(file, target) : file;
     if (!resolved) { report('ERROR', file, line, 'broken-link', `链接目标不存在: ${raw}`); continue; }
     if (fragment && resolved.endsWith('.md') && !anchors(resolved).has(fragment)) report('ERROR', file, line, 'broken-anchor', `章节锚点不存在: ${raw}`);
-    if (path.basename(file) === 'AGENTS.md' && path.dirname(file) === ROOT) {
-      const section = text.slice(0, match.index).match(/^## .*$/gm)?.at(-1) || '';
-      if (section.startsWith('## 3. Find things')) routingRows++;
-    }
-  }
-}
-const TASK_STATUS = new Set(['Backlog', 'Planning', 'Implementing', 'Reviewing', 'Blocked', 'Completed']);
-function tableValue(text, prefix) {
-  for (const line of text.split(/\r?\n/)) {
-    const row = line.match(/^\|\s*([^|]+)\|([^|]*)/);
-    if (row && prefix.test(row[1].replace(/\*/g, '').trim())) return row[2].trim();
-  }
-  return null;
-}
-if (!linksOnly) for (const file of files.filter(f => f.endsWith('.md'))) {
-  const rel = relative(file), text = fs.readFileSync(file, 'utf8');
-  // 同目录内的 ExecPlan 和数据质量探测产物不使用 Task 卡状态。
-  const standaloneTask = /^docs\/development\/tasks\/(?:active|backlog|completed)\/TASK-\d+[^/]*\.md$/.test(rel)
-    && !/-plan\.md$/.test(rel)
-    && !/^TASK-\d+-data-quality-report(?:-\d{4}-\d{2}-\d{2})?\.md$/.test(path.basename(file));
-  const storyTask = /^docs\/development\/(?:delivery\/(?:completed\/)?|archive\/delivery\/)US-\d+\/TASK-\d+\.md$/.test(rel);
-  if (standaloneTask || storyTask) {
-    const pending = /^> 待 Orchestrator 正式登记的任务内容，当前不含 Status，不属于已登记任务或实施队列。/m.test(text);
-    const cell = tableValue(text, /^Status$/i) ?? text.match(/^\*\*Status:?\*\*[:：]?[ \t]*(?:\r?\n)?[ \t]*(.+)$/m)?.[1] ?? text.match(/^##\s+Status[ \t]*\r?\n\s*([^\r\n]+)/m)?.[1];
-    if (!cell) {
-      if (pending) pendingTasks.push(rel);
-      else report('WARN', file, 1, 'task-status-missing', '任务卡缺少 Status 字段，也未明确标注待登记');
-    } else {
-      if (pending) report('ERROR', file, 1, 'pending-status-conflict', '待登记声明与已有 Status 字段冲突');
-      const value = cell.match(/^[\s*`]*([A-Za-z_]+)/)?.[1];
-      const created = tableValue(text, /^Created\b/i) ?? text.match(/^\*\*Created[^*]*\*\*[:：]?[ \t]*(?:\r?\n)?[ \t]*(.+)$/m)?.[1] ?? text.match(/^##\s+Created[ \t]*\r?\n\s*([^\r\n]+)/m)?.[1] ?? '';
-      const createdDate = created.match(/\d{4}-\d\d-\d\d/)?.[0];
-      // Old spelling is retained only for dated legacy cards (STATES.md §7).
-      if (!TASK_STATUS.has(value) && !(createdDate && createdDate < '2026-10-30')) report('ERROR', file, 1, 'task-status-enum', `Status 不在现行枚举内: ${value || cell}`);
-    }
-  }
-  const template = /(?:^|\/)os\/templates\//.test(rel);
-  if (!template && /(?:^|\/)os\/(?:standards|roles|architecture)\/|(?:^|\/)AGENTS\.md$/.test(rel)) {
-    for (const match of text.matchAll(/<(PROJECT_NAME|technology|command|Brief description|security contact[^>]*|capability)>/g)) report('ERROR', file, text.slice(0, match.index).split('\n').length, 'template-placeholder', `规则文档残留模板占位符: ${match[0]}`);
   }
 }
 const errors = findings.filter(f => f.level === 'ERROR'), warns = findings.filter(f => f.level === 'WARN');
-const result = { files: files.length, totalLinks, routingRows, sourceRoot: SOURCE_ROOT, sourceOnlyLinks: sourceOnly, pendingTasks, errors, warns };
+const result = { files: files.length, totalLinks, sourceRoot: SOURCE_ROOT, sourceOnlyLinks: sourceOnly, errors, warns };
 if (json) console.log(JSON.stringify(result, null, 2));
 else {
   for (const f of findings) console.log(`${f.level} ${f.file}:${f.line} [${f.rule}] ${f.message}`);
   console.log(`扫描 ${files.length} 份文档；链接 ${totalLinks} 条；ERROR ${errors.length}；WARN ${warns.length}`);
-  if (SOURCE_ROOT) console.log(`仅在源码目录解析的引用 ${sourceOnly.length} 条（不包含 docs）；待登记任务 ${pendingTasks.length} 份。`);
+  if (SOURCE_ROOT) console.log(`仅在源码目录解析的引用 ${sourceOnly.length} 条（不包含 docs）。`);
 }
 process.exitCode = errors.length ? 1 : warns.length ? 2 : 0;

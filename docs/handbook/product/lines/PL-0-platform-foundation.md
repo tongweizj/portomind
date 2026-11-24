@@ -2,9 +2,9 @@
 
 > 版本：v1.7 · 日期：2026-10-26
 > 归属：[PRODUCT_LINES.md](../PRODUCT_LINES.md)「产品线 INDEX」中 **PL-0** 的明细子文件
-> v1.7 修订（**M0.2d 认证形态裁决**）：Human 2026-10-26 裁决账号与访问控制的产品形态（单租户多账号 / `admin`+`member` / admin 建号无自助注册 / 只停用不删除 / 首登强制改密 / 会话存 Mongo），已写成 [FS-authentication](../../../development/requirements/specs/completed/FS-authentication.md) + [ADR-001](../../../os/architecture/adr/ADR-001-authentication.md) + [TASK-058](../../../development/tasks/completed/TASK-058-authentication-and-accounts.md)。本文件同步两条判定的事实描述：`M0.2c` 补「`CORS_ORIGINS` 读了不生效」的准确成因、`M0.2d` 由「公网前完成认证」细化为已裁决形态。**优先级未变（两者仍为 P0）**。
-> v1.6 修订（**内容迁移批次 3/3：删除副本，本文件回归产品文档**）：按 [DOCS.md §1](../../../os/standards/DOCS.md)（`product/` 不放实现细节）与 §2（每主题只在一处详述）删除全部**已在他处详述或被新文档取代**的内容——§6.1 调研方法、§6.2 运行时形态表（→ [DEPLOYMENT.md §1](../../ops/DEPLOYMENT.md)）、§6.4 调度与日历机制（→ [CRON_WORKER_DEV.md](../../technical/CRON_WORKER_DEV.md)）、§6.5 运维横切（→ [SERVER.md](../../ops/SERVER.md)）、§7.1 API 总表（→ [API_CONTRACT.md](../../technical/API_CONTRACT.md)，已是超集）、§7.2 数据模型（→ [DATA_MODEL.md](../../technical/DATA_MODEL.md)）、§7.3 路由与组件（→ [CLIENT_DEV.md](../../technical/CLIENT_DEV.md)）、§7.4 业务规则速查（→ [CLIENT.md §5](../../manual/CLIENT.md)）、§7.5 需求编码索引（与 §6 编码对照重复，细粒度归 [PRD.md](../../../development/requirements/PRD.md)）、§8.2 死代码清单（→ [CLIENT_DEV.md §2](../../technical/CLIENT_DEV.md)）、§8.3 已关闭的文档争议。§5 由「功能点 + 实现入口」压成**能力级清单**。**全部判定与优先级一字未改**；删除项的落点均已在文内给出链接。518 → 197 行（实测）。
-> v1.5 修订（**批次 2/3：技术栈与外部集成迁入 ARCHITECTURE**）：[`ARCHITECTURE.md`](../../../os/architecture/ARCHITECTURE.md) 原为未填充的通用英文模板（含 PostgreSQL / Prisma / OAuth / Teams 等本项目不存在的设定），已按实际代码重写为 v2.0；§6.2 的两张表**整表迁出并删除本地副本**，迁移时修正 3 处事实错误（东方财富 `push2`+`push2delay` 主备对；天天基金真实 API 是 `api.fund.eastmoney.com/f10/lsjz`；MongoDB 由 `MONGO_URI` 决定、非本地内嵌），并补记「`shared/` 与 `client/` 无独立测试」。
+> v1.7 修订（**M0.2d 认证形态裁决**）：Human 2026-10-26 裁决账号与访问控制的产品形态（单租户多账号 / `admin`+`member` / admin 建号无自助注册 / 只停用不删除 / 首登强制改密 / 会话存 Mongo），已写成 FS-authentication + [ADR-001](../../../architecture/adr/ADR-001-authentication.md) + TASK-058。本文件同步两条判定的事实描述：`M0.2c` 补「`CORS_ORIGINS` 读了不生效」的准确成因、`M0.2d` 由「公网前完成认证」细化为已裁决形态。**优先级未变（两者仍为 P0）**。
+> v1.6 修订（**内容迁移批次 3/3：删除副本，本文件回归产品文档**）：按 DOCS.md §1（`product/` 不放实现细节）与 §2（每主题只在一处详述）删除全部**已在他处详述或被新文档取代**的内容——§6.1 调研方法、§6.2 运行时形态表（→ [DEPLOYMENT.md §1](../../ops/DEPLOYMENT.md)）、§6.4 调度与日历机制（→ [CRON_WORKER_DEV.md](../../technical/CRON_WORKER_DEV.md)）、§6.5 运维横切（→ [SERVER.md](../../ops/SERVER.md)）、§7.1 API 总表（→ [API_CONTRACT.md](../../technical/API_CONTRACT.md)，已是超集）、§7.2 数据模型（→ [DATA_MODEL.md](../../technical/DATA_MODEL.md)）、§7.3 路由与组件（→ [CLIENT_DEV.md](../../technical/CLIENT_DEV.md)）、§7.4 业务规则速查（→ [CLIENT.md §5](../../manual/CLIENT.md)）、§7.5 需求编码索引（与 §6 编码对照重复，细粒度归 PRD.md）、§8.2 死代码清单（→ [CLIENT_DEV.md §2](../../technical/CLIENT_DEV.md)）、§8.3 已关闭的文档争议。§5 由「功能点 + 实现入口」压成**能力级清单**。**全部判定与优先级一字未改**；删除项的落点均已在文内给出链接。518 → 197 行（实测）。
+> v1.5 修订（**批次 2/3：技术栈与外部集成迁入 ARCHITECTURE**）：[`ARCHITECTURE.md`](../../../architecture/ARCHITECTURE.md) 原为未填充的通用英文模板（含 PostgreSQL / Prisma / OAuth / Teams 等本项目不存在的设定），已按实际代码重写为 v2.0；§6.2 的两张表**整表迁出并删除本地副本**，迁移时修正 3 处事实错误（东方财富 `push2`+`push2delay` 主备对；天天基金真实 API 是 `api.fund.eastmoney.com/f10/lsjz`；MongoDB 由 `MONGO_URI` 决定、非本地内嵌），并补记「`shared/` 与 `client/` 无独立测试」。
 > v1.4 修订（**批次 1/3：先建后删**）：新建 [`handbook/technical/DATA_MODEL.md`](../../technical/DATA_MODEL.md) 与 [`handbook/technical/CLIENT_DEV.md`](../../technical/CLIENT_DEV.md)，两位是**扩展版而非复制**（均先与源码对账，并补入 PL-0 缺的内容）。当时仅对旧副本加「已迁出」标注，删除动作即本轮 v1.6。
 > v1.3 修订（**路线 B**）：产品定义（产品是什么 / 三条硬边界）整体上移至 [PRODUCT_LINES.md §1](../PRODUCT_LINES.md) 并升格为唯一权威定义，本线 §1 收敛为与其他 6 条同构的「定位与价值主张」。
 > v1.2 / v1.1 修订：重写 §1（曾一度自持产品定义，已按 v1.3 上移）；与实码对账修正事实漂移（路由 `/assets`→`/instruments`、`/family` 下线、侧栏 5 项、完整性检查「只进日志不入产品」、删除会漂移的行数硬数字、`utils/formatters.js` 并非空文件）。
@@ -73,7 +73,7 @@
 | M0.2a | 统一响应 / traceId / 脱敏 | 保留 | 横切能力齐全，可观测性到位 | — | — |
 | M0.2b | 日志查看页 | **修改** | 手写 `useState/useEffect`，与全站 Query 数据层不一致 | 统一到 Query 数据层（与前端数据层合并一并处理） | P2 |
 | M0.2c | CORS `origin:true` | ✅ **已完成**（TASK-058 U1，2026-10-27） | 已改为白名单 + `credentials:true`（`CORS_ORIGINS` 生效），生产未配 `CORS_ORIGINS` 启动 fail-fast；开发态有本地默认来源 | 已完成 | ~~P0~~ 已闭环 |
-| M0.2d | 无认证授权 | ✅ **已完成**（TASK-058 U1+U2+U3，2026-10-28 结案） | 已落地：单租户多账号（`User`/`Session`）+ `admin`/`member` 两角色 + 服务端会话（Mongo，绝对 7 天 TTL）+ 首登强制改密 + 默认 `admin/admin` seed + 登录限速 + 全部业务端点 401 闸门 + 前端 `/login`、`/account`、`/account/users` 与 401 拦截、顶栏头像下拉（账户设置/系统设置/提醒规则/退出登录，侧栏 5→4）。**2026-10-26 裁决**：无自助注册、用户只停用不删除、不加 `tenantId` | 见 [FS-authentication](../../../development/requirements/specs/completed/FS-authentication.md) 与 [TASK-058 完成记录](../../../development/tasks/completed/TASK-058-authentication-and-accounts.md)；**U1 与 U2 必须同批发布**，代码仍在分支 `dd388ac` 待合入 `main` | **P0**（公网前置；已闭环） |
+| M0.2d | 无认证授权 | ✅ **已完成**（TASK-058 U1+U2+U3，2026-10-28 结案） | 已落地：单租户多账号（`User`/`Session`）+ `admin`/`member` 两角色 + 服务端会话（Mongo，绝对 7 天 TTL）+ 首登强制改密 + 默认 `admin/admin` seed + 登录限速 + 全部业务端点 401 闸门 + 前端 `/login`、`/account`、`/account/users` 与 401 拦截、顶栏头像下拉（账户设置/系统设置/提醒规则/退出登录，侧栏 5→4）。**2026-10-26 裁决**：无自助注册、用户只停用不删除、不加 `tenantId` | 见 FS-authentication 与 TASK-058 完成记录；**U1 与 U2 必须同批发布**，代码仍在分支 `dd388ac` 待合入 `main` | **P0**（公网前置；已闭环） |
 | M0.3a | Design token | 保留 | 主色 / 涨跌色等已固化，语义一致 | — | — |
 | M0.3b | 双轨样式 | **合并** | 内联 token style 与 Tailwind 两套并存，长期维护成本高 | 明确单一主路径（建议 token + 组件封装），逐步收敛 | P2 |
 | M0.3c | 通用状态组件 | 保留 | DataState 三态全站复用 | — | — |
@@ -98,7 +98,7 @@
 
 ## 6. 功能域地图与编码对照
 
-**功能编码对照**（PRD 采用模块化需求编码，本文件沿用该编码以便双向追溯；**细粒度编码条目以 [PRD.md](../../../development/requirements/PRD.md) 为准**）：
+**功能编码对照**（PRD 采用模块化需求编码，本文件沿用该编码以便双向追溯；**细粒度编码条目以 PRD.md 为准**）：
 
 | 前缀 | 功能域 | 编号范围 | 展开位置 |
 |---|---|---|---|
@@ -149,7 +149,7 @@
 
 ## 7. 技术债的产品化处理
 
-技术债之所以写进产品文档，是因为它们会以「用户可见的不可信」或「迭代速度下降」的形式外化。**架构层面的结构与机制见 [ARCHITECTURE.md §8](../../../os/architecture/ARCHITECTURE.md)（本文不重复）**，本节只保留「外化为哪种用户问题 + 如何处理」。
+技术债之所以写进产品文档，是因为它们会以「用户可见的不可信」或「迭代速度下降」的形式外化。**架构层面的结构与机制见 [ARCHITECTURE.md §8](../../../architecture/ARCHITECTURE.md)（本文不重复）**，本节只保留「外化为哪种用户问题 + 如何处理」。
 
 | 技术债 | 外化为哪种用户问题 | 产品化处理建议 |
 |---|---|---|
@@ -159,7 +159,7 @@
 | ~~无认证 + CORS 过宽~~ ✅ | ~~数据暴露风险（家庭资产全量可见）~~ | ✅ 已闭环（TASK-058 U1，2026-10-27）：后端认证内核 + CORS 白名单；**余**：前端 `/login`、`/account`、`/account/users`（U2/U3）未上线，U1 不得单独发布（见 §4 M0.2c / M0.2d） |
 | 前端数据层不统一 | 页面加载 / 刷新行为不一致，改一处易漏另一处 | 决定「是否全站迁移 Query」后再动手，不为统一而统一（见 §4 M0.2b） |
 | 节假日表逐年维护 | 某年节后误判开市 → 抓到空数据 / 误报缺口 | 把「年度维护」列为固定运维动作（可用到期提醒），见 §4 M0.1c |
-| 枚举两份 | 新增市场 / 币种时漏改一端 → 前端选不到、后端拒收 | `shared/constants` ↔ `client/src/constants/enums.js` 双向同步；根治方向是「前端由后端驱动」（详见 [ARCHITECTURE.md §8](../../../os/architecture/ARCHITECTURE.md)） |
+| 枚举两份 | 新增市场 / 币种时漏改一端 → 前端选不到、后端拒收 | `shared/constants` ↔ `client/src/constants/enums.js` 双向同步；根治方向是「前端由后端驱动」（详见 [ARCHITECTURE.md §8](../../../architecture/ARCHITECTURE.md)） |
 
 ---
 
@@ -173,7 +173,7 @@
 - 技术债被清理或新增（产品可见层面）→ 更新 §7。
 - 产品线划分本身变化 → 更新 [PRODUCT_LINES.md](../PRODUCT_LINES.md)。
 
-**不要写进本文**（各有唯一归属，见 [DOCS.md §2.2](../../../os/standards/DOCS.md)）：API 端点（→ `API_CONTRACT`）· 数据模型字段（→ `DATA_MODEL`）· 前端路由/组件/hooks（→ `CLIENT_DEV`）· 调度引擎与 TaskRun 契约（→ `CRON_WORKER_DEV`）· 运维命令（→ `CRON_WORKER_OPS` / `SERVER`）· 业务口径（→ `CLIENT.md §5`）· 运行时形态与技术栈（→ `DEPLOYMENT §1` / `ARCHITECTURE §2-3`）。
+**不要写进本文**（各有唯一归属，见 DOCS.md §2.2）：API 端点（→ `API_CONTRACT`）· 数据模型字段（→ `DATA_MODEL`）· 前端路由/组件/hooks（→ `CLIENT_DEV`）· 调度引擎与 TaskRun 契约（→ `CRON_WORKER_DEV`）· 运维命令（→ `CRON_WORKER_OPS` / `SERVER`）· 业务口径（→ `CLIENT.md §5`）· 运行时形态与技术栈（→ `DEPLOYMENT §1` / `ARCHITECTURE §2-3`）。
 
 ---
 
@@ -181,7 +181,7 @@
 
 - [PRODUCT_LINES.md](../PRODUCT_LINES.md) — 产品线总览与 INDEX（本文件的上级；产品定义唯一权威）
 - [PL-1 投资账本线](./PL-1-ledger.md) · [PL-2 行情数据线](./PL-2-market-data.md) · [PL-3 组合与配置线](./PL-3-portfolio.md) · [PL-4 再平衡决策线](./PL-4-rebalancing.md) · [PL-5 提醒与通知线](./PL-5-alerting.md) · [PL-6 家庭总览线](./PL-6-household.md)
-- [ARCHITECTURE.md](../../../os/architecture/ARCHITECTURE.md) — 架构风格、技术栈、外部集成、模块边界、架构约束与架构债
+- [ARCHITECTURE.md](../../../architecture/ARCHITECTURE.md) — 架构风格、技术栈、外部集成、模块边界、架构约束与架构债
 - [DEPLOYMENT.md](../../ops/DEPLOYMENT.md) — 系统总览与运行时拓扑（§1）、环境变量全表（§4）、部署（§6）、安全边界（§9）
 - [CRON_WORKER.md](../../ops/CRON_WORKER.md) — 调度功能地图；运维 / 产品 / 开发三视角见其导航
 - [CRON_WORKER_DEV.md](../../technical/CRON_WORKER_DEV.md) — 调度引擎、两层防重、TaskRun 契约、日历与市场时区归桶
@@ -191,8 +191,8 @@
 - [CLIENT_DEV.md](../../technical/CLIENT_DEV.md) — 前端实现：路由、组件、数据层、设计 token、已知偏差
 - [DATA_MODEL.md](../../technical/DATA_MODEL.md) — 数据模型、索引与契约缺口
 - [API_CONTRACT.md](../../technical/API_CONTRACT.md) — REST API 契约
-- [PRD.md](../../../development/requirements/PRD.md) — 需求基线（功能编码来源）
-- [BOARD.md](../../../BOARD.md) — 任务板与阶段路线（原 `development/requirements/ROADMAP.md` 尚未建立，勿再引用）
-- [os/standards/DOCS.md](../../../os/standards/DOCS.md) — 文档结构规范与单一归属规则
-- [ADR-001 认证（模板）](../../../os/architecture/adr/ADR-001-authentication.md) · [ADR-002 单一调度器与共享内核](../../../os/architecture/adr/ADR-002-single-scheduler.md)
+- PRD.md — 需求基线（功能编码来源）
+- BOARD.md — 任务板与阶段路线（原 `development/requirements/ROADMAP.md` 尚未建立，勿再引用）
+- DOCS.md — 文档结构规范与单一归属规则
+- [ADR-001 认证（模板）](../../../architecture/adr/ADR-001-authentication.md) · [ADR-002 单一调度器与共享内核](../../../architecture/adr/ADR-002-single-scheduler.md)
 - functions.md（已归档） — 本线内容的原始来源（历史留存，勿据此更新）

@@ -1,0 +1,55 @@
+name: "Spec / 场景（需求规格）"
+description: "产品需求规格或用户场景；长期需求基线"
+title: "[SPEC] "
+labels: ["type:spec"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        > 本仓库为 **public**，Issue 正文与评论公开可见。
+        > 禁止写入真实持仓、金额、账号、密码、`MONGO_URI` 或任何凭据。
+        > 长期生效的产品规则与架构决策仍分别写回 handbook / ADR，不留在 Issue 里。
+
+  - type: dropdown
+    id: kind
+    attributes:
+      label: 类型
+      options:
+        - FS（功能规格）
+        - SCN（用户场景）
+        - PRD（需求基线修订）
+    validations:
+      required: true
+
+  - type: input
+    id: legacy-ref
+    attributes:
+      label: 历史文档编号（仅迁移时填）
+      placeholder: "FS-ops-center-channel-redefinition"
+
+  - type: textarea
+    id: background
+    attributes:
+      label: 背景与问题
+    validations:
+      required: true
+
+  - type: textarea
+    id: requirement
+    attributes:
+      label: 需求正文
+    validations:
+      required: true
+
+  - type: textarea
+    id: non-goals
+    attributes:
+      label: 非目标与影响面
+
+  - type: checkboxes
+    id: sanitized
+    attributes:
+      label: 提交确认
+      options:
+        - label: 正文不含真实财务数据与凭据
+          required: true

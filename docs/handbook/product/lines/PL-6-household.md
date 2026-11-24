@@ -4,7 +4,7 @@
 > 归属：[PRODUCT_LINES.md](../PRODUCT_LINES.md)「产品线 INDEX」中 **PL-6** 的明细子文件
 > v1.1 修订：§1 开头补一句指向 [PRODUCT_LINES.md §1](../PRODUCT_LINES.md) 的链接（产品级定义唯一归属，路线 B）；本线内容未动。
 > 内容范围：① 成熟度快评（总表 §2.4） ② 产品线 → 产品模块归属（总表 §3） ③ 全量功能评估 ④ 已实现功能点清单 ⑤ 架构实现明细（合并自原 `os/architecture/functions.md` §4.8，原文件已归档）
-> 功能编码：`FAM-01~04` + `FxRate`（汇率），沿用 [PRD](../../../development/requirements/PRD.md)
+> 功能编码：`FAM-01~04` + `FxRate`（汇率），沿用 PRD
 
 ---
 
@@ -147,5 +147,5 @@
 - [PL-2 行情数据线](./PL-2-market-data.md) — 价格是折算输入
 - [PL-3 组合与配置线](./PL-3-portfolio.md) — 组合是折算的聚合单元
 - [PL-5 提醒与通知线](./PL-5-alerting.md) — FAM-03 的落地形态
-- [PRD.md](../../../development/requirements/PRD.md) — 需求基线（功能编码来源）
+- PRD.md — 需求基线（功能编码来源）
 - functions.md（已归档） — 本文 §6 的原始来源

@@ -1,0 +1,76 @@
+name: "Task（实施任务）"
+description: "可独立交付的实施单元：范围、AC、实施计划、验证与证据"
+title: "[TASK] "
+labels: ["type:task"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        > 本仓库为 **public**，Issue 正文与评论公开可见。
+        > 禁止写入真实持仓、金额、账号、密码、`MONGO_URI` 或任何凭据。
+        > 状态由 Projects 的 `Status` 字段维护；`blocked` 用 label 叠加。
+
+  - type: input
+    id: parent
+    attributes:
+      label: 所属 Story
+      description: "填 #NN；独立维护任务填 none"
+      placeholder: "#12 或 none"
+
+  - type: input
+    id: legacy-ref
+    attributes:
+      label: 历史任务编号（仅迁移时填）
+      placeholder: "TASK-062"
+
+  - type: textarea
+    id: goal
+    attributes:
+      label: 目标
+    validations:
+      required: true
+
+  - type: textarea
+    id: scope
+    attributes:
+      label: 范围与禁改
+      description: "明确允许改的目录/文件，以及明确不许碰的边界"
+    validations:
+      required: true
+
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: 验收条件（AC）
+      description: "逐条、可观测"
+    validations:
+      required: true
+
+  - type: textarea
+    id: plan
+    attributes:
+      label: 实施计划
+      description: |
+        替代原 ExecPlan 独立文件。跨模块 / schema 变更 / 安全面 / 新依赖必须写清
+        Work Breakdown、Verification、Risks、Rollback；Human 在本 Issue 评论中
+        留下明确的批准记录后才可开工。免计划时写明依据与验证方法。
+
+  - type: textarea
+    id: verification
+    attributes:
+      label: 验证方法与结果
+      description: "引用 DEPLOYMENT.md §7 的命令，不复制命令；记录基线、实跑结果、未验证范围"
+
+  - type: textarea
+    id: evidence
+    attributes:
+      label: 交付证据
+      description: "改动清单、已知妥协、关联 PR、审查结论；关闭前由 Human 确认"
+
+  - type: checkboxes
+    id: sanitized
+    attributes:
+      label: 提交确认
+      options:
+        - label: 正文、评论与证据不含真实财务数据与凭据
+          required: true

@@ -4,7 +4,7 @@
 > 归属：[PRODUCT_LINES.md](../PRODUCT_LINES.md)「产品线 INDEX」中 **PL-1** 的明细子文件
 > v1.1 修订：§1 开头补一句指向 [PRODUCT_LINES.md §1](../PRODUCT_LINES.md) 的链接（产品级定义唯一归属，路线 B）；本线内容未动。
 > 内容范围：① 成熟度快评（总表 §2.4） ② 产品线 → 产品模块归属（总表 §3） ③ 全量功能评估 ④ 已实现功能点清单 ⑤ 架构实现明细（合并自原 `os/architecture/functions.md` §4.1 / §4.3 / §4.4，原文件已归档）
-> 功能编码：`AS-01~03` / `AS-09`（资产）· `TR-01~03` / `TR-06~09`（交易）· `TR-04~05`（持仓与成本），沿用 [PRD](../../../development/requirements/PRD.md)
+> 功能编码：`AS-01~03` / `AS-09`（资产）· `TR-01~03` / `TR-06~09`（交易）· `TR-04~05`（持仓与成本），沿用 PRD
 
 ---
 
@@ -267,6 +267,6 @@
 - [PL-2 行情数据线](./PL-2-market-data.md) — 价格输入（本线估值字段的依赖方）
 - [PL-3 组合与配置线](./PL-3-portfolio.md) — 本线下游：组合洞察
 - [PL-0 平台基座线](./PL-0-platform-foundation.md) — 技术债 / 遗留 / 数据模型总表
-- [PRD.md](../../../development/requirements/PRD.md) — 需求基线（功能编码来源）
+- PRD.md — 需求基线（功能编码来源）
 - [CLIENT.md](../../manual/CLIENT.md) — 使用指南（业务口径）
 - functions.md（已归档） — 本文 §6 的原始来源

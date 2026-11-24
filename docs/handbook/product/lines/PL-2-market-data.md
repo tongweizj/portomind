@@ -4,7 +4,7 @@
 > 归属：[PRODUCT_LINES.md](../PRODUCT_LINES.md)「产品线 INDEX」中 **PL-2** 的明细子文件
 > v1.1 修订：§1 开头补一句指向 [PRODUCT_LINES.md §1](../PRODUCT_LINES.md) 的链接（产品级定义唯一归属，路线 B）；本线内容未动。
 > 内容范围：① 成熟度快评（总表 §2.4） ② 产品线 → 产品模块归属（总表 §3） ③ 全量功能评估 ④ 已实现功能点清单 ⑤ 架构实现明细（合并自原 `os/architecture/functions.md` §4.2 / §4.9，原文件已归档）
-> 功能编码：`AS-04~08` / `AS-10`（行情价格）· `AS-11`（估值分位），沿用 [PRD](../../../development/requirements/PRD.md)
+> 功能编码：`AS-04~08` / `AS-10`（行情价格）· `AS-11`（估值分位），沿用 PRD
 
 ---
 
