@@ -1,6 +1,7 @@
 // server/controllers/opsTask.controller.js
 //
 // TASK-070：运维中心 task-run 读取与手动 integrity-check 触发。
+// TASK-071：手动 daily-price-sync 触发。
 // 协议层只做参数/状态码/响应包装；业务与 TaskRun 生命周期在 shared。
 
 const mongoose = require('mongoose');
@@ -27,12 +28,7 @@ function parseMarketGroupBody(body) {
   if (keys.some((key) => key !== 'marketGroup')) {
     return { ok: false, message: 'price-sync only accepts the marketGroup field' };
   }
-  if (body.marketGroup === undefined || body.marketGroup === null) {
-    return { ok: true, marketGroup: undefined };
-  }
-  if (body.marketGroup !== 'CN' && body.marketGroup !== 'US_CA') {
-    return { ok: false, message: 'marketGroup must be CN or US_CA' };
-  }
+  // 市场组取值由 shared 的 assertMarketGroup 统一校验，避免在此复制 PRICE_SYNC_GROUPS。
   return { ok: true, marketGroup: body.marketGroup };
 }
 

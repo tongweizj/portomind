@@ -470,7 +470,7 @@ async function runScenarios() {
     syncRequests.some((request) => request.url === '/ops-center/price-sync'
       && JSON.parse(request.data).marketGroup === 'CN')
       && text('[data-testid="ops-price-sync-progress"]').includes('已完成 1 / 2'));
-  await waitFor(() => text('[data-testid="ops-price-sync-result"]').includes('同步完成'), 6000);
+  await waitFor(() => text('[data-testid="ops-price-sync-result"]') === '同步完成', 6000);
   await waitFor(
     () => syncRequests.filter((request) => request.url === '/ops-center/assets').length > assetsBeforeSync,
     4000
@@ -482,6 +482,7 @@ async function runScenarios() {
 
   view = mount({ role: 'member' });
   await waitRows();
+  check('TASK-070 member 看不到刷新按钮', !q('[data-testid="ops-integrity-refresh"]'));
   check('TASK-071 member 看不到价格同步按钮', !q('[data-testid="ops-price-sync"]'));
   await view.unmount();
 }

@@ -56,7 +56,11 @@ function chainable(rows) {
 }
 
 function stubEmptyAssets(t) {
-  t.mock.method(Asset, 'find', () => chainable([]));
+  t.mock.method(Asset, 'find', () => ({
+    sort() { return this; },
+    then(resolve, reject) { return Promise.resolve([]).then(resolve, reject); },
+    lean: async () => []
+  }));
 }
 
 function stubStartSuccess(t, over = {}) {
@@ -64,6 +68,31 @@ function stubStartSuccess(t, over = {}) {
   t.mock.method(TaskRun, 'create', async (doc) => ({ ...doc, _id: RUN_ID, ...over }));
   t.mock.method(TaskRun, 'updateOne', async () => ({ modifiedCount: 1 }));
   stubEmptyAssets(t);
+}
+
+function stubPriceSyncStart(t) {
+  t.mock.method(TaskRun, 'init', async () => TaskRun);
+  const runs = [];
+  const updates = [];
+  t.mock.method(TaskRun, 'create', async (doc) => {
+    runs.push(doc);
+    return { ...doc, _id: RUN_ID };
+  });
+  t.mock.method(TaskRun, 'updateOne', async (filter, update) => {
+    updates.push(update);
+    return { modifiedCount: 1 };
+  });
+  stubEmptyAssets(t);
+  return { runs, updates };
+}
+
+async function waitFor(predicate, timeout = 1000) {
+  const deadline = Date.now() + timeout;
+  while (Date.now() < deadline) {
+    if (predicate()) return;
+    await new Promise((resolve) => setTimeout(resolve, 5));
+  }
+  assert.fail('condition was not met before timeout');
 }
 
 test('未登录触发/读取均返回 401', async () => {
@@ -89,8 +118,8 @@ test('手动触发返回 202 + runId，不等待任务结束', async (t) => {
   assert.ok(Number.isFinite(Date.parse(started.body.data.startedAt)));
 });
 
-test('价格同步 202 + runId，空 Body 表示全部 active，CN/US_CA 可指定', async (t) => {
-  stubStartSuccess(t);
+test('价格同步 202 + runId，空 Body 表示全部 active 并使用全局锁', async (t) => {
+  const { runs, updates } = stubPriceSyncStart(t);
   const all = await request('/api/ops-center/price-sync', {
     method: 'POST', headers: { 'content-type': 'application/json' }, body: '{}'
   });
@@ -98,24 +127,29 @@ test('价格同步 202 + runId，空 Body 表示全部 active，CN/US_CA 可指�
   assert.equal(all.body.data.runId, RUN_ID);
   assert.equal(all.body.data.taskName, 'daily-price-sync');
   assert.equal(all.body.data.status, 'RUNNING');
-  await new Promise((resolve) => setTimeout(resolve, 20));
+  assert.equal(runs[0].lockKey, 'ops:daily-price-sync');
+  await waitFor(() => updates.some((update) => update.$set?.status === 'SUCCEEDED'));
+});
 
+test('价格同步将 CN / US_CA 市场组传入共享任务', async (t) => {
+  const { updates } = stubPriceSyncStart(t);
   const cn = await request('/api/ops-center/price-sync', {
     method: 'POST', headers: { 'content-type': 'application/json' },
     body: JSON.stringify({ marketGroup: 'CN' })
   });
   assert.equal(cn.status, 202);
-  await new Promise((resolve) => setTimeout(resolve, 20));
+  await waitFor(() => updates.some((update) => update.$set?.result?.marketGroup === 'CN'));
+
   const usCa = await request('/api/ops-center/price-sync', {
     method: 'POST', headers: { 'content-type': 'application/json' },
     body: JSON.stringify({ marketGroup: 'US_CA' })
   });
   assert.equal(usCa.status, 202);
-  await new Promise((resolve) => setTimeout(resolve, 20));
+  await waitFor(() => updates.some((update) => update.$set?.result?.marketGroup === 'US_CA'));
 });
 
 test('价格同步非法市场组/额外字段返回 400', async () => {
-  for (const body of [{ marketGroup: 'HK' }, { marketGroup: 'CN', repair: true }]) {
+  for (const body of [{ marketGroup: 'HK' }, { marketGroup: null }, { marketGroup: 'CN', repair: true }]) {
     const response = await request('/api/ops-center/price-sync', {
       method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body)
     });

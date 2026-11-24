@@ -1,7 +1,7 @@
 // shared/tasks/dailySync.js
 // 每日价格同步（业务能力，server 与 cron-worker 共用；本模块**不**加载 .env、不建立连接）：
 // 获取全部激活资产 → 逐资产校验市场当日是否开市（休市跳过并记 info）→
-// 经带重试的 Fetcher 抓取并入库；整体由 runTrackedTask 追踪（耗时、成功/失败明细）。
+// 经带重试的 Fetcher 抓取并入库；整体由 runTrackedTask / startTrackedTask 追踪（耗时、成功/失败明细）。
 //
 // 调用方约定：
 //  - 调度触发：cron-worker/src/schedulers/priceScheduler.js（进程已连接 MongoDB）
@@ -94,7 +94,7 @@ async function syncActiveAssetPrices(dependencies = {}, context = {}) {
       await persistPrice(priceData, context);
       summary.successCount += 1;
       summary.assets.push(assetResult(asset, 'fetched', {
-        priceDate: marketDate(priceData.timestamp)
+        priceDate: todayString(priceData.timestamp)
       }));
       taskLogger.info('PRICE_SYNC_ASSET_SUCCEEDED', {
         symbol: asset.symbol,
@@ -198,5 +198,4 @@ function startDailySync(options = {}) {
 module.exports = dailySync;
 module.exports.syncActiveAssetPrices = syncActiveAssetPrices;
 module.exports.startDailySync = startDailySync;
-module.exports.resolveContext = resolveContext;
 module.exports.marketDate = marketDate;

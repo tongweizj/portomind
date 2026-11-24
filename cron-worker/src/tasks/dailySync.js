@@ -3,6 +3,7 @@
 // 注意：**定时调度不经过本文件** —— src/schedulers/priceScheduler.js 直接调用
 // @portomind/shared/tasks/dailySync（与 server 侧 `npm run sync:prices` 同一实现）。
 // 本文件只负责：加载 cron-worker/.env → 建立 MongoDB 连接 → 调用共享任务 → 断开连接。
+// TASK-071 起共享任务使用全局锁与逐资产 result；调度仍直接调用共享实现。
 
 require('../config/env');
 const mongoose = require('mongoose');

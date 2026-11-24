@@ -5,7 +5,7 @@ const dailySync = require('../src/tasks/dailySync');
 const { syncActiveAssetPrices, marketDate } = dailySync;
 const { startDailySync } = require('@portomind/shared/tasks/dailySync');
 const TaskRun = require('@portomind/shared/models/taskRun');
-const { dateBounds, canonicalDayTimestamp } = require('@portomind/shared/utils/marketTime');
+const { dateBounds, canonicalDayTimestamp, todayString } = require('@portomind/shared/utils/marketTime');
 const tiantian = require('@portomind/shared/fetchers/tiantianFetcher');
 const { classifyMarketDataError } = require('@portomind/shared/fetchers/errors');
 const { fetchWithRetry } = require('@portomind/shared/utils/retry');
@@ -48,7 +48,8 @@ test('syncActiveAssetPrices 区分开市/休市/失败三类资产', async () =>
 
 test('startDailySync 立即返回 runId，result.assets 与 progress 落库', async (t) => {
   t.mock.method(TaskRun, 'init', async () => TaskRun);
-  t.mock.method(TaskRun, 'create', async (doc) => ({ ...doc, _id: 'run-71' }));
+  let created;
+  t.mock.method(TaskRun, 'create', async (doc) => { created = doc; return { ...doc, _id: 'run-71' }; });
   const updates = [];
   t.mock.method(TaskRun, 'updateOne', async (filter, update) => {
     updates.push({ filter, update });
@@ -72,6 +73,7 @@ test('startDailySync 立即返回 runId，result.assets 与 progress 落库', as
 
   assert.equal(handle.ok, true);
   assert.equal(handle.runId, 'run-71');
+  assert.equal(created.lockKey, 'ops:daily-price-sync');
   assert.equal(handle.status, 'RUNNING');
   assert.ok(updates.some(({ update }) => update.$set?.progress?.total === 1));
 
@@ -83,6 +85,25 @@ test('startDailySync 立即返回 runId，result.assets 与 progress 落库', as
     status: 'fetched', priceDate: '2026-11-24'
   }]);
   assert.equal(updates.at(-1).update.$unset.lockKey, 1);
+});
+
+test('价格日期按 MARKET_TIMEZONE 落桶，不被 SCHEDULER_TIMEZONE 拉偏', async () => {
+  const timestamp = new Date('2026-11-24T23:30:00Z');
+  const original = process.env.SCHEDULER_TIMEZONE;
+  process.env.SCHEDULER_TIMEZONE = 'Asia/Shanghai';
+  try {
+    const result = await syncActiveAssetPrices({
+      getActiveAssets: async () => [{ symbol: 'VOO.US', market: 'US' }],
+      isMarketOpenToday: () => true,
+      fetchLatest: async () => ({ symbol: 'VOO.US', market: 'US', price: 100, timestamp }),
+      saveLatest: async () => {}
+    });
+    assert.equal(result.assets[0].priceDate, todayString(timestamp));
+    assert.notEqual(result.assets[0].priceDate, marketDate(timestamp));
+  } finally {
+    if (original === undefined) delete process.env.SCHEDULER_TIMEZONE;
+    else process.env.SCHEDULER_TIMEZONE = original;
+  }
 });
 
 test('marketDate 按 SCHEDULER_TIMEZONE 归一化', () => {

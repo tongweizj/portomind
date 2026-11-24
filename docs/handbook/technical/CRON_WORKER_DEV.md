@@ -167,7 +167,7 @@ TASK-070 起，带 `lockKey` 的任务在 `RUNNING` 期间维护 `progress: {com
 
 | taskName | `result` 形状（冻结） |
 |---|---|
-| `daily-price-sync` | `{ skippedCount, marketGroup?, circuitOpened?, assets:[{assetId,symbol,market,status:'fetched'\|'skipped'\|'failed',priceDate,reason?}] }`。`marketGroup` 为 `CN` 或 `US_CA`，手动全量批次可省略；`status='skipped'` 时 `reason='MARKET_CLOSED'`，`status='failed'` 时 `reason` 为失败分类。`assets` 不保存原始价格序列。 |
+| `daily-price-sync` | `{ skippedCount, marketGroup?, circuitOpened?, assets:[{assetId,symbol,market,status:'fetched'\|'skipped'\|'failed',priceDate,reason?}] }`。`marketGroup` 为 `CN` 或 `US_CA`，手动全量批次可省略；`status='skipped'` 时 `reason='MARKET_CLOSED'`，`status='failed'` 时 `reason` 为失败分类；`priceDate` 按 `MARKET_TIMEZONE` 归桶的实际价格日。`assets` 不保存原始价格序列。 |
 | `price-integrity-check` | `{ totals:{expectedCount,actualCount,missingCount}, checkedCount, skippedCount, allSkipped, completenessRatio, assets:[{assetId,symbol,market,launchDate,status,from,to,expected,actual,missing,ratio,missingRanges[],missingRangesTruncated}], gapAssets:[{symbol,missingCount}] }`。`assets[].status ∈ OK \| GAP \| ERROR \| SKIPPED_NO_LAUNCH_DATE \| INSUFFICIENT_SAMPLE`；`missingRanges` 最多 20 段，超出由 `missingRangesTruncated=true` 标记；不落原始价格序列、补采错误详情或堆栈 |
 | `alert-evaluate` | `{ evaluated, created, archived, failed }` |
 | `fx-rate-sync` | `{ fxCount, currencies:{ USD:{ok:true,rateToCny}, CAD:{…}, HKD:{…} } }`；`ok:true` 仅表示该币种本次真实写入完成，失败运行记 `FAILED` 且不补造成功标志 |

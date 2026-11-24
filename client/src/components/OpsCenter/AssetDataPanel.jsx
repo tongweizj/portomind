@@ -136,6 +136,11 @@ function validityCell(validity) {
   );
 }
 
+function taskErrorText(error, conflictText, fallback) {
+  if (!error) return '';
+  return error.code === 'TASK_ALREADY_RUNNING' ? conflictText : getApiErrorMessage(error, fallback);
+}
+
 function formatCheckedAt(value) {
   if (!value) return UNKNOWN_TEXT;
   const date = new Date(value);
@@ -238,18 +243,10 @@ export default function AssetDataPanel() {
   const totalPages = Math.max(1, Math.ceil(total / pageSize));
   const hasFilters = Boolean(filters.market || filters.missingType || filters.search || filters.active !== 'true');
   const refreshError = refresh.startError || refresh.runError;
-  const refreshErrorText = !refreshError
-    ? ''
-    : (refreshError.code === 'TASK_ALREADY_RUNNING'
-      ? '已有检查在运行，请稍后重试'
-      : getApiErrorMessage(refreshError, '检查刷新失败'));
+  const refreshErrorText = taskErrorText(refreshError, '已有检查在运行，请稍后重试', '检查刷新失败');
   const refreshResult = REFRESH_RESULT_VIEW[refresh.run?.status] || null;
   const priceSyncError = priceSync.startError || priceSync.runError;
-  const priceSyncErrorText = !priceSyncError
-    ? ''
-    : (priceSyncError.code === 'TASK_ALREADY_RUNNING'
-      ? '已有价格同步在运行，请稍后重试'
-      : getApiErrorMessage(priceSyncError, '价格同步失败'));
+  const priceSyncErrorText = taskErrorText(priceSyncError, '已有价格同步在运行，请稍后重试', '价格同步失败');
   const priceSyncResult = PRICE_SYNC_RESULT_VIEW[priceSync.run?.status] || null;
 
   return (
@@ -360,7 +357,7 @@ export default function AssetDataPanel() {
             type="button"
             data-testid="ops-price-sync"
             onClick={() => priceSync.start({ marketGroup: syncGroup || undefined })}
-            disabled={priceSync.isStarting || priceSync.isRunning}
+            disabled={priceSync.isStarting || priceSync.isRunning || priceSync.isLoadingRun}
             className="px-3 py-1 bg-gray-200 rounded disabled:opacity-50"
           >
             {priceSync.isStarting || priceSync.isRunning ? '同步中…' : '同步今日价格'}
@@ -389,7 +386,7 @@ export default function AssetDataPanel() {
             type="button"
             data-testid="ops-integrity-refresh"
             onClick={() => refresh.start()}
-            disabled={refresh.isStarting || refresh.isRunning}
+            disabled={refresh.isStarting || refresh.isRunning || refresh.isLoadingRun}
             className="px-3 py-1 bg-gray-200 rounded disabled:opacity-50"
           >
             {refresh.isStarting || refresh.isRunning ? '检查中…' : '刷新历史完整度'}
