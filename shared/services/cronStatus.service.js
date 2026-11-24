@@ -28,7 +28,6 @@ const { getLatestPriceDetails, STALE_AFTER_TRADING_DAYS } = require('./marketDat
 const { MARKET_DATA_ERROR } = require('../fetchers/errors');
 
 const { isMarketOpenOn, lastOpenDayBefore, pickTargetInfo } = require('./marketDay.service');
-const { TASK_NAME: ASSET_INTEGRITY_TASK, assetCompletenessSnapshot } = require('./assetIntegrity.service');
 const { MARKET_TIMEZONE, dateBounds, marketDate } = require('../utils/marketTime');
 const {
   CRON_TASK_NAMES,
@@ -112,7 +111,7 @@ function marketOf(asset) {
 
 function loadLatestRuns() {
   return TaskRun.aggregate([
-    { $match: { taskName: { $in: [...CRON_TASK_NAMES, ASSET_INTEGRITY_TASK] } } },
+    { $match: { taskName: { $in: CRON_TASK_NAMES } } },
     { $sort: { startedAt: -1 } },
     { $group: { _id: '$taskName', doc: { $first: '$$ROOT' } } }
   ]);
@@ -1022,13 +1021,11 @@ async function getStatus({ now = new Date(), detail = null, date = null, portfol
   const alerts = buildAlertsDataState(runByTask.get('alert-evaluate') || null);
   const fx = buildFxDataState(runByTask.get('fx-rate-sync') || null, fxCount);
   const rebalance = await buildRebalanceState({ tz });
-  const assetCompleteness = await assetCompletenessSnapshot(runByTask.get(ASSET_INTEGRITY_TASK), assets || [], current);
 
   return {
     generatedAt: current.toISOString(),
     timezone: tz,
     staleThresholdHours: staleThresholdHours('daily-price-sync'),
-    assetCompleteness,
     tasks: [
       priceEntry,
       buildResultTaskEntry({ taskName: 'price-integrity-check', doc: runByTask.get('price-integrity-check') || null, now: current, built: integrity, skipDoc: skipByTask.get('price-integrity-check') || null }),

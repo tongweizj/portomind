@@ -10,8 +10,6 @@ import { MemoryRouter, Route, Routes } from 'react-router';
 import CronBoard from '../../src/components/CronStatus/CronBoard';
 import BoardShell from '../../src/components/CronStatus/BoardShell';
 import { api } from '../../src/services/api.client';
-import AssetIntegrityDetail from '../../src/pages/Asset/AssetIntegrityDetail';
-import AssetForm from '../../src/pages/Asset/AssetForm';
 
 const results = [];
 const calls = [];
@@ -135,8 +133,6 @@ function makeSnapshot(overrides = {}) {
     generatedAt: '2026-10-23T07:00:10.000Z',
     timezone: 'America/Toronto',
     staleThresholdHours: 48,
-    assetCompleteness: { checkedAt: '2026-10-23T07:00:09.000Z', contractReady: true, dataStateLevel: 'ok', total: 40,
-      complete: 40, incomplete: 0, launchDateMissing: 0, priceEmpty3MarketDays: 0, incompleteAssets: [] },
     tasks,
     ...overrides
   };
@@ -170,8 +166,6 @@ function mount(snapshot, { fail = false } = {}) {
       <MemoryRouter initialEntries={['/logs?tab=board']}>
         <Routes>
           <Route path="/logs" element={<CronBoard />} />
-          <Route path="/instruments/incomplete" element={<AssetIntegrityDetail />} />
-          <Route path="/instruments/edit/:id" element={<AssetForm />} />
         </Routes>
       </MemoryRouter>
     </QueryClientProvider>
@@ -211,12 +205,12 @@ async function runScenarios() {
   await waitFor(() => text('[data-testid="overall-badge"]').includes('全部正常'));
   const priceCards = qa('[data-testid="price-card"]');
   const dataCards = qa('[data-testid="task-card"]');
-  check('AC1 六卡真实渲染（1 price + 5 data）', priceCards.length === 1 && dataCards.length === 5,
+  check('AC1 五卡真实渲染（1 price + 4 data）', priceCards.length === 1 && dataCards.length === 4,
     `price=${priceCards.length} data=${dataCards.length}`);
-  check('AC1 总览绑定真实快照且六项全 ok 才全部正常', text('[data-testid="overall-badge"]').includes('全部正常')
+  check('AC1 总览绑定真实快照且五项全 ok 才全部正常', text('[data-testid="overall-badge"]').includes('全部正常')
     && text('[data-testid="snapshot-at"]').includes('2026-10-23T07:00:10.000Z'));
   const dotStates = qa('[data-testid="health-dot"]').map((dot) => dot.getAttribute('data-state'));
-  check('AC1 六灯取真实 dataStateLevel', dotStates.length === 6 && dotStates.every((state) => state === 'ok'),
+  check('AC1 五灯取真实 dataStateLevel', dotStates.length === 5 && dotStates.every((state) => state === 'ok'),
     JSON.stringify(dotStates));
 
   const priceText = text('[data-testid="price-card"]');
@@ -268,72 +262,6 @@ async function runScenarios() {
   await sleep(1200);
   check('AC5 无自动轮询（静置后请求数不变）', calls.length === 2, `calls=${calls.length}`);
   normal.unmount();
-
-  const manual = mount(makeSnapshot({ assetCompleteness: null }));
-  await waitLoaded();
-  const slot = q('[data-testid="asset-completeness-slot"]');
-  const runButton = slot.querySelector('button:not([disabled])');
-  check('TASK-076 未检查时为灰色，手动按钮位于第六卡下方', slot.querySelector('article')?.dataset.level === 'unknown'
-    && !runButton?.closest('article') && runButton?.textContent === '运行资产信息检查');
-  const asset = { _id: 'asset-076', symbol: 'VOO.US', name: 'Vanguard', market: 'US', currency: 'USD', type: 'etf',
-    active: true, watchlist: false, tags: [], launchDate: null };
-  let checkCalls = 0;
-  let lastSnapshot = null;
-  let edited = null;
-  api.defaults.adapter = async config => {
-    calls.push(config.url);
-    let data;
-    if (config.method === 'post' && config.url === '/asset-integrity/check') {
-      checkCalls += 1;
-      const incompleteAssets = !asset.active || asset.launchDate ? [] : [{ assetId: asset._id, symbol: asset.symbol, name: asset.name,
-        market: asset.market, reasons: ['LAUNCH_DATE_MISSING'] }];
-      lastSnapshot = { contractReady: true, checkedAt: '2026-10-23T07:00:09Z', dataStateLevel: asset.active ? (asset.launchDate ? 'ok' : 'warn') : 'unknown',
-        total: Number(asset.active), complete: Number(asset.active && Boolean(asset.launchDate)), incomplete: incompleteAssets.length,
-        launchDateMissing: incompleteAssets.length, priceEmpty3MarketDays: 0, incompleteAssets };
-      data = { status: 'SUCCEEDED' };
-    } else if (config.url === '/cron/status') {
-      const report = lastSnapshot?.total === 1 && asset.launchDate
-        ? { ...lastSnapshot, complete: 1, incomplete: 0, launchDateMissing: 0, incompleteAssets: [], dataStateLevel: 'ok' }
-        : lastSnapshot;
-      data = makeSnapshot({ assetCompleteness: report });
-    } else if (config.url === `/assets/${asset._id}`) {
-      if (config.method === 'put') {
-        edited = JSON.parse(config.data);
-        asset.active = edited.active;
-        asset.launchDate = edited.launchDate;
-      }
-      data = asset;
-    } else {
-      throw new Error(`Unexpected request ${config.method} ${config.url}`);
-    }
-    return { data: { success: true, data }, status: 200, statusText: 'OK', headers: {}, config };
-  };
-  runButton.click();
-  await waitFor(() => card('资产信息完整度')?.innerText.includes('0 / 1 完整'));
-  check('TASK-076 一次点击只触发一次检查并刷新快照', checkCalls === 1 && calls.slice(-2).join(',') === '/asset-integrity/check,/cron/status');
-  slot.querySelector('a').click();
-  await waitFor(() => document.body.innerText.includes('VOO.US · Vanguard'));
-  check('TASK-076 资产详情列出缺失理由，编辑跳转标的域', document.body.innerText.includes('缺少上市 / 成立日期')
-    && q('a[href="/instruments/edit/asset-076"]') && !q('button'));
-  q('a[href="/instruments/edit/asset-076"]').click();
-  await waitFor(() => q('input[name="symbol"]')?.value === 'VOO.US');
-  const date = q('input[name="launchDate"]');
-  Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value').set.call(date, '2010-09-07');
-  date.dispatchEvent(new Event('input', { bubbles: true }));
-  date.dispatchEvent(new Event('change', { bubbles: true }));
-  q('input[name="active"]').click();
-  q('form button[type="submit"]').click();
-  await waitFor(() => edited && q('a[href="/logs?tab=board"]'));
-  check('TASK-076 表单在同一次保存补填原日历日期并停用资产', edited.launchDate === '2010-09-07' && edited.active === false);
-  await waitFor(() => document.body.innerText.includes('所有受检资产信息完整'));
-  check('TASK-076 停用资产仍可只读刷新上次受检报告里的日期结果', checkCalls === 1
-    && calls.slice(-2).join(',') === '/assets/asset-076,/cron/status');
-  q('a[href="/logs?tab=board"]').click();
-  await waitFor(() => q('[data-testid="asset-completeness-slot"] button:not([disabled])'));
-  q('[data-testid="asset-completeness-slot"] button:not([disabled])').click();
-  await waitFor(() => checkCalls === 2 && card('资产信息完整度')?.innerText.includes('0 / 0 完整'));
-  check('TASK-076 下一次手动检查才将停用资产移出受检范围', checkCalls === 2);
-  manual.unmount();
 
   const allSkippedSnapshot = makeSnapshot();
   const unchecked = allSkippedSnapshot.tasks.find(item => item.taskName === 'price-integrity-check');
@@ -417,8 +345,8 @@ async function runScenarios() {
   // ── 整体失败（无快照）→ 五卡统一降级 ──
   const failed = mount(null, { fail: true });
   await waitFor(() => Boolean(q('[data-testid="cron-error"]')));
-  check('AC5 整体失败六卡统一降级', qa('[data-testid="price-card"]').length === 1
-    && qa('[data-testid="task-card"]').length === 5
+  check('AC5 整体失败五卡统一降级', qa('[data-testid="price-card"]').length === 1
+    && qa('[data-testid="task-card"]').length === 4
     && qa('[data-testid="task-card"]').every((item) => item.getAttribute('data-level') === 'bad'));
   check('AC5 整体失败不显示全部正常', !text('[data-testid="overall-badge"]').includes('全部正常'),
     text('[data-testid="overall-badge"]'));
@@ -443,19 +371,19 @@ async function runScenarios() {
       text('[data-testid="overall-badge"]').includes('刷新失败'));
   stale.unmount();
 
-  // ── 053 默认骨架回归：不传 props 时仍为五个 TaskCardShell + 六区域 ──
+  // ── 053 默认骨架回归：不传 props 时仍为五卡六区域 ──
   const shellContainer = document.createElement('div');
   document.body.appendChild(shellContainer);
   const shellRoot = createRoot(shellContainer);
   shellRoot.render(<BoardShell />);
-  await waitFor(() => qa('[data-testid="task-card"]').length >= 6);
+  await waitFor(() => qa('[data-testid="task-card"]').length >= 5);
   await sleep(50);
   const shellCards = [...shellContainer.querySelectorAll('[data-testid="task-card"]')];
   const shellIds = ['card-title', 'run-state', 'last-run', 'data-ratio', 'key-metric', 'anomaly-entry'];
-  check('053 默认 BoardShell 六卡结构符合修订附录', shellCards.length === 6
-    && shellIds.every((id) => shellContainer.querySelectorAll(`[data-testid="${id}"]`).length === 6));
-  check('053/056 默认总览六灯仍为 unknown + 图例保留',
-    shellContainer.querySelectorAll('[data-testid="health-dot"]').length === 6
+  check('053 默认 BoardShell 五卡结构符合修订附录', shellCards.length === 5
+    && shellIds.every((id) => shellContainer.querySelectorAll(`[data-testid="${id}"]`).length === 5));
+  check('053/056 默认总览五灯仍为 unknown + 图例保留',
+    shellContainer.querySelectorAll('[data-testid="health-dot"]').length === 5
       && [...shellContainer.querySelectorAll('[data-testid="health-dot"]')].every((dot) => dot.getAttribute('data-state') === 'unknown')
       && shellContainer.innerText.includes('状态图例'));
   shellRoot.unmount();

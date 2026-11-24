@@ -128,21 +128,6 @@ export function buildUnavailableView({ message = '快照获取失败', level = '
   };
 }
 
-export function buildAssetCompletenessView(snapshot) {
-  const view = buildBaseView(snapshot && {
-    ...snapshot,
-    lastRun: snapshot.checkedAt ? { startedAt: snapshot.checkedAt, status: 'SUCCEEDED' } : null
-  });
-  return {
-    ...view,
-    keyMetricText: `${displayNumber(snapshot?.complete)} / ${displayNumber(snapshot?.total)} 完整`,
-    details: [
-      { label: '缺少上市 / 成立日期', value: displayNumber(snapshot?.launchDateMissing) },
-      { label: '最近 3 个市场日价格全为空', value: displayNumber(snapshot?.priceEmpty3MarketDays) }
-    ]
-  };
-}
-
 export function buildLoadingView() {
   return {
     present: false,

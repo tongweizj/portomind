@@ -112,7 +112,6 @@ app.use('/api', requireAuth);
 app.use('/api/transactions', transactionRoutes);
 app.use('/api/portfolios', portfolioRoutes);
 app.use('/api/assets', assetRoutes);
-app.use('/api/asset-integrity', require('./routes/assetIntegrity.routes'));
 app.use('/api/logs', logsRouter);
 app.use('/api/rebalance', rebalanceRecordRoutes);
 app.use('/api/prices', priceRoutes);

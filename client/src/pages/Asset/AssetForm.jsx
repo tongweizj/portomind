@@ -1,17 +1,15 @@
 // ✅ 文件：src/pages/AssetForm.jsx
 import { useEffect, useState } from 'react';
-import { useLocation, useNavigate, useParams } from 'react-router';
+import { useNavigate, useParams } from 'react-router';
 import { useQueryClient } from '@tanstack/react-query';
 import { createAsset, getAssetById, updateAsset } from '../../services/asset.service';
 import { getApiErrorMessage } from '../../services/api.client';
 import { ASSET_TYPES, ASSET_CLASSES, ASSET_MARKETS, ASSET_CURRENCIES } from '../../constants/enums';
 import { launchDateValue } from './launchDate';
-import { ROUTES } from '../../constants/routes';
 import { CRON_STATUS_QUERY_KEY } from '../../hooks/useCronStatus';
 
 export default function AssetForm() {
   const navigate = useNavigate();
-  const { state } = useLocation();
   const queryClient = useQueryClient();
   const { id } = useParams();
   const isEdit = !!id;
@@ -65,7 +63,7 @@ export default function AssetForm() {
       if (isEdit && dateChanged) {
         await queryClient.invalidateQueries({ queryKey: CRON_STATUS_QUERY_KEY, refetchType: 'all' });
       }
-      navigate(state?.fromIntegrity ? ROUTES.ASSET_INTEGRITY : '/instruments');
+      navigate('/instruments');
     } catch (err) {
       console.error('Error saving asset:', err);
       setError(getApiErrorMessage(err, '保存标的失败'));

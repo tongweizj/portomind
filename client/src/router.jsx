@@ -10,11 +10,11 @@ import AppLayout from './components/layout/AppLayout';
 import { AuthProvider } from './components/auth/AuthProvider';
 import RequireAuth from './components/auth/RequireAuth';
 import { ROUTE_PATTERNS } from './constants/routes';
+import { LOG_TAB_ASSETS, LOG_TAB_PARAM } from './constants/logTabs';
 import Account from './pages/Account';
 import AccountUsers from './pages/AccountUsers';
 import AssetDetail from './pages/Asset/AssetDetail';
 import AssetForm from './pages/Asset/AssetForm';
-import AssetIntegrityDetail from './pages/Asset/AssetIntegrityDetail';
 import AssetList from './pages/Asset/AssetList';
 import Dashboard from './pages/Dashboard';
 import Login from './pages/Login';
@@ -70,7 +70,8 @@ export default function AppRouter() {
               {/* 标的：列表从「今日行情」屏底进入，不占顶层导航 */}
               <Route path="/instruments" element={<AssetList />} />
               <Route path="/instruments/new" element={<AssetForm />} />
-              <Route path={ROUTE_PATTERNS.ASSET_INTEGRITY} element={<AssetIntegrityDetail />} />
+              {/* TASK-073：旧资产信息完整度页退休，保留路径重定向到新资产数据 tab。 */}
+              <Route path={ROUTE_PATTERNS.ASSET_INTEGRITY} element={<Navigate to={`/logs?${LOG_TAB_PARAM}=${LOG_TAB_ASSETS}`} replace />} />
               <Route path="/instruments/edit/:id" element={<AssetForm />} />
               <Route path="/instruments/:id" element={<AssetDetail />} />
 

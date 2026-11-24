@@ -1,8 +1,8 @@
 // shared/services/priceCoverage.service.js
 //
 // TASK-068：逐资产「目标市场日 + 最近 N 个市场日」的价格覆盖计算。
-// 该口径原先只存在于 assetIntegrity.service 的私有函数中；运维中心资产总表
-// 需要同一口径判断今日价格与有效性，因此抽到此单一实现，禁止再写第二份。
+// TASK-068 从已退休的 assetIntegrity.service 抽出；运维中心资产总表使用这一份
+// 目标市场日/窗口口径，禁止再写第二份。
 
 const dayjs = require('dayjs');
 const utc = require('dayjs/plugin/utc');
@@ -71,7 +71,7 @@ function matchedPriceDate(pricedDays, market, date) {
   return expectedBucketCandidates(market, date).find((candidate) => pricedDays.has(candidate)) || null;
 }
 
-// 窗口内任一日有价即视为有覆盖；与 asset-integrity-check 的 PRICE_EMPTY_3_MARKET_DAYS 同口径。
+// 窗口内任一日有价即视为有覆盖；与资产完整性的“最近 3 个市场日全空”判定同口径。
 function anyPriceInWindow(window, pricedDays) {
   if (!window || !pricedDays) return false;
   return [...window.buckets].some((day) => pricedDays.has(day));
