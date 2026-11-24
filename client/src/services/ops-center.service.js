@@ -2,7 +2,8 @@
 //
 // TASK-068：运维中心资产总表读取。
 // TASK-069：筛选/搜索/排序/分页全部作为服务端 query params 发送；客户端不拉全量切片。
-// TASK-070：只新增白名单 POST /integrity-check 与 task-run 详情读取。
+// TASK-070：白名单 POST /integrity-check 与 task-run 详情读取。
+// TASK-071：白名单 POST /price-sync。
 import { api } from './api.client';
 import {
   OPS_CENTER_DEFAULT_PAGE_SIZE,
@@ -33,11 +34,17 @@ export async function getAssetsOverview({
 }
 
 const INTEGRITY_CHECK_ENDPOINT = '/ops-center/integrity-check';
+const PRICE_SYNC_ENDPOINT = '/ops-center/price-sync';
 const TASK_RUNS_ENDPOINT = '/ops-center/task-runs';
 
 /** TASK-070：手动刷新历史完整度（202 + runId）。 */
 export async function startIntegrityCheck() {
   return (await api.post(INTEGRITY_CHECK_ENDPOINT, {})).data;
+}
+
+/** TASK-071：手动触发今日价格同步（202 + runId）；空 marketGroup = 全部 active。 */
+export async function startPriceSync({ marketGroup } = {}) {
+  return (await api.post(PRICE_SYNC_ENDPOINT, marketGroup ? { marketGroup } : {})).data;
 }
 
 /** TASK-070：读取一次任务运行的状态/进度/结果。 */

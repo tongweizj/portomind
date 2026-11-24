@@ -52,17 +52,19 @@ function staticChecks() {
   const service = read('src/services/ops-center.service.js');
   const postCalls = (service.match(/\bapi\.post\(/g) || []).length;
   const getCalls = (service.match(/\bapi\.get\(/g) || []).length;
-  check('TASK-070 数据层只含资产 GET 与白名单任务端点',
-    getCalls === 2 && postCalls === 1
+  check('TASK-070/071 数据层只含资产 GET 与白名单任务端点',
+    getCalls === 2 && postCalls === 2
       && /api\.get\(OPS_CENTER_ASSETS_ENDPOINT/.test(service)
       && /api\.post\(INTEGRITY_CHECK_ENDPOINT, \{\}\)/.test(service)
+      && /api\.post\(PRICE_SYNC_ENDPOINT/.test(service)
       && /api\.get\(`\$\{TASK_RUNS_ENDPOINT\}\/\$\{runId\}`\)/.test(service)
       && !/api\.(put|patch|delete)/.test(service));
 
   const panel = read('src/components/OpsCenter/AssetDataPanel.jsx');
-  check('TASK-070 资产面板不直接写 API，刷新经专用 hook',
+  check('TASK-070/071 资产面板不直接写 API，刷新/同步经专用 hook',
     !/useMutation|api\.(post|put|patch|delete)/.test(panel)
-      && /useIntegrityRefresh\(\)/.test(panel));
+      && /useIntegrityRefresh\(\)/.test(panel)
+      && /usePriceSync\(\)/.test(panel));
   check('TASK-068 编辑链接仅 admin 可见', /isAdmin \?/.test(panel) && /instruments\/edit\//.test(panel));
   check('TASK-068 缺失/未知值不补 0', !/\|\|\s*0\b/.test(panel) && !/\|\|\s*0\b/.test(service));
   check('TASK-068 无可用运行的历史完整度仍回退 unavailable',
