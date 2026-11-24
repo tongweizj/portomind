@@ -3,6 +3,7 @@ const { test } = require('node:test');
 const assert = require('node:assert');
 const dailySync = require('../src/tasks/dailySync');
 const { syncActiveAssetPrices, marketDate } = dailySync;
+const { startDailySync } = require('@portomind/shared/tasks/dailySync');
 const TaskRun = require('@portomind/shared/models/taskRun');
 const { dateBounds, canonicalDayTimestamp } = require('@portomind/shared/utils/marketTime');
 const tiantian = require('@portomind/shared/fetchers/tiantianFetcher');
@@ -39,6 +40,49 @@ test('syncActiveAssetPrices 区分开市/休市/失败三类资产', async () =>
   assert.equal(summary.failures[0].item, '510300');
   assert.equal(summary.failures[0].category, 'UPSTREAM');
   assert.equal(summary.failures[0].retryable, true);
+  assert.deepEqual(summary.assets.map(asset => asset.status), ['fetched', 'skipped', 'failed']);
+  assert.match(summary.assets[0].priceDate, /^\d{4}-\d{2}-\d{2}$/);
+  assert.equal(summary.assets[1].reason, 'MARKET_CLOSED');
+  assert.equal(summary.assets[2].reason, 'UPSTREAM');
+});
+
+test('startDailySync 立即返回 runId，result.assets 与 progress 落库', async (t) => {
+  t.mock.method(TaskRun, 'init', async () => TaskRun);
+  t.mock.method(TaskRun, 'create', async (doc) => ({ ...doc, _id: 'run-71' }));
+  const updates = [];
+  t.mock.method(TaskRun, 'updateOne', async (filter, update) => {
+    updates.push({ filter, update });
+    return { modifiedCount: 1 };
+  });
+  let release;
+  const gate = new Promise((resolve) => { release = resolve; });
+  const handle = await startDailySync({
+    trigger: 'MANUAL',
+    now: new Date('2026-11-24T15:00:00Z'),
+    dependencies: {
+      getActiveAssets: async () => [{ _id: 'asset-1', symbol: 'VOO.US', market: 'US' }],
+      isMarketOpenToday: () => true,
+      fetchLatest: async (asset) => {
+        await gate;
+        return { ...asset, price: 100, timestamp: new Date('2026-11-24T15:00:00Z') };
+      },
+      saveLatest: async () => {}
+    }
+  });
+
+  assert.equal(handle.ok, true);
+  assert.equal(handle.runId, 'run-71');
+  assert.equal(handle.status, 'RUNNING');
+  assert.ok(updates.some(({ update }) => update.$set?.progress?.total === 1));
+
+  release();
+  const summary = await handle.promise;
+  assert.equal(summary.status, 'SUCCEEDED');
+  assert.deepEqual(summary.result.assets, [{
+    assetId: 'asset-1', symbol: 'VOO.US', market: 'US',
+    status: 'fetched', priceDate: '2026-11-24'
+  }]);
+  assert.equal(updates.at(-1).update.$unset.lockKey, 1);
 });
 
 test('marketDate 按 SCHEDULER_TIMEZONE 归一化', () => {
@@ -50,11 +94,12 @@ test('同日两组使用独立 runKey 并顺序入锁，手动入口继续全量
   const now = new Date('2026-11-13T17:00:00Z');
   const runs = [];
   const saved = [];
+  t.mock.method(TaskRun, 'init', async () => TaskRun);
   t.mock.method(TaskRun, 'create', async row => {
     runs.push(row);
     return { _id: row.runKey };
   });
-  t.mock.method(TaskRun, 'updateOne', async () => ({}));
+  t.mock.method(TaskRun, 'updateOne', async () => ({ modifiedCount: 1 }));
   const dependencies = {
     getActiveAssets: async () => ['CN-SH', 'CN-SZ', 'CN-FUND', 'HK', 'US', 'CA'].map(market => ({ symbol: market, market })),
     isMarketOpenToday: () => true,
@@ -105,8 +150,9 @@ test('CN 定时批次收到前一日净值时保留旧桶并记录资产失败',
   const priorDay = '2026-11-12';
   const priorBucket = dateBounds(priorDay).start.toISOString();
   const prices = new Map([[priorBucket, 1.10]]);
+  t.mock.method(TaskRun, 'init', async () => TaskRun);
   t.mock.method(TaskRun, 'create', async () => ({ _id: 'test-run' }));
-  const updateRun = t.mock.method(TaskRun, 'updateOne', async () => ({}));
+  const updateRun = t.mock.method(TaskRun, 'updateOne', async () => ({ modifiedCount: 1 }));
   const dependencies = {
     getActiveAssets: async () => [{ symbol: '001180.CN', market: 'CN-FUND' }],
     isMarketOpenToday: () => true,
@@ -124,7 +170,8 @@ test('CN 定时批次收到前一日净值时保留旧桶并记录资产失败',
   assert.equal(result.failures[0].category, 'UPSTREAM');
   assert.equal(result.failures[0].provider, 'TIANTIAN');
   assert.match(result.failures[0].message, new RegExp(`${day}.*${priorDay}`));
-  assert.equal(updateRun.mock.calls[0].arguments[1].$set.status, 'PARTIAL');
+  const terminal = updateRun.mock.calls.find(call => call.arguments[1].$set?.status === 'PARTIAL');
+  assert.ok(terminal, '应写入 PARTIAL 终态');
 
   const manual = await dailySync({ trigger: 'MANUAL', now, dependencies });
   assert.equal(manual.successCount, 1);
@@ -176,8 +223,9 @@ test('NOT_FOUND 与已恢复的请求打断熔断计数，写入失败不会熔�
 });
 
 async function assertDiagnosticsRedacted(t, bodies) {
+  t.mock.method(TaskRun, 'init', async () => TaskRun);
   t.mock.method(TaskRun, 'create', async () => ({ _id: 'redaction-test' }));
-  const update = t.mock.method(TaskRun, 'updateOne', async () => ({}));
+  const update = t.mock.method(TaskRun, 'updateOne', async () => ({ modifiedCount: 1 }));
   const info = t.mock.method(taskLogger, 'info', () => {});
   const error = t.mock.method(taskLogger, 'error', () => {});
   await dailySync({ trigger: 'MANUAL', dependencies: {
@@ -188,7 +236,7 @@ async function assertDiagnosticsRedacted(t, bodies) {
       throw classifyMarketDataError({ response: { status: 503, data: bodies[index] } }, 'YAHOO');
     }
   } });
-  const stored = update.mock.calls[0].arguments[1].$set.failures;
+  const stored = update.mock.calls.find(call => call.arguments[1].$set?.failures).arguments[1].$set.failures;
   assert.equal(stored.length, bodies.length);
   const logged = info.mock.calls.find(call => call.arguments[0] === 'TASK_END').arguments[1].failures;
   assert.deepEqual(logged, stored);

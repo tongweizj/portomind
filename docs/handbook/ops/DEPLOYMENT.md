@@ -78,6 +78,7 @@ SCHEDULER_TIMEZONE=America/Toronto   # 只读/查询接口按调度时区取当�
 MARKET_TIMEZONE=America/Toronto
 OPS_PROGRESS_THROTTLE_MS=1000        # TaskRun 进度写节流（TASK-070）
 OPS_INTEGRITY_STALE_MS=1800000       # 完整性运行 stale 阈值；需与 worker 一致
+OPS_PRICE_SYNC_STALE_MS=3600000       # 价格同步运行 stale 阈值；需与 worker 一致
 # LOG_DIR 可选；默认写入仓库根 logs/，与 cron-worker 共用
 
 # TASK-058 认证（U1）：
@@ -105,6 +106,7 @@ INTEGRITY_AUTO_REPAIR=true
 INTEGRITY_REPAIR_MAX_DAYS=30
 OPS_PROGRESS_THROTTLE_MS=1000        # TaskRun 进度写节流（TASK-070）
 OPS_INTEGRITY_STALE_MS=1800000       # 完整性运行 stale 阈值；需与 server 一致
+OPS_PRICE_SYNC_STALE_MS=3600000       # 价格同步运行 stale 阈值；需与 server 一致
 MARKET_DATA_TIMEOUT_MS=10000
 # LOG_DIR 可选；默认写入仓库根 logs/，与 server 共用
 ```

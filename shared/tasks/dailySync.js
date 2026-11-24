@@ -14,7 +14,8 @@ const { marketDate, todayString } = require('../utils/marketTime');
 const { getActiveAssets } = require('../services/asset.service');
 const { fetchLatest, resolveFetcher } = require('../services/priceFetch.service');
 const { saveLatest } = require('../services/priceStorage.service');
-const { runTrackedTask } = require('../services/taskRunner');
+const { runTrackedTask, startTrackedTask } = require('../services/taskRunner');
+const { OPS_TASK_CONFIG } = require('../config/opsTasks');
 const { isMarketOpenToday } = require('../services/calendar.service');
 const { MARKET_DATA_ERROR, MarketDataError } = require('../fetchers/errors');
 
@@ -40,22 +41,34 @@ async function syncActiveAssetPrices(dependencies = {}, context = {}) {
     successCount: 0,
     skippedCount: 0,
     failureCount: 0,
-    failures: []
+    failures: [],
+    assets: []
   };
   const outageCounts = new Map();
   const openedProviders = new Set();
+  const reportProgress = typeof context.reportProgress === 'function' ? context.reportProgress : () => {};
+  const marketDay = context.scheduledDay || marketDate(context.now);
+  const assetResult = (asset, status, extra = {}) => ({
+    assetId: asset._id ? String(asset._id) : null,
+    symbol: asset.symbol,
+    market: asset.market,
+    status,
+    ...extra
+  });
 
   taskLogger.info('PRICE_SYNC_ASSETS_LOADED', { totalCount: assets.length, marketGroup: context.marketGroup });
+  await reportProgress(0, assets.length);
   for (const asset of assets) {
     let provider;
     let fetching = false;
     try {
       if (!marketOpen(asset.market, calendarDate)) {
         summary.skippedCount += 1;
+        summary.assets.push(assetResult(asset, 'skipped', { reason: 'MARKET_CLOSED', priceDate: null }));
         taskLogger.info('PRICE_SYNC_ASSET_SKIPPED_MARKET_CLOSED', {
           symbol: asset.symbol,
           market: asset.market,
-          marketDate: context.scheduledDay || marketDate()
+          marketDate: marketDay
         });
         continue;
       }
@@ -80,6 +93,9 @@ async function syncActiveAssetPrices(dependencies = {}, context = {}) {
       }
       await persistPrice(priceData, context);
       summary.successCount += 1;
+      summary.assets.push(assetResult(asset, 'fetched', {
+        priceDate: marketDate(priceData.timestamp)
+      }));
       taskLogger.info('PRICE_SYNC_ASSET_SUCCEEDED', {
         symbol: asset.symbol,
         timestamp: priceData.timestamp,
@@ -107,38 +123,65 @@ async function syncActiveAssetPrices(dependencies = {}, context = {}) {
       if (Number.isInteger(error.status)) failure.status = error.status;
       if (error.responseBody !== undefined) failure.responseBody = error.responseBody;
       summary.failures.push(failure);
+      summary.assets.push(assetResult(asset, 'failed', {
+        reason: failure.category,
+        priceDate: null
+      }));
       taskLogger.error('PRICE_SYNC_ASSET_FAILED', failure);
+    } finally {
+      await reportProgress(summary.assets.length, assets.length);
     }
   }
   if (openedProviders.size) summary.circuitOpened = [...openedProviders];
   return summary;
 }
 
-async function dailySync(options = {}) {
-  const trigger = options.trigger || 'SCHEDULED';
-  const { marketGroup } = options;
+function assertMarketGroup(marketGroup) {
   if (marketGroup !== undefined && !Object.hasOwn(PRICE_SYNC_GROUPS, marketGroup)) {
     throw new RangeError(`Unknown price sync market group: ${marketGroup}`);
   }
+}
+
+function resolveContext(options = {}) {
+  const trigger = options.trigger || 'SCHEDULED';
+  const { marketGroup } = options;
+  assertMarketGroup(marketGroup);
   const now = options.now || new Date();
   const scheduledDay = trigger === 'SCHEDULED' ? marketDate(now) : undefined;
   const runKey = options.runKey || (trigger === 'SCHEDULED'
     ? (marketGroup ? `${scheduledDay}:${marketGroup}` : scheduledDay)
     : `manual:${now.toISOString()}`);
+  return { trigger, marketGroup, now, scheduledDay, runKey };
+}
 
-  const run = () => runTrackedTask({
-    taskName: 'daily-price-sync',
-    runKey,
-    trigger,
-    execute: async () => {
-      const summary = await syncActiveAssetPrices(options.dependencies, { trigger, runKey, marketGroup, scheduledDay });
-      const result = { skippedCount: summary.skippedCount };
-      if (marketGroup) result.marketGroup = marketGroup;
+function trackedOptions(options, context) {
+  return {
+    taskName: OPS_TASK_CONFIG.priceSync.taskName,
+    runKey: context.runKey,
+    trigger: context.trigger,
+    lockKey: OPS_TASK_CONFIG.priceSync.lockKey,
+    staleAfterMs: OPS_TASK_CONFIG.priceSync.staleAfterMs,
+    execute: async ({ reportProgress }) => {
+      const summary = await syncActiveAssetPrices(options.dependencies, {
+        trigger: context.trigger,
+        runKey: context.runKey,
+        marketGroup: context.marketGroup,
+        scheduledDay: context.scheduledDay,
+        now: context.now,
+        reportProgress
+      });
+      const result = { skippedCount: summary.skippedCount, assets: summary.assets };
+      if (context.marketGroup) result.marketGroup = context.marketGroup;
       if (summary.circuitOpened) result.circuitOpened = summary.circuitOpened;
       return { ...summary, result };
     }
-  });
-  if (!scheduledDay || !marketGroup) return run();
+  };
+}
+
+async function dailySync(options = {}) {
+  const context = resolveContext(options);
+  const run = () => runTrackedTask(trackedOptions(options, context));
+  if (!context.scheduledDay || !context.marketGroup) return run();
 
   // TaskRun 看板依赖原任务名，两个定时批次顺序进入同名任务的进程内锁。
   const batch = scheduledBatch.then(run);
@@ -146,6 +189,14 @@ async function dailySync(options = {}) {
   return batch;
 }
 
+/** server 手动触发：立即返回 runId，执行在后台继续。 */
+function startDailySync(options = {}) {
+  const context = resolveContext(options);
+  return startTrackedTask(trackedOptions(options, context));
+}
+
 module.exports = dailySync;
 module.exports.syncActiveAssetPrices = syncActiveAssetPrices;
+module.exports.startDailySync = startDailySync;
+module.exports.resolveContext = resolveContext;
 module.exports.marketDate = marketDate;

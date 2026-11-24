@@ -22,6 +22,11 @@ const OPS_TASK_CONFIG = Object.freeze({
     taskName: 'price-integrity-check',
     lockKey: 'ops:price-integrity-check',
     staleAfterMs: envMs('OPS_INTEGRITY_STALE_MS', DEFAULT_STALE_MS)
+  }),
+  priceSync: Object.freeze({
+    taskName: 'daily-price-sync',
+    lockKey: 'ops:daily-price-sync',
+    staleAfterMs: envMs('OPS_PRICE_SYNC_STALE_MS', 60 * MINUTE_MS)
   })
 });
 

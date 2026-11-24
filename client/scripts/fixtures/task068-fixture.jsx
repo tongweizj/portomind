@@ -422,10 +422,67 @@ async function runScenarios() {
   check('TASK-070 409 冲突按稳定 code 显示明确错误', text('[data-testid="ops-integrity-error"]').includes('已有检查在运行'));
   await view.unmount();
 
-  // member 只读
+
+  // ── TASK-071 今日价格同步 ──
+  view = mount();
+  await waitRows();
+  const syncGroups = qa('[data-testid="ops-price-sync-group"] option').map((option) => option.value);
+  check('TASK-071 同步范围包含全部 active / CN-HK / US-CA',
+    JSON.stringify(syncGroups) === JSON.stringify(['', 'CN', 'US_CA']));
+
+  const syncRequests = [];
+  let pricePolls = 0;
+  api.defaults.adapter = async (config) => {
+    syncRequests.push({ method: config.method, url: config.url, data: config.data });
+    if (config.url === '/ops-center/price-sync') {
+      return {
+        data: { success: true, data: { runId: 'run-71', taskName: 'daily-price-sync', status: 'RUNNING', startedAt: checkedAt } },
+        status: 202, statusText: 'Accepted', headers: {}, config
+      };
+    }
+    if (config.url === '/ops-center/assets') {
+      return {
+        data: { success: true, data: historyItems, pagination: { page: 1, pageSize: 50, total: historyItems.length } },
+        status: 200, statusText: 'OK', headers: {}, config
+      };
+    }
+    if (config.url === '/ops-center/task-runs/run-71') {
+      pricePolls += 1;
+      const done = pricePolls >= 2;
+      return {
+        data: { success: true, data: {
+          runId: 'run-71', taskName: 'daily-price-sync', runKey: 'manual:x', trigger: 'MANUAL',
+          status: done ? 'SUCCEEDED' : 'RUNNING', stale: false, startedAt: checkedAt,
+          progress: { completed: done ? 2 : 1, total: 2, updatedAt: checkedAt },
+          counts: { totalCount: 2, successCount: done ? 2 : 0, failureCount: 0 },
+          failures: [], result: { assets: [] }
+        } },
+        status: 200, statusText: 'OK', headers: {}, config
+      };
+    }
+    throw new Error(`Unexpected request ${config.method} ${config.url}`);
+  };
+  setSelect('ops-price-sync-group', 'CN');
+  const assetsBeforeSync = syncRequests.filter((request) => request.url === '/ops-center/assets').length;
+  q('[data-testid="ops-price-sync"]').click();
+  await waitFor(() => Boolean(q('[data-testid="ops-price-sync-progress"]')));
+  check('TASK-071 admin 可触发 CN-HK 同步并显示进度',
+    syncRequests.some((request) => request.url === '/ops-center/price-sync'
+      && JSON.parse(request.data).marketGroup === 'CN')
+      && text('[data-testid="ops-price-sync-progress"]').includes('已完成 1 / 2'));
+  await waitFor(() => text('[data-testid="ops-price-sync-result"]').includes('同步完成'), 6000);
+  await waitFor(
+    () => syncRequests.filter((request) => request.url === '/ops-center/assets').length > assetsBeforeSync,
+    4000
+  );
+  check('TASK-071 同步终态后回读资产总表',
+    text('[data-testid="ops-price-sync"]').includes('同步今日价格')
+      && syncRequests.filter((request) => request.url === '/ops-center/assets').length > assetsBeforeSync);
+  await view.unmount();
+
   view = mount({ role: 'member' });
   await waitRows();
-  check('TASK-070 member 看不到刷新按钮', !q('[data-testid="ops-integrity-refresh"]'));
+  check('TASK-071 member 看不到价格同步按钮', !q('[data-testid="ops-price-sync"]'));
   await view.unmount();
 }
 

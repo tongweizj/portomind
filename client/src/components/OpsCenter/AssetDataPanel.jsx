@@ -3,6 +3,7 @@
 // TASK-068：运维中心「资产数据」tab 的第一版总表。
 // TASK-069：服务端筛选、搜索、问题优先排序与分页；客户端只发送 query params，
 // 不在浏览器里拉全量或自行排序/切片。
+// TASK-071：admin 可触发今日价格同步；member 只读。
 // - admin 可见资产编辑链接，member 只读；服务端仍只要求登录（UI 约定，不是安全边界）。
 // - 缺失/未知值显示「—」或「无法判断」，绝不补 0、不伪造完整数据。
 
@@ -15,6 +16,7 @@ import { OPS_CENTER_DEFAULT_FILTERS, OPS_CENTER_DEFAULT_PAGE_SIZE } from '../../
 import { colors } from '../../constants/design-tokens';
 import { useOpsCenterAssets } from '../../hooks/useOpsCenterAssets';
 import { useIntegrityRefresh } from '../../hooks/useIntegrityRefresh';
+import { usePriceSync } from '../../hooks/usePriceSync';
 import { getApiErrorMessage } from '../../services/api.client';
 
 const TODAY_PRICE_VIEW = Object.freeze({
@@ -63,6 +65,18 @@ const SORT_OPTIONS = Object.freeze([
 ]);
 
 const UNKNOWN_TEXT = '—';
+
+const PRICE_SYNC_GROUP_OPTIONS = Object.freeze([
+  { value: '', label: '全部 active' },
+  { value: 'CN', label: 'CN-HK' },
+  { value: 'US_CA', label: 'US-CA' }
+]);
+
+const PRICE_SYNC_RESULT_VIEW = Object.freeze({
+  SUCCEEDED: { label: '同步完成', color: colors.statusOk },
+  PARTIAL: { label: '同步完成（部分资产失败）', color: colors.statusWarn },
+  FAILED: { label: '同步失败', color: colors.statusBad }
+});
 
 const REFRESH_RESULT_VIEW = Object.freeze({
   SUCCEEDED: { label: '检查完成', color: colors.statusOk },
@@ -168,6 +182,8 @@ function historyCell(history) {
 export default function AssetDataPanel() {
   const { isAdmin } = useAuth();
   const refresh = useIntegrityRefresh();
+  const priceSync = usePriceSync();
+  const [syncGroup, setSyncGroup] = useState('');
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(OPS_CENTER_DEFAULT_PAGE_SIZE);
   const [filters, setFilters] = useState({ ...OPS_CENTER_DEFAULT_FILTERS });
@@ -228,6 +244,13 @@ export default function AssetDataPanel() {
       ? '已有检查在运行，请稍后重试'
       : getApiErrorMessage(refreshError, '检查刷新失败'));
   const refreshResult = REFRESH_RESULT_VIEW[refresh.run?.status] || null;
+  const priceSyncError = priceSync.startError || priceSync.runError;
+  const priceSyncErrorText = !priceSyncError
+    ? ''
+    : (priceSyncError.code === 'TASK_ALREADY_RUNNING'
+      ? '已有价格同步在运行，请稍后重试'
+      : getApiErrorMessage(priceSyncError, '价格同步失败'));
+  const priceSyncResult = PRICE_SYNC_RESULT_VIEW[priceSync.run?.status] || null;
 
   return (
     <div className="space-y-3">
@@ -317,6 +340,48 @@ export default function AssetDataPanel() {
           <option value="desc">降序</option>
         </select>
       </form>
+
+      {isAdmin && (
+        <div className="flex flex-wrap items-center gap-3 text-sm" data-testid="ops-price-sync-control">
+          <label style={{ color: colors.textSecondary }}>
+            今日价格同步
+            <select
+              data-testid="ops-price-sync-group"
+              value={syncGroup}
+              onChange={(event) => setSyncGroup(event.target.value)}
+              className="ml-2 border rounded px-2 py-1"
+            >
+              {PRICE_SYNC_GROUP_OPTIONS.map((option) => (
+                <option key={option.value || 'all'} value={option.value}>{option.label}</option>
+              ))}
+            </select>
+          </label>
+          <button
+            type="button"
+            data-testid="ops-price-sync"
+            onClick={() => priceSync.start({ marketGroup: syncGroup || undefined })}
+            disabled={priceSync.isStarting || priceSync.isRunning}
+            className="px-3 py-1 bg-gray-200 rounded disabled:opacity-50"
+          >
+            {priceSync.isStarting || priceSync.isRunning ? '同步中…' : '同步今日价格'}
+          </button>
+          {priceSync.run?.progress && (
+            <span data-testid="ops-price-sync-progress" style={{ color: colors.textSecondary }}>
+              已完成 {priceSync.run.progress.completed ?? 0} / {priceSync.run.progress.total ?? UNKNOWN_TEXT}
+            </span>
+          )}
+          {priceSyncResult && (
+            <span data-testid="ops-price-sync-result" style={{ color: priceSyncResult.color }}>
+              {priceSyncResult.label}
+            </span>
+          )}
+          {priceSyncError && (
+            <span data-testid="ops-price-sync-error" role="alert" style={{ color: colors.statusBad }}>
+              {priceSyncErrorText}
+            </span>
+          )}
+        </div>
+      )}
 
       {isAdmin && (
         <div className="flex flex-wrap items-center gap-3 text-sm" data-testid="ops-integrity-refresh-control">

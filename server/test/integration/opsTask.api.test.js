@@ -69,6 +69,8 @@ function stubStartSuccess(t, over = {}) {
 test('未登录触发/读取均返回 401', async () => {
   const start = await request('/api/ops-center/integrity-check', { method: 'POST', body: '{}' }, { authenticated: false });
   assert.equal(start.status, 401);
+  const priceSync = await request('/api/ops-center/price-sync', { method: 'POST', body: '{}' }, { authenticated: false });
+  assert.equal(priceSync.status, 401);
   const detail = await request(`/api/ops-center/task-runs/${RUN_ID}`, {}, { authenticated: false });
   assert.equal(detail.status, 401);
 });
@@ -85,6 +87,66 @@ test('手动触发返回 202 + runId，不等待任务结束', async (t) => {
   assert.equal(started.body.data.taskName, 'price-integrity-check');
   assert.equal(started.body.data.status, 'RUNNING');
   assert.ok(Number.isFinite(Date.parse(started.body.data.startedAt)));
+});
+
+test('价格同步 202 + runId，空 Body 表示全部 active，CN/US_CA 可指定', async (t) => {
+  stubStartSuccess(t);
+  const all = await request('/api/ops-center/price-sync', {
+    method: 'POST', headers: { 'content-type': 'application/json' }, body: '{}'
+  });
+  assert.equal(all.status, 202);
+  assert.equal(all.body.data.runId, RUN_ID);
+  assert.equal(all.body.data.taskName, 'daily-price-sync');
+  assert.equal(all.body.data.status, 'RUNNING');
+  await new Promise((resolve) => setTimeout(resolve, 20));
+
+  const cn = await request('/api/ops-center/price-sync', {
+    method: 'POST', headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ marketGroup: 'CN' })
+  });
+  assert.equal(cn.status, 202);
+  await new Promise((resolve) => setTimeout(resolve, 20));
+  const usCa = await request('/api/ops-center/price-sync', {
+    method: 'POST', headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ marketGroup: 'US_CA' })
+  });
+  assert.equal(usCa.status, 202);
+  await new Promise((resolve) => setTimeout(resolve, 20));
+});
+
+test('价格同步非法市场组/额外字段返回 400', async () => {
+  for (const body of [{ marketGroup: 'HK' }, { marketGroup: 'CN', repair: true }]) {
+    const response = await request('/api/ops-center/price-sync', {
+      method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body)
+    });
+    assert.equal(response.status, 400);
+    assert.equal(response.body.success, false);
+  }
+});
+
+test('价格同步已有活跃运行时返回 409 + 当前运行信息', async (t) => {
+  t.mock.method(TaskRun, 'init', async () => TaskRun);
+  t.mock.method(TaskRun, 'create', async () => {
+    throw Object.assign(new Error('duplicate lock'), { code: 11000 });
+  });
+  const active = {
+    _id: 'active-price', taskName: 'daily-price-sync', runKey: 'manual:old',
+    status: 'RUNNING', startedAt: new Date(),
+    progress: { completed: 2, total: 6, updatedAt: new Date() }
+  };
+  t.mock.method(TaskRun, 'findOne', () => ({
+    sort() { return this; },
+    lean: async () => active
+  }));
+  t.mock.method(TaskSkip, 'create', async () => ({ _id: 'skip-price' }));
+
+  const response = await request('/api/ops-center/price-sync', {
+    method: 'POST', headers: { 'content-type': 'application/json' }, body: '{}'
+  });
+  assert.equal(response.status, 409);
+  assert.equal(response.body.code, 'TASK_ALREADY_RUNNING');
+  assert.equal(response.body.details.activeRun.runId, 'active-price');
+  assert.equal(response.body.details.activeRun.progress.total, 6);
 });
 
 test('已有活跃运行返回 409 + activeRun；请求体非空 400', async (t) => {

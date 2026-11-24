@@ -41,6 +41,8 @@ cron-worker 通过 `src/config/env.js` 加载 **`cron-worker/.env`**（不是 `s
 | `MARKET_DATA_TIMEOUT_MS` | `10000` | 单次行情请求超时（毫秒） |
 
 > 时区解析优先级：`SCHEDULER_TIMEZONE` → `MARKET_TIMEZONE` → `America/Toronto`。
+>
+> 运维中心手动任务相关 `OPS_*`（进度节流、完整性/价格同步 stale 阈值）由 shared 读取；`OPS_INTEGRITY_STALE_MS` / `OPS_PRICE_SYNC_STALE_MS` 在 server 与 worker 两侧必须一致。完整变量表见 [DEPLOYMENT](./DEPLOYMENT.md)。
 
 ---
 
