@@ -22,6 +22,7 @@ const familyRoutes = require('./routes/family.routes');
 const valuationRoutes = require('./routes/valuation.routes');
 const cronStatusRoutes = require('./routes/cron-status.routes');
 const opsCenterRoutes = require('./routes/opsCenter.routes');
+const opsTaskRoutes = require('./routes/opsTask.routes');
 
 // ---------------------------------------------------------------------------
 // CORS 白名单（TASK-058 / FS §6 U1-R10）
@@ -122,6 +123,8 @@ app.use('/api/valuations', valuationRoutes);
 app.use('/api/cron', cronStatusRoutes);
 // TASK-068：运维中心只读聚合（GET /api/ops-center/assets）
 app.use('/api/ops-center', opsCenterRoutes);
+// TASK-070：手动 integrity-check 与 task-run 详情（仅登录，UI-only admin）
+app.use('/api/ops-center', opsTaskRoutes);
 
 app.use((req, res) => failure(req, res, 404, 'API route not found'));
 app.use(errorHandler);

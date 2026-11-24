@@ -14,6 +14,7 @@ import { ASSET_MARKETS } from '../../constants/enums';
 import { OPS_CENTER_DEFAULT_FILTERS, OPS_CENTER_DEFAULT_PAGE_SIZE } from '../../constants/opsCenter';
 import { colors } from '../../constants/design-tokens';
 import { useOpsCenterAssets } from '../../hooks/useOpsCenterAssets';
+import { useIntegrityRefresh } from '../../hooks/useIntegrityRefresh';
 import { getApiErrorMessage } from '../../services/api.client';
 
 const TODAY_PRICE_VIEW = Object.freeze({
@@ -62,6 +63,12 @@ const SORT_OPTIONS = Object.freeze([
 ]);
 
 const UNKNOWN_TEXT = '—';
+
+const REFRESH_RESULT_VIEW = Object.freeze({
+  SUCCEEDED: { label: '检查完成', color: colors.statusOk },
+  PARTIAL: { label: '检查完成（部分资产失败）', color: colors.statusWarn },
+  FAILED: { label: '检查失败', color: colors.statusBad }
+});
 
 function todayPriceCell(todayPrice) {
   const status = todayPrice?.status;
@@ -115,15 +122,52 @@ function validityCell(validity) {
   );
 }
 
+function formatCheckedAt(value) {
+  if (!value) return UNKNOWN_TEXT;
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return UNKNOWN_TEXT;
+  return date.toLocaleString('zh-CN', { hour12: false });
+}
+
 function historyCell(history) {
   if (!history || history.status === 'unavailable') {
-    return <span data-testid="ops-history" style={{ color: colors.textMuted }}>尚未检查</span>;
+    return <span data-testid="ops-history" data-status="unavailable" style={{ color: colors.textMuted }}>尚未检查</span>;
   }
-  return <span data-testid="ops-history">{UNKNOWN_TEXT}</span>;
+  if (history.status === 'unknown') {
+    return (
+      <div data-testid="ops-history" data-status="unknown" style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+        <span style={{ color: colors.statusIdle }}>无法判断</span>
+        {history.checkedAt && (
+          <span data-testid="ops-history-checked-at" style={{ color: colors.textMuted, fontSize: 11 }}>
+            上次检查 {formatCheckedAt(history.checkedAt)}
+          </span>
+        )}
+      </div>
+    );
+  }
+  const ratioText = typeof history.ratio === 'number' && Number.isFinite(history.ratio)
+    ? `${(history.ratio * 100).toFixed(1)}%`
+    : UNKNOWN_TEXT;
+  return (
+    <div data-testid="ops-history" data-status="checked" style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+      <span>
+        已采 <span data-testid="ops-history-actual">{history.actual ?? UNKNOWN_TEXT}</span>
+        {' / '}应有 <span data-testid="ops-history-expected">{history.expected ?? UNKNOWN_TEXT}</span>
+      </span>
+      <span style={{ color: history.missing > 0 ? colors.statusWarn : colors.statusOk }}>
+        缺失 <span data-testid="ops-history-missing">{history.missing ?? UNKNOWN_TEXT}</span>
+        {' · '}完整率 <span data-testid="ops-history-ratio">{ratioText}</span>
+      </span>
+      <span data-testid="ops-history-checked-at" style={{ color: colors.textMuted, fontSize: 11 }}>
+        上次检查 {formatCheckedAt(history.checkedAt)}
+      </span>
+    </div>
+  );
 }
 
 export default function AssetDataPanel() {
   const { isAdmin } = useAuth();
+  const refresh = useIntegrityRefresh();
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(OPS_CENTER_DEFAULT_PAGE_SIZE);
   const [filters, setFilters] = useState({ ...OPS_CENTER_DEFAULT_FILTERS });
@@ -177,6 +221,13 @@ export default function AssetDataPanel() {
   const total = pagination?.total ?? 0;
   const totalPages = Math.max(1, Math.ceil(total / pageSize));
   const hasFilters = Boolean(filters.market || filters.missingType || filters.search || filters.active !== 'true');
+  const refreshError = refresh.startError || refresh.runError;
+  const refreshErrorText = !refreshError
+    ? ''
+    : (refreshError.code === 'TASK_ALREADY_RUNNING'
+      ? '已有检查在运行，请稍后重试'
+      : getApiErrorMessage(refreshError, '检查刷新失败'));
+  const refreshResult = REFRESH_RESULT_VIEW[refresh.run?.status] || null;
 
   return (
     <div className="space-y-3">
@@ -266,6 +317,35 @@ export default function AssetDataPanel() {
           <option value="desc">降序</option>
         </select>
       </form>
+
+      {isAdmin && (
+        <div className="flex flex-wrap items-center gap-3 text-sm" data-testid="ops-integrity-refresh-control">
+          <button
+            type="button"
+            data-testid="ops-integrity-refresh"
+            onClick={() => refresh.start()}
+            disabled={refresh.isStarting || refresh.isRunning}
+            className="px-3 py-1 bg-gray-200 rounded disabled:opacity-50"
+          >
+            {refresh.isStarting || refresh.isRunning ? '检查中…' : '刷新历史完整度'}
+          </button>
+          {refresh.run?.progress && (
+            <span data-testid="ops-integrity-progress" style={{ color: colors.textSecondary }}>
+              已完成 {refresh.run.progress.completed ?? 0} / {refresh.run.progress.total ?? UNKNOWN_TEXT}
+            </span>
+          )}
+          {refreshResult && (
+            <span data-testid="ops-integrity-result" style={{ color: refreshResult.color }}>
+              {refreshResult.label}
+            </span>
+          )}
+          {refreshError && (
+            <span data-testid="ops-integrity-error" role="alert" style={{ color: colors.statusBad }}>
+              {refreshErrorText}
+            </span>
+          )}
+        </div>
+      )}
 
       <div className="flex flex-wrap items-center justify-between gap-2 text-sm" style={{ color: colors.textSecondary }}>
         <span>

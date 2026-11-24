@@ -20,6 +20,10 @@ Related ExecPlan:
 
 `docs/development/tasks/completed/TASK-005-unify-scheduler-plan.md`
 
+Related ADR:
+
+`ADR-004（运维中心手动任务执行机制；不改变本 ADR 的调度归属）`
+
 Supersedes:
 
 `None`
@@ -181,6 +185,11 @@ Unaffected areas:
 - **`shared/` 内保留原相对目录结构**，使搬迁文件的内部引用零改动；跨界引用统一为 `@portomind/shared/...`。
 - **任务与调度的边界**：`shared/tasks/dailySync.js` 是纯模块（不加载 `.env`、不建连）；各包的 `tasks/*.js` 只是 CLI 薄壳（加载本包 `.env` → 建连 → 调用共享任务）。`dailySync` 的调度路径由 `cron-worker` 的 priceScheduler 直接调用共享实现，**不经过**薄壳。
 - **`historySync` 与 `integrityCheck` 留在 `cron-worker`**：它们只有 worker 使用（`server` 侧那份是死代码，已删），迁入 `shared` 无收益。
+  > **2026-11-24 演进（TASK-070 / ADR-004）**：完整性检查的业务计算已抽入
+  > `shared/tasks/priceIntegrityCheck.js`，因为 `server` 的手动刷新需要复用同一实现；
+  > `cron-worker/src/tasks/integrityCheck.js` 退化为 `.env` / 连接 / CLI / 修复注入的薄壳。
+  > `historySync` 仍留在 `cron-worker`。本 ADR 的「`cron-worker` 唯一调度所有者、`server` 不注册 cron」
+  > 结论不变；手动端点只启动共享任务，不产生定时触发。
 - **调度触发权 ≠ 业务能力**：`alertEngine` / `fxRate` / `rebalance` 引擎留在 `shared` 并被两个进程共享；`server` 的手动端点因此与定时调度结果口径一致。
 - **再平衡的单日分发**：`cron-worker/src/schedulers/rebalanceScheduler.js` 每日 00:00 读取未归档组合，按 `rebalanceSchedule` 判断到期（`daily`=每日 / `weekly`=周一 / `monthly`=1 日）。原因：调度迁出 API 进程后无法跨进程动态注册；分发器让组合新增/改动/归档在下一周期自动生效，且 `taskName`/`runKey` 语义与迁移前一致。
 - **不变量**：AUTO 再平衡只生成建议 + 提醒，**永不自动交易**。
@@ -243,6 +252,7 @@ Related documentation:
 - `docs/development/tasks/completed/DOCS-DEDUP-2026-10-15.md` §3 — Q10 缺口发现过程
 - `docs/handbook/ops/CRON_WORKER_OPS.md` — 调度与数据质量运维
 - `docs/handbook/ops/DEPLOYMENT.md` §2 / §3 — 进程拓扑与环境变量
+- [ADR-004](./ADR-004-ops-center-manual-task-execution.md) — 运维中心手动任务：共享任务内核、TaskRun 异步执行与跨进程锁
 - [`docs/handbook/product/lines/`](../../handbook/product/lines) — 功能全景与能力边界（原 `docs/os/architecture/functions.md`，已归档于 `docs/archive/functions.md`）
 - `DOCS.md` — 文档结构与「单一归属」规则
 
@@ -259,3 +269,10 @@ ADR created（随 TASK-005 实施完成）。方案 A 与三项附加裁决由 H
 - D3 `SCHEDULER_ENABLED` 终态 = **仅 worker 保留，server 移除**
 - D4（仅方案 B 需要的内部端点鉴权）= **不适用**，随方案 A 自动失效
 - D5 `calendar.service` + `markets` 迁入 `shared` = **是**
+
+### 2026-11-24
+
+TASK-070 新增 [ADR-004](./ADR-004-ops-center-manual-task-execution.md)：`server` 的运维中心手动刷新通过
+`shared/tasks/priceIntegrityCheck.js` 启动异步 TaskRun，`cron-worker` 仍是唯一调度所有者；新增
+`lockKey` / `progress` 作为执行机制。本 ADR 的原始背景、方案比较与裁决**保持不变**，
+`integrityCheck` 的落点由「仅 worker」演进为「业务在 shared、触发与 repair 注入在 worker」。

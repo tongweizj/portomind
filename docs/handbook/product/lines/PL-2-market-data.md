@@ -135,7 +135,7 @@
 | 历史回补并发 | `shared/tasks/historySync.cjs`（`p-limit`，默认 3） | cron-worker 任务 |
 | 重试退避 | `shared/utils/retry.js`（指数退避 + 抖动） | 两进程共用 |
 | 日志 | `shared/config/logger.js`（`app-%DATE%.log` + `task-%DATE%.log`，含脱敏） | 两进程共用同一目录与配置 |
-| 完整性检查 | `cron-worker/src/tasks/integrityCheck.js` | 仅 worker 持有（无 API 手动端点） |
+| 完整性检查 | `shared/tasks/priceIntegrityCheck.js`；`cron-worker/src/tasks/integrityCheck.js` 为 CLI/调度薄壳 | 定时触发只在 worker；server 运维中心可手动触发同一共享任务（TASK-070） |
 | CLI 薄壳 | `server/tasks/dailySync.js`、`cron-worker/src/tasks/dailySync.js` | 只负责 `.env` + 建连 + 调用内核 + 断开 |
 
 ### 6.3 行情抓取适配与容错
@@ -202,7 +202,7 @@
 ## 7. 边界与已知缺口
 
 - **完整性检查截断无提示**：缺失区间超 `maxRepairRanges=50` 时静默截断（与 AS-07 同一动作）。
-- **`integrityCheck.js` 偏大**（约 386 行），待拆分。
+- **历史完整度只表示检测到的缺口**：`GAP` 不推断停牌、采集失败或供应商异常；`unknown` 不折算为 0%。
 - **节假日表需逐年维护**：CN/HK `2027+` 未维护，未维护年份按空表处理（已加 warn）。
 - **估值分位无自动抓取**：可持续性弱，间接使 AL-10 长期静默。
 

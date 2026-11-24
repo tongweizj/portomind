@@ -2,7 +2,7 @@
 //
 // TASK-068 / TASK-069：运维中心资产总表聚合服务。
 // 只验证外部可观察结果：状态契约、服务端筛选/搜索/排序/分页、
-// 有效性（最近 3 个目标市场日）与 history 占位契约。
+// 有效性（最近 3 个目标市场日）与 history 三态契约。
 // 时间固定注入，不依赖运行当天的真实日期。
 
 process.env.SCHEDULER_TIMEZONE = 'America/Toronto';
@@ -11,6 +11,7 @@ const test = require('node:test');
 const assert = require('node:assert/strict');
 
 const Asset = require('@portomind/shared/models/asset');
+const TaskRun = require('@portomind/shared/models/taskRun');
 const { matchesAssetQuery } = require('../helpers/assetQuery');
 const Price = require('@portomind/shared/models/price');
 const {
@@ -71,6 +72,13 @@ function asset(over = {}) {
   };
 }
 
+test.beforeEach((t) => {
+  t.mock.method(TaskRun, 'findOne', () => ({
+    sort() { return this; },
+    lean: async () => null
+  }));
+});
+
 const byId = (items, id) => items.find((item) => item.assetId === id);
 
 test('默认 active、问题优先排序，并按今日价格/基础信息/有效性返回可观察状态', async (t) => {
@@ -103,7 +111,9 @@ test('默认 active、问题优先排序，并按今日价格/基础信息/有�
   });
   assert.deepEqual(voo.basicInfo, { complete: true, missingFields: [] });
   assert.deepEqual(voo.validity, { status: 'normal' });
-  assert.deepEqual(voo.history, { status: 'unavailable' });
+  assert.deepEqual(voo.history, {
+    status: 'unavailable', checkedAt: null, expected: null, actual: null, missing: null, ratio: null
+  });
 
   const missing = byId(result.data, 'a2');
   assert.equal(missing.todayPrice.marketDay, '2026-11-20');
@@ -315,7 +325,9 @@ test('价格源查询失败时降级为 unknown，不伪造缺价/待核查', as
   assert.equal(result.data[0].todayPrice.status, 'unknown');
   assert.equal(result.data[0].todayPrice.priceDate, null);
   assert.equal(result.data[0].validity.status, 'unknown');
-  assert.deepEqual(result.data[0].history, { status: 'unavailable' });
+  assert.deepEqual(result.data[0].history, {
+    status: 'unavailable', checkedAt: null, expected: null, actual: null, missing: null, ratio: null
+  });
 });
 
 
@@ -328,4 +340,40 @@ test('历史缺口只在 checked 且 missing>0 时进入优先级分组', () => 
   assert.equal(priorityGroup({ ...base, history: { status: 'checked', missing: 2 } }), 3);
   assert.equal(priorityGroup({ ...base, history: { status: 'checked', missing: 0 } }), 4);
   assert.equal(priorityGroup({ ...base, history: { status: 'unavailable' } }), 4);
+});
+
+
+test('历史完整度：checked / unknown / unavailable 三态与计数', async (t) => {
+  const assets = [
+    asset({ _id: 'h1', symbol: 'ONE.US' }),
+    asset({ _id: 'h2', symbol: 'NEW.US', launchDate: new Date('2026-11-19T12:00:00.000Z') }),
+    asset({ _id: 'h3', symbol: 'NONE.US' })
+  ];
+  stubAssets(t, assets);
+  stubPrices(t, []);
+  const endedAt = new Date('2026-11-24T07:30:00.000Z');
+  const run = {
+    endedAt,
+    result: {
+      assets: [
+        { assetId: 'h1', status: 'GAP', expected: 240, actual: 238, missing: 2, ratio: 238 / 240 },
+        { assetId: 'h2', status: 'INSUFFICIENT_SAMPLE', expected: null, actual: null, missing: null, ratio: null }
+      ]
+    }
+  };
+
+  const result = await getAssetsOverview({
+    now: NOW_SYNCED,
+    dependencies: { loadLatestIntegrityRun: async () => run }
+  });
+
+  assert.deepEqual(byId(result.data, 'h1').history, {
+    status: 'checked', checkedAt: endedAt, expected: 240, actual: 238, missing: 2, ratio: 238 / 240
+  });
+  assert.deepEqual(byId(result.data, 'h2').history, {
+    status: 'unknown', checkedAt: endedAt, expected: null, actual: null, missing: null, ratio: null
+  });
+  assert.deepEqual(byId(result.data, 'h3').history, {
+    status: 'unknown', checkedAt: endedAt, expected: null, actual: null, missing: null, ratio: null
+  }, '有可用运行但无该资产条目时是 unknown，不是未检查');
 });

@@ -233,6 +233,7 @@ cron-worker/index.js
 
 | ADR | 主题 | 状态 |
 |---|---|---|
+| [ADR-004](./adr/ADR-004-ops-center-manual-task-execution.md) | 运维中心手动任务：共享任务内核、TaskRun 异步执行与跨进程锁 | `Accepted`（2026-11-24，Human 批准） |
 | [ADR-003](./adr/ADR-003-symbol-suffix-contract.md) | symbol 统一契约：存储带大写后缀（按 market 派生），采集按市场去除/保留 | `Accepted`（2026-11-17，Human 正式批准） |
 | [ADR-002](./adr/ADR-002-single-scheduler.md) | 单一调度器：全部定时任务收敛到 `cron-worker` | `Accepted` |
 | [ADR-001](./adr/ADR-001-authentication.md) | 认证机制（服务端会话 + 角色） | `Accepted`（U1+U2+U3 均已实施，2026-10-27） |
