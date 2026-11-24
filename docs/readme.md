@@ -13,8 +13,8 @@ docs/
 │   ├── ARCHITECTURE.md
 │   ├── PRICE-PIPELINE-REVIEW.md
 │   └── adr/               # ADR-001 认证 / ADR-002 单一调度器 / ADR-003 symbol 后缀契约
-├── standards/             # 工程规范：编码 / 测试 / Git（文档与安全规则待重建）
 ├── prototypes/            # 设计稿与交互原型：Ardot 视觉稿、HTML 原型、截图基线
+├── agents/                # 代理配置与工程规范：Issue tracker、triage 标签、域文档、编码/测试/Git
 ├── handbook/              # 持续维护的系统资料
 │   ├── technical/         # API 契约、数据模型、前端与调度开发说明
 │   ├── manual/            # 用户手册：界面操作、业务概念
@@ -24,7 +24,7 @@ docs/
 └── assets/                # 文档公共静态资源
 ```
 
-`architecture/` 与 `handbook/` 是技术真相层，随系统行为变化持续更新；`standards/` 现存编码、测试、Git 三份工程约束，文档结构与安全规则已删除、待启用 Claude 后重建；`prototypes/` 是设计资产。四者都不随单个任务启闭。
+`architecture/` 与 `handbook/` 是技术真相层，随系统行为变化持续更新；`agents/` 承载代理配置与工程规范（编码、测试、Git，以及 Issue tracker、triage 标签、域文档消费规则）；`prototypes/` 是设计资产。三者都不随单个任务启闭。
 
 ## 快速查找
 
@@ -32,7 +32,7 @@ docs/
 |---|---|
 | 系统结构、技术栈、模块边界、架构债 | [ARCHITECTURE.md](./architecture/ARCHITECTURE.md) |
 | 某个结构性决策「为什么这么做」 | [adr/](./architecture/adr) |
-| 编码 / 测试 / Git 规范（文档与安全规则待重建） | [standards/](./standards) |
+| 编码 / 测试 / Git 规范 | [CODING.md](./agents/CODING.md) · [TESTING.md](./agents/TESTING.md) · [GIT.md](./agents/GIT.md) |
 | 价格链路专项审阅 | [PRICE-PIPELINE-REVIEW.md](./architecture/PRICE-PIPELINE-REVIEW.md) |
 | HTTP 接口与响应 | [API_CONTRACT.md](./handbook/technical/API_CONTRACT.md) |
 | 数据模型字段、枚举、索引 | [DATA_MODEL.md](./handbook/technical/DATA_MODEL.md) |
@@ -42,6 +42,7 @@ docs/
 | 界面操作与业务口径 | [CLIENT.md](./handbook/manual/CLIENT.md) |
 | 产品功能全景、能力边界 | [PRODUCT_LINES.md](./handbook/product/PRODUCT_LINES.md) |
 | 设计稿、7 屏 PNG、全屏 PDF、HTML 原型 | [prototypes/README.md](./prototypes/README.md) |
+| 代理配置（Issue tracker / triage 标签 / 域文档） | [agents/](./agents) |
 | 中文项目介绍 | [README.zh-CN.md](./handbook/README.zh-CN.md) |
 | 需求 / Spec / US / Task / 计划 / 证据 | GitHub Issues |
 | 建单模板 | [.github/ISSUE_TEMPLATE/](../.github/ISSUE_TEMPLATE) |
@@ -49,7 +50,7 @@ docs/
 ## 明细入口
 
 - 架构：[架构总览](./architecture/ARCHITECTURE.md)、[ADR-001 认证](./architecture/adr/ADR-001-authentication.md)、[ADR-002 单一调度器](./architecture/adr/ADR-002-single-scheduler.md)、[ADR-003 symbol 后缀契约](./architecture/adr/ADR-003-symbol-suffix-contract.md)、[价格链路审阅](./architecture/PRICE-PIPELINE-REVIEW.md)。
-- 规范：[编码](./standards/CODING.md)、[测试](./standards/TESTING.md)、[Git](./standards/GIT.md)。文档结构与安全条款已删除，相关规则待启用 Claude 后重建。
+- 规范：[编码](./agents/CODING.md)、[测试](./agents/TESTING.md)、[Git](./agents/GIT.md)。
 - 开发：[API 契约](./handbook/technical/API_CONTRACT.md)、[数据模型](./handbook/technical/DATA_MODEL.md)、[前端开发](./handbook/technical/CLIENT_DEV.md)、[调度开发](./handbook/technical/CRON_WORKER_DEV.md)。
 - 用户：[客户端操作](./handbook/manual/CLIENT.md)、[业务概念](./handbook/manual/Concept.md)、[后台任务功能介绍](./handbook/manual/CRON_WORKER_PRODUCT.md)。
 - 运维：[系统部署](./handbook/ops/DEPLOYMENT.md)、[服务端运行](./handbook/ops/SERVER.md)、[调度总览](./handbook/ops/CRON_WORKER.md)、[调度运维](./handbook/ops/CRON_WORKER_OPS.md)、[产品线明细](./handbook/product/lines)。
@@ -58,7 +59,7 @@ docs/
 ## 校验
 
 ```bash
-npm run docs:check        # 扫描 docs/**/*.md、docs/**/*.html 与仓库根 README
+npm run docs:check        # 扫描 docs/**/*.md、docs/**/*.html、仓库根 README 与 CLAUDE.md、各包 README/AGENTS
 npm run docs:check:links  # 兼容别名
 ```
 

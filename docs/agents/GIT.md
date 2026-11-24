@@ -1,5 +1,7 @@
 # GIT.md
 
+> 过程文档已迁至 GitHub Issues / Projects：本文中的 “task card” 指对应的 GitHub Issue，“ExecPlan” 指 Issue 正文中的实施计划，任务状态由 Projects 的 `Status` 字段维护。`REVIEWER.md`、`EXECUTION_PLANS.md`、`STATES.md` 等旧流程文件已退役。
+
 ## 1. Purpose
 
 This document defines Git practices for human and multi-agent development.
@@ -234,7 +236,7 @@ When resolving conflicts:
 3. Preserve approved intent from both tasks where appropriate.
 4. Re-run relevant verification afterward.
 
-Complex conflicts require the human owner. There is **no Integrator role** in this project — see EXECUTION_PLANS.md §7.
+Complex conflicts require the human owner. There is **no Integrator role** in this project.
 
 ---
 
@@ -272,19 +274,19 @@ If unexpected uncommitted work exists, do not silently discard it.
 
 ## 16. Integration
 
-**Only the Human merges into `main`.** There is no Integrator role in this project (EXECUTION_PLANS.md §7).
+**Only the Human merges into `main`.** There is no Integrator role in this project.
 
 Integration work is therefore split as:
 
 | Step | Who |
 |---|---|
 | combining branches / resolving conflicts | the branch owner (usually the Implementer), under Human instruction |
-| running full relevant verification | Implementer runs it; Reviewer independently confirms (see REVIEWER.md) |
+| running full relevant verification | Implementer runs it; Reviewer independently confirms (see the `code-review` skill) |
 | confirming integrated behaviour on `main` | **Human**, after the merge |
 
 Individual branch success does not imply integration success — a green branch can still break on `main` once combined.
 
-After a merge, record the outcome in the task board's `Merged` column (`Merged` + PR number); that field is Human-maintained (STATES.md §1).
+After a merge, update the related GitHub Issue / Project item status and record the merged PR number. Status fields are Human-maintained.
 
 ---
 

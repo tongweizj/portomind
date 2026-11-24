@@ -74,6 +74,17 @@ test('task-card statuses, delivery layout and template placeholders are no longe
   assert.equal(result.status, 0);
   assert.deepEqual(result.errors, []);
 });
+test('root CLAUDE.md is scanned as an entry document', t => {
+  const root = fixture(t, {
+    'README.md': '# README\n[guide](./docs/guide.md)',
+    'CLAUDE.md': '# CLAUDE\n[guide](./docs/guide.md)\n[missing](./docs/absent.md)',
+    'docs/guide.md': '# Guide'
+  });
+  const result = run(root);
+  assert.equal(result.status, 1);
+  assert.equal(result.totalLinks, 3);
+  assert.deepEqual(result.errors.map(e => [e.file, e.rule]), [['CLAUDE.md', 'broken-link']]);
+});
 test('json output exposes link-check fields only', t => {
   const root = fixture(t, { 'docs/index.md': '[guide](./guide.md)', 'docs/guide.md': '# Guide' });
   const result = run(root);

@@ -6,7 +6,8 @@
  * --source-root PATH resolve missing non-docs files from an explicitly named
  *                    source checkout. Never use that checkout to replace missing docs or anchors.
  *
- * Scope: local links, heading anchors and HTML assets only. Task cards,
+ * Scope: local links, heading anchors and HTML assets only. Covers Markdown and HTML
+ * under docs/, the root README.md / CLAUDE.md, and per-package README/AGENTS files. Task cards,
  * delivery directory layout, task status enums and agent routing tables now
  * live in GitHub Issues / Projects and are intentionally not validated here.
  * --links-only is kept as a compatibility alias for `npm run docs:check:links`;
@@ -24,7 +25,11 @@ function option(name) {
 const ROOT = option('--root') || path.resolve(__dirname, '..');
 const SOURCE_ROOT = option('--source-root');
 const json = args.includes('--json');
-const entries = ['README.md', ...['client', 'server', 'cron-worker', 'shared'].flatMap(d => [`${d}/README.md`, `${d}/readme.md`, `${d}/AGENTS.md`])];
+const entries = [
+  'README.md',
+  'CLAUDE.md',
+  ...['client', 'server', 'cron-worker', 'shared'].flatMap(d => [`${d}/README.md`, `${d}/readme.md`, `${d}/AGENTS.md`])
+];
 const files = [], findings = [], sourceOnly = [];
 const seen = new Set();
 const relative = f => path.relative(ROOT, f).split(path.sep).join('/');

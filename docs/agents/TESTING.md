@@ -127,7 +127,7 @@ Inspect the current package scripts and test directories before choosing verific
 
 Keep reusable acceptance scripts in the repository, named by behavior or task, runnable without local edits or credentials. Prefer discoverable commands. Remove obsolete scripts with an explicit reason. Temporary probes may support one review but are not standing regression coverage.
 
-Key checks: new or critical assertions must be able to fail; “always displays” requirements need empty-state cases; do not mock away the suspected layer; investigate a failed assertion before changing it; distinguish “ran without throwing” from “produced correct data”. Negative controls follow REVIEWER.md §2.3.
+Key checks: new or critical assertions must be able to fail; “always displays” requirements need empty-state cases; do not mock away the suspected layer; investigate a failed assertion before changing it; distinguish “ran without throwing” from “produced correct data”. Negative controls should prove that the check fails when it should.
 
 ## 6. Acceptance Criteria Mapping
 
@@ -295,7 +295,7 @@ In multi-agent work:
 
 - each Implementer verifies its own scope
 - Reviewer independently checks relevant behavior
-- the **Human** runs or confirms combined verification after merge — there is no Integrator role (EXECUTION_PLANS.md §7)
+- the **Human** runs or confirms combined verification after merge — there is no Integrator role
 
 Passing tests in separate branches do not prove the integrated result is correct.
 
