@@ -30,7 +30,7 @@ const BAN = /执行|撤销|重做|手动触发|编辑阈值/;
   check('AC8 刷新按钮调用 refreshBoard', /onclick="refreshBoard\(\)"/.test(src), '未找到刷新按钮');
   check('S.logs.tab 默认 = board', /logs:\{\s*tab:'board'/.test(src), '默认值不是 board');
   check('R-2 旧 tab key（runs/logs 分支）已移除', !/f\.tab==='runs'/.test(src) && !/f\.tab==='logs'/.test(src), '仍存在旧 key');
-  check('AC11 侧栏「日志」入口未被改动', /id="nav-logs"[^>]*onclick="go\('#\/logs'\)"/.test(src), 'nav-logs 被改');
+  check('AC11 侧栏「运维中心」入口未被改动', /id="nav-logs"[^>]*onclick="go\('#\/logs'\)"/.test(src), 'nav-logs 被改');
 
   const browser = await chromium.launch({ executablePath: CHROME, headless: true });
   const page = await browser.newPage({ viewport: { width: 1440, height: 900 } });

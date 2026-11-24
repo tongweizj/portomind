@@ -12,6 +12,7 @@
 // 信息架构（TASK-050）：顶层 6 → 5 项，「家庭视图」移除（五区块并入 `/portfolios`）。
 // 信息架构（TASK-058 U2 / FS v1.5 `D12`）：顶层 5 → 4 项——「提醒规则」移入顶栏头像下拉；
 //   侧栏不含任何账户入口（无用户名区 / 无账户设置 / 无退出登录），底部只留版本注记。
+// 频道改名（TASK-067）：`/logs` 的可见身份改为「运维中心」（URL 与 tab key 不变）。
 import { useState } from 'react';
 import { Link, useLocation } from 'react-router';
 import {
@@ -49,7 +50,7 @@ const navItems = [
     ],
   },
   { to: '/prices', icon: LineChart, label: '今日行情', badge: '监控', active: (p) => p.startsWith('/prices') },
-  { to: '/logs', icon: FileText, label: '日志', active: (p) => p === '/logs' },
+  { to: '/logs', icon: FileText, label: '运维中心', active: (p) => p === '/logs' },
 ];
 
 const itemClass = 'flex items-center gap-3 px-3 py-2 text-sm transition-colors';

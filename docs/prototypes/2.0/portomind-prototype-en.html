@@ -392,7 +392,7 @@
       <!-- Alert rules has been moved out of the sidebar; the entry point is now the top bar avatar dropdown (2026-10-27); the sidebar keeps 4 items -->
       <div class="s-item" id="nav-logs" data-nav="logs" onclick="go('#/logs')">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 5h16M4 12h10M4 19h7"/></svg>
-        <span class="lbl">Logs</span>
+        <span class="lbl">Operations Center</span>
       </div>
     </nav>
     <div class="s-bottom">
@@ -1004,8 +1004,8 @@ function route(){
       // Deep-link initial values: ?date= / ?portfolio= (OQ8)
       if(q.date) S.rb.date = q.date;
       if(q.portfolio) S.rb.pid = q.portfolio;
-      setNav('logs'); title='Logs · Rebalance details'; render(vRebalanceBoard);
-    } else { setNav('logs'); title='Logs'; render(vLogs); }
+      setNav('logs'); title='Operations Center · Rebalance details'; render(vRebalanceBoard);
+    } else { setNav('logs'); title='Operations Center'; render(vLogs); }
   }
   else { setNav('root'); render(vDashboard); }
   $('tbTitle').textContent = title;
@@ -2011,7 +2011,7 @@ function saveRuleForm(id){
 }
 
 /* =====================================================
-   View · Logs (/logs) — TASK-061 / FS-cron-worker-status-board
+   View · Operations Center (/logs) — TASK-061 / FS-cron-worker-status-board
    A task run board pinned at the top, plus two raw log views (task log / server log).
    Read-only troubleshooting across the whole channel: never show Execute / Revert / Redo / Manual trigger / Edit threshold (OQ6, AC9)
 ===================================================== */

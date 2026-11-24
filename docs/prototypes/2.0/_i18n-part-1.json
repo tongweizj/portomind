@@ -35,7 +35,7 @@
     { "zh": "自选行情", "en": "Watchlist" },
     { "zh": "监控", "en": "Monitoring" },
     { "zh": "「提醒规则」已移出侧栏，入口在顶栏头像下拉（2026-10-27）；侧栏保持 4 项", "en": "Alert rules has been moved out of the sidebar; the entry point is now the top bar avatar dropdown (2026-10-27); the sidebar keeps 4 items" },
-    { "zh": "日志", "en": "Logs" },
+    { "zh": "运维中心", "en": "Operations Center" },
     { "zh": "v2.1 · 自托管", "en": "v2.1 · Self-hosted" },
     { "zh": "搜索资产、组合…", "en": "Search instruments, portfolios…" },
     { "zh": "账户唯一入口：顶栏右侧头像下拉（M-03 / D11·D12）。侧栏不再提供任何账户入口。", "en": "The single account entry point: the avatar dropdown at the right of the top bar (M-03 / D11·D12). The sidebar no longer provides any account entry." },

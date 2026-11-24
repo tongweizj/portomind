@@ -1201,7 +1201,8 @@ async function runBrowserChecks(browser) {
     const navCount = await navLinks.count();
     const navTexts = (await navLinks.allInnerTexts()).map(squash);
     assert(navCount === 4, `侧栏导航项应恰 4 个，实际 ${navCount}（${navTexts.join(' | ')}）`);
-    for (const expected of ['Dashboard', '组合管理', '今日行情', '日志']) {
+    // TASK-067：/logs 的可见身份改为「运维中心」（原「日志」）。
+    for (const expected of ['Dashboard', '组合管理', '今日行情', '运维中心']) {
       assert(navTexts.some((text) => text.includes(expected)), `侧栏缺少「${expected}」，实际 ${navTexts.join(' | ')}`);
     }
     const asideText = squash(await aside.innerText());

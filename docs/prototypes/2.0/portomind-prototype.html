@@ -407,7 +407,7 @@
       <!-- 「提醒规则」已移出侧栏，入口在顶栏头像下拉（2026-10-27）；侧栏保持 4 项 -->
       <div class="s-item" id="nav-logs" data-nav="logs" onclick="go('#/logs')">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 5h16M4 12h10M4 19h7"/></svg>
-        <span class="lbl">日志</span>
+        <span class="lbl">运维中心</span>
       </div>
     </nav>
     <div class="s-bottom">
@@ -1045,8 +1045,8 @@ function route(){
       // 深链初值：?date= / ?portfolio=（OQ8）
       if(q.date) S.rb.date = q.date;
       if(q.portfolio) S.rb.pid = q.portfolio;
-      setNav('logs'); title='日志 · 再平衡详情'; render(vRebalanceBoard);
-    } else { setNav('logs'); title='日志'; render(vLogs); }
+      setNav('logs'); title='运维中心 · 再平衡详情'; render(vRebalanceBoard);
+    } else { setNav('logs'); title='运维中心'; render(vLogs); }
   }
   else { setNav('root'); render(vDashboard); }
   $('tbTitle').textContent = title;
@@ -2073,7 +2073,7 @@ function saveRuleForm(id){
 }
 
 /* =====================================================
-   视图 · 日志（/logs）—— TASK-061 / FS-cron-worker-status-board
+   视图 · 运维中心（/logs）—— TASK-061 / FS-cron-worker-status-board
    置顶「任务运行看板」+ 两个原始日志视图（任务日志 / 服务器日志）。
    全频道只读排障：永不出现「执行 / 撤销 / 重做 / 手动触发 / 编辑阈值」（OQ6、AC9）
 ===================================================== */

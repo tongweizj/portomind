@@ -1,7 +1,7 @@
 {
   "range": "2001-2500",
   "entries": [
-    { "zh": "视图 · 日志（/logs）—— TASK-061 / FS-cron-worker-status-board", "en": "View · Logs (/logs) — TASK-061 / FS-cron-worker-status-board" },
+    { "zh": "视图 · 运维中心（/logs）—— TASK-061 / FS-cron-worker-status-board", "en": "View · Operations Center (/logs) — TASK-061 / FS-cron-worker-status-board" },
     { "zh": "置顶「任务运行看板」+ 两个原始日志视图（任务日志 / 服务器日志）。", "en": "A task run board pinned at the top, plus two raw log views (task log / server log)." },
     { "zh": "全频道只读排障：永不出现「执行 / 撤销 / 重做 / 手动触发 / 编辑阈值」（OQ6、AC9）", "en": "Read-only troubleshooting across the whole channel: never show Execute / Revert / Redo / Manual trigger / Edit threshold (OQ6, AC9)" },
     { "zh": "整体徽章只由「数据态」决定 —— 运行态 SUCCEEDED 不参与「全部正常」判定（§2.1 铁律）", "en": "The overall badge is determined solely by the data state — the SUCCEEDED run state does not take part in the all-normal verdict (§2.1 hard rule)" },
