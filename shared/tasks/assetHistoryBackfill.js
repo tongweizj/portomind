@@ -6,7 +6,7 @@
 
 const { getAssetById } = require('../services/asset.service');
 const { OPS_TASK_CONFIG } = require('../config/opsTasks');
-const { runTrackedTask, startTrackedTask } = require('../services/taskRunner');
+const { startTrackedTask } = require('../services/taskRunner');
 const { isDateString, dateBounds } = require('../utils/marketTime');
 const {
   countAssetCoverage,
