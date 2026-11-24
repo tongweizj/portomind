@@ -1,41 +1,10 @@
-const dayjs = require('dayjs');
 const Asset = require('../models/asset');
-const Price = require('../models/price');
-const { ASSET_MARKETS, ASSET_CURRENCIES } = require('../constants/asset.constants');
-const { PRICE_TARGET_MAX_LOOKBACK_DAYS } = require('../constants/cronStatus.constants');
-const { marketDate, dateBounds, MARKET_TIMEZONE } = require('../utils/marketTime');
-const { toStorageSymbol } = require('../utils/symbol');
-const { pickTargetInfo, lastOpenDayBefore, expectedBucketCandidates, marketTimezone, isMarketOpenOn } = require('./marketDay.service');
+const { ASSET_MARKETS } = require('../constants/asset.constants');
+const { marketDate, MARKET_TIMEZONE } = require('../utils/marketTime');
+const { MARKET_DAY_COUNT, priceWindow, loadPrices } = require('./priceCoverage.service');
+const { DATE_REASONS, launchDateReason, metadataReasons } = require('./assetMetadata.service');
 
 const TASK_NAME = 'asset-integrity-check';
-const EXPECTED_CURRENCY = { US: 'USD', CA: 'CAD', HK: 'HKD', 'CN-SH': 'CNY', 'CN-SZ': 'CNY', 'CN-FUND': 'CNY' };
-const MARKET_DAY_COUNT = 3;
-const DATE_REASONS = new Set(['LAUNCH_DATE_MISSING', 'LAUNCH_DATE_INVALID', 'LAUNCH_DATE_FUTURE']);
-
-function launchDateReason(asset, now) {
-  const { launchDate, market } = asset;
-  if (launchDate == null) return 'LAUNCH_DATE_MISSING';
-  if (!(launchDate instanceof Date) || !Number.isFinite(launchDate.getTime())) return 'LAUNCH_DATE_INVALID';
-  const tz = ASSET_MARKETS.includes(market) ? marketTimezone(market) : MARKET_TIMEZONE;
-  return marketDate(launchDate, tz) > marketDate(now, tz) ? 'LAUNCH_DATE_FUTURE' : null;
-}
-
-function metadataReasons(asset, now) {
-  const { symbol, market, currency } = asset;
-  const name = typeof asset.name === 'string' ? asset.name.trim() : '';
-  const validMarket = ASSET_MARKETS.includes(market);
-  const reasons = [];
-  if (typeof symbol !== 'string' || !/^[A-Z0-9][A-Z0-9._-]{0,31}$/.test(symbol)) reasons.push('SYMBOL_FORMAT');
-  else if (validMarket && symbol !== toStorageSymbol(symbol, market)) reasons.push('SYMBOL_SUFFIX');
-  if (!name) reasons.push('NAME_EMPTY');
-  else if (name.length > 120) reasons.push('NAME_TOO_LONG');
-  if (!validMarket) reasons.push('MARKET_INVALID');
-  if (!ASSET_CURRENCIES.includes(currency)) reasons.push('CURRENCY_INVALID');
-  else if (validMarket && EXPECTED_CURRENCY[market] !== currency) reasons.push('CURRENCY_MISMATCH');
-  const dateReason = launchDateReason(asset, now);
-  if (dateReason) reasons.push(dateReason);
-  return reasons;
-}
 
 function incompleteEntry(asset, reasons) {
   return { assetId: String(asset._id), symbol: asset.symbol ?? null, name: asset.name ?? null, market: asset.market ?? null, reasons };
@@ -52,38 +21,6 @@ function summarize(total, incompleteAssets) {
     priceEmpty3MarketDays: missingByReason.PRICE_EMPTY_3_MARKET_DAYS || 0,
     missingByReason, incompleteAssets
   };
-}
-
-function priceWindow(market, now, tz) {
-  const { targetMarketDate } = pickTargetInfo(market, now, tz);
-  const dates = [];
-  if (targetMarketDate) {
-    const lower = dayjs.utc(targetMarketDate).subtract(PRICE_TARGET_MAX_LOOKBACK_DAYS - 1, 'day').format('YYYY-MM-DD');
-    let date = targetMarketDate;
-    while (date && date >= lower && dates.length < MARKET_DAY_COUNT) {
-      dates.push(date);
-      if (dates.length < MARKET_DAY_COUNT) date = lastOpenDayBefore(market, date, tz);
-    }
-  }
-  const buckets = new Set(dates);
-  for (const date of dates) {
-    for (const candidate of expectedBucketCandidates(market, date)) {
-      // 窗外开市日的桶可能是它自己的价格。只有休市日的旧桶可无歧义归给窗口。
-      if (!buckets.has(candidate) && !isMarketOpenOn(market, candidate)) buckets.add(candidate);
-    }
-  }
-  return { dates, buckets };
-}
-
-async function loadPrices(symbols, buckets) {
-  if (!symbols.length || !buckets.size) return [];
-  return Price.find({
-    symbol: { $in: symbols },
-    $or: [...buckets].map(day => {
-      const { start, end } = dateBounds(day);
-      return { timestamp: { $gte: start, $lt: end } };
-    })
-  }).select('symbol price timestamp').lean();
 }
 
 async function inspectAssetIntegrity({ now = new Date(), dependencies = {} } = {}) {

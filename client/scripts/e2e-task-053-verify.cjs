@@ -50,9 +50,11 @@ async function main() {
   const navTexts = await page.locator('aside nav a').allInnerTexts();
   check('AC1 侧栏入口为运维中心', navTexts.some((text) => text.includes('运维中心')), navTexts.join('|'));
   const tabLabels = await page.getByRole('tab').allInnerTexts();
-  check('AC1 恰好 3 个 tab', tabLabels.length === 3, JSON.stringify(tabLabels));
-  check('AC1 顺序 = 看板/服务器/任务',
-    tabLabels[0] === '任务运行看板' && tabLabels[1] === '服务器日志' && tabLabels[2] === '任务日志',
+  // TASK-068：资产数据 tab 固定在看板之后（顺序 看板/资产数据/服务器/任务）。
+  check('AC1 恰好 4 个 tab', tabLabels.length === 4, JSON.stringify(tabLabels));
+  check('AC1 顺序 = 看板/资产数据/服务器/任务',
+    tabLabels[0] === '任务运行看板' && tabLabels[1] === '资产数据'
+      && tabLabels[2] === '服务器日志' && tabLabels[3] === '任务日志',
     JSON.stringify(tabLabels));
   const selected0 = await page.getByRole('tab', { selected: true }).innerText().catch(() => '');
   check('AC1 无参数时默认选中看板', selected0 === '任务运行看板', selected0);

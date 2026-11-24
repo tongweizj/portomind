@@ -144,6 +144,14 @@ Portfolio 枚举：`type`（风险定位）为 `活钱 | 稳健 | 长期`；`acc
 | `GET /api/logs` | Query: `date?` (`YYYY-MM-DD`，默认市场当日), `level?` (`all\|error\|warn\|info\|verbose\|debug\|silly`), `page,pageSize` | 应用日志条目数组 + 分页 | `200`; 查询参数无效 `400`; `500` |
 | `GET /api/logs/tasks` | Query: `date?` (`YYYY-MM-DD`，默认市场当日), `level?`, `page,pageSize` | 任务日志条目数组 + 分页 | `200`; 查询参数无效 `400`; `500` |
 | `GET /api/cron/status` | Query: `detail?`（缺省＝主视图；`rebalance`＝再平衡逐组合明细；其它非空值 `400`）、`date?`（`YYYY-MM-DD`，**仅 detail 校验/使用**；detail 下非法 `400`，主视图忽略该参数）、`portfolioId?`（ObjectId，仅 detail；非法/不存在仍 `200` + 空 `rows` + `notes[].code`） | **只读**聚合快照：`{generatedAt,timezone,staleThresholdHours,tasks:[5]}`。每项含 `taskName/lastRun(无记录 null)/stale/contractReady/dataState/dataStateLevel(ok\|warn\|bad\|unknown)/notes[]`。价格数据态：`{targetMarketDate,calendarPrevOpenDay,expected,fetched,missing[],byMarket,notListed[],unsupportedMarkets[],dayPriceSymbolCount}`；完整性/提醒/汇率/再平衡的 `result` 派生值在缺失时为 `null`（`contractReady=false` + `CONTRACT_NOT_READY`）；TASK-057 落地后按冻结 `result` 归一化。detail 形态：`{date,contractReady,generatedAt,summary:{totalPortfolios,due,generated,failed,skipped},rows[],notes[]}` | `200`; `detail` 非法 `400`；detail 下 `date` 非法 `400`；`portfolioId` 非法/不存在不报错（`200` + 空结果）。**不触发任何任务、不写任何集合** |
+| `GET /api/ops-center/assets` | Query: `page,pageSize`（默认 `1/50`，上限 100）。TASK-068 只提供默认页；筛选/排序参数在 Ticket 03 增加前**不接收**。 | 资产总表数组 + 分页。每项 `{assetId,symbol,name,market,currency,launchDate,todayPrice:{marketDay,status,priceDate},basicInfo:{complete,missingFields},validity:{status},history:{status:'unavailable'}}`。默认只取 `active`，按 `symbol` 升序。缺失/未知值为 `null`，不补 0。 | `200`; 非法分页参数 `400`; 未登录 `401`。**只读，不触发任务、不写集合** |
+
+> `GET /api/ops-center/assets` 的字段口径（TASK-068）：
+> - `todayPrice.marketDay` 是 `marketDay.service` 计算的目标市场日，不是自然日；`todayPrice.status ∈ priced | missing | market_closed | not_due | not_listed | unknown`。`priced` 表示目标市场日已有价格；`missing` 表示已到同步点、市场开市且无价格；`market_closed` 表示当前市场日休市；`not_due` 表示尚未到该市场当日同步点；`not_listed` 表示目标市场日早于资产 `launchDate`；`unknown` 表示市场不受支持或无法确定目标日。`priceDate` 仅在 `priced` 时返回实际价格入桶日期（`MARKET_TIMEZONE`），否则为 `null`。
+> - `basicInfo` 只检查 `symbol/name/market/currency/launchDate` 五个元数据字段；`missingFields` 取 `symbol|name|market|currency|launchDate`（含格式非法），不包含价格、类型、标签或启用状态。
+> - `validity.status` 按最近 3 个目标市场日判断：任一有价 `normal`；全空 `needs_review`（表示资产资料可能有问题，**不是采集失败**）；无 `launchDate`、上市不足 3 个市场日或市场不受支持为 `unknown`。休市日不计入 3 个市场日。
+> - `history.status = unavailable` 是本票的占位契约（历史完整度由 Ticket 04 填充），客户端显示「尚未检查」。
+> - 端点只要求登录，不新增 admin 校验；admin 可见的资产编辑链接是 UI 约定，不是安全边界。
 
 > `GET /api/cron/status` 是**只读聚合**端点。价格覆盖按 `byMarket` 的目标日分别查价，顶层 `targetMarketDate` 取最晚目标日，`expected` 和 `fetched` 为各市场的合计。TASK-078 更新了分组目标日规则。其余字段定义见 TASK-054 ExecPlan §4.3/§4.4。
 
