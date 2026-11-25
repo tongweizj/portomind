@@ -328,6 +328,49 @@ test('批量补采异步返回 202，父 TaskRun 汇总逐资产结果', async (
   assert.equal(final.$set.result.assets.length, 2);
 });
 
+test('批量补采全部资产失败时父 TaskRun 为 FAILED，部分失败仍为 PARTIAL', async (t) => {
+  stubBatchAssets(t);
+  t.mock.method(TaskRun, 'init', async () => TaskRun);
+  // 子任务按 assetId 决定成败：failIds 内的资产创建子 TaskRun 时抛错 → 该资产 failed。
+  let failIds = new Set([ASSET_ID, ASSET_ID_2]);
+  t.mock.method(TaskRun, 'create', async (doc) => {
+    if (doc.taskName === 'asset-history-backfill-batch') return { ...doc, _id: `batch-${doc.runKey}` };
+    if ([...failIds].some((id) => String(doc.lockKey || doc.runKey || '').includes(id))) {
+      throw new Error('child store unavailable');
+    }
+    return { ...doc, _id: `child-${doc.runKey}` };
+  });
+  const updates = [];
+  t.mock.method(TaskRun, 'updateOne', async (filter, update) => {
+    updates.push(update);
+    return { modifiedCount: 1 };
+  });
+
+  const start = () => request('/api/ops-center/price-backfill', {
+    method: 'POST', headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ assetIds: [ASSET_ID, ASSET_ID_2], from: '2026-11-20', to: '2026-11-20' })
+  });
+  const finalUpdate = async () => {
+    await waitFor(() => updates.some((update) => update.$set?.result?.assetCount === 2));
+    const index = updates.findIndex((update) => update.$set?.result?.assetCount === 2);
+    return updates.splice(0, index + 1).at(-1);
+  };
+
+  assert.equal((await start()).status, 202);
+  const allFailed = await finalUpdate();
+  assert.equal(allFailed.$set.status, 'FAILED');
+  assert.equal(allFailed.$set.result.allFailed, true);
+  assert.deepEqual(allFailed.$set.result.assets.map((item) => item.status), ['failed', 'failed']);
+  assert.match(allFailed.$set.result.assets[0].message, /child store unavailable/);
+
+  failIds = new Set([ASSET_ID_2]);
+  assert.equal((await start()).status, 202);
+  const partial = await finalUpdate();
+  assert.equal(partial.$set.status, 'PARTIAL');
+  assert.equal(partial.$set.result.allFailed, false);
+  assert.deepEqual(partial.$set.result.assets.map((item) => item.status), ['succeeded', 'failed']);
+});
+
 test('批量补采：空/非法 assetIds 400，活跃批量运行 409', async (t) => {
   for (const body of [
     {}, { assetIds: [] }, { assetIds: ['not-an-id'] },

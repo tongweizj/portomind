@@ -10,6 +10,7 @@ const { taskLogger } = require('../config/logger');
 const { PROGRESS_THROTTLE_MS, DEFAULT_STALE_MS } = require('../config/opsTasks');
 
 const activeTasks = new Map();
+const COMPLETED_STATUSES = new Set(['SUCCEEDED', 'PARTIAL', 'FAILED']);
 
 function normalizeCounts(result = {}) {
   const normalized = {
@@ -219,7 +220,8 @@ async function startTrackedTask({
   exclusiveRunKey,
   lockKey,
   staleAfterMs = DEFAULT_STALE_MS,
-  progressThrottleMs = PROGRESS_THROTTLE_MS
+  progressThrottleMs = PROGRESS_THROTTLE_MS,
+  resolveStatus
 }) {
   const activeKey = activeKeyOf({ lockKey, taskName });
   if (activeTasks.has(activeKey)) {
@@ -322,7 +324,10 @@ async function startTrackedTask({
       const result = normalizeCounts(await execute({ runId, reportProgress }));
       const endedAt = new Date();
       const durationMs = endedAt.getTime() - startedAt.getTime();
-      const status = result.failureCount > 0 ? 'PARTIAL' : 'SUCCEEDED';
+      const defaultStatus = result.failureCount > 0 ? 'PARTIAL' : 'SUCCEEDED';
+      // 可选钩子：任务可按自身结果覆盖终态（如批量补采全部失败 → FAILED）；非法返回值回退默认规则。
+      const resolved = typeof resolveStatus === 'function' ? resolveStatus(result) : null;
+      const status = COMPLETED_STATUSES.has(resolved) ? resolved : defaultStatus;
       const summary = {
         runId,
         taskName,

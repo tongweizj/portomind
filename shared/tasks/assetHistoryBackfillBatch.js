@@ -138,6 +138,20 @@ function buildAssetSummary(asset, status, summary, extra = {}) {
   };
 }
 
+const FAILED_ASSET_STATUSES = new Set(['failed', 'partial']);
+
+// 全部失败：有资产，且每个资产都实际执行后未成功（failed/partial）。
+// 含 skipped 的批次不算全部失败，保持 PARTIAL；空批次不算。
+function isAllFailed(results) {
+  return results.length > 0 && results.every((item) => FAILED_ASSET_STATUSES.has(item.status));
+}
+
+/** 父任务终态：全部失败 → FAILED；其余沿用默认规则（有失败/跳过 → PARTIAL，否则 SUCCEEDED）。 */
+function resolveBatchStatus(summary) {
+  if (summary?.result?.allFailed) return 'FAILED';
+  return summary?.failureCount > 0 ? 'PARTIAL' : 'SUCCEEDED';
+}
+
 async function runBatchAssetHistoryBackfill(assets, options = {}) {
   const startChild = options.startAssetHistoryBackfill || startAssetHistoryBackfill;
   const reportProgress = typeof options.reportProgress === 'function' ? options.reportProgress : () => {};
@@ -198,6 +212,7 @@ async function runBatchAssetHistoryBackfill(assets, options = {}) {
       successCount,
       failureCount,
       skippedCount: results.filter((item) => item.status === 'skipped').length,
+      allFailed: isAllFailed(results),
       missingBeforeCount: sum('missingBeforeCount'),
       missingAfterCount: sum('missingAfterCount'),
       fetchedCount: sum('fetchedCount'),
@@ -213,6 +228,7 @@ function trackedOptions(options, assets, now) {
     trigger: options.trigger || 'MANUAL',
     lockKey: OPS_TASK_CONFIG.assetBackfillBatch.lockKey,
     staleAfterMs: OPS_TASK_CONFIG.assetBackfillBatch.staleAfterMs,
+    resolveStatus: resolveBatchStatus,
     execute: async ({ reportProgress }) => runBatchAssetHistoryBackfill(assets, {
       ...options,
       reportProgress
@@ -238,6 +254,7 @@ async function startBatchAssetHistoryBackfill(options = {}) {
 
 module.exports = {
   previewBatchAssetHistoryBackfill,
+  resolveBatchStatus,
   runBatchAssetHistoryBackfill,
   startBatchAssetHistoryBackfill
 };

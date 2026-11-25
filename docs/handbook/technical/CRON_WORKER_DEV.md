@@ -149,7 +149,7 @@ CN 定时批次只写入日期与批次目标日相符的场外基金净值。�
 |---|---|---|
 | `SUCCEEDED` | `failureCount === 0` | 无 |
 | `PARTIAL` | 存在失败项（资产级 / 汇率级） | 看 `failures[]`（`item/category/provider/retryable/message`） |
-| `FAILED` | 任务级异常（未捕获） | 看任务日志 |
+| `FAILED` | 任务级异常（未捕获）；或任务通过 `startTrackedTask` 的 `resolveStatus` 钩子显式判定（目前仅 `asset-history-backfill-batch` 全部资产失败，见 §5.5 result 契约） | 异常：看任务日志；钩子判定：看 `result` 与 `failures[]` |
 | `SKIPPED` | `runTrackedTask` 的**返回值**（已在跑 / 重复 runKey）；**不写入 `taskruns`** | 无需处理；事件见 `taskskips`（§5.5） |
 
 > `taskruns.status` 的 schema 枚举仍只有 `RUNNING / SUCCEEDED / PARTIAL / FAILED`；TASK-057 **不新增 SKIPPED 状态**。监控与告警如何解读这些状态，见 [运维手册 §7](../ops/CRON_WORKER_OPS.md#7-监控与巡检)。
@@ -176,7 +176,7 @@ TASK-070 起，带 `lockKey` 的任务在 `RUNNING` 期间维护 `progress: {com
 | `alert-evaluate` | `{ evaluated, created, archived, failed }` |
 | `fx-rate-sync` | `{ fxCount, currencies:{ USD:{ok:true,rateToCny}, CAD:{…}, HKD:{…} } }`；`ok:true` 仅表示该币种本次真实写入完成，失败运行记 `FAILED` 且不补造成功标志 |
 | `asset-history-backfill` | `{assetId,symbol,market,from,to,expectedCount,missingBeforeCount,missingAfterCount,fetchedCount,requestedRanges[],requestedRangesTruncated,missingRanges[],missingRangesTruncated,failureRanges[]}`；同步等待端点返回同一摘要的关键字段。 |
-| `asset-history-backfill-batch` | `{assetCount,successCount,failureCount,skippedCount,missingBeforeCount,missingAfterCount,fetchedCount,assets:[{assetId,symbol,market,status:'succeeded'\|'partial'\|'failed'\|'skipped',runId,from,to,missingBeforeCount,missingAfterCount,fetchedCount,reason?,message?}]}`；父任务只聚合，子任务为单资产结果。`failureCount = assetCount - successCount`（含 skipped），因此存在跳过资产时父任务终态为 `PARTIAL`。 |
+| `asset-history-backfill-batch` | `{assetCount,successCount,failureCount,skippedCount,allFailed,missingBeforeCount,missingAfterCount,fetchedCount,assets:[{assetId,symbol,market,status:'succeeded'\|'partial'\|'failed'\|'skipped',runId,from,to,missingBeforeCount,missingAfterCount,fetchedCount,reason?,message?}]}`；父任务只聚合，子任务为单资产结果。`failureCount = assetCount - successCount`（含 skipped），因此存在跳过资产时父任务终态为 `PARTIAL`。父任务终态：全部资产 `succeeded` → `SUCCEEDED`；全部资产实际执行后未成功（每项 `failed`/`partial`）→ `FAILED`，此时 `allFailed: true`；其余（含成功与失败混合、存在 `skipped`、全部 `skipped`）→ `PARTIAL`。空批次被入口 400 拦截。`FAILED` 终态仍完整写入 `result.assets` 与 `failures[]`，与任务异常抛出的 `FAILED`（`failures[0].item` 为任务名、无 `result`）可用 `result` 是否存在区分。 |
 | `rebalance-check` | `{ totalPortfolios, dueCount, skippedCount, perPortfolio:[{portfolioId,due,needsRebalance,suggestionsCount,recordId,status,failureReason?,skipReason?}] }` |
 
 价格完整性检查在资产总数大于零且全部跳过时记录 `allSkipped: true`、`checkedCount: 0` 和 `completenessRatio: null`。这些字段表示本次未检查，同样用于结束日志。TaskRun 运行状态沿用现有判定。TASK-070 起 `skippedCount` 是未检查总数（无 `launchDate` + 样本不足）；看板的 `skippedNoLaunchDate` 从 `result.assets[].status` 派生，不再用 `skippedCount` 代替。
