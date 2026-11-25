@@ -366,6 +366,7 @@ AlertRule ──_id──> AlertEvent.ruleId（**可空**：再平衡通知没�
 - TASK-070 起 `price-integrity-check` 的 `result.assets[]` 保存资产级历史摘要（`status/expected/actual/missing/ratio` 与最多 20 段 `missingRanges`），供运维中心历史完整度回读；不保存原始价格序列。`GAP` 只表示检测到缺失交易日，不推断停采/停牌/供应商异常。
 - TASK-071 起 `daily-price-sync` 的 `result.assets[]` 保存逐资产 `status(fetched/skipped/failed)`、`priceDate`（按 `MARKET_TIMEZONE` 归桶）、`reason`（休市/失败分类）；同样不保存原始价格序列。
 - TASK-072 起 `asset-history-backfill` 的 `result` 保存资产、区间、expected/missingBefore/missingAfter/fetched、有界缺失区间与补采失败区间；不保存原始价格序列。
+- TASK-074 起 `asset-history-backfill-batch` 的父 `result` 保存逐资产状态与汇总计数；未成功资产带 `reason`/`message`，父 `failures[]` 透传子任务真实原因；子任务沿用单资产 result。
 - 跨进程互斥使用独立 `lockKey` 部分唯一索引，不改四态枚举，也不把锁编码成新的 `runKey`；详见 §4.10 与 [CRON_WORKER_DEV.md §4](./CRON_WORKER_DEV.md#4-防重与跨进程互斥)。
 
 **含义**：`SUCCEEDED` 仍只能读成「跑完且没有异常抛出」，不能读成「有数据更新」；数据是否到位必须看 `result` 的业务摘要 + `Price.timestamp` 等事实字段交叉验证。

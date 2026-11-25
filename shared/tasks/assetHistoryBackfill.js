@@ -32,6 +32,27 @@ function assetNotFound() {
   return error;
 }
 
+function validateRangeOptions(options = {}) {
+  const hasYear = options.year !== undefined;
+  if (hasYear) {
+    if (!Number.isInteger(options.year) || options.year < 1970) {
+      throw badRequest('year must be an integer from 1970 onward', 'INVALID_YEAR');
+    }
+    if (options.from !== undefined || options.to !== undefined) {
+      throw badRequest('year and from/to are mutually exclusive', 'INVALID_RANGE');
+    }
+  }
+  if (options.from !== undefined && !isDateString(options.from)) {
+    throw badRequest('from must be YYYY-MM-DD', 'INVALID_RANGE');
+  }
+  if (options.to !== undefined && !isDateString(options.to)) {
+    throw badRequest('to must be YYYY-MM-DD', 'INVALID_RANGE');
+  }
+  if (options.from !== undefined && options.to !== undefined && options.from > options.to) {
+    throw badRequest('from must be earlier than or equal to to', 'INVALID_RANGE');
+  }
+}
+
 function resolveWindow(asset, options = {}) {
   const now = options.now || new Date();
   let target;
@@ -44,19 +65,9 @@ function resolveWindow(asset, options = {}) {
 
   const currentYear = Number(target.slice(0, 4));
   const hasYear = options.year !== undefined;
-  if (hasYear) {
-    if (!Number.isInteger(options.year) || options.year < 1970 || options.year > currentYear) {
-      throw badRequest('year must be an integer between 1970 and the current market year', 'INVALID_YEAR');
-    }
-    if (options.from !== undefined || options.to !== undefined) {
-      throw badRequest('year and from/to are mutually exclusive', 'INVALID_RANGE');
-    }
-  }
-  if (options.from !== undefined && !isDateString(options.from)) {
-    throw badRequest('from must be YYYY-MM-DD', 'INVALID_RANGE');
-  }
-  if (options.to !== undefined && !isDateString(options.to)) {
-    throw badRequest('to must be YYYY-MM-DD', 'INVALID_RANGE');
+  validateRangeOptions(options);
+  if (hasYear && options.year > currentYear) {
+    throw badRequest('year must not exceed the current market year', 'INVALID_YEAR');
   }
 
   let from = hasYear ? `${options.year}-01-01` : (options.from || `${currentYear}-01-01`);
@@ -83,7 +94,7 @@ function resolveWindow(asset, options = {}) {
 async function resolveBackfillRequest(options = {}) {
   if (!options.assetId) throw badRequest('assetId is required', 'INVALID_ASSET');
   const loadAsset = options.getAssetById || getAssetById;
-  const asset = await loadAsset(options.assetId);
+  const asset = options.asset || await loadAsset(options.assetId);
   if (!asset) throw assetNotFound();
   const now = options.now || new Date();
   return { asset, ...resolveWindow(asset, { ...options, now }), now };
@@ -169,6 +180,24 @@ async function runAssetBackfill(asset, from, to, options = {}) {
   };
 }
 
+async function previewAssetBackfill(options = {}) {
+  const context = await resolveBackfillRequest(options);
+  const countFn = options.countAssetCoverage || countAssetCoverage;
+  const counted = await countFn(context.asset, context.from, context.to, options.countOptions || {});
+  const bounded = boundedMissingRanges(counted.missingDates, 3);
+  return {
+    assetId: String(context.asset._id),
+    symbol: context.asset.symbol,
+    market: context.asset.market,
+    from: context.from,
+    to: context.to,
+    expectedCount: counted.expectedCount,
+    missingCount: counted.missingCount,
+    missingRanges: bounded.ranges,
+    missingRangesTruncated: bounded.truncated
+  };
+}
+
 function trackedOptions(options, context) {
   return {
     taskName: OPS_TASK_CONFIG.assetBackfill.taskName,
@@ -193,7 +222,10 @@ async function startAssetHistoryBackfill(options = {}) {
 }
 
 module.exports = {
+  badRequest,
   startAssetHistoryBackfill,
+  previewAssetBackfill,
+  validateRangeOptions,
   resolveWindow,
   runAssetBackfill
 };

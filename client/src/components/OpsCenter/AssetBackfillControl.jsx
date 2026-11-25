@@ -2,57 +2,22 @@
 //
 // TASK-072：资产行内的单资产历史补采。默认当前年份，可改起止日期；
 // 同步等待结果，仅显示本行状态，不自动改写历史完整度快照。
-import { useState } from 'react';
 import { Link } from 'react-router';
 import { useAssetBackfill } from '../../hooks/useAssetBackfill';
+import { useBackfillRange } from '../../hooks/useBackfillRange';
 import { getApiErrorMessage } from '../../services/api.client';
 import { colors } from '../../constants/design-tokens';
 
-function todayString() {
-  return new Intl.DateTimeFormat('en-CA', {
-    year: 'numeric', month: '2-digit', day: '2-digit'
-  }).format(new Date());
-}
-
-function defaultRange() {
-  const today = todayString();
-  return { from: `${today.slice(0, 4)}-01-01`, to: today };
-}
-
 export default function AssetBackfillControl({ asset }) {
-  const today = todayString();
-  const currentYear = Number(today.slice(0, 4));
-  const years = Array.from({ length: 6 }, (_, index) => String(currentYear - index));
-  const initial = defaultRange();
-  const [year, setYear] = useState(String(currentYear));
-  const [from, setFrom] = useState(initial.from);
-  const [to, setTo] = useState(initial.to);
+  const range = useBackfillRange();
   const mutation = useAssetBackfill();
   const data = mutation.data;
   const error = mutation.error;
   const suffix = asset.assetId;
 
-  const changeYear = (event) => {
-    const value = event.target.value;
-    setYear(value);
-    if (!value) return;
-    setFrom(`${value}-01-01`);
-    setTo(Number(value) === currentYear ? today : `${value}-12-31`);
-  };
-
-  const changeFrom = (event) => {
-    setFrom(event.target.value);
-    setYear('');
-  };
-
-  const changeTo = (event) => {
-    setTo(event.target.value);
-    setYear('');
-  };
-
   const submit = (event) => {
     event.preventDefault();
-    mutation.mutate({ assetId: asset.assetId, from, to });
+    mutation.mutate({ assetId: asset.assetId, from: range.from, to: range.to });
   };
 
   let resultText = null;
@@ -71,11 +36,11 @@ export default function AssetBackfillControl({ asset }) {
           年份
           <select
             data-testid={`ops-backfill-year-${suffix}`}
-            value={year}
-            onChange={changeYear}
+            value={range.year}
+            onChange={(event) => range.changeYear(event.target.value)}
             className="ml-1 border rounded px-1"
           >
-            {years.map((value) => <option key={value} value={value}>{value}</option>)}
+            {range.years.map((value) => <option key={value} value={value}>{value}</option>)}
             <option value="">自定义区间</option>
           </select>
         </label>
@@ -84,8 +49,8 @@ export default function AssetBackfillControl({ asset }) {
           <input
             type="date"
             data-testid={`ops-backfill-from-${suffix}`}
-            value={from}
-            onChange={changeFrom}
+            value={range.from}
+            onChange={(event) => range.changeFrom(event.target.value)}
             className="ml-1 border rounded px-1"
           />
         </label>
@@ -94,8 +59,8 @@ export default function AssetBackfillControl({ asset }) {
           <input
             type="date"
             data-testid={`ops-backfill-to-${suffix}`}
-            value={to}
-            onChange={changeTo}
+            value={range.to}
+            onChange={(event) => range.changeTo(event.target.value)}
             className="ml-1 border rounded px-1"
           />
         </label>
@@ -129,7 +94,7 @@ export default function AssetBackfillControl({ asset }) {
           <span className="block text-xs" style={{ color: colors.textMuted }}>
             <Link
               data-testid={`ops-backfill-history-link-${suffix}`}
-              to={`/prices/${encodeURIComponent(asset.symbol)}/history?year=${from.slice(0, 4)}`}
+              to={`/prices/${encodeURIComponent(asset.symbol)}/history?year=${range.from.slice(0, 4)}`}
               className="underline"
               style={{ color: colors.brand }}
             >

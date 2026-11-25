@@ -42,7 +42,7 @@ cron-worker 通过 `src/config/env.js` 加载 **`cron-worker/.env`**（不是 `s
 
 > 时区解析优先级：`SCHEDULER_TIMEZONE` → `MARKET_TIMEZONE` → `America/Toronto`。
 >
-> 运维中心手动任务相关 `OPS_*`（进度节流、完整性/价格同步/单资产回填 stale 阈值）由 shared 读取；`OPS_INTEGRITY_STALE_MS` / `OPS_PRICE_SYNC_STALE_MS` / `OPS_BACKFILL_STALE_MS` 在 server 与 worker 两侧必须一致。完整变量表见 [DEPLOYMENT](./DEPLOYMENT.md)。
+> 运维中心手动任务相关 `OPS_*`（进度节流、完整性/价格同步/单资产回填/批量回填 stale 阈值）由 shared 读取；`OPS_INTEGRITY_STALE_MS` / `OPS_PRICE_SYNC_STALE_MS` / `OPS_BACKFILL_STALE_MS` / `OPS_BATCH_BACKFILL_STALE_MS` 在 server 与 worker 两侧必须一致。完整变量表见 [DEPLOYMENT](./DEPLOYMENT.md)。
 
 ---
 

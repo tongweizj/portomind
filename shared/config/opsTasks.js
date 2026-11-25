@@ -32,6 +32,11 @@ const OPS_TASK_CONFIG = Object.freeze({
     taskName: 'asset-history-backfill',
     lockKeyPrefix: 'ops:asset-backfill:',
     staleAfterMs: envMs('OPS_BACKFILL_STALE_MS', DEFAULT_STALE_MS)
+  }),
+  assetBackfillBatch: Object.freeze({
+    taskName: 'asset-history-backfill-batch',
+    lockKey: 'ops:asset-backfill-batch',
+    staleAfterMs: envMs('OPS_BATCH_BACKFILL_STALE_MS', 60 * MINUTE_MS)
   })
 });
 

@@ -3,6 +3,7 @@
 // TASK-070：运维中心 task-run 读取与手动 integrity-check 触发。
 // TASK-071：手动 daily-price-sync 触发。
 // TASK-072：单资产历史补采（同步等待 200 + 摘要）。
+// TASK-074：批量补缺失（preview 200 / async 202）。
 // 协议层只做参数/状态码/响应包装；业务与 TaskRun 生命周期在 shared。
 
 const mongoose = require('mongoose');
@@ -11,6 +12,10 @@ const { startDailySync } = require('@portomind/shared/tasks/dailySync');
 const {
   startAssetHistoryBackfill: startAssetHistoryBackfillTask
 } = require('@portomind/shared/tasks/assetHistoryBackfill');
+const {
+  previewBatchAssetHistoryBackfill,
+  startBatchAssetHistoryBackfill
+} = require('@portomind/shared/tasks/assetHistoryBackfillBatch');
 const {
   getTaskRunById,
   serializeTaskRun
@@ -44,6 +49,26 @@ function parseBackfillBody(body) {
   const allowed = new Set(['from', 'to', 'year']);
   if (Object.keys(body).some((key) => !allowed.has(key))) {
     return { ok: false, message: 'price-backfill only accepts from, to or year' };
+  }
+  return { ok: true, value: body };
+}
+
+function parseBatchBackfillBody(body) {
+  if (!body || typeof body !== 'object' || Array.isArray(body)) {
+    return { ok: false, message: 'price-backfill accepts a JSON object' };
+  }
+  const allowed = new Set(['assetIds', 'from', 'to', 'year', 'preview']);
+  if (Object.keys(body).some((key) => !allowed.has(key))) {
+    return { ok: false, message: 'price-backfill only accepts assetIds, from, to, year or preview' };
+  }
+  if (!Array.isArray(body.assetIds) || body.assetIds.length === 0) {
+    return { ok: false, message: 'assetIds must be a non-empty array' };
+  }
+  if (body.assetIds.some((id) => typeof id !== 'string' || !mongoose.Types.ObjectId.isValid(id))) {
+    return { ok: false, message: 'assetIds must contain valid ObjectIds' };
+  }
+  if (body.preview !== undefined && typeof body.preview !== 'boolean') {
+    return { ok: false, message: 'preview must be a boolean' };
   }
   return { ok: true, value: body };
 }
@@ -134,6 +159,30 @@ exports.startAssetHistoryBackfill = async (req, res, next) => {
   } catch (error) {
     if (error.status === 400) return failure(req, res, 400, error.message);
     if (error.status === 404) return failure(req, res, 404, error.message);
+    return next(error);
+  }
+};
+
+exports.startBatchAssetHistoryBackfill = async (req, res, next) => {
+  const parsed = parseBatchBackfillBody(req.body);
+  if (!parsed.ok) return failure(req, res, 400, parsed.message);
+  const payload = {
+    assetIds: parsed.value.assetIds,
+    from: parsed.value.from,
+    to: parsed.value.to,
+    year: parsed.value.year,
+    trigger: 'MANUAL'
+  };
+  try {
+    if (parsed.value.preview === true) {
+      const preview = await previewBatchAssetHistoryBackfill(payload);
+      return success(res, preview);
+    }
+    const handle = await startBatchAssetHistoryBackfill(payload);
+    if (!handle.ok) return conflictRun(req, res, handle);
+    return acceptedRun(res, handle);
+  } catch (error) {
+    if (error.status === 400) return failure(req, res, 400, error.message);
     return next(error);
   }
 };

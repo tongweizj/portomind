@@ -36,6 +36,7 @@ export async function getAssetsOverview({
 const INTEGRITY_CHECK_ENDPOINT = '/ops-center/integrity-check';
 const PRICE_SYNC_ENDPOINT = '/ops-center/price-sync';
 const ASSET_BACKFILL_ENDPOINT = '/ops-center/assets';
+const BATCH_BACKFILL_ENDPOINT = '/ops-center/price-backfill';
 const TASK_RUNS_ENDPOINT = '/ops-center/task-runs';
 
 /** TASK-070：手动刷新历史完整度（202 + runId）。 */
@@ -56,6 +57,38 @@ export async function backfillAsset(assetId, { from, to, year } = {}) {
   if (year !== undefined) body.year = year;
   // 单资产补采同步等待，可能超过 API 默认 15 秒。
   return (await api.post(`${ASSET_BACKFILL_ENDPOINT}/${assetId}/price-backfill`, body, { timeout: 120000 })).data;
+}
+
+/** TASK-074：按当前服务端筛选结果取全部资产 id（仅用于批量选择）。 */
+export async function getAllFilteredAssetIds(filters = {}, { maxIds } = {}) {
+  const ids = [];
+  let page = 1;
+  let total = Infinity;
+  while (ids.length < total && page <= 100) {
+    const result = await getAssetsOverview({ ...filters, page, pageSize: 100 });
+    const rows = Array.isArray(result.data) ? result.data : [];
+    ids.push(...rows.map((row) => row.assetId).filter(Boolean));
+    total = Number(result.pagination?.total) || rows.length;
+    if (rows.length === 0) break;
+    // 调用方只需知道是否超过上限时，早停避免无谓翻页。
+    if (Number.isFinite(maxIds) && ids.length > maxIds) break;
+    page += 1;
+  }
+  return [...new Set(ids)];
+}
+
+async function requestBatchBackfill(payload) {
+  return (await api.post(BATCH_BACKFILL_ENDPOINT, payload, { timeout: 120000 })).data;
+}
+
+/** TASK-074：批量补采预览；不写库、不建 TaskRun。 */
+export async function previewBatchBackfill({ assetIds, from, to, year }) {
+  return requestBatchBackfill({ assetIds, from, to, year, preview: true });
+}
+
+/** TASK-074：启动批量补采；202 + runId。 */
+export async function startBatchBackfill({ assetIds, from, to, year }) {
+  return requestBatchBackfill({ assetIds, from, to, year, preview: false });
 }
 
 /** TASK-070：读取一次任务运行的状态/进度/结果。 */
