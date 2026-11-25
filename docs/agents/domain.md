@@ -16,10 +16,7 @@ Single-context repo:
 ```
 /
 ├── GLOSSARY.md
-├── docs/architecture/adr/
-│   ├── ADR-001-authentication.md
-│   ├── ADR-002-single-scheduler.md
-│   └── ADR-003-symbol-suffix-contract.md
+├── docs/architecture/adr/      # ADR-NNN-<slug>.md
 ├── shared/
 ├── server/
 ├── cron-worker/
