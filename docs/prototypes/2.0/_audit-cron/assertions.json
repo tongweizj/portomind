@@ -20,7 +20,7 @@
     "detail": "仍存在旧 key"
   },
   {
-    "name": "AC11 侧栏「日志」入口未被改动",
+    "name": "AC11 侧栏「运维中心」入口未被改动",
     "ok": true,
     "detail": "nav-logs 被改"
   },

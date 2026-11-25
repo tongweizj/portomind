@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-10-28T01:38:35.323Z",
+  "generatedAt": "2026-11-25T22:44:08.629Z",
   "total": 59,
   "pass": 59,
   "fail": 0,
@@ -120,14 +120,14 @@
       "detail": "n=4"
     },
     {
-      "name": "A-01 侧栏导航文案 = {Dashboard,组合管理,自选行情,日志}",
+      "name": "A-01 侧栏导航文案 = {Dashboard,组合管理,自选行情,运维中心}",
       "ok": true,
-      "detail": "[\"Dashboard\",\"组合管理\",\"自选行情\",\"日志\"]"
+      "detail": "[\"Dashboard\",\"组合管理\",\"自选行情\",\"运维中心\"]"
     },
     {
       "name": "A-01 侧栏不含「提醒规则」（入口已移至下拉）",
       "ok": true,
-      "detail": "[\"Dashboard\",\"组合管理\",\"自选行情\",\"日志\"]"
+      "detail": "[\"Dashboard\",\"组合管理\",\"自选行情\",\"运维中心\"]"
     },
     {
       "name": "A-01 「自选行情」保留「监控」badge（FS-asset-price-consolidation §导航）",
