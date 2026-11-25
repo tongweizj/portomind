@@ -4,6 +4,7 @@ const assert = require('node:assert');
 const TaskRun = require('@portomind/shared/models/taskRun');
 const {
   previewBatchAssetHistoryBackfill,
+  resolveBatchStatus,
   runBatchAssetHistoryBackfill,
   startBatchAssetHistoryBackfill
 } = require('@portomind/shared/tasks/assetHistoryBackfillBatch');
@@ -138,16 +139,80 @@ test('runBatchAssetHistoryBackfill 逐资产复用子任务并保留部分失败
   // 父任务失败项透传子任务真实原因，而不是合成文案。
   assert.equal(summary.failures[0].category, 'UPSTREAM');
   assert.equal(summary.failures[0].message, 'quote unavailable');
+  assert.equal(summary.result.allFailed, false);
   assert.deepEqual(progress.at(-1), [3, 3]);
 });
 
-test('startBatchAssetHistoryBackfill 遇到部分失败时父任务为 PARTIAL', async (t) => {
+test('runBatchAssetHistoryBackfill 全部资产失败时标记 allFailed', async () => {
+  const startChild = async () => ({
+    ok: true,
+    promise: Promise.resolve({
+      status: 'PARTIAL',
+      failureCount: 1,
+      failures: [{ item: 'VTI.US', category: 'UPSTREAM', provider: 'YAHOO', message: 'quote unavailable' }],
+      result: { from: '2026-11-01', to: '2026-11-05', missingBeforeCount: 2, missingAfterCount: 2, fetchedCount: 0 }
+    })
+  });
+
+  const summary = await runBatchAssetHistoryBackfill(ASSETS, {
+    startAssetHistoryBackfill: startChild,
+    from: '2026-11-01',
+    to: '2026-11-05'
+  });
+
+  assert.equal(summary.successCount, 0);
+  assert.equal(summary.failureCount, 3);
+  assert.equal(summary.result.allFailed, true);
+});
+
+test('runBatchAssetHistoryBackfill 失败与跳过混合、全部跳过、空批次都不算 allFailed', async () => {
+  const failing = async () => { throw Object.assign(new Error('db down'), { category: 'INTERNAL' }); };
+  const busy = async () => ({ ok: false, reason: 'ALREADY_RUNNING' });
+  const invalid = async () => { throw Object.assign(new Error('bad range'), { status: 400, code: 'INVALID_RANGE' }); };
+
+  // a1 失败，a2 跳过（已在运行），a3 跳过（400）：无成功但含跳过 → 不算全部失败。
+  const children = { a1: failing, a2: busy, a3: invalid };
+  const mixed = await runBatchAssetHistoryBackfill(ASSETS, {
+    startAssetHistoryBackfill: (options) => children[options.assetId](options)
+  });
+  assert.deepEqual(mixed.result.assets.map((item) => item.status), ['failed', 'skipped', 'skipped']);
+  assert.equal(mixed.successCount, 0);
+  assert.equal(mixed.failureCount, 3);
+  assert.equal(mixed.result.allFailed, false);
+  assert.equal(resolveBatchStatus(mixed), 'PARTIAL');
+
+  const allSkipped = await runBatchAssetHistoryBackfill(ASSETS, { startAssetHistoryBackfill: busy });
+  assert.equal(allSkipped.result.skippedCount, 3);
+  assert.equal(allSkipped.result.allFailed, false);
+  assert.equal(resolveBatchStatus(allSkipped), 'PARTIAL');
+
+  const allThrown = await runBatchAssetHistoryBackfill(ASSETS, { startAssetHistoryBackfill: failing });
+  assert.equal(allThrown.result.allFailed, true);
+  assert.equal(resolveBatchStatus(allThrown), 'FAILED');
+
+  const empty = await runBatchAssetHistoryBackfill([], { startAssetHistoryBackfill: failing });
+  assert.equal(empty.totalCount, 0);
+  assert.equal(empty.result.allFailed, false);
+  assert.equal(resolveBatchStatus(empty), 'SUCCEEDED');
+});
+
+test('resolveBatchStatus：全部成功 SUCCEEDED，部分失败 PARTIAL，全部失败 FAILED', () => {
+  assert.equal(resolveBatchStatus({ failureCount: 0, result: { allFailed: false } }), 'SUCCEEDED');
+  assert.equal(resolveBatchStatus({ failureCount: 1, result: { allFailed: false } }), 'PARTIAL');
+  assert.equal(resolveBatchStatus({ failureCount: 3, result: { allFailed: true } }), 'FAILED');
+});
+
+test('startBatchAssetHistoryBackfill 全部资产失败时父任务为 FAILED 并保留逐资产结果', async (t) => {
   t.mock.method(TaskRun, 'init', async () => TaskRun);
-  t.mock.method(TaskRun, 'create', async (doc) => ({ ...doc, _id: 'batch-partial' }));
-  t.mock.method(TaskRun, 'updateOne', async () => ({ modifiedCount: 1 }));
+  t.mock.method(TaskRun, 'create', async (doc) => ({ ...doc, _id: 'batch-failed' }));
+  const updates = [];
+  t.mock.method(TaskRun, 'updateOne', async (filter, update) => {
+    updates.push(update);
+    return { modifiedCount: 1 };
+  });
 
   const handle = await startBatchAssetHistoryBackfill({
-    assetIds: ['a1'],
+    assetIds: ['a1', 'a2'],
     from: '2026-11-01',
     to: '2026-11-05',
     now: new Date('2026-11-24T15:00:00Z'),
@@ -157,15 +222,57 @@ test('startBatchAssetHistoryBackfill 遇到部分失败时父任务为 PARTIAL',
       promise: Promise.resolve({
         status: 'PARTIAL',
         failureCount: 1,
-        result: { from: '2026-11-01', to: '2026-11-05', missingBeforeCount: 2, missingAfterCount: 1, fetchedCount: 1 }
+        failures: [{ item: 'x', category: 'UPSTREAM', message: 'quote unavailable' }],
+        result: { from: '2026-11-01', to: '2026-11-05', missingBeforeCount: 2, missingAfterCount: 2, fetchedCount: 0 }
       })
+    })
+  });
+
+  const summary = await handle.promise;
+  assert.equal(summary.status, 'FAILED');
+  assert.equal(summary.successCount, 0);
+  assert.equal(summary.failureCount, 2);
+  assert.equal(summary.result.allFailed, true);
+  assert.equal(summary.failures[0].category, 'UPSTREAM');
+  const final = updates.at(-1);
+  assert.equal(final.$set.status, 'FAILED');
+  assert.equal(final.$set.result.assets.length, 2);
+  assert.equal(final.$unset.lockKey, 1);
+});
+
+test('startBatchAssetHistoryBackfill 遇到部分失败时父任务为 PARTIAL', async (t) => {
+  t.mock.method(TaskRun, 'init', async () => TaskRun);
+  t.mock.method(TaskRun, 'create', async (doc) => ({ ...doc, _id: 'batch-partial' }));
+  t.mock.method(TaskRun, 'updateOne', async () => ({ modifiedCount: 1 }));
+
+  const handle = await startBatchAssetHistoryBackfill({
+    assetIds: ['a1', 'a2'],
+    from: '2026-11-01',
+    to: '2026-11-05',
+    now: new Date('2026-11-24T15:00:00Z'),
+    getAssetById: loader(),
+    // a1 成功、a2 子任务 PARTIAL：有成功也有失败 → 父任务 PARTIAL（全部失败见下方 FAILED 用例）。
+    startAssetHistoryBackfill: async (options) => ({
+      ok: true,
+      promise: Promise.resolve(options.assetId === 'a1'
+        ? {
+            status: 'SUCCEEDED',
+            failureCount: 0,
+            result: { from: '2026-11-01', to: '2026-11-05', missingBeforeCount: 1, missingAfterCount: 0, fetchedCount: 1 }
+          }
+        : {
+            status: 'PARTIAL',
+            failureCount: 1,
+            result: { from: '2026-11-01', to: '2026-11-05', missingBeforeCount: 2, missingAfterCount: 1, fetchedCount: 1 }
+          })
     })
   });
 
   const summary = await handle.promise;
   assert.equal(summary.status, 'PARTIAL');
   assert.equal(summary.failureCount, 1);
-  assert.equal(summary.result.assets[0].status, 'partial');
+  assert.equal(summary.result.allFailed, false);
+  assert.deepEqual(summary.result.assets.map((item) => item.status), ['succeeded', 'partial']);
 });
 
 test('startBatchAssetHistoryBackfill 使用批量锁并创建父 TaskRun', async (t) => {
