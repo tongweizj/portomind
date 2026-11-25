@@ -86,7 +86,7 @@ curl "http://localhost:8080/api/prices/date/$(date +%F)?page=1&pageSize=20"
 
 ## 5. 手动 API 端点
 
-这些端点中，除标注「只读」的 `GET /api/cron/status` 与 `GET /api/ops-center/task-runs/:id` 外，其余提供**手动触发**能力，与 cron-worker 的定时任务**共用同一业务引擎**（`@portomind/shared`），
+这些端点中，除标注「只读」的 `GET /api/cron/status`、`GET /api/ops-center/task-runs` 与 `GET /api/ops-center/task-runs/:id` 外，其余提供**手动触发**能力，与 cron-worker 的定时任务**共用同一业务引擎**（`@portomind/shared`），
 结果口径一致。自动触发由 cron-worker 负责（见 [cron-worker 总览](./CRON_WORKER.md) §2）。
 
 > ⚠️ 自 TASK-058 U1 起，下表端点均需先登录（会话 cookie `pm_sid`）；直接用 `curl` 调试时先 `POST /api/auth/login` 取 cookie（详见 [DEPLOYMENT §9](./DEPLOYMENT.md) 与 [API 契约](../technical/API_CONTRACT.md)「认证与错误码」）。
@@ -98,7 +98,8 @@ curl "http://localhost:8080/api/prices/date/$(date +%F)?page=1&pageSize=20"
 | `POST` | `/api/ops-center/price-sync` | 异步同步今日价格（`daily-price-sync`）：空 Body/`{}` = 全部 active，`{marketGroup:'CN'\|'US_CA'}` 指定市场组；成功 `202 + runId`，非法组 `400`，已有运行 `409` |
 | `POST` | `/api/ops-center/assets/<id>/price-backfill` | 同步补采单资产历史：Body `{from?,to?}` 或 `{year}`，默认当前年份；返回 `200 + 摘要`，非法区间 `400`，资产不存在 `404`，同资产运行中 `409` |
 | `POST` | `/api/ops-center/price-backfill` | 批量补缺失：Body `{assetIds,from?,to?,year?,preview?}`；`preview:true` 返回 `200` 预估，否则 `202 + runId`；非法选择/区间 `400`，已有批量运行 `409` |
-| `GET` | `/api/ops-center/task-runs/<id>` | **只读**任务运行详情：状态、`stale`、进度、计数、失败与 `result`；不返回内部 `lockKey` |
+| `GET` | `/api/ops-center/task-runs` | **只读**采集记录列表（TaskRun + 跳过事件）：按 `taskName`/`assetId`/`from`/`to` 筛选、服务端分页；不读取服务器原始日志 |
+| `GET` | `/api/ops-center/task-runs/<id>` | **只读**任务运行详情：状态、`stale`、进度、计数、失败、`result` 与逐资产明细 `assetResults`；不返回内部 `lockKey` |
 | `POST` | `/api/alerts/evaluate` | 手动跑一次提醒规则评估（界面「立即评估」按钮同效） |
 | `POST` | `/api/family/fx/sync` | 手动同步汇率（USD/CAD/HKD → CNY）。采集源以 CNY 为 base，入库前取倒数转成 `rateToCny` =「1 外币 = X CNY」 |
 | `PUT` | `/api/family/fx/rates/<CUR>` | 手动录入汇率，如 `PUT /api/family/fx/rates/USD` body `{"rateToCny":7.2}`（数据以 `manual` 标记） |

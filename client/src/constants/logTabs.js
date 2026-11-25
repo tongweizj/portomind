@@ -3,6 +3,7 @@
 // TASK-053（C-01）：/logs 子应用的 **唯一** tab 定义来源。
 // TASK-067：频道可见身份改为「运维中心」，URL 与 tab key 不变。
 // TASK-068：新增「资产数据」tab（`?tab=assets`），顺序固定在任务运行看板之后。
+// TASK-075：资产数据 tab 内的子视图 `?tab=assets&view=table|records`。
 //
 // 为什么单独一个常量文件：
 //   - AC2 要求 tab 落 URL（`?tab=board|assets|server|task`），参数名会被后续
@@ -38,4 +39,21 @@ export const LOG_TAB_KEYS = Object.freeze(LOG_TABS.map((t) => t.key));
 export function normalizeLogTab(raw) {
   const value = typeof raw === 'string' ? raw.trim() : '';
   return LOG_TAB_KEYS.includes(value) ? value : DEFAULT_LOG_TAB;
+}
+
+// ── TASK-075：资产数据 tab 的子视图（`?tab=assets&view=...`） ──
+export const ASSET_VIEW_PARAM = 'view';
+export const ASSET_VIEW_RECORDS = 'records';
+
+export const ASSET_VIEWS = Object.freeze([
+  { key: 'table', label: '资产总表' },
+  { key: ASSET_VIEW_RECORDS, label: '采集记录' },
+]);
+
+export const DEFAULT_ASSET_VIEW = 'table';
+
+/** 子视图同样走白名单；无效值回落资产总表。 */
+export function normalizeAssetView(raw) {
+  const value = typeof raw === 'string' ? raw.trim() : '';
+  return ASSET_VIEWS.some((view) => view.key === value) ? value : DEFAULT_ASSET_VIEW;
 }

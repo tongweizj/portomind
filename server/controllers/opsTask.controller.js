@@ -4,6 +4,7 @@
 // TASK-071：手动 daily-price-sync 触发。
 // TASK-072：单资产历史补采（同步等待 200 + 摘要）。
 // TASK-074：批量补缺失（preview 200 / async 202）。
+// TASK-075：采集记录列表（服务端筛选/分页）与 task-run 详情的逐资产明细。
 // 协议层只做参数/状态码/响应包装；业务与 TaskRun 生命周期在 shared。
 
 const mongoose = require('mongoose');
@@ -20,8 +21,16 @@ const {
   getTaskRunById,
   serializeTaskRun
 } = require('@portomind/shared/services/taskRuns.service');
+const taskRecords = require('@portomind/shared/services/taskRecords.service');
 const { staleAfterMsFor } = require('@portomind/shared/config/opsTasks');
-const { success, failure } = require('../utils/apiResponse');
+const { isDateString } = require('@portomind/shared/utils/marketTime');
+const {
+  success,
+  failure,
+  pagination,
+  parsePagination,
+  validatePaginationQuery
+} = require('../utils/apiResponse');
 
 function hasUnexpectedBody(body) {
   if (body === undefined || body === null) return false;
@@ -187,6 +196,35 @@ exports.startBatchAssetHistoryBackfill = async (req, res, next) => {
   }
 };
 
+function validateRecordsQuery(query) {
+  const paginationError = validatePaginationQuery(query, 100);
+  if (paginationError) return paginationError;
+  if (query.taskName !== undefined && !taskRecords.RECORD_TASK_NAMES.includes(query.taskName)) {
+    return `taskName must be one of: ${taskRecords.RECORD_TASK_NAMES.join(', ')}`;
+  }
+  if (query.assetId !== undefined && !mongoose.Types.ObjectId.isValid(query.assetId)) {
+    return 'assetId must be a valid asset ID';
+  }
+  for (const field of ['from', 'to']) {
+    if (query[field] !== undefined && !isDateString(query[field])) return `${field} must use YYYY-MM-DD format`;
+  }
+  if (query.from && query.to && query.from > query.to) return 'from cannot be later than to';
+  return null;
+}
+
+exports.listTaskRecords = async (req, res, next) => {
+  const queryError = validateRecordsQuery(req.query);
+  if (queryError) return failure(req, res, 400, queryError);
+  try {
+    const { page, pageSize } = parsePagination(req.query, { pageSize: taskRecords.DEFAULT_PAGE_SIZE });
+    const { taskName, assetId, from, to } = req.query;
+    const result = await taskRecords.listTaskRecords({ page, pageSize, taskName, assetId, from, to });
+    return success(res, result.data, { pagination: pagination(page, pageSize, result.total) });
+  } catch (error) {
+    return next(error);
+  }
+};
+
 exports.getTaskRun = async (req, res, next) => {
   if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
     return failure(req, res, 400, 'Invalid task run ID');
@@ -194,9 +232,10 @@ exports.getTaskRun = async (req, res, next) => {
   try {
     const doc = await getTaskRunById(req.params.id);
     if (!doc) return failure(req, res, 404, 'Task run not found');
-    return success(res, serializeTaskRun(doc, {
-      staleAfterMs: staleAfterMsFor(doc.taskName)
-    }));
+    return success(res, {
+      ...serializeTaskRun(doc, { staleAfterMs: staleAfterMsFor(doc.taskName) }),
+      assetResults: taskRecords.buildAssetResults(doc)
+    });
   } catch (error) {
     return next(error);
   }

@@ -44,7 +44,10 @@ function staticChecks() {
 
   const viewer = read('src/pages/LogViewer.jsx');
   check('TASK-068 资产 tab 挂载独立面板',
-    /activeTab === LOG_TAB_ASSETS/.test(viewer) && /<AssetDataPanel \/>/.test(viewer));
+    /activeTab === LOG_TAB_ASSETS/.test(viewer) && /<AssetDataTabs \/>/.test(viewer));
+  const assetTabs = read('src/components/OpsCenter/AssetDataTabs.jsx');
+  check('TASK-075 资产数据子视图只挂载当前视图（总表 / 采集记录）',
+    /activeView === ASSET_VIEW_RECORDS \? <CollectionRecordsPanel \/> : <AssetDataPanel \/>/.test(assetTabs));
   check('TASK-068 原始日志分支只接受 server/task',
     /RAW_LOG_TAB_KEYS\.includes\(activeTab\)/.test(viewer)
       && !/activeTab !== DEFAULT_LOG_TAB/.test(viewer));
@@ -52,8 +55,9 @@ function staticChecks() {
   const service = read('src/services/ops-center.service.js');
   const postCalls = (service.match(/\bapi\.post\(/g) || []).length;
   const getCalls = (service.match(/\bapi\.get\(/g) || []).length;
-  check('TASK-070/071/072/074 数据层只含资产 GET 与白名单任务端点',
-    getCalls === 2 && postCalls === 4
+  check('TASK-070/071/072/074/075 数据层只含资产/记录 GET 与白名单任务端点',
+    getCalls === 3 && postCalls === 4
+      && /api\.get\(TASK_RUNS_ENDPOINT, \{ params \}\)/.test(service)
       && /api\.get\(OPS_CENTER_ASSETS_ENDPOINT/.test(service)
       && /api\.post\(INTEGRITY_CHECK_ENDPOINT, \{\}\)/.test(service)
       && /api\.post\(PRICE_SYNC_ENDPOINT/.test(service)
@@ -85,6 +89,13 @@ function staticChecks() {
   check('TASK-068 缺失/未知值不补 0', !/\|\|\s*0\b/.test(panel) && !/\|\|\s*0\b/.test(service));
   check('TASK-068 无可用运行的历史完整度仍回退 unavailable',
     /'unavailable'/.test(panel) && panel.includes('尚未检查'));
+
+  const records = read('src/components/OpsCenter/CollectionRecordsPanel.jsx');
+  check('TASK-075 采集记录面板不直接调用 API，也不读取原始日志服务',
+    !/useMutation|\bapi\.(get|post|put|patch|delete)\(/.test(records)
+      && !/log\.service|\/logs/.test(records)
+      && /useTaskRecords\(/.test(records)
+      && /useOpsTaskRun\(runId\)/.test(records));
 
   const hook = read('src/hooks/useOpsCenterAssets.js');
   check('TASK-069 查询参数进入 queryKey 与服务端请求',

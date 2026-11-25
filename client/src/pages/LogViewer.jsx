@@ -18,10 +18,11 @@
 import { useCallback, useState } from 'react';
 import { useSearchParams } from 'react-router';
 import CronBoard from '../components/CronStatus/CronBoard';
-import AssetDataPanel from '../components/OpsCenter/AssetDataPanel';
+import AssetDataTabs from '../components/OpsCenter/AssetDataTabs';
 import RawLogView from '../components/RawLog/RawLogView';
 import {
   DEFAULT_LOG_TAB,
+  ASSET_VIEW_PARAM,
   LOG_TAB_ASSETS,
   LOG_TAB_PARAM,
   LOG_TABS,
@@ -47,6 +48,8 @@ const LogsPage = () => {
       // 且不会因为省略参数而让用户以为切换无效（AC2 允许无参数等价 board，
       // 但从界面点选后应能直接分享/回退到该 tab）。
       next.set(LOG_TAB_PARAM, key);
+      // TASK-075：子视图参数只属于资产数据 tab，离开时清掉，避免残留到其他 tab 的 URL。
+      if (key !== LOG_TAB_ASSETS) next.delete(ASSET_VIEW_PARAM);
       // replace: false → 每个 tab 切换都进历史栈，满足 AC2「前进后退在 tab 间切换」
       setSearchParams(next);
     },
@@ -89,10 +92,10 @@ const LogsPage = () => {
         </section>
       )}
 
-      {/* 资产数据：仅在 assets tab 挂载，只读聚合（TASK-068）。 */}
+      {/* 资产数据：仅在 assets tab 挂载（TASK-068）；子视图资产总表 / 采集记录（TASK-075）。 */}
       {activeTab === LOG_TAB_ASSETS && (
         <section role="tabpanel" aria-label="资产数据">
-          <AssetDataPanel />
+          <AssetDataTabs />
         </section>
       )}
 
