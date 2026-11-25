@@ -4,11 +4,13 @@
 // TASK-069：筛选/搜索/排序/分页全部作为服务端 query params 发送；客户端不拉全量切片。
 // TASK-070：白名单 POST /integrity-check 与 task-run 详情读取。
 // TASK-071：白名单 POST /price-sync。
+// TASK-075：采集记录列表（筛选/分页均为服务端参数）。
 import { api } from './api.client';
 import {
   OPS_CENTER_DEFAULT_PAGE_SIZE,
   OPS_CENTER_DEFAULT_SORT_BY,
-  OPS_CENTER_DEFAULT_SORT_ORDER
+  OPS_CENTER_DEFAULT_SORT_ORDER,
+  OPS_RECORDS_DEFAULT_PAGE_SIZE
 } from '../constants/opsCenter';
 
 const OPS_CENTER_ASSETS_ENDPOINT = '/ops-center/assets';
@@ -94,4 +96,22 @@ export async function startBatchBackfill({ assetIds, from, to, year }) {
 /** TASK-070：读取一次任务运行的状态/进度/结果。 */
 export async function getTaskRun(runId) {
   return (await api.get(`${TASK_RUNS_ENDPOINT}/${runId}`)).data;
+}
+
+/** TASK-075：采集记录列表；空筛选不发送，分页由服务端完成。 */
+export async function listTaskRecords({
+  page = 1,
+  pageSize = OPS_RECORDS_DEFAULT_PAGE_SIZE,
+  taskName,
+  assetId,
+  from,
+  to
+} = {}) {
+  const params = { page, pageSize };
+  if (taskName) params.taskName = taskName;
+  if (assetId) params.assetId = assetId;
+  if (from) params.from = from;
+  if (to) params.to = to;
+  const response = await api.get(TASK_RUNS_ENDPOINT, { params });
+  return { data: response.data, pagination: response.pagination };
 }

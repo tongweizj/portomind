@@ -102,7 +102,7 @@ function installAdapter() {
   };
 }
 
-function mount({ role = 'admin', nextMode = 'ok' } = {}) {
+function mount({ role = 'admin', nextMode = 'ok', initialEntry = '/logs?tab=assets' } = {}) {
   mode = nextMode;
   release = null;
   calls.length = 0;
@@ -116,7 +116,7 @@ function mount({ role = 'admin', nextMode = 'ok' } = {}) {
   root.render(
     <QueryClientProvider client={queryClient}>
       <AuthContext.Provider value={{ user: { role }, isAdmin: role === 'admin' }}>
-        <MemoryRouter initialEntries={['/logs?tab=assets']}>
+        <MemoryRouter initialEntries={[initialEntry]}>
           <Routes>
             <Route path="/logs" element={<LogViewer />} />
           </Routes>
@@ -150,11 +150,11 @@ async function runScenarios() {
   // ── tab 身份与顺序 ──
   let view = mount();
   await waitRows();
-  const tabs = qa('[role="tab"]').map((tab) => tab.innerText);
+  const tabs = qa('[role="tablist"][aria-label="运维中心"] [role="tab"]').map((tab) => tab.innerText);
   check('TASK-068 tab 顺序 = 看板/资产数据/服务器/任务',
     tabs.join('|') === '任务运行看板|资产数据|服务器日志|任务日志', tabs.join('|'));
   check('TASK-068 ?tab=assets 直接选中资产数据',
-    q('[role="tab"][aria-selected="true"]')?.innerText === '资产数据');
+    q('[role="tablist"][aria-label="运维中心"] [role="tab"][aria-selected="true"]')?.innerText === '资产数据');
   check('TASK-068 一次加载只请求一次资产总表', calls.length === 1, `calls=${calls.length}`);
 
   // ── 表头与四类今日价格状态 ──
@@ -645,6 +645,202 @@ async function runScenarios() {
       && text('[data-testid="ops-batch-failure"]').includes('VTI.US')
       && text('[data-testid="ops-batch-failure"]').includes('quote unavailable')
       && batchAssetsRequests > assetsBeforeBatchStart);
+  await view.unmount();
+
+  // ── TASK-075 采集记录子 tab ──
+  const recordRequests = [];
+  const detailRequests = [];
+  const RECORDS = [
+    {
+      kind: 'run', runId: 'run-75a', taskName: 'asset-history-backfill-batch', runKey: 'manual:a', trigger: 'MANUAL',
+      status: 'PARTIAL', startedAt: '2026-11-24T16:00:00.000Z', endedAt: '2026-11-24T16:02:05.000Z', durationMs: 125000,
+      counts: { totalCount: 2, successCount: 1, failureCount: 1 },
+      scope: { marketGroup: null, assetId: null, symbol: null, assetCount: 2, from: '2026-11-01', to: '2026-11-05' }
+    },
+    {
+      kind: 'skip', skipId: 'skip-1', runId: null, taskName: 'daily-price-sync', runKey: 'manual:b', trigger: 'MANUAL',
+      status: 'SKIPPED', reason: 'ALREADY_RUNNING', activeRunKey: 'manual:c', startedAt: '2026-11-24T15:00:00.000Z',
+      endedAt: null, durationMs: null, counts: null, scope: null
+    },
+    {
+      kind: 'run', runId: 'run-75b', taskName: 'daily-price-sync', runKey: 'manual:d', trigger: 'SCHEDULED',
+      status: 'SUCCEEDED', startedAt: '2026-11-24T14:00:00.000Z', endedAt: '2026-11-24T14:00:30.000Z', durationMs: 30000,
+      counts: { totalCount: 3, successCount: 3, failureCount: 0 },
+      scope: { marketGroup: 'US_CA', assetId: null, symbol: null, assetCount: 3, from: '2026-11-24', to: '2026-11-24' }
+    }
+  ];
+  const recordsAdapter = async (config) => {
+    if (config.url === '/ops-center/assets') {
+      return {
+        data: { success: true, data: ITEMS, pagination: { page: 1, pageSize: 100, total: ITEMS.length } },
+        status: 200, statusText: 'OK', headers: {}, config
+      };
+    }
+    if (config.url === '/ops-center/task-runs') {
+      const params = { ...(config.params || {}) };
+      recordRequests.push(params);
+      const filtered = params.taskName || params.assetId;
+      return {
+        data: {
+          success: true,
+          data: filtered ? RECORDS.slice(0, 1) : RECORDS,
+          pagination: { page: Number(params.page), pageSize: Number(params.pageSize), total: filtered ? 1 : 45 }
+        },
+        status: 200, statusText: 'OK', headers: {}, config
+      };
+    }
+    if (config.url === '/ops-center/task-runs/run-75a') {
+      detailRequests.push(config.url);
+      return {
+        data: { success: true, data: {
+          runId: 'run-75a', taskName: 'asset-history-backfill-batch', status: 'PARTIAL', stale: false,
+          counts: { totalCount: 2, successCount: 1, failureCount: 1 }, failures: [], result: {},
+          assetResults: [
+            {
+              assetId: 'a-priced', symbol: 'VOO.US', market: 'US', status: 'succeeded', reason: null, message: null,
+              from: '2026-11-01', to: '2026-11-05', priceDate: null, missingCount: 0, missingRanges: [],
+              missingRangesTruncated: false, childRunId: 'c1'
+            },
+            {
+              assetId: 'a-missing', symbol: 'VTI.US', market: 'US', status: 'partial', reason: 'UPSTREAM',
+              message: 'quote unavailable', from: '2026-11-01', to: '2026-11-05', priceDate: null, missingCount: 2,
+              missingRanges: [{ from: '2026-11-03', to: '2026-11-04' }], missingRangesTruncated: true, childRunId: 'c2'
+            }
+          ]
+        } },
+        status: 200, statusText: 'OK', headers: {}, config
+      };
+    }
+    if (config.url === '/ops-center/task-runs/c2') {
+      detailRequests.push(config.url);
+      return {
+        data: { success: true, data: {
+          runId: 'c2', taskName: 'asset-history-backfill', status: 'PARTIAL', stale: false,
+          counts: { totalCount: 1, successCount: 0, failureCount: 1 }, failures: [], result: {},
+          assetResults: [{
+            assetId: 'a-missing', symbol: 'VTI.US', market: 'US', status: 'partial', reason: 'HISTORY_GAP',
+            message: 'missing 2/5 trading days after backfill', from: '2026-11-01', to: '2026-11-05', priceDate: null,
+            missingCount: 2, missingRanges: [{ from: '2026-11-03', to: '2026-11-04' }],
+            missingRangesTruncated: false, childRunId: null
+          }]
+        } },
+        status: 200, statusText: 'OK', headers: {}, config
+      };
+    }
+    throw new Error(`Unexpected request ${config.method} ${config.url}`);
+  };
+
+  view = mount({ initialEntry: '/logs?tab=assets&view=records' });
+  api.defaults.adapter = recordsAdapter;
+  await view.queryClient.resetQueries();
+  await waitFor(() => qa('[data-testid="ops-record-row"]').length === RECORDS.length);
+  check('TASK-075 ?tab=assets&view=records 直接打开采集记录且不加载资产总表',
+    q('[data-testid="ops-asset-view-records"]')?.getAttribute('aria-selected') === 'true'
+      && !q('[data-testid="ops-asset-table"]')
+      && Boolean(q('[data-testid="ops-records-table"]')));
+  const recordHeaders = qa('[data-testid="ops-records-table"] > thead th').map((th) => th.innerText);
+  check('TASK-075 列表列 = 时间/类型/范围/状态/总数/成功/失败/耗时/明细',
+    recordHeaders.join('|') === '时间|操作类型|范围|状态|总数|成功|失败|耗时|明细', recordHeaders.join('|'));
+  const [batchRow, skipRow, syncRow] = qa('[data-testid="ops-record-row"]');
+  const cell = (row, testid) => row?.querySelector(`[data-testid="${testid}"]`)?.innerText ?? '';
+  check('TASK-075 批量补缺失行显示范围、状态、计数与耗时',
+    cell(batchRow, 'ops-record-type') === '批量补缺失'
+      && cell(batchRow, 'ops-record-scope') === '2 只资产 · 2026-11-01 ~ 2026-11-05'
+      && cell(batchRow, 'ops-record-status') === '部分失败'
+      && cell(batchRow, 'ops-record-total') === '2'
+      && cell(batchRow, 'ops-record-success') === '1'
+      && cell(batchRow, 'ops-record-failure') === '1'
+      && batchRow.innerText.includes('2 分 5 秒'),
+    batchRow?.innerText);
+  check('TASK-075 跳过事件显示原因，计数为 — 而非 0',
+    skipRow?.dataset.kind === 'skip'
+      && cell(skipRow, 'ops-record-status') === '已跳过'
+      && cell(skipRow, 'ops-record-scope').includes('已有同类任务在运行')
+      && cell(skipRow, 'ops-record-total') === '—'
+      && !skipRow.querySelector('[data-testid="ops-record-detail-toggle"]'),
+    skipRow?.innerText);
+  check('TASK-075 今日同步行显示市场组与定时标记',
+    cell(syncRow, 'ops-record-scope').startsWith('US-CA · 3 只资产')
+      && cell(syncRow, 'ops-record-type').includes('定时'),
+    syncRow?.innerText);
+  check('TASK-075 首次请求带服务端分页参数、无空筛选',
+    recordRequests[0]?.page === 1 && recordRequests[0]?.pageSize === 20
+      && !('taskName' in recordRequests[0]) && !('assetId' in recordRequests[0]),
+    JSON.stringify(recordRequests[0]));
+  check('TASK-075 总数与页码取自服务端分页',
+    text('[data-testid="ops-records-total"]').includes('共 45 条记录')
+      && text('[data-testid="ops-records-page"]') === '第 1 / 3 页');
+
+  q('[data-testid="ops-records-next"]').click();
+  await waitFor(() => recordRequests.at(-1)?.page === 2);
+  check('TASK-075 翻页由服务端完成', recordRequests.at(-1).page === 2);
+
+  // 翻页后重新取第一行再展开。
+  await waitFor(() => qa('[data-testid="ops-record-row"]').length > 0);
+  qa('[data-testid="ops-record-row"]')[0].querySelector('[data-testid="ops-record-detail-toggle"]').click();
+  await waitFor(() => qa('[data-testid="ops-record-asset-row"]').length === 2);
+  const [okAsset, partialAsset] = qa('[data-testid="ops-record-asset-row"]');
+  check('TASK-075 run 详情显示逐资产结果、失败原因与缺失区间',
+    detailRequests.length === 1
+      && okAsset.querySelector('[data-testid="ops-record-asset-status"]')?.innerText === '成功'
+      && partialAsset.querySelector('[data-testid="ops-record-asset-status"]')?.innerText === '部分完成'
+      && partialAsset.querySelector('[data-testid="ops-record-asset-reason"]')?.innerText === 'UPSTREAM：quote unavailable'
+      && partialAsset.querySelector('[data-testid="ops-record-asset-missing-ranges"]')?.innerText === '2026-11-03 ~ 2026-11-04 等（已截断）',
+    partialAsset?.innerText);
+
+  partialAsset.querySelector('[data-testid="ops-record-child-toggle"]').click();
+  await waitFor(() => text('[data-testid="ops-record-child-detail"]').includes('2026-11-03 ~ 2026-11-04'));
+  check('TASK-075 批量补缺失可展开子任务查看该资产的缺失区间与原因',
+    detailRequests.includes('/ops-center/task-runs/c2')
+      && text('[data-testid="ops-record-child-detail"]').includes('missing 2/5 trading days after backfill'));
+
+  setSelect('ops-records-type', 'asset-history-backfill-batch');
+  await waitFor(() => recordRequests.at(-1)?.taskName === 'asset-history-backfill-batch');
+  check('TASK-075 操作类型筛选进入服务端参数并回到第 1 页',
+    recordRequests.at(-1).page === 1 && recordRequests.at(-1).taskName === 'asset-history-backfill-batch');
+  await waitFor(() => qa('[data-testid="ops-records-asset"] option').length === ITEMS.length + 1);
+  check('TASK-075 未按资产筛选时不显示跳过事件排除提示', !q('[data-testid="ops-records-asset-hint"]'));
+  setSelect('ops-records-asset', 'a-missing');
+  await waitFor(() => recordRequests.at(-1)?.assetId === 'a-missing');
+  check('TASK-075 按资产筛选时提示不含跳过事件',
+    text('[data-testid="ops-records-asset-hint"]').includes('不含跳过事件'));
+  setInput('ops-records-from', '2026-11-01');
+  await waitFor(() => recordRequests.at(-1)?.from === '2026-11-01');
+  setInput('ops-records-to', '2026-11-24');
+  await waitFor(() => recordRequests.at(-1)?.to === '2026-11-24');
+  check('TASK-075 资产与时间筛选进入服务端参数',
+    recordRequests.at(-1).assetId === 'a-missing'
+      && recordRequests.at(-1).from === '2026-11-01'
+      && recordRequests.at(-1).to === '2026-11-24'
+      && recordRequests.at(-1).taskName === 'asset-history-backfill-batch');
+
+  q('[data-testid="ops-asset-view-table"]').click();
+  await waitRows();
+  check('TASK-075 切回资产总表后渲染总表、卸载采集记录',
+    Boolean(q('[data-testid="ops-asset-table"]')) && !q('[data-testid="ops-records-panel"]'));
+  await view.unmount();
+
+  view = mount({ role: 'member', initialEntry: '/logs?tab=assets&view=records' });
+  api.defaults.adapter = recordsAdapter;
+  await view.queryClient.resetQueries();
+  await waitFor(() => qa('[data-testid="ops-record-row"]').length === RECORDS.length);
+  check('TASK-075 member 可查看同样的采集记录', qa('[data-testid="ops-record-row"]').length === RECORDS.length);
+  await view.unmount();
+
+  view = mount({ nextMode: 'ok', initialEntry: '/logs?tab=assets&view=records' });
+  api.defaults.adapter = async (config) => {
+    if (config.url === '/ops-center/task-runs') {
+      const error = new Error('from cannot be later than to');
+      error.config = config;
+      error.response = { status: 400, data: { success: false, message: 'from cannot be later than to' }, headers: {} };
+      throw error;
+    }
+    return recordsAdapter(config);
+  };
+  await view.queryClient.resetQueries();
+  await waitFor(() => Boolean(q('[data-testid="ops-records-error"]')), 8000);
+  check('TASK-075 列表加载失败时显示错误且不伪造记录',
+    !q('[data-testid="ops-records-table"]') && text('[data-testid="ops-records-error"]').length > 0);
   await view.unmount();
 
   view = mount({ role: 'member' });

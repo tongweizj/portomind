@@ -32,7 +32,7 @@ PortoMind 是 npm workspaces monorepo，由 **四个 workspace** 组成：
 ## 2. 前置条件
 
 - Node.js 与 npm（基线验证环境 Node 24 / npm 11；lockfile 决定依赖版本）
-- 可访问的 MongoDB
+- 可访问的 MongoDB（≥ 4.4：运维中心采集记录列表用 `$unionWith` 合并 `taskskips`，见 [API 契约](../technical/API_CONTRACT.md)）
 - 两个终端窗口（开发）或 PM2（生产）
 
 检查 MongoDB（Linux systemd 示例）：

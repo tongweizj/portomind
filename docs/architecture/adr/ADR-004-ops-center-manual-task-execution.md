@@ -209,6 +209,7 @@ progress: { completed: Number, total: Number, updatedAt: Date }
 - [x] TASK-071：价格同步接入全局锁 `ops:daily-price-sync`（阈值 60 分钟）、统一 `progress` 与逐资产 `result.assets`。
 - [x] TASK-072：单资产回填使用 `ops:asset-backfill:<assetId>` 前缀锁（阈值 30 分钟），复用 shared `historySync`/覆盖计算；同步返回 `200 + summary`，冲突 `409`。
 - [x] TASK-074：批量补缺失使用父/子 TaskRun；父锁 `ops:asset-backfill-batch`（60 分钟），子任务沿用按资产锁；预览不写库，执行 `202 + runId`。
+- [x] TASK-075：只读采集记录 `GET /api/ops-center/task-runs`（TaskRun + `taskskips`，服务端筛选/分页）与详情 `assetResults` 逐资产归一；不触发任务、不读原始日志。
 - [ ] 若后续需要区分停牌/采集失败/供应商异常，另立需求与 ADR，不在现有 GAP 上叠加推断。
 
 ## 9. Decision History
