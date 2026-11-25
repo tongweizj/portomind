@@ -131,6 +131,7 @@ npm run check:integrity -- --dry-run                          # 只出预览报�
 
 - **结构化任务记录**：`taskruns` 集合（每类任务一行，含 status / 计数 / failures / **result 摘要**）；防重跳过是独立事件，写在 `taskskips` 集合（TASK-057）。
 - **任务日志**：仓库根 `logs/task-YYYY-MM-DD.log`（按天切割，注意当天日期）。
+- **界面查看**：运维中心（`/logs`）的「任务运行看板」汇总 5 类定时任务的最近运行；「资产数据 → 采集记录」（`/logs?tab=assets&view=records`）按操作类型 / 资产 / 时间列出今日同步、单资产补采、批量补缺失、完整性刷新的运行与跳过事件，并展开逐资产结果（见 [client 使用手册](../manual/CLIENT.md) §3.7）。
 
 ### 7.2 常用巡检
 

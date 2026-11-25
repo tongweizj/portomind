@@ -167,7 +167,7 @@ PL-0 平台基座 ──横切驱动──> PL-1 / PL-2 / PL-3 / PL-4 / PL-5 / P
 |---|---|---|
 | `shared/` | 代码库（无进程） | 全部业务内核：models / services / tasks / fetchers / constants / config / utils —— **唯一实现** |
 | `client/` | 进程 | SPA 界面，全部业务操作与可视化 |
-| `server/` | 进程 | REST API；**不注册任何 cron**，调度 / TaskRun 暴露只读聚合（`GET /api/cron/status`）与运维中心白名单手动任务端点（`POST /api/ops-center/integrity-check`、`POST /api/ops-center/price-sync`、`POST /api/ops-center/assets/:id/price-backfill`、`POST /api/ops-center/price-backfill`、`GET /api/ops-center/task-runs/:id`，见 ADR-004）；白名单外不暴露触发 / 写操作 |
+| `server/` | 进程 | REST API；**不注册任何 cron**，调度 / TaskRun 暴露只读聚合与运维中心四类白名单手动任务端点（端点清单见 [API 契约](../technical/API_CONTRACT.md)，执行模型见 ADR-004）；白名单外不暴露触发 / 写操作 |
 | `cron-worker/` | 进程 | **全项目唯一调度所有者**，注册全部 5 类定时任务 |
 
 > 详细运行时形态见 [DEPLOYMENT.md §1](../ops/DEPLOYMENT.md)；技术栈与外部集成见 [ARCHITECTURE.md §2 / §3](../../architecture/ARCHITECTURE.md)。
@@ -238,7 +238,7 @@ PL-0 平台基座 ──横切驱动──> PL-1 / PL-2 / PL-3 / PL-4 / PL-5 / P
 | AS-03 / AS-09 | 资产批量分类 + 未分类专列表 | 解锁 CM-08 / RB-11 大类能力 |
 | AS-07 | 数据质量看板（覆盖率 / 缺口 / 截断提示） | 信任 |
 | AS-11 | 估值分位批量 / 半自动导入 | 激活 AL-10 |
-| AS-04 | 今日价格页同步状态可视化 | 信任 |
+| AS-04 | 今日行情页同步状态可视化（部分由运维中心「今日价格」列承接） | 信任 |
 | RB-02 / RB-09 | 建议「整手 / 最小金额」取整 + 行内微调后执行 | 「动得对」最后一公里 |
 | CM-04 | 组合记账币种补 HKD | 口径一致 |
 | AL-08 | 规则模板 + 克隆 | 降低使用门槛 |

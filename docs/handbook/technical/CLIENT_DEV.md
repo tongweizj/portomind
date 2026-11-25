@@ -18,14 +18,19 @@ client/src/
 ├── constants/
 │   ├── routes.js           # ROUTE_PATTERNS（path 模式）+ ROUTES（生成函数）
 │   ├── enums.js            # 枚举 ↔ 中文标签（口径单一来源）
+│   ├── logTabs.js          # 运维中心 tab 与资产数据子视图（`?tab=` / `?view=`）唯一定义
+│   ├── opsCenter.js        # 运维中心查询默认值、批量上限、采集记录类型文案
 │   └── design-tokens.js    # 颜色 / 圆角 / 字体 / 布局尺寸
-├── hooks/                  # TanStack Query 封装（useAlerts / useFamily / usePortfolio / usePortfolios / useUsers；会话在 components/auth/AuthProvider 的 ['session']）
+├── hooks/                  # TanStack Query 封装（useAlerts / useFamily / usePortfolio / usePortfolios / useUsers / 运维中心 hooks，见 §3.2；会话在 components/auth/AuthProvider 的 ['session']）
 ├── services/               # axios 实例 + 各领域 service（auth / user / alert / asset / …）
 ├── components/             # 跨页面复用组件
 │   ├── layout/             # AppLayout / Sidebar / UserMenu（顶栏头像下拉，账户与登出唯一入口）
 │   ├── auth/               # AuthProvider / authContext / RequireAuth / ForcedChangeScreen / ForbiddenUsersScreen
 │   ├── users/              # 用户管理弹窗（CreateUserModal / ResetPasswordModal）
 │   ├── portfolio/          # 组合详情 Tab 子组件（KpiCards / PositionOverview / Rebalance / …）
+│   ├── CronStatus/         # 运维中心「任务运行看板」（CronBoard + 五张任务卡）
+│   ├── OpsCenter/          # 运维中心「资产数据」tab（资产总表 / 采集记录 / 补采控件），见 §5.5
+│   ├── RawLog/             # 运维中心「服务器日志 / 任务日志」tab（RawLogView）
 │   ├── ButtonGroup/ DataState/ PortfolioCard/ TransactionTable/
 │   └── Household/          # 家庭区块 6 个（纯 props 组件）
 ├── pages/                  # 页面（按域分目录）
@@ -77,7 +82,8 @@ client/src/
 | `/assets/edit/:id` | — | 旧路由兼容 redirect，由 `LegacyAssetEditRedirect` 内联组件保留 `id` |
 | `/prices` | `Prices/Today` | 今日 / 指定日价格 |
 | `/prices/:symbol/history` | `Prices/History` | 价格历史 |
-| `/logs` | `LogViewer` | 日志查看（运维页） |
+| `/logs` | `LogViewer` | **运维中心**：tab 编排（`?tab=board\|assets\|server\|task`，非法值回落 `board`）；资产数据 tab 内子视图 `?view=table\|records`（非法值回落 `table`）。不新增 `/logs/*` 子路由 |
+| `/instruments/incomplete` | — | **已退休页面的兼容 redirect** → `/logs?tab=assets`（TASK-073；路径保留在 `ROUTE_PATTERNS.ASSET_INTEGRITY`） |
 | `*` | — | 通配 redirect → `/portfolios` |
 
 **已下线**：`/family`（原家庭视图页）已删除，**不设显式重定向**，书签由 `*` 通配承接落到 `/portfolios`。后端 `/api/family/*` 端点全部保留——它们仍供 Dashboard 与组合列表页取数，**不是死代码**。
@@ -117,7 +123,7 @@ defaultOptions: { queries: { retry: 1, staleTime: 1000 * 60 } }
 
 ### 3.2 hooks 清单（`hooks/`）
 
-文件：`useAlerts.js` / `useFamily.js` / `usePortfolio.js` / `usePortfolios.js` / `useUsers.js`。
+文件：`useAlerts.js` / `useFamily.js` / `usePortfolio.js` / `usePortfolios.js` / `useUsers.js`，以及运维中心 hooks（见本节末）。
 
 | Hook | queryKey | staleTime / 轮询 | 参数 |
 |---|---|---|---|
@@ -132,11 +138,25 @@ defaultOptions: { queries: { retry: 1, staleTime: 1000 * 60 } }
 
 mutation hooks：`useUpsertFxRate` / `useSyncFxRates` / `useCreateAlertRule` / `useUpdateAlertRule` / `useDeleteAlertRule` / `useMarkAlertEventRead` / `useEvaluateAlerts`，各自内部负责失效相关 key（见 §3.4）。
 
+运维中心 hooks（TASK-063/068–075）：
+
+| Hook | queryKey / 行为 |
+|---|---|
+| `useCronStatus()` | 看板快照；固定 key，首读一次 + 手动 `refetch`，`refetchInterval: false` |
+| `useOpsCenterAssets(params)` | `['ops-center-assets', params]`，30s；筛选/排序/分页全部作为服务端参数 |
+| `useTaskRecords(params)` | `['ops-center-task-records', params]`，15s；采集记录列表 |
+| `useOpsTaskRun(runId)` | `['ops-center-task-run', runId]`；仅 `RUNNING` 时 1.5s 轮询 |
+| `useOpsTaskStart(fn)` | 启动异步任务（202 + runId）→ 轮询 `useOpsTaskRun` → 终态失效 `['ops-center-assets']`；`useIntegrityRefresh` / `usePriceSync` 是它的薄封装 |
+| `useAssetBackfill()` / `useBatchBackfill()` | 单资产补采（同步等待）/ 批量补缺失（预览 + 异步执行）mutation |
+| `useBackfillRange()` | 补采年份/区间的表单状态（无请求） |
+
+运维中心的写入口只允许这四类白名单任务（今日同步、单资产补采、批量补缺失、完整性刷新），由 `client/scripts/verify-task-068.cjs` 的静态断言守护；新增 mutation 必须先修订 Spec #66。
+
 **返回形状统一**为 `{ data, isLoading, isError, refetch }` —— 不返回 `error` 对象。错误信息取 `getApiErrorMessage(error)` 或由页面自行 `catch`。
 
 ### 3.3 未走 Query 的页面（现状，非缺陷）
 
-只有 Dashboard、组合列表、组合详情头部、提醒规则、交易写操作页走了 Query。**资产 / 价格 / 持仓 / 再平衡 / 日志等页面仍是「service 直调 + 组件内 `useState`/`useEffect`」**。
+只有 Dashboard、组合列表、组合详情头部、提醒规则、交易写操作页走了 Query。**资产 / 价格 / 持仓 / 再平衡页面，以及运维中心的服务器日志 / 任务日志 tab（`RawLogView`）仍是「service 直调 + 组件内 `useState`/`useEffect`」**；运维中心的看板与资产数据 tab 已走 Query。
 
 这不是遗漏，是分阶段迁移的中间状态：
 - **新页面必须直接用 Query hooks**，不要再新增 `useEffect` 取数；
@@ -169,7 +189,7 @@ mutation hooks：`useUpsertFxRate` / `useSyncFxRates` / `useCreateAlertRule` / `
 
 ### 4.2 领域 service
 
-`auth.service`（登录/登出/会话/改密/资料）/ `user.service`（管理员用户管理）/ `asset` / `portfolio`（含持仓概览与持仓历史）/ `price` / `transaction` / `rebalance` / `alert` / `family` / `log` / `cron-status` 各一个文件，每个只负责「拼 URL + 传参 + 返回 data」。基础设施两件不带 `.service` 后缀：`api.client.js`（axios 单实例）、`auth-session.bus.js`（拦截器 ↔ Provider 事件桥）。
+`auth.service`（登录/登出/会话/改密/资料）/ `user.service`（管理员用户管理）/ `asset` / `portfolio`（含持仓概览与持仓历史）/ `price` / `transaction` / `rebalance` / `alert` / `family` / `log` / `cron-status` / `ops-center`（资产总表、四类白名单任务、task-run 详情与采集记录列表）各一个文件，每个只负责「拼 URL + 传参 + 返回 data」。基础设施两件不带 `.service` 后缀：`api.client.js`（axios 单实例）、`auth-session.bus.js`（拦截器 ↔ Provider 事件桥）。
 
 **service 层不做业务计算、不做字段改名**——口径在 `shared/` 服务端实现（前后端共用同一份业务内核），前端二次计算会造成两套口径。
 
@@ -183,7 +203,7 @@ mutation hooks：`useUpsertFxRate` / `useSyncFxRates` / `useCreateAlertRule` / `
 |---|---|
 | `layout/AppLayout` | 主框架：Sidebar(232px) + 顶栏(64px，含未读铃铛 + 用户下拉) + 强制改密闸门 + `<Outlet/>` |
 | `layout/UserMenu` | 顶栏头像下拉：身份行（用户名 + 角色同一行、角色弱化）+ 账户设置 + 系统设置（仅 admin）+ 提醒规则 + 退出登录（末位）；点击外部 / `Esc` 关闭；`aria-haspopup/expanded/controls` 齐全；强制改密态除「系统设置」disabled 外均可用（`D11`/`D12`/`D13`） |
-| `layout/Sidebar` | **4 项**顶层导航：Dashboard / 组合管理〔二级：组合列表 / 全部交易〕/ 今日行情 / 日志。激活态紫底紫字，`active` 用**显式判定函数**而非前缀匹配；展开态不持久化；底部只有版本号。**无任何账户入口、无「退出登录」**（`D12`：账户与登出唯一入口在顶栏下拉） |
+| `layout/Sidebar` | **4 项**顶层导航：Dashboard / 组合管理〔二级：组合列表 / 全部交易〕/ 今日行情 / 运维中心（`/logs`）。激活态紫底紫字，`active` 用**显式判定函数**而非前缀匹配；展开态不持久化；底部只有版本号。**无任何账户入口、无「退出登录」**（`D12`：账户与登出唯一入口在顶栏下拉） |
 
 ### 5.2 通用
 
@@ -215,7 +235,22 @@ mutation hooks：`useUpsertFxRate` / `useSyncFxRates` / `useCreateAlertRule` / `
 
 `RECENT_LIMIT` 由后端 fixed 为 10（交易与再平衡都是），前端要 5 条请自己 `slice(0, 5)`。
 
-### 5.5 零引用文件（已于 TASK-071 删除）
+### 5.5 运维中心（`/logs`）
+
+| 组件 | 职责 |
+|---|---|
+| `pages/LogViewer` | 只做 tab 编排：四个 tab 顺序由 `constants/logTabs.js` 的 `LOG_TABS` 决定（任务运行看板 / 资产数据 / 服务器日志 / 任务日志）；只挂载当前 tab；离开资产数据 tab 时清除 `?view=` |
+| `CronStatus/CronBoard` | 任务运行看板：总览条 + 五张任务卡；只读，「刷新」只重新读取 `GET /api/cron/status` |
+| `OpsCenter/AssetDataTabs` | 资产数据 tab 的子视图编排（资产总表 / 采集记录），只挂载当前子视图 |
+| `OpsCenter/AssetDataPanel` | 资产总表：服务端筛选/搜索/排序/分页；admin 可见今日同步、完整性刷新、批量选择与行内补采、资产编辑链接，member 只读 |
+| `OpsCenter/AssetBackfillControl` | 行内单资产补采（年份/区间） |
+| `OpsCenter/BatchBackfillControl` | 批量补缺失：预览 → 确认 → 进度 → 逐资产失败原因 |
+| `OpsCenter/CollectionRecordsPanel` | 采集记录：列表、筛选、分页；展开 run 详情的 `assetResults`，批量补缺失可再展开子任务 |
+| `RawLog/RawLogView` | 服务器日志 / 任务日志（原始日志查询，筛选状态由 `LogViewer` 持有） |
+
+admin / member 的差异只在 UI 可见性（`useAuth().isAdmin`）；权限口径见 [client 使用手册 §3.7](../manual/CLIENT.md#37-运维中心)。
+
+### 5.6 零引用文件（已于 TASK-071 删除）
 
 原「零引用文件」清单中的 17 个文件已在 TASK-071（M1～M3）**全部删除**，仓库中不再存在，切勿按旧路径 import：
 
@@ -276,7 +311,7 @@ mutation hooks：`useUpsertFxRate` / `useSyncFxRates` / `useCreateAlertRule` / `
 2. **注册路由**：`constants/routes.js` 加 `ROUTE_PATTERNS`，若有跳转需求再加 `ROUTES`；`router.jsx` 里挂到 `<Route element={<AppLayout/>}>` 内部（**否则没有 Sidebar**）。
 3. **数据层**：优先在 `hooks/` 新增 Query hook（`queryKey` 用数组，参数对象进 key），**不要**在组件内写 `useEffect` 取数。若只是单页一次性读取，也至少用 `useQuery` 包一层以获得缓存与 `isLoading` 语义。
 4. **service**：若接口尚不存在，先在 `services/<域>.service.js` 加函数，URL 与参数与 [API_CONTRACT.md](./API_CONTRACT.md) 对齐。
-5. **导航**：只有「用户每天要看」的入口才进 Sidebar（当前 4 项，新增需先撤一项）。运维/排障类入口保留 URL 直达；账户类入口一律放顶栏头像下拉，**不进侧栏**。
+5. **导航**：只有「用户每天要看」的入口才进 Sidebar（当前 4 项，新增需先撤一项）。运维与排障能力统一挂在「运维中心」（`/logs`）内部，用 tab / query param 承载，不新增 URL 直达页或 `/logs/*` 子路由；账户类入口一律放顶栏头像下拉，**不进侧栏**。
 6. **样式**：优先 token（内联）或已映射的语义 class；不要引入新的色值字面量。
 7. **空态与错误态**：用 `DataState` 的 `EmptyState` / `ErrorState`，不要各写一套。
 
