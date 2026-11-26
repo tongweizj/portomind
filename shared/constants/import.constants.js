@@ -3,8 +3,9 @@
 
 const SOURCE_BROKERS = Object.freeze(['wealthsimple', 'questrade', 'other']);
 
-// 导入格式 → 解析器在 shared/services/transactionImport/parsers.js 注册；后续工单（#100 / #102）追加。
-const IMPORT_FORMATS = Object.freeze(['standard']);
+// 导入格式 → 解析器在 shared/services/transactionImport/index.js 的 PARSERS 注册；
+// standard 标准 CSV（#94）、wealthsimple 原格式 CSV（#100）；Questrade（#102）后续追加。
+const IMPORT_FORMATS = Object.freeze(['standard', 'wealthsimple']);
 
 // 每次确认最多写入的来源流水行数（Human 决定：按源报表活动行计，成对行不拆批）。
 const IMPORT_COMMIT_LIMIT = 500;
