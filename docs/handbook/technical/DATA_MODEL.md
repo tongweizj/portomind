@@ -365,13 +365,13 @@ AlertRule ──_id──> AlertEvent.ruleId（**可空**：再平衡通知没�
 |---|---|
 | `portfolioId` / `sourceAccountId` | 目标组合 / 来源账户 |
 | `status` | `committing` → `committed` 或 `rolled_back` |
-| `lockKey` | `portfolio:<id>`；仅 `committing` 期间存在，终态 `$unset` |
+| `lockKey` | 主批次 `portfolio:<id>`；伴随锁 `portfolio:<对端组合 id>`（TASK-099）或 `source:<来源账户 id \| new:<broker>:<账号哈希或别名>>`（代码审查 S3）；仅 `committing` 期间存在，终态 `$unset` |
 | `previewToken` / `ledgerFingerprint` | 本次确认核对过的预览凭据 |
-| `parentBatchId` | TASK-099：跨组合划转共同入账时，对端组合的伴随锁指向主批次；随主批次终态一并释放 |
+| `parentBatchId` | 伴随锁（对端组合 / 来源账户）指向主批次；随主批次终态一并释放 |
 | `phase` | `flipped`：pending→committed 翻转已完成，之后的故障只向前补完暂存一端状态，不回滚 |
 | `counts` / `updates` / `error` | 当次结果计数；更新类处置（TASK-095）改写前的原值 `[{transactionId, before, unset}]`（先写后改，回滚 / 崩溃回收时恢复）；失败原因 |
 
-- 部分唯一索引 `{lockKey}`（`status:'committing'`）：同组合并发确认只有一个成功。
+- 部分唯一索引 `{lockKey}`（`status:'committing'`）：同组合并发确认只有一个成功；每次确认另取来源账户伴随锁 `source:<key>`，同一来源账户并发确认到不同组合时后到者 `409 IMPORT_IN_PROGRESS`（外部编号按来源账户跨组合匹配，pending 行互不可见，否则会重复入账）。手动新增 / 编辑 / 删除流水在该组合有 `committing` 批次时返回 `409 IMPORT_IN_PROGRESS`（只读检查，不取锁）。
 - 整批写入：新行先以 `status:'pending'` 写入，单语句翻转为 `committed`；失败即删除本批 pending 行并标 `rolled_back`；超过 10 分钟仍为 `committing` 的批次在下一次确认前回收。单机 MongoDB 无多文档事务，故采用应用层方案。
 - 跨组合划转（TASK-099）：主锁之后按组合 id 顺序取对端伴随锁，任一被占 → `409 IMPORT_IN_PROGRESS`；两端流水同属一次翻转，不会单边可见。
 
@@ -384,6 +384,7 @@ AlertRule ──_id──> AlertEvent.ruleId（**可空**：再平衡通知没�
 | `portfolioId` / `sourceAccountId` | 该端的组合与来源账户（各端各自保留） |
 | `direction` | `out` / `in` |
 | `symbol` / `assetType` / `market` / `currency` | 资产快照（ADR-003 存储代码，资产原币种） |
+| `mappedFrom` | 经代码映射（`symbolMap`，TASK-102）前的报表代码，可选；后到一端据此判断是否同一证券 |
 | `quantity` / `date` / `dateKind` / `timeZone` / `timeZoneSource` / `settlementDate` / `settlementStatus` / `sequence` | 与导入流水同口径 |
 | `pairGroup` | 报表配对组号（可选） |
 | `transferCost` / `transferCostCurrency` / `transferFxRate` | 报表给出的转入成本与换算依据（转入端） |
