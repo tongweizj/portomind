@@ -209,18 +209,28 @@ test('无法配对或组号不完整的单端：待核对阻塞；组号两端�
 
 test('已入账的换汇再次导入：两端同为现金重复待核对；只跳过一端时另一端不能单独入账', async (t) => {
   freshWorld(t);
-  const content = csv([
+  let content = csv([
     { pair_group: 'FX-9', cash_amount: '-1370', cash_currency: 'CAD' },
     { pair_group: 'FX-9', cash_amount: '1000', cash_currency: 'USD' }
   ]);
   const first = await previewAndCommit(body(content));
   assert.equal(first.commit.status, 201);
 
-  const again = await preview(body(content));
+  // 决定 8：同一文件重新上传 → 同行号同内容的两端都自动跳过
+  const same = await preview(body(content));
+  assert.deepEqual(same.rows.map(row => row.code), ['ALREADY_IMPORTED', 'ALREADY_IMPORTED']);
+
+  // 另一份报表（行号不同）里的同额换汇：两端按现金重复人工核对
+  const other = csv([
+    { pair_group: 'FX-9', cash_amount: '1000', cash_currency: 'USD' },
+    { pair_group: 'FX-9', cash_amount: '-1370', cash_currency: 'CAD' }
+  ]);
+  const again = await preview(body(other));
   assert.deepEqual(again.rows.map(row => row.code), ['CASH_DUPLICATE', 'CASH_DUPLICATE']);
-  const [cad, usd] = again.rows;
+  const [usd, cad] = again.rows;
+  content = other;
   const half = await preview(body(content, { resolutions: { [cad.rowKey]: { action: 'skip' }, [usd.rowKey]: { action: 'add' } } }));
-  assert.deepEqual(half.rows.map(row => [row.disposition, row.code]), [['skip', 'CASH_DUPLICATE'], ['review', 'FX_PARTNER_SKIPPED']]);
+  assert.deepEqual(half.rows.map(row => [row.disposition, row.code]), [['review', 'FX_PARTNER_SKIPPED'], ['skip', 'CASH_DUPLICATE']]);
   assert.equal(half.blocking, true);
 
   const both = await preview(body(content, { resolutions: { [cad.rowKey]: { action: 'skip' }, [usd.rowKey]: { action: 'skip' } } }));

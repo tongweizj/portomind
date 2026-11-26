@@ -38,7 +38,7 @@ const wealthsimpleCsv = require('./wealthsimpleCsv');
 const questradeXlsx = require('./questradeXlsx');
 const sourceAccounts = require('./sourceAccount.service');
 const { runAtomicCommit, sourceLockKey } = require('./commit');
-const { matchRows, applyResolutions } = require('./matching');
+const { skipCommittedRows, matchRows, applyResolutions } = require('./matching');
 const transfers = require('./transfers');
 const { pairRows, enforcePairIntegrity } = require('./pairing');
 const { FX_PAIR_SPEC } = require('./fxPairSpec');
@@ -724,6 +724,8 @@ async function computePreview(input) {
   for (const row of rows) {
     if (row.disposition === 'review' && row.code === 'FEE_UNKNOWN') row.rawHash = rawHashOf({ ...row.candidate, fee: null });
   }
+  // 决定 8：已入账的报表行（来源账户 + 行号 + 内容）自动跳过，重新上传同一文件即续传下一批
+  const committedKeys = await skipCommittedRows(rows, { portfolioId, sourceAccountId });
   // TASK-101：换汇两端配对（显式组号 / 用户指定 / 同账户同日唯一建议）；未配对端进入待核对
   pairRows(rows, FX_PAIR_SPEC, resolutions);
   // 划转行（TASK-099）不参与成交匹配，由 transfers.resolveTransfers 配对 / 暂存 / 核对承接成本
@@ -782,7 +784,7 @@ async function computePreview(input) {
     lockPortfolioIds: transferPlan.lockPortfolioIds
   });
   const ledgerFingerprint = ledgerFingerprintOf({
-    portfolioId, sourceAccountId, ledger, matchedIds: [...matchedIds, ...transferPlan.fingerprintKeys]
+    portfolioId, sourceAccountId, ledger, matchedIds: [...committedKeys, ...matchedIds, ...transferPlan.fingerprintKeys]
   });
 
   return {

@@ -115,6 +115,32 @@ function sameCashActivity(left, right) {
 }
 
 /**
+ * 已入账报表行的续传识别（Human 决定 8 / 代码审查 S7）：同一来源账户 + 同一行号（及行号类型）+ 同一内容（rawHash）
+ * 的本组合已入账流水即「这一行已导入」，自动跳过——超过 500 行的报表重新上传同一文件即可继续写入下一批。
+ * 已入账到其他组合的同一行不在此跳过，仍按 matchRows 的外部编号规则展示原组合。
+ * 须在配对与成交匹配之前调用；被认领的旧流水记入 row.claimedId，matchRows 不再让其他行认领。
+ * 返回参与识别的旧流水快照键（计入账本指纹）。
+ */
+async function skipCommittedRows(rows, { portfolioId, sourceAccountId }) {
+  if (!sourceAccountId) return [];
+  const pending = rows.filter(row => row.disposition === 'pending' && row.rawHash);
+  if (!pending.length) return [];
+  const committed = await Transaction.find(visibleQuery({
+    portfolioId, sourceAccountId, 'source.rawHash': { $in: [...new Set(pending.map(row => row.rawHash))] }
+  })).lean();
+  const byIdentity = new Map(committed.map(tx => [
+    `${tx.source?.rowNumberKind || ''}|${tx.source?.rowNumber}|${tx.source?.rawHash}`, tx
+  ]));
+  for (const row of pending) {
+    const tx = byIdentity.get(`${row.rowNumberKind || ''}|${row.rowNumber}|${row.rawHash}`);
+    if (!tx) continue;
+    setSkip(row, tx, `同一来源账户已入账本报表第 ${row.rowNumber} 行（内容一致）`);
+    row.claimedId = String(tx._id);
+  }
+  return committed.map(tx => `${tx._id}:${new Date(tx.updatedAt || 0).getTime()}`);
+}
+
+/**
  * 对 disposition === 'pending' 的行执行匹配；返回参与匹配的旧流水快照键（计入账本指纹）。
  */
 async function matchRows(rows, { portfolioId, sourceAccountId }) {
@@ -192,7 +218,8 @@ async function matchRows(rows, { portfolioId, sourceAccountId }) {
     diff: diffOf(tx, row.candidate)
   });
 
-  const claimed = new Set();
+  // 续传识别（skipCommittedRows）已认领的旧流水不再参与一对一认领
+  const claimed = new Set(rows.map(row => row.claimedId).filter(Boolean));
   const identical = (tx, row) => diffOf(tx, row.candidate).length === 0;
   const claimIdentical = (row, pool, reason) => {
     const hit = pool.find(tx => !claimed.has(String(tx._id)) && identical(tx, row));
@@ -316,4 +343,4 @@ function applyResolutions(rows, resolutions = {}) {
   }
 }
 
-module.exports = { matchRows, applyResolutions, diffOf, DIFF_FIELDS };
+module.exports = { skipCommittedRows, matchRows, applyResolutions, diffOf, DIFF_FIELDS };
