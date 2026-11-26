@@ -374,7 +374,7 @@ test('重复导入同一文件：全部跳过并提示无可写入流水', async
   assert.equal(body.data.blockingReasons[0].code, 'NOTHING_TO_IMPORT');
 });
 
-test('同文件重复原成交编号：内容一致跳过重复行，内容不同报错', async (t) => {
+test('同文件重复原成交编号：内容一致跳过重复行，内容不同待核对（#95）', async (t) => {
   freshWorld(t);
   const { body } = await call('POST', '/api/transactions/import/preview', importBody(csv([
     { external_id: 'D-1' }, { external_id: 'D-1' }, { external_id: 'D-1', quantity: '3' }
