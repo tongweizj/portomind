@@ -2,7 +2,7 @@ const mongoose = require('mongoose');
 const Transaction = require('../models/transaction');
 const Portfolio = require('../models/portfolio');
 const Asset = require('../models/asset');
-const { calculatePositions, replayDayKey } = require('./transaction/positionCalculator');
+const { calculatePositions, localTradeDay } = require('./transaction/positionCalculator');
 const { visibleQuery } = require('./transaction/visibility');
 const { assertPortfolioUnlocked } = require('./transactionImport/commit');
 
@@ -150,8 +150,8 @@ async function updateTransaction(id, input) {
     currency: asset.currency
   };
   // TASK-096：编辑沿用已确认的重放顺序（sequence / orderRank），超卖校验与编辑后重放一致；
-  // 成交日（UTC 交易日）改变时，原交易日上确认的 orderRank 不再适用，一并清除。
-  const dayChanged = replayDayKey(existing.date) !== replayDayKey(transaction.date);
+  // 成交日（当地交易日）改变时，原交易日上确认的 orderRank 不再适用，一并清除。
+  const dayChanged = localTradeDay(existing) !== localTradeDay({ ...existing, date: transaction.date });
   const ordering = { sequence: existing.sequence, orderRank: dayChanged ? undefined : existing.orderRank };
   await validateLedger({ ...transaction, ...ordering }, id, existing);
   const update = dayChanged && existing.orderRank !== undefined

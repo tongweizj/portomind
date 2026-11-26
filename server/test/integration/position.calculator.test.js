@@ -271,7 +271,7 @@ test('历史数据库适配层使用 portfolioId、timestamp 和 price', async (
 });
 
 // ─────────────────────────────────────────────────────────────
-// TASK-096（#96）：重放顺序 = (UTC 交易日, orderRank, date, sequence, _id)
+// TASK-096（#96）：重放顺序 = (当地交易日, orderRank, date, sequence, _id)
 // ─────────────────────────────────────────────────────────────
 
 const replayOrderCases = [
@@ -320,7 +320,7 @@ const replayOrderCases = [
     throws: 'INSUFFICIENT_POSITION'
   },
   {
-    name: 'orderRank 只在同一 UTC 交易日内生效，不跨日',
+    name: 'orderRank 只在同一当地交易日内生效，不跨日',
     transactions: [
       { _id: '0001', action: 'buy', quantity: 10, price: 100, date: '2026-03-01T15:00:00Z', orderRank: 5 },
       { _id: '0002', action: 'sell', quantity: 10, price: 100, date: '2026-03-02T00:00:00Z', orderRank: -5 }
@@ -442,3 +442,15 @@ for (const scenario of splitCases) {
     }
   });
 }
+
+// 代码审查 S5：重放日分桶按流水的当地交易日
+test('S5 同日顺序确认（orderRank）只在当地交易日内生效：次日仅日期卖出不会排到前一晚的多伦多成交之前', () => {
+  const buy = trade({
+    date: new Date('2026-01-06T01:30:00Z'), dateKind: 'datetime', timeZone: 'America/Toronto', quantity: 10
+  });
+  const sell = trade({
+    action: 'sell', date: new Date('2026-01-06T00:00:00Z'), dateKind: 'date', orderRank: -1, quantity: 10, price: 110
+  });
+  const [position] = calculatePositions([sell, buy]).concat([]);
+  assert.equal(position, undefined, '买入（当地 01-05）在先、卖出（01-06）在后，清仓且不超卖');
+});

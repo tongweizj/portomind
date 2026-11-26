@@ -139,7 +139,7 @@ AlertRule ──_id──> AlertEvent.ruleId（**可空**：再平衡通知没�
 | `price` | Number，`min: Number.EPSILON`（> 0）；持仓类动作 required（`split` 除外，拆股不记单价），现金类可空 |
 | `splitRatio` | Number，可选，> 0（TASK-098）：拆股比例 = 新份额 / 旧份额（1 拆 2 为 2，10 合 1 为 0.1）；已知时重放核对 `拆股前份额 ×(splitRatio−1) = quantity` |
 | `fee` | Number，= `0`，min 0。买入计入成本、卖出从净得扣除 |
-| `date` | Date，required，= now。**业务日期**，决定持仓重放的顺序。重放顺序 `(UTC 交易日, orderRank, date, 导入批次, sequence, _id)`（`positionCalculator.compareTransactions`，预览 / 确认后重放 / 编辑共用；同一时刻手动流水在导入流水之前，字符串按码位比较） |
+| `date` | Date，required，= now。**业务日期**，决定持仓重放的顺序。重放顺序 `(当地交易日, orderRank, date, 导入批次, sequence, _id)`（当地交易日：带时刻流水按其 `timeZone`（缺省 `MARKET_TIMEZONE`）取日历日，仅日期流水取存储的 UTC 日期；`positionCalculator.localTradeDay`）（`positionCalculator.compareTransactions`，预览 / 确认后重放 / 编辑共用；同一时刻手动流水在导入流水之前，字符串按码位比较） |
 | `notes` | String，trim，≤500 |
 | `sourceAccountId` | ObjectId → SourceAccount，可选（TASK-094：导入流水的来源账户） |
 | `source` | 子文档，可选：`{kind:'import', format:'standard'\|'wealthsimple'\|'questrade', fileName, rowNumber, rowNumberKind:'original'\|'file', externalId(券商原成交编号，无则 null，从不合成), importBatchId, rawHash}` |
@@ -151,7 +151,7 @@ AlertRule ──_id──> AlertEvent.ruleId（**可空**：再平衡通知没�
 | `feeSource` | `broker`/`derived`/`user`/`confirmed_zero`（佣金缺失不按 0 处理，需推算、补填或明确确认） |
 | `grossAmount` | 数量 × 单价（无编号成交匹配字段，不含佣金与净额） |
 | `pairGroupId` / `sequence` | 成对流水组号（TASK-101 换汇两端：报表 `pair_group` 原值，或建议 / 用户指定配对生成的 `fx-<hash>`；两端共同入账，单端不入账）；同一报表内原行顺序（时间正序），同一时刻同批次按此重放 |
-| `orderRank` | Number，可选（TASK-096）：用户确认的同日先后，仅在同一 UTC 交易日内生效（默认 0；确认「之前」为负、「之后」为正）。编辑改动成交日时清除 |
+| `orderRank` | Number，可选（TASK-096）：用户确认的同日先后，仅在同一当地交易日内生效（默认 0；确认「之前」为负、「之后」为正）。编辑改动成交日时清除 |
 | `carryCost` / `carryCostCurrency` / `carryCostSource` / `transferFxRate` | TASK-099，仅 `transfer_in`：承接成本（转入资产原币种，重放时代替 `qty×price`）；来源 `report`（报表划转成本）/`carried`（同币种承接转出端移动平均成本）/`fx`（转出成本 × 换算依据）/`user`（用户补填）；换算依据 = 1 单位转出资产币种折合的转入资产币种 |
 | `transfer` | TASK-099：`{direction:'out'\|'in', counterpartPortfolioId, counterpartSourceAccountId, stagedLegId?}`。两端以同一 `pairGroupId` 关联、同一 `source.importBatchId` 共同入账；`price` 为每单位成本快照（转出 = 转出前均价，转入 = 承接成本 / 份额），不参与重放 |
 | `status` | `pending`/`committed`，仅导入写入。`pending` 行对全部读取方不可见（统一经 `shared/services/transaction/visibility.js`），手动录入与旧数据无此字段 |

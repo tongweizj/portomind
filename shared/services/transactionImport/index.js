@@ -19,7 +19,6 @@ const {
   calculatePositions,
   compareTransactions,
   replayLedger,
-  replayDayKey,
   localTradeDay,
   PREVIEW_BATCH_KEY
 } = require('../transaction/positionCalculator');
@@ -247,7 +246,7 @@ const STATE_EPSILON = 1e-9;
 
 // 行的交易日（报表日历日）：仅日期行即报表日期，带时刻行按其时区（缺省 MARKET_TIMEZONE）取当地日。
 function tradeDayKey(candidate) {
-  return localTradeDay(candidate);
+  return candidate.localDate || localTradeDay(candidate);
 }
 
 function probeOf(row) {
@@ -275,7 +274,7 @@ function outcomeOf(transactions, symbol, day) {
   };
   return {
     full: attempt(transactions).error || null,
-    day: attempt(transactions.filter(tx => replayDayKey(tx.date) <= day))
+    day: attempt(transactions.filter(tx => localTradeDay(tx) <= day))
   };
 }
 
@@ -287,7 +286,7 @@ function sameOutcome(left, right) {
 }
 
 /**
- * 同日顺序核对（TASK-096 / AC-11）。对每个标的、每个 UTC 交易日：
+ * 同日顺序核对（TASK-096 / AC-11）。对每个标的、每个当地交易日（代码审查 S5：不是 UTC 日）：
  * - 有已入账流水且新旧之间存在非「双方都带时刻」的组合 → 新行整体相对已入账流水的先后不确定（跨报表）；
  * - 只有新行且同日混合带时刻与仅日期 → 仅日期行相对带时刻行的先后不确定（混合精度）。
  * 同报表仅日期的同日成交按原行顺序（sequence），不视为不确定。
@@ -296,10 +295,10 @@ function sameOutcome(left, right) {
  * 预览、确认后重放与后续编辑共用 compareTransactions，保证顺序一致。
  */
 function checkSameDayOrder(symbol, existing, newRows, resolutions) {
-  const days = [...new Set(newRows.map(row => replayDayKey(row.candidate.date)))].sort();
+  const days = [...new Set(newRows.map(row => tradeDayKey(row.candidate)))].sort();
   for (const day of days) {
-    const dayNew = newRows.filter(row => replayDayKey(row.candidate.date) === day);
-    const dayExisting = existing.filter(tx => replayDayKey(tx.date) === day);
+    const dayNew = newRows.filter(row => tradeDayKey(row.candidate) === day);
+    const dayExisting = existing.filter(tx => localTradeDay(tx) === day);
     let floating = [];
     let anchors = [];
     if (dayExisting.length) {
@@ -368,7 +367,7 @@ async function validateLedger(rows, portfolioId, resolutions = {}, extraProbes =
     ? await Transaction.find(visibleQuery({ portfolioId, symbol: { $in: symbols } })).lean()
     : [];
   for (const row of writes) {
-    if (row.disposition === 'update' && replayDayKey(row.target.date) === replayDayKey(row.candidate.date)) {
+    if (row.disposition === 'update' && localTradeDay(row.target) === tradeDayKey(row.candidate)) {
       row.orderRank = row.target.orderRank;
     }
   }

@@ -45,8 +45,6 @@ function applySplit(position, delta, splitRatio, transactionDate) {
   position.quantity = after;
 }
 
-const DAY_MS = 24 * 60 * 60 * 1000;
-
 function orderNumber(value, fallback) {
   const number = Number(value);
   return value === null || value === undefined || value === '' || !Number.isFinite(number) ? fallback : number;
@@ -66,8 +64,8 @@ function batchKeyOf(transaction) {
 }
 
 /**
- * 重放顺序（TASK-096）：(UTC 交易日, orderRank, date, 导入批次, sequence, _id)。
- * - 仅日期流水存当日 UTC 零点，与同日带时刻流水落在同一 UTC 交易日；
+ * 重放顺序（TASK-096）：(当地交易日 localTradeDay, orderRank, date, 导入批次, sequence, _id)。
+ * - 带时刻流水按其时区的日历日分桶，仅日期流水按报表日期（存当日 UTC 零点）分桶，二者在同一当地交易日比较；
  * - orderRank：用户确认的同日先后（默认 0），只在同一交易日内生效，不改写成交时刻；
  * - 同一时刻：手动 / 旧流水（无批次）在前，导入流水按批次先后（ObjectId 时间序），
  *   同批次内按 sequence（原行顺序，时间正序）；预览行用 PREVIEW_BATCH_KEY 排在全部已入账流水之后；
@@ -77,8 +75,9 @@ function batchKeyOf(transaction) {
 function compareTransactions(left, right) {
   const leftTime = new Date(left.date).getTime();
   const rightTime = new Date(right.date).getTime();
-  const dayDifference = Math.floor(leftTime / DAY_MS) - Math.floor(rightTime / DAY_MS);
-  if (dayDifference !== 0) return dayDifference;
+  const leftDay = localTradeDay(left) || '';
+  const rightDay = localTradeDay(right) || '';
+  if (leftDay !== rightDay) return leftDay < rightDay ? -1 : 1;
   const rankDifference = orderNumber(left.orderRank, 0) - orderNumber(right.orderRank, 0);
   if (rankDifference !== 0) return rankDifference;
   if (leftTime !== rightTime) return leftTime - rightTime;
@@ -89,20 +88,28 @@ function compareTransactions(left, right) {
   return codeUnitCompare(String(left._id || ''), String(right._id || ''));
 }
 
-/** UTC 日历日键（YYYY-MM-DD）。 */
-function replayDayKey(value) {
-  return new Date(value).toISOString().slice(0, 10);
-}
+// 带时刻流水的当地日缓存（重放排序中比较器会被调用很多次；键 = 时刻 + 时区）
+const localDayCache = new Map();
+const LOCAL_DAY_CACHE_LIMIT = 50000;
 
 /**
- * 流水的当地交易日（YYYY-MM-DD）：带时刻（dateKind='datetime'）按其时区（缺省 MARKET_TIMEZONE）取日历日；
- * 仅日期流水存当日 UTC 零点，直接取 UTC 日期。与 compareTransactions 的日分桶一致。
+ * 流水的当地交易日（YYYY-MM-DD，代码审查 S5）：带时刻（dateKind='datetime'）按其时区（缺省 MARKET_TIMEZONE）取日历日；
+ * 仅日期流水与旧数据（无 dateKind）存当日 UTC 零点，直接取 UTC 日期。compareTransactions 与导入同日顺序核对共用。
  */
 function localTradeDay(transaction) {
   const date = new Date(transaction.date);
-  if (Number.isNaN(date.getTime())) return null;
-  if (transaction.dateKind === 'datetime') return dayjs(date).tz(transaction.timeZone || MARKET_TIMEZONE).format('YYYY-MM-DD');
-  return date.toISOString().slice(0, 10);
+  const time = date.getTime();
+  if (Number.isNaN(time)) return null;
+  if (transaction.dateKind !== 'datetime') return date.toISOString().slice(0, 10);
+  const zone = transaction.timeZone || MARKET_TIMEZONE;
+  const key = `${time}|${zone}`;
+  let day = localDayCache.get(key);
+  if (day === undefined) {
+    if (localDayCache.size >= LOCAL_DAY_CACHE_LIMIT) localDayCache.clear();
+    day = dayjs(date).tz(zone).format('YYYY-MM-DD');
+    localDayCache.set(key, day);
+  }
+  return day;
 }
 
 function latestPriceFor(latestPrices, symbol) {
@@ -345,7 +352,6 @@ function calculatePositionHistory(transactions, prices, interval = 'day') {
 module.exports = {
   calculatePositions,
   replayLedger,
-  replayDayKey,
   localTradeDay,
   calculatePositionHistory,
   compareTransactions,
