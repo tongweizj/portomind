@@ -15,14 +15,21 @@ const mongoose = require('mongoose');
 const Portfolio = require('../../models/portfolio');
 const Asset = require('../../models/asset');
 const Transaction = require('../../models/transaction');
-const { calculatePositions } = require('../transaction/positionCalculator');
+const {
+  calculatePositions,
+  compareTransactions,
+  replayLedger,
+  replayDayKey,
+  PREVIEW_BATCH_KEY
+} = require('../transaction/positionCalculator');
 const { visibleQuery } = require('../transaction/visibility');
 const { toStorageSymbol, marketFromSuffix, normalizeSymbol } = require('../../utils/symbol');
 const { isCashAction } = require('../../constants/transaction.constants');
 const {
   IMPORT_FORMATS,
   IMPORT_COMMIT_LIMIT,
-  IMPORT_PREVIEW_LIMIT
+  IMPORT_PREVIEW_LIMIT,
+  IMPORT_TIME_ZONE_CHOICES
 } = require('../../constants/import.constants');
 const standardCsv = require('./standardCsv');
 const sourceAccounts = require('./sourceAccount.service');
@@ -141,10 +148,119 @@ function applyFeeResolution(row, resolution) {
   row.options = ['fee', 'confirmZeroFee', 'skip'];
 }
 
-// 超卖校验：按标的把新增 / 更新行逐条（时间正序）并入现有账本重放；失败行标错并剔除，继续校验后续行。
-// 更新行（#95）以新值替换目标旧流水（沿用其 _id 以保持同刻排序）；标的被更正时同时校验旧标的移除后的账本。
-async function validateLedger(rows, portfolioId) {
-  // 现金类流水不影响持仓，不参与超卖重放（更正把成交改成现金流水的情况由 #95 的 action 范围排除）
+const ORDER_CHOICES = ['before', 'after'];
+const STATE_EPSILON = 1e-9;
+
+function probeOf(row) {
+  // 同一时刻：预览行排在全部已入账流水之后（与确认后「本批次最新」一致），批内按原行顺序
+  return {
+    ...row.candidate,
+    ...row.asset,
+    sequence: row.sequence,
+    orderRank: row.orderRank,
+    source: { importBatchId: PREVIEW_BATCH_KEY },
+    _id: `~${String(row.sequence).padStart(6, '0')}`
+  };
+}
+
+// 单个情景的结果：全账本是否超卖 + 当日收盘时该标的的数量 / 剩余成本 / 已实现盈亏。
+function outcomeOf(transactions, symbol, day) {
+  const attempt = list => {
+    try {
+      const position = replayLedger(list).get(symbol) || { quantity: 0, remainingCost: 0, realizedPnl: 0 };
+      return { quantity: position.quantity, remainingCost: position.remainingCost, realizedPnl: position.realizedPnl };
+    } catch (error) {
+      if (error.code !== 'INSUFFICIENT_POSITION') throw error;
+      return { error: error.code };
+    }
+  };
+  return {
+    full: attempt(transactions).error || null,
+    day: attempt(transactions.filter(tx => replayDayKey(tx.date) <= day))
+  };
+}
+
+function sameOutcome(left, right) {
+  if (left.full !== right.full) return false;
+  if (left.day.error || right.day.error) return left.day.error === right.day.error;
+  return ['quantity', 'remainingCost', 'realizedPnl']
+    .every(key => Math.abs(left.day[key] - right.day[key]) < STATE_EPSILON);
+}
+
+/**
+ * 同日顺序核对（TASK-096 / AC-11）。对每个标的、每个 UTC 交易日：
+ * - 有已入账流水且新旧之间存在非「双方都带时刻」的组合 → 新行整体相对已入账流水的先后不确定（跨报表）；
+ * - 只有新行且同日混合带时刻与仅日期 → 仅日期行相对带时刻行的先后不确定（混合精度）。
+ * 同报表仅日期的同日成交按原行顺序（sequence），不视为不确定。
+ * 不确定且「之前 / 之后」两种顺序的超卖、剩余成本或已实现盈亏结果不同 → 行标 review ORDER_AMBIGUOUS，
+ * 用户以 resolutions[rowKey].order = 'before' | 'after' 确认；确认结果写入 orderRank 持久化，
+ * 预览、确认后重放与后续编辑共用 compareTransactions，保证顺序一致。
+ */
+function checkSameDayOrder(symbol, existing, newRows, resolutions) {
+  const days = [...new Set(newRows.map(row => replayDayKey(row.candidate.date)))].sort();
+  for (const day of days) {
+    const dayNew = newRows.filter(row => replayDayKey(row.candidate.date) === day);
+    const dayExisting = existing.filter(tx => replayDayKey(tx.date) === day);
+    let floating = [];
+    let anchors = [];
+    if (dayExisting.length) {
+      const allTimed = dayExisting.every(tx => tx.dateKind === 'datetime') &&
+        dayNew.every(row => row.candidate.dateKind === 'datetime');
+      if (!allTimed) { floating = dayNew; anchors = dayExisting; }
+    } else {
+      const dateOnly = dayNew.filter(row => row.candidate.dateKind !== 'datetime');
+      const timed = dayNew.filter(row => row.candidate.dateKind === 'datetime');
+      if (dateOnly.length && timed.length) { floating = dateOnly; anchors = timed.map(probeOf); }
+    }
+    if (!floating.length) continue;
+
+    const anchorRanks = anchors.map(item => Number(item.orderRank) || 0);
+    const rankFor = choice => (choice === 'before' ? Math.min(...anchorRanks) - 1 : Math.max(...anchorRanks) + 1);
+    const answers = [...new Set(floating.map(row => resolutions[row.rowKey]?.order).filter(Boolean))];
+    if (answers.length === 1 && ORDER_CHOICES.includes(answers[0])) {
+      for (const row of floating) { row.orderRank = rankFor(answers[0]); row.orderResolved = answers[0]; }
+      continue;
+    }
+
+    const scenario = choice => {
+      const floatingKeys = new Set(floating.map(row => row.rowKey));
+      const probes = newRows.map(row => (floatingKeys.has(row.rowKey) ? { ...probeOf(row), orderRank: rankFor(choice) } : probeOf(row)));
+      return outcomeOf([...existing, ...probes], symbol, day);
+    };
+    if (sameOutcome(scenario('before'), scenario('after'))) continue;
+
+    const conflict = {
+      day,
+      kind: dayExisting.length ? 'cross_report' : 'mixed_precision',
+      existing: dayExisting.map(tx => ({
+        id: String(tx._id), action: tx.action, quantity: tx.quantity, price: tx.price,
+        date: tx.date, dateKind: tx.dateKind || null
+      })),
+      rowKeys: floating.map(row => row.rowKey)
+    };
+    for (const row of floating) {
+      row.disposition = 'review';
+      row.code = 'ORDER_AMBIGUOUS';
+      row.reason = answers.length > 1
+        ? '同日顺序决议不一致：请对本组各行选择同一顺序'
+        : (dayExisting.length
+          ? `${day} 已有其他报表或手动录入的同日流水，顺序不同会改变超卖、持仓成本或已实现盈亏：请确认本报表这些成交发生在已有流水之前还是之后`
+          : `${day} 同时有带时刻与仅日期的成交，顺序不同会改变超卖、持仓成本或已实现盈亏：请确认仅日期成交发生在带时刻成交之前还是之后`);
+      row.options = ['order', 'skip'];
+      row.orderConflict = conflict;
+      if (resolutions[row.rowKey]?.action === 'skip') {
+        row.disposition = 'skip';
+        row.resolved = true;
+      }
+    }
+  }
+}
+
+// 超卖校验：按标的先核对同日顺序（新增行），再把新增 / 更新行按重放顺序逐条并入现有账本；失败行标错并剔除，继续校验后续行。
+// 更新行（#95）以新值替换目标旧流水；标的被更正时同时校验旧标的移除后的账本。
+// 更新写入后归属本次导入批次并带新 sequence（importedFields），预览探针与之一致；同一交易日内沿用目标已确认的 orderRank。
+async function validateLedger(rows, portfolioId, resolutions = {}) {
+  // 现金类流水（TASK-097）不影响持仓，不参与同日顺序核对与超卖重放
   const writes = rows.filter(row => (row.disposition === 'add' || row.disposition === 'update') && !isCashAction(row.candidate.action));
   const symbols = [...new Set(writes.flatMap(row => (row.disposition === 'update'
     ? [row.candidate.symbol, row.target.symbol]
@@ -152,18 +268,25 @@ async function validateLedger(rows, portfolioId) {
   const ledger = symbols.length
     ? await Transaction.find(visibleQuery({ portfolioId, symbol: { $in: symbols } })).lean()
     : [];
+  for (const row of writes) {
+    if (row.disposition === 'update' && replayDayKey(row.target.date) === replayDayKey(row.candidate.date)) {
+      row.orderRank = row.target.orderRank;
+    }
+  }
   for (const symbol of symbols) {
-    let accepted = ledger.filter(tx => tx.symbol === symbol);
-    const pendingRows = writes.filter(row => row.candidate.symbol === symbol || (row.disposition === 'update' && row.target.symbol === symbol))
-      .sort((left, right) => new Date(left.candidate.date) - new Date(right.candidate.date) || left.sequence - right.sequence);
-    for (const row of pendingRows) {
-      if (row.disposition === 'error') continue;
-      const probe = {
-        ...row.candidate,
-        ...row.asset,
-        // 同一时刻：现有流水在前，新行按原行顺序（_id 以 ~ 开头排在 ObjectId 之后）
-        _id: row.disposition === 'update' ? row.target._id : `~${String(row.sequence).padStart(6, '0')}`
-      };
+    const existing = ledger.filter(tx => tx.symbol === symbol);
+    const addRows = writes.filter(row => row.disposition === 'add' && row.candidate.symbol === symbol);
+    // 更新行替换的目标不作为同日顺序的锚点
+    const updatedIds = new Set(writes.filter(row => row.disposition === 'update').map(row => String(row.target._id)));
+    checkSameDayOrder(symbol, existing.filter(tx => !updatedIds.has(String(tx._id))), addRows, resolutions);
+
+    let accepted = [...existing];
+    const ordered = writes
+      .filter(row => row.candidate.symbol === symbol || (row.disposition === 'update' && row.target.symbol === symbol))
+      .map(row => ({ row, probe: row.disposition === 'update' ? { ...probeOf(row), _id: row.target._id } : probeOf(row) }))
+      .sort((left, right) => compareTransactions(left.probe, right.probe));
+    for (const { row, probe } of ordered) {
+      if (row.disposition === 'error' || row.disposition === 'skip') continue;
       const next = row.disposition === 'update'
         ? accepted.filter(tx => String(tx._id) !== String(row.target._id))
         : [...accepted];
@@ -173,6 +296,8 @@ async function validateLedger(rows, portfolioId) {
         accepted = next;
       } catch (error) {
         if (error.code !== 'INSUFFICIENT_POSITION') throw error;
+        // 顺序待确认的行：超卖与否取决于用户确认的顺序，保持 review，不另报错
+        if (row.disposition === 'review') continue;
         rowError(row, 'INSUFFICIENT_POSITION', `${row.disposition === 'update' ? '更新后' : ''}卖出数量超过 ${symbol} 当时的可用持仓`);
       }
     }
@@ -227,7 +352,11 @@ function publicCandidate(row) {
     date: c.date,
     dateKind: c.dateKind,
     timeZone: c.timeZone,
+    timeZoneSource: c.timeZoneSource,
+    localDate: c.localDate,
+    localTime: c.localTime,
     settlementDate: c.settlementDate,
+    settlementStatus: c.settlementStatus,
     quantity: c.quantity,
     price: c.price,
     grossAmount: c.grossAmount,
@@ -258,10 +387,10 @@ function validateInput(input) {
   if (input.resolutions !== undefined && (typeof input.resolutions !== 'object' || Array.isArray(input.resolutions) || input.resolutions === null)) {
     throw businessError(400, 'INVALID_RESOLUTIONS', 'resolutions must be an object keyed by rowKey');
   }
-  if (input.timeZone !== undefined && input.timeZone !== null && input.timeZone !== '') {
-    try { new Intl.DateTimeFormat('en-US', { timeZone: input.timeZone }).format(); } catch {
-      throw businessError(400, 'INVALID_TIME_ZONE', 'timeZone must be a valid IANA time zone');
-    }
+  // TASK-096：页面确认的时区只允许北京 / 多伦多（报表自带 time_zone 列不受此限制）
+  if (input.timeZone !== undefined && input.timeZone !== null && input.timeZone !== '' &&
+      !IMPORT_TIME_ZONE_CHOICES.includes(input.timeZone)) {
+    throw businessError(400, 'INVALID_TIME_ZONE', `timeZone must be one of: ${IMPORT_TIME_ZONE_CHOICES.join(', ')}`);
   }
   return format;
 }
@@ -299,6 +428,16 @@ async function computePreview(input) {
     code: row.error?.code,
     reason: row.error?.reason
   }));
+
+  // TASK-096：报表有成交时间但无时区 → 待用户确认北京 / 多伦多时区（文件级 timeZone），确认前不猜时刻。
+  for (const row of rows) {
+    if (row.disposition !== 'pending' || !row.candidate.needsTimeZone) continue;
+    row.disposition = 'review';
+    row.code = 'TIME_ZONE_UNCONFIRMED';
+    row.reason = '报表有成交时间但没有时区：请确认按北京或多伦多时间解读';
+    row.options = ['timeZone', 'skip'];
+  }
+  const requiresTimeZone = rows.some(row => row.code === 'TIME_ZONE_UNCONFIRMED');
 
   // 多账户报表按账户拆分：按账号分组，用户选择一个账户（accountSelector = 末 4 位 + 哈希前缀）。
   const broker = input.sourceAccount?.broker || null;
@@ -361,15 +500,18 @@ async function computePreview(input) {
   for (const row of rows) {
     if (row.disposition === 'pending') row.disposition = 'add';
   }
-  // 用户对 review 行的显式决议：skip / add / update（#95）
+  // 用户对 review 行的显式决议：skip / add / update（#95）；同日顺序决议在 validateLedger 内处理（#96）
   applyResolutions(rows, resolutions);
-  const ledger = await validateLedger(rows, portfolioId);
+  const ledger = await validateLedger(rows, portfolioId, resolutions);
 
   const counts = { add: 0, update: 0, skip: 0, review: 0, error: 0, total: rows.length };
   for (const row of rows) counts[row.disposition] += 1;
   const blockingReasons = [];
   if (missingColumns.length) blockingReasons.push({ code: 'MISSING_COLUMNS', reason: `未映射必需列：${missingColumns.join(', ')}` });
   if (requiresAccountSelection) blockingReasons.push({ code: 'ACCOUNT_SELECTION_REQUIRED', reason: '报表包含多个账户，请选择一个来源账户' });
+  if (requiresTimeZone && rows.some(row => row.code === 'TIME_ZONE_UNCONFIRMED' && row.disposition === 'review')) {
+    blockingReasons.push({ code: 'TIME_ZONE_REQUIRED', reason: '报表有成交时间但没有时区，请确认北京或多伦多时区' });
+  }
   if (counts.error) blockingReasons.push({ code: 'ROW_ERRORS', reason: `${counts.error} 行存在错误` });
   if (counts.review) blockingReasons.push({ code: 'UNRESOLVED_REVIEW', reason: `${counts.review} 行待核对` });
   const batches = planBatches(rows);
@@ -385,7 +527,7 @@ async function computePreview(input) {
     format,
     sourceKey,
     alias: resolvedSource.planned.alias,
-    rows: rows.map(row => [row.rowKey, row.disposition, row.code || null, row.rawHash || null, row.candidate?.notes || null, row.targetId || null])
+    rows: rows.map(row => [row.rowKey, row.disposition, row.code || null, row.rawHash || null, row.candidate?.notes || null, row.targetId || null, row.orderRank ?? null])
   });
   const ledgerFingerprint = ledgerFingerprintOf({ portfolioId, sourceAccountId, ledger, matchedIds });
 
@@ -405,7 +547,8 @@ async function computePreview(input) {
     mapping: parsed.mapping,
     accounts,
     selectedAccount,
-    requiresAccountSelection
+    requiresAccountSelection,
+    requiresTimeZone
   };
 }
 
@@ -425,6 +568,8 @@ function toPreviewResponse(preview) {
     accounts: preview.accounts.map(({ selector, accountKeyLast4, rowCount }) => ({ selector, accountKeyLast4, rowCount })),
     accountSelector: preview.selectedAccount?.selector || null,
     requiresAccountSelection: preview.requiresAccountSelection,
+    requiresTimeZone: preview.requiresTimeZone,
+    timeZoneOptions: [...IMPORT_TIME_ZONE_CHOICES],
     fileName: preview.file.name,
     headers: preview.headers,
     mapping: preview.mapping,
@@ -441,6 +586,8 @@ function toPreviewResponse(preview) {
       matches: row.matches || [],
       duplicateOf: row.duplicateOf || null,
       targetId: row.targetId || null,
+      orderConflict: row.orderConflict || null,
+      orderResolved: row.orderResolved || null,
       candidate: publicCandidate(row)
     })),
     counts: preview.counts,
@@ -483,14 +630,17 @@ function importedFields(preview, row, { sourceAccountId, importBatchId }) {
     },
     dateKind: c.dateKind,
     timeZone: c.timeZone || undefined,
+    timeZoneSource: c.timeZoneSource || undefined,
     settlementDate: c.settlementDate || undefined,
+    settlementStatus: c.settlementStatus,
     cashAmount: c.cashAmount ?? undefined,
     cashCurrency: c.cashCurrency,
     cashAmountSource: c.cashAmountSource || undefined,
     feeSource: c.feeSource || undefined,
     grossAmount: c.grossAmount ?? undefined,
     pairGroupId: c.pairGroup || undefined,
-    sequence: row.sequence
+    sequence: row.sequence,
+    orderRank: row.orderRank ?? undefined
   };
 }
 

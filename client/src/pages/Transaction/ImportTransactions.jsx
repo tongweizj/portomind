@@ -3,6 +3,7 @@
 // TASK-094：标准 CSV 完整批次预览 + 确认。
 //   - 页面只读取文件文本、收集来源账户 / 列映射 / 逐行决议，并展示服务端返回的预览与当次结果；
 //   - 解析、映射应用、标的派生、匹配、超卖与拆批全部由服务端完成（client 不持有业务规则）；
+//   - TASK-096：报表有时间无时区时由用户确认北京 / 多伦多时区；同日顺序影响结果时由用户确认先后（服务端判定）；
 //   - 任何输入变化都使预览失效，必须重新预览后才能确认；服务端检测到账本变化时同样要求重新预览。
 import { useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router';
@@ -29,10 +30,21 @@ const DISPOSITION_STYLES = {
 };
 const FEE_SOURCE_LABELS = { derived: '推算', user: '补填', confirmed_zero: '确认为 0', unknown: '未知' };
 const TIME_ZONE_OPTIONS = [
-  { value: '', label: '不指定（文件内时间须带 time_zone）' },
+  { value: '', label: '未确认（报表时间带时区时无需选择）' },
   { value: 'America/Toronto', label: '多伦多（America/Toronto）' },
   { value: 'Asia/Shanghai', label: '北京（Asia/Shanghai）' },
 ];
+const ORDER_LABELS = {
+  cross_report: { before: '在已有流水之前', after: '在已有流水之后' },
+  mixed_precision: { before: '在带时刻成交之前', after: '在带时刻成交之后' },
+};
+
+function formatTradeTime(c) {
+  if (!c) return '—';
+  // 时区未确认：只显示报表原始日期时间，不猜换算后的时刻
+  if (!c.date) return `${c.localDate || ''} ${c.localTime || ''}（时区待确认）`.trim();
+  return formatDate(c.date, c.dateKind);
+}
 
 function formatDate(value, kind) {
   if (!value) return '—';
@@ -171,6 +183,16 @@ export default function ImportTransactions() {
     invalidate();
   };
 
+  // 同日顺序决议作用于同组全部行（服务端要求同组决议一致）
+  const setOrderResolution = (rowKeys, order) => {
+    setResolutions(current => {
+      const next = { ...current };
+      for (const key of rowKeys) next[key] = { order };
+      return next;
+    });
+    invalidate();
+  };
+
   const setResolution = (rowKey, value) => {
     setResolutions(current => {
       const next = { ...current };
@@ -205,7 +227,10 @@ export default function ImportTransactions() {
             <div className="rounded border bg-gray-50 px-3 py-2 text-sm text-gray-800">{portfolio?.name || '加载中…'}</div>
           </div>
           <div>
-            <label className="mb-1 block text-sm text-gray-700">成交时间的默认时区</label>
+            <label className="mb-1 block text-sm text-gray-700">
+              报表无时区时按此解读成交时间
+              {preview?.requiresTimeZone && <span className="ml-2 text-amber-700">（需确认）</span>}
+            </label>
             <select value={timeZone} onChange={e => { setTimeZone(e.target.value); invalidate(); }}
               className="w-full rounded border bg-white px-3 py-2 text-sm">
               {TIME_ZONE_OPTIONS.map(option => <option key={option.value} value={option.value}>{option.label}</option>)}
@@ -351,6 +376,7 @@ export default function ImportTransactions() {
                   <th className="px-2 py-2">类型</th>
                   <th className="px-2 py-2">代码</th>
                   <th className="px-2 py-2">成交时间</th>
+                  <th className="px-2 py-2">结算日</th>
                   <th className="px-2 py-2 text-right">数量</th>
                   <th className="px-2 py-2 text-right">单价</th>
                   <th className="px-2 py-2 text-right">佣金</th>
@@ -376,7 +402,10 @@ export default function ImportTransactions() {
                       </td>
                       <td className="px-2 py-2">{c ? (TRANSACTION_ACTION_LABELS[c.action] || c.activityType) : '—'}</td>
                       <td className="px-2 py-2">{c?.symbol || '—'}</td>
-                      <td className="px-2 py-2 whitespace-nowrap">{c ? formatDate(c.date, c.dateKind) : '—'}</td>
+                      <td className="px-2 py-2 whitespace-nowrap">{formatTradeTime(c)}</td>
+                      <td className="px-2 py-2 whitespace-nowrap">
+                        {c ? (c.settlementStatus === 'known' ? formatDate(c.settlementDate, 'date') : '未知') : '—'}
+                      </td>
                       <td className="px-2 py-2 text-right">{c?.quantity ?? '—'}</td>
                       <td className="px-2 py-2 text-right">{c?.price ?? '—'}</td>
                       <td className="px-2 py-2 text-right whitespace-nowrap">
@@ -403,6 +432,20 @@ export default function ImportTransactions() {
                               确认按 0
                             </label>
                           </div>
+                        )}
+                        {row.options.includes('order') && row.orderConflict && (
+                          <div className="mt-1 flex flex-wrap items-center gap-3">
+                            {['before', 'after'].map(order => (
+                              <label key={order} className="flex items-center gap-1">
+                                <input type="radio" name={`order-${row.rowKey}`} checked={resolution.order === order}
+                                  onChange={() => setOrderResolution(row.orderConflict.rowKeys, order)} />
+                                {ORDER_LABELS[row.orderConflict.kind]?.[order] || order}
+                              </label>
+                            ))}
+                          </div>
+                        )}
+                        {row.orderResolved && !row.options.includes('order') && (
+                          <div className="text-gray-500">已确认顺序：{row.orderResolved === 'before' ? '之前' : '之后'}</div>
                         )}
                         <ImportMatchResolution row={row} resolution={resolution}
                           onChange={value => setResolution(row.rowKey, value)} />

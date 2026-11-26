@@ -258,7 +258,10 @@ test('无编号仅日期：同来源同日同标的同方向但内容不同 → 
   const otherDay = await preview(body(csv([{ quantity: '12', trade_date: '2026-01-09' }]), { sourceAccount }));
   assert.equal(otherDay.rows[0].disposition, 'add');
   const sell = await preview(body(csv([{ activity_type: 'sell', quantity: '1' }]), { sourceAccount }));
-  assert.equal(sell.rows[0].disposition, 'add', '不同方向不匹配');
+  // 不同方向不匹配；该卖出与已入账同日仅日期买入的先后会改变已实现盈亏（买入含佣金），
+  // 因此按 #96 进入同日顺序核对，而不是成交匹配
+  assert.equal(sell.rows[0].matches.length, 0, '不同方向不匹配');
+  assert.equal(sell.rows[0].code, 'ORDER_AMBIGUOUS');
 });
 
 const LEGACY = (id, overrides = {}) => ({

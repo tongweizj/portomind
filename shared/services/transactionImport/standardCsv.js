@@ -16,7 +16,7 @@ const STANDARD_COLUMNS = Object.freeze([
   { key: 'activity_type', label: '活动类型', description: 'buy / sell / div_reinvest / div_cash / tax / interest / cash_in / cash_out / fee（换汇、拆股、划转陆续开放）' },
   { key: 'trade_date', label: '成交日期', description: 'YYYY-MM-DD' },
   { key: 'trade_time', label: '成交时间', description: 'HH:MM 或 HH:MM:SS；填写（含 00:00:00）即保留时刻精度' },
-  { key: 'time_zone', label: '时区', description: 'IANA 时区名，如 America/Toronto、Asia/Shanghai；有成交时间时必填（或在页面统一指定）' },
+  { key: 'time_zone', label: '时区', description: 'IANA 时区名，如 America/Toronto、Asia/Shanghai；有成交时间而留空时，预览要求在页面确认北京或多伦多时区' },
   { key: 'settlement_date', label: '结算日', description: 'YYYY-MM-DD；留空表示未知' },
   { key: 'external_id', label: '原成交编号', description: '券商成交编号；没有则留空' },
   { key: 'source_row', label: '原行号', description: '原始报表中的行号；留空时预览使用上传文件行号' },
@@ -198,18 +198,26 @@ function normalizeRow(fields, { defaultTimeZone } = {}) {
   let date;
   let dateKind = 'date';
   let timeZoneName = null;
+  let timeZoneSource = null;
+  let localTime = null;
   if (tradeTime) {
     if (!/^\d{2}:\d{2}(:\d{2})?$/.test(tradeTime)) {
       return { error: rowError('INVALID_TIME', `成交时间格式无效：${tradeTime}（应为 HH:MM[:SS]）`) };
     }
-    timeZoneName = String(fields.time_zone ?? '').trim() || defaultTimeZone || '';
-    if (!timeZoneName) return { error: rowError('TIME_ZONE_REQUIRED', '有成交时间但缺少时区（time_zone），请在文件或页面指定') };
-    if (!isTimeZone(timeZoneName)) return { error: rowError('INVALID_TIME_ZONE', `时区无效：${timeZoneName}`) };
-    const time = tradeTime.length === 5 ? `${tradeTime}:00` : tradeTime;
-    const parsed = dayjs.tz(`${tradeDate} ${time}`, 'YYYY-MM-DD HH:mm:ss', timeZoneName);
-    if (!parsed.isValid()) return { error: rowError('INVALID_TIME', `成交时间无效：${tradeTime}`) };
-    date = parsed.utc().toDate();
+    localTime = tradeTime.length === 5 ? `${tradeTime}:00` : tradeTime;
     dateKind = 'datetime';
+    const reportZone = String(fields.time_zone ?? '').trim();
+    timeZoneName = reportZone || defaultTimeZone || null;
+    timeZoneSource = reportZone ? 'report' : (timeZoneName ? 'user' : null);
+    if (timeZoneName && !isTimeZone(timeZoneName)) return { error: rowError('INVALID_TIME_ZONE', `时区无效：${timeZoneName}`) };
+    if (timeZoneName) {
+      const parsed = dayjs.tz(`${tradeDate} ${localTime}`, 'YYYY-MM-DD HH:mm:ss', timeZoneName);
+      if (!parsed.isValid()) return { error: rowError('INVALID_TIME', `成交时间无效：${tradeTime}`) };
+      date = parsed.utc().toDate();
+    } else {
+      // TASK-096：有时间无时区 → 不猜时刻（date=null），由预览要求用户确认北京 / 多伦多时区。
+      date = null;
+    }
   } else {
     // 仅日期精度：与手动录入一致，存为该日 UTC 零点，dateKind 标明精度（不伪造时刻）。
     date = new Date(`${tradeDate}T00:00:00.000Z`);
@@ -251,7 +259,13 @@ function normalizeRow(fields, { defaultTimeZone } = {}) {
       date,
       dateKind,
       timeZone: timeZoneName,
+      timeZoneSource,
+      needsTimeZone: dateKind === 'datetime' && !timeZoneName,
+      localDate: tradeDate,
+      localTime,
+      // 结算日独立于成交日保存；缺失标记 unknown（不以成交日代替）
       settlementDate: settlementText ? new Date(`${settlementText}T00:00:00.000Z`) : null,
+      settlementStatus: settlementText ? 'known' : 'unknown',
       ...amounts,
       cashCurrency,
       externalId: String(fields.external_id ?? '').trim() || null,

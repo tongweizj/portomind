@@ -16,10 +16,53 @@ function calculationError(code, message) {
   return error;
 }
 
+const DAY_MS = 24 * 60 * 60 * 1000;
+
+function orderNumber(value, fallback) {
+  const number = Number(value);
+  return value === null || value === undefined || value === '' || !Number.isFinite(number) ? fallback : number;
+}
+
+// 预览中尚未写入的导入行使用的批次键：按码位比较排在任何已入账 ObjectId 之后。
+const PREVIEW_BATCH_KEY = '~preview';
+
+function codeUnitCompare(left, right) {
+  if (left === right) return 0;
+  return left < right ? -1 : 1;
+}
+
+function batchKeyOf(transaction) {
+  const batchId = transaction.source?.importBatchId;
+  return batchId === undefined || batchId === null ? '' : String(batchId);
+}
+
+/**
+ * 重放顺序（TASK-096）：(UTC 交易日, orderRank, date, 导入批次, sequence, _id)。
+ * - 仅日期流水存当日 UTC 零点，与同日带时刻流水落在同一 UTC 交易日；
+ * - orderRank：用户确认的同日先后（默认 0），只在同一交易日内生效，不改写成交时刻；
+ * - 同一时刻：手动 / 旧流水（无批次）在前，导入流水按批次先后（ObjectId 时间序），
+ *   同批次内按 sequence（原行顺序，时间正序）；预览行用 PREVIEW_BATCH_KEY 排在全部已入账流水之后；
+ * - _id：最终稳定次序。字符串一律按码位比较（localeCompare 会把 '~' 排在十六进制字符之前）。
+ * 预览、确认后重放与后续编辑共用此比较器，保证三者顺序一致。
+ */
 function compareTransactions(left, right) {
-  const dateDifference = new Date(left.date) - new Date(right.date);
-  if (dateDifference !== 0) return dateDifference;
-  return String(left._id || '').localeCompare(String(right._id || ''));
+  const leftTime = new Date(left.date).getTime();
+  const rightTime = new Date(right.date).getTime();
+  const dayDifference = Math.floor(leftTime / DAY_MS) - Math.floor(rightTime / DAY_MS);
+  if (dayDifference !== 0) return dayDifference;
+  const rankDifference = orderNumber(left.orderRank, 0) - orderNumber(right.orderRank, 0);
+  if (rankDifference !== 0) return rankDifference;
+  if (leftTime !== rightTime) return leftTime - rightTime;
+  const batchDifference = codeUnitCompare(batchKeyOf(left), batchKeyOf(right));
+  if (batchDifference !== 0) return batchDifference;
+  const sequenceDifference = orderNumber(left.sequence, -1) - orderNumber(right.sequence, -1);
+  if (sequenceDifference !== 0) return sequenceDifference;
+  return codeUnitCompare(String(left._id || ''), String(right._id || ''));
+}
+
+/** UTC 交易日键（YYYY-MM-DD），与 compareTransactions 的日分桶一致。 */
+function replayDayKey(value) {
+  return new Date(value).toISOString().slice(0, 10);
 }
 
 function latestPriceFor(latestPrices, symbol) {
@@ -42,7 +85,7 @@ function latestPriceFor(latestPrices, symbol) {
  * - div_reinvest：分红再投，等价 buy（数量与成本增加，含 fee）；
  * - fee 只影响发生之后的持仓，不回溯漂移（重放天然满足）。
  */
-function calculatePositions(transactions, latestPrices = {}) {
+function replayLedger(transactions) {
   if (!Array.isArray(transactions)) {
     throw calculationError('INVALID_TRANSACTIONS', 'transactions must be an array');
   }
@@ -115,6 +158,15 @@ function calculatePositions(transactions, latestPrices = {}) {
     positions.set(symbol, position);
   }
 
+  return positions;
+}
+
+/**
+ * 持仓（仅数量 > 0）。重放口径见 replayLedger；
+ * replayLedger 另返回已清仓标的（含已实现盈亏），供导入顺序核对比较同日结果。
+ */
+function calculatePositions(transactions, latestPrices = {}) {
+  const positions = replayLedger(transactions);
   return [...positions.values()]
     .filter(position => position.quantity > EPSILON)
     .sort((left, right) => left.symbol.localeCompare(right.symbol))
@@ -226,7 +278,10 @@ function calculatePositionHistory(transactions, prices, interval = 'day') {
 
 module.exports = {
   calculatePositions,
+  replayLedger,
+  replayDayKey,
   calculatePositionHistory,
   compareTransactions,
+  PREVIEW_BATCH_KEY,
   periodKey
 };
