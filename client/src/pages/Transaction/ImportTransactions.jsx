@@ -35,11 +35,20 @@ const DISPOSITION_STYLES = {
   add: 'text-emerald-700', update: 'text-blue-700', skip: 'text-gray-500', stage: 'text-indigo-700',
   review: 'text-amber-700', error: 'text-red-700', deferred: 'text-gray-500',
 };
-// 导入格式：标准 CSV（可手动列映射）/ Wealthsimple 原格式 CSV（TASK-100，服务端自带列识别，不做列映射）
+// 导入格式：标准 CSV（可手动列映射）/ Wealthsimple 原格式 CSV（TASK-100）/ Questrade 原格式 XLSX（TASK-102）；
+// 原格式由服务端自带列识别，不做列映射。broker 为新建来源账户时的默认券商。
 const IMPORT_FORMAT_OPTIONS = [
   { value: 'standard', label: '标准 CSV' },
-  { value: 'wealthsimple', label: 'Wealthsimple 原格式 CSV' },
+  { value: 'wealthsimple', label: 'Wealthsimple 原格式 CSV', broker: 'wealthsimple' },
+  { value: 'questrade', label: 'Questrade 原格式 XLSX', broker: 'questrade' },
 ];
+
+// 文件统一按字节读取：文本格式解码为 UTF-8 文本（TextDecoder 去 BOM），二进制格式（XLSX）以 base64 上传
+function toBase64(bytes) {
+  let binary = '';
+  for (let i = 0; i < bytes.length; i += 0x8000) binary += String.fromCharCode(...bytes.subarray(i, i + 0x8000));
+  return btoa(binary);
+}
 const FEE_SOURCE_LABELS = { derived: '推算', user: '补填', confirmed_zero: '确认为 0', unknown: '未知' };
 const TIME_ZONE_OPTIONS = [
   { value: '', label: '未确认（报表时间带时区时无需选择）' },
@@ -99,6 +108,8 @@ export default function ImportTransactions() {
   const [mapping, setMapping] = useState(null);
   const [accountSelector, setAccountSelector] = useState('');
   const [resolutions, setResolutions] = useState({});
+  // TASK-102：报表代码 → 资产代码映射（键为服务端给出的 symbolMapKey）
+  const [symbolMap, setSymbolMap] = useState({});
   const [preview, setPreview] = useState(null);
   const [stale, setStale] = useState(false);
   const [result, setResult] = useState(null);
@@ -131,8 +142,11 @@ export default function ImportTransactions() {
   const buildPayload = (overrides = {}) => ({
     portfolioId,
     format: importFormat,
-    file,
+    file: file && (importFormat === 'questrade'
+      ? { name: file.name, encoding: 'base64', content: file.base64 }
+      : { name: file.name, encoding: 'text', content: file.text }),
     sourceAccount,
+    ...(Object.keys(symbolMap).length ? { symbolMap } : {}),
     ...(mapping ? { mapping } : {}),
     ...(accountSelector ? { accountSelector } : {}),
     ...(timeZone ? { timeZone } : {}),
@@ -145,7 +159,9 @@ export default function ImportTransactions() {
     if (!picked) return;
     const reader = new FileReader();
     reader.onload = () => {
-      setFile({ name: picked.name, encoding: 'text', content: String(reader.result || '') });
+      const bytes = new Uint8Array(reader.result || new ArrayBuffer(0));
+      setFile({ name: picked.name, text: new TextDecoder('utf-8').decode(bytes), base64: toBase64(bytes) });
+      setSymbolMap({});
       setMapping(null);
       setAccountSelector('');
       setResolutions({});
@@ -154,11 +170,11 @@ export default function ImportTransactions() {
       setResult(null);
       setError('');
     };
-    reader.readAsText(picked, 'utf-8');
+    reader.readAsArrayBuffer(picked);
   };
 
   const runPreview = async (overrides) => {
-    if (!file) { setError('请先选择 CSV 文件'); return; }
+    if (!file) { setError('请先选择报表文件'); return; }
     if (sourceMode === 'new' && !alias.trim()) { setError('请填写来源账户别名'); return; }
     setLoading(true);
     setError('');
@@ -224,6 +240,16 @@ export default function ImportTransactions() {
     setResolutions(current => {
       const next = { ...current };
       if (value) next[rowKey] = value; else delete next[rowKey];
+      return next;
+    });
+    invalidate();
+  };
+
+  const setSymbolMapEntry = (key, value) => {
+    setSymbolMap(current => {
+      const next = { ...current };
+      const symbol = value.trim().toUpperCase();
+      if (symbol) next[key] = symbol; else delete next[key];
       return next;
     });
     invalidate();
@@ -311,7 +337,9 @@ export default function ImportTransactions() {
             <select value={importFormat} aria-label="报表格式"
               onChange={e => {
                 setImportFormat(e.target.value);
-                if (e.target.value === 'wealthsimple' && sourceMode === 'new') setBroker('wealthsimple');
+                const option = IMPORT_FORMAT_OPTIONS.find(item => item.value === e.target.value);
+                if (option?.broker && sourceMode === 'new') setBroker(option.broker);
+                setSymbolMap({});
                 setMapping(null);
                 setResolutions({});
                 invalidate();
@@ -321,8 +349,8 @@ export default function ImportTransactions() {
             </select>
           </div>
           <div className="grow">
-            <label className="mb-1 block text-sm text-gray-700">CSV 文件（标准模板格式可上传后手动列映射；Wealthsimple 原格式直接上传）</label>
-            <input type="file" accept=".csv,text/csv" onChange={handleFile} className="w-full rounded border px-3 py-2 text-sm" />
+            <label className="mb-1 block text-sm text-gray-700">报表文件（标准模板格式可上传后手动列映射；Wealthsimple CSV / Questrade XLSX 原格式直接上传）</label>
+            <input type="file" accept={importFormat === 'questrade' ? '.xlsx' : '.csv,text/csv'} onChange={handleFile} className="w-full rounded border px-3 py-2 text-sm" />
           </div>
           <button type="button"
             onClick={async () => {
@@ -469,7 +497,10 @@ export default function ImportTransactions() {
                         {DISPOSITION_LABELS[disposition] || disposition}
                       </td>
                       <td className="px-2 py-2">{c ? (TRANSACTION_ACTION_LABELS[c.action] || c.activityType) : '—'}</td>
-                      <td className="px-2 py-2">{c?.symbol || '—'}</td>
+                      <td className="px-2 py-2">
+                        {c?.symbol || '—'}
+                        {c?.mappedFrom ? <div className="text-xs text-gray-500">报表代码 {c.mappedFrom}</div> : null}
+                      </td>
                       <td className="px-2 py-2 whitespace-nowrap">{formatTradeTime(c)}</td>
                       <td className="px-2 py-2 whitespace-nowrap">
                         {c ? (c.settlementStatus === 'known' ? formatDate(c.settlementDate, 'date') : '未知') : '—'}
@@ -524,6 +555,15 @@ export default function ImportTransactions() {
                         )}
                         {row.orderResolved && !row.options.includes('order') && (
                           <div className="text-gray-500">已确认顺序：{row.orderResolved === 'before' ? '之前' : '之后'}</div>
+                        )}
+                        {/* TASK-102：报表代码无法对应资产（内部代码 / 跨币种划转转入端）→ 由用户指定资产代码，同键的行共用 */}
+                        {row.symbolMapKey && (
+                          <div className="mt-1 flex flex-wrap items-center gap-2">
+                            <span className="text-gray-600">{row.symbolMapKey} →</span>
+                            <input value={symbolMap[row.symbolMapKey] || ''} aria-label="资产代码映射"
+                              placeholder="资产代码，如 VTI.US" className="w-32 rounded border px-1 py-0.5"
+                              onChange={e => setSymbolMapEntry(row.symbolMapKey, e.target.value)} />
+                          </div>
                         )}
                         {/* TASK-101：换汇两端配对。配对与候选全部由服务端给出，页面只展示并回传用户指定的另一端 */}
                         {row.pair && (

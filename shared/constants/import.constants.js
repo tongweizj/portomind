@@ -4,8 +4,10 @@
 const SOURCE_BROKERS = Object.freeze(['wealthsimple', 'questrade', 'other']);
 
 // 导入格式 → 解析器在 shared/services/transactionImport/index.js 的 PARSERS 注册；
-// standard 标准 CSV（#94）、wealthsimple 原格式 CSV（#100）；Questrade（#102）后续追加。
-const IMPORT_FORMATS = Object.freeze(['standard', 'wealthsimple']);
+// standard 标准 CSV（#94）、wealthsimple 原格式 CSV（#100）、questrade 原格式 XLSX（#102）。
+const IMPORT_FORMATS = Object.freeze(['standard', 'wealthsimple', 'questrade']);
+// 二进制格式：file.encoding 必须为 base64，解析器收到 Buffer。
+const BINARY_IMPORT_FORMATS = Object.freeze(['questrade']);
 
 // 每次确认最多写入的来源流水行数（Human 决定：按源报表活动行计，成对行不拆批）。
 const IMPORT_COMMIT_LIMIT = 500;
@@ -27,6 +29,7 @@ module.exports = {
   SOURCE_BROKERS,
   IMPORT_TIME_ZONE_CHOICES,
   IMPORT_FORMATS,
+  BINARY_IMPORT_FORMATS,
   IMPORT_COMMIT_LIMIT,
   IMPORT_PREVIEW_LIMIT,
   IMPORT_DISPOSITIONS,
