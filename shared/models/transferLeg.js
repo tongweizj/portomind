@@ -16,6 +16,8 @@ const TransferLegSchema = new mongoose.Schema({
   sourceAccountId: { type: mongoose.Schema.Types.ObjectId, ref: 'SourceAccount' },
   direction: { type: String, enum: ['out', 'in'], required: true },
   symbol: { type: String, required: true, trim: true, uppercase: true },
+  // 经代码映射（symbolMap，#102）前的报表代码：后到一端据此判断是否同一证券
+  mappedFrom: { type: String, trim: true, uppercase: true },
   assetType: { type: String, enum: ASSET_TYPES, required: true },
   market: { type: String, enum: ASSET_MARKETS, required: true },
   // 资产原币种（承接成本以转入资产币种计）

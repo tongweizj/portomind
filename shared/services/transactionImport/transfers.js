@@ -5,9 +5,10 @@
 //
 // 预览流程（resolveTransfers）：
 // 1. 显式跳过 / 重复识别：同组合同来源账户同内容已入账 → skip ALREADY_IMPORTED；已暂存 → skip TRANSFER_ALREADY_STAGED。
-// 2. 配对：候选 = 同文件反方向的划转行 + 服务端已暂存的反方向一端。
-//    两端都有 pair_group → 组号一致即候选；否则数量一致且成交日相差 ≤ TRANSFER_PAIR_WINDOW_DAYS 天。
-//    唯一候选 → 自动配对；多个 → review TRANSFER_PAIR_AMBIGUOUS（resolutions[rowKey].pairWith 指定）；
+// 2. 配对：候选 = 同文件反方向的划转行 + 服务端已暂存的反方向一端，且须是同一证券（sameSecurity）。
+//    两端都有 pair_group → 组号一致即候选（组号一致但证券不同 → 错误 TRANSFER_PAIR_INVALID）；
+//    否则数量一致且成交日相差 ≤ TRANSFER_PAIR_WINDOW_DAYS 天。
+//    用户 pairWith 指定优先；其余互为唯一候选 → 自动配对；仍有候选 → review TRANSFER_PAIR_AMBIGUOUS；
 //    没有候选 → stage TRANSFER_AWAITING_COUNTERPART（确认时暂存，不阻塞整批）。
 // 3. 核对：两端份额必须一致（TRANSFER_QUANTITY_MISMATCH）；转出端按其组合账本重放取得转出前移动平均成本
 //    （持仓不足 → TRANSFER_INSUFFICIENT_POSITION）。
@@ -26,6 +27,8 @@ const SourceAccount = require('../../models/sourceAccount');
 const { replayLedger, PREVIEW_BATCH_KEY } = require('../transaction/positionCalculator');
 const { visibleQuery } = require('../transaction/visibility');
 const { TRANSFER_PAIR_WINDOW_DAYS } = require('../../constants/import.constants');
+const { baseSymbol } = require('../../utils/symbol');
+const { mutualUniquePairs } = require('./pairing');
 
 const EPSILON = 1e-9;
 const DAY_MS = 24 * 60 * 60 * 1000;
@@ -67,6 +70,7 @@ function legOfRow(row, ctx) {
     portfolioId: String(ctx.portfolioId),
     sourceAccountId: ctx.sourceAccountId ? String(ctx.sourceAccountId) : null,
     symbol: c.symbol,
+    mappedFrom: c.mappedFrom || null,
     currency: row.asset.currency,
     quantity: c.quantity,
     date: c.date,
@@ -88,6 +92,7 @@ function legOfStaged(leg) {
     portfolioId: String(leg.portfolioId),
     sourceAccountId: leg.sourceAccountId ? String(leg.sourceAccountId) : null,
     symbol: leg.symbol,
+    mappedFrom: leg.mappedFrom || null,
     currency: leg.currency,
     quantity: leg.quantity,
     date: leg.date,
@@ -100,8 +105,19 @@ function legOfStaged(leg) {
   };
 }
 
+// 同一证券：存储代码相同，或去掉市场后缀后相同（跨币种日记账 XEQ.TO → XEQ.US），
+// 或经代码映射（#102 symbolMap）前的报表代码与对端一致。
+function securityKeysOf(leg) {
+  return new Set([leg.symbol, leg.mappedFrom].filter(Boolean).map(baseSymbol));
+}
+
+function sameSecurity(left, right) {
+  const keys = securityKeysOf(left);
+  return [...securityKeysOf(right)].some(key => keys.has(key));
+}
+
 function compatible(left, right) {
-  if (left.direction === right.direction) return false;
+  if (left.direction === right.direction || !sameSecurity(left, right)) return false;
   if (left.pairGroup && right.pairGroup) return left.pairGroup === right.pairGroup;
   if (Math.abs(left.quantity - right.quantity) > EPSILON * Math.max(1, left.quantity)) return false;
   return Math.abs(new Date(left.date).getTime() - new Date(right.date).getTime()) <= TRANSFER_PAIR_WINDOW_DAYS * DAY_MS;
@@ -231,36 +247,57 @@ async function resolveTransfers(rows, ctx) {
     accounts: new Map(accounts.map(item => [String(item._id), item.alias]))
   };
 
-  // 配对
+  // 配对。显式同组号但不是同一证券 / 不是一出一入 → 行错误（不猜对端）
+  const byGroup = new Map();
+  for (const row of active) {
+    const group = row.candidate.pairGroup;
+    if (group) byGroup.set(group, [...(byGroup.get(group) || []), row]);
+  }
+  for (const [group, members] of byGroup) {
+    if (members.length !== 2) continue;
+    const [left, right] = members.map(row => rowLegs.get(row.rowKey));
+    if (left.direction !== right.direction && !sameSecurity(left, right)) {
+      members.forEach(row => rowError(row, 'TRANSFER_PAIR_INVALID', `划转组号 ${group} 的两端不是同一证券（${left.symbol} / ${right.symbol}）`));
+    }
+  }
+
   const pairedWith = new Map();
   const claimedStaged = new Set();
-  for (const row of active) {
-    if (pairedWith.has(row.rowKey)) continue;
-    const self = rowLegs.get(row.rowKey);
-    const candidates = [
-      ...active.filter(other => other !== row && !pairedWith.has(other.rowKey)).map(other => rowLegs.get(other.rowKey)),
-      ...stagedLegs.filter(leg => !claimedStaged.has(leg.id))
-    ].filter(leg => compatible(self, leg));
-    const wanted = resolutions[row.rowKey]?.pairWith;
-    let partner = null;
-    if (wanted) {
-      partner = candidates.find(leg => leg.id === String(wanted)) || null;
-      if (!partner) {
-        setReview(row, 'TRANSFER_PAIR_AMBIGUOUS', '指定的配对对象不在候选之内，请重新选择', ['pairWith', 'skip']);
-        row.transfer = { direction: self.direction, candidates: candidates.map(leg => legSummary(leg, names)) };
-        continue;
-      }
-    } else if (candidates.length === 1) {
-      partner = candidates[0];
-    } else if (candidates.length > 1) {
-      setReview(row, 'TRANSFER_PAIR_AMBIGUOUS', `有 ${candidates.length} 个可配对的另一端：请指定配对对象`, ['pairWith', 'skip']);
-      row.transfer = { direction: self.direction, candidates: candidates.map(leg => legSummary(leg, names)) };
-      continue;
-    }
-    if (!partner) continue;
-    pairedWith.set(row.rowKey, partner);
+  const link = (self, partner) => {
+    pairedWith.set(self.id, partner);
     if (partner.kind === 'row') pairedWith.set(partner.id, self);
     else claimedStaged.add(partner.id);
+  };
+  const freeRowLegs = () => active
+    .filter(row => row.disposition === 'transfer' && !pairedWith.has(row.rowKey))
+    .map(row => rowLegs.get(row.rowKey));
+  // 候选 = 同文件未配对的反方向一端 + 未被占用的暂存一端；暂存一端的候选只看本文件行
+  const candidatesOf = self => (self.kind === 'staged'
+    ? freeRowLegs().filter(leg => compatible(self, leg))
+    : [...freeRowLegs().filter(leg => leg !== self), ...stagedLegs.filter(leg => !claimedStaged.has(leg.id))]
+      .filter(leg => compatible(self, leg)));
+  const ambiguous = (row, candidates, reason) => {
+    setReview(row, 'TRANSFER_PAIR_AMBIGUOUS', reason, ['pairWith', 'skip']);
+    row.transfer = { direction: rowLegs.get(row.rowKey).direction, candidates: candidates.map(leg => legSummary(leg, names)) };
+  };
+
+  // 1. 用户指定（resolutions[rowKey].pairWith = 另一端 rowKey | 暂存一端 id）
+  for (const row of active) {
+    const wanted = resolutions[row.rowKey]?.pairWith;
+    if (!wanted || row.disposition !== 'transfer' || pairedWith.has(row.rowKey)) continue;
+    const self = rowLegs.get(row.rowKey);
+    const candidates = candidatesOf(self);
+    const partner = candidates.find(leg => leg.id === String(wanted));
+    if (partner) link(self, partner);
+    else ambiguous(row, candidates, '指定的配对对象不在候选之内，请重新选择');
+  }
+  // 2. 互为唯一候选 → 自动配对（与换汇建议配对同一规则，不按行序贪心）
+  const { pairs } = mutualUniquePairs(freeRowLegs(), candidatesOf, leg => leg.id);
+  for (const [self, partner] of pairs) link(self, partner);
+  // 3. 仍有候选但不唯一 → 待用户指定；没有候选 → 暂存（见下）
+  const leftovers = freeRowLegs().map(self => [self, candidatesOf(self)]);
+  for (const [self, candidates] of leftovers) {
+    if (candidates.length) ambiguous(self.row, candidates, `有 ${candidates.length} 个可配对的另一端（或另一端还有其他候选）：请指定配对对象`);
   }
 
   // 账本缓存（组合 + 标的）
@@ -510,6 +547,7 @@ function stagedLegDocument(row, preview, ctx) {
     sourceAccountId: ctx.sourceAccountId,
     direction: c.direction,
     symbol: c.symbol,
+    mappedFrom: c.mappedFrom || undefined,
     assetType: row.asset.type,
     market: row.asset.market,
     currency: row.asset.currency,

@@ -14,7 +14,8 @@ const POSITION_ACTIONS = Object.freeze(['buy', 'sell', 'div_reinvest', 'split', 
 // fx 换汇（TASK-101）：每端一条，各记本币种带符号金额，两端以 pairGroupId 关联并共同入账。
 const CASH_ACTIONS = Object.freeze(['div_cash', 'tax', 'interest', 'cash_in', 'cash_out', 'fee', 'fx']);
 
-// 必须成对入账的动作（TASK-101 换汇；#99 划转沿用同一配对机制）：单端不入账。
+// 同文件内必须成对入账的动作（TASK-101 换汇，pairing.js）：单端不入账。
+// 证券划转（TRANSFER_ACTIONS）也成对入账，但先到的一端可暂存等待另一端（transfers.js），不在此列。
 const PAIRED_ACTIONS = Object.freeze(['fx']);
 
 const TRANSACTION_ACTIONS = Object.freeze([...POSITION_ACTIONS, ...CASH_ACTIONS]);

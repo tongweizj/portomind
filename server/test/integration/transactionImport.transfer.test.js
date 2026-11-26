@@ -459,11 +459,14 @@ test('放弃暂存的一端后预览过期：确认返回 409，本端改为暂�
 // ─────────────────────────────────────────────────────────────
 
 test('拆批：同文件两端落在第 500 和 501 条时边界前移，两端同一次确认', async (t) => {
-  const world = freshWorld(t, { transactions: [buyTx({ quantity: 1000 })] });
+  const world = freshWorld(t, { transactions: [
+    buyTx({ quantity: 1000 }),
+    buyTx({ symbol: 'XEQ.TO', market: 'CA', currency: 'CAD', quantity: 10, price: 30 })
+  ] });
   const buys = Array.from({ length: 499 }, (_, index) => ({ trade_date: '2026-02-01', quantity: '1', source_row: String(index + 2) }));
   const input = body(PORTFOLIO_A, csv([
     ...buys,
-    { activity_type: 'transfer_out', trade_date: '2026-03-02', pair_group: 'J1', quantity: '-2', unit_price: '' },
+    { activity_type: 'transfer_out', trade_date: '2026-03-02', pair_group: 'J1', symbol: 'XEQ', market: 'CA', cash_currency: 'CAD', quantity: '-2', unit_price: '' },
     { activity_type: 'transfer_in', trade_date: '2026-03-02', pair_group: 'J1', symbol: 'XEQ', market: 'US', quantity: '2', unit_price: '', transfer_cost: '210' }
   ]));
   const { preview: data, commit } = await previewAndCommit(input);
@@ -476,4 +479,53 @@ test('拆批：同文件两端落在第 500 和 501 条时边界前移，两端�
   assert.equal(second.commit.status, 201, JSON.stringify(second.commit.body));
   assert.equal(visible(world).filter(tx => tx.action.startsWith('transfer_')).length, 2);
   assert.equal((await positionOf(PORTFOLIO_A, 'XEQ.US')).remainingCost, 210, '报表给出的承接成本');
+});
+
+// ─────────────────────────────────────────────────────────────
+// 代码审查 S1：配对须同一证券，且须互为唯一候选
+// ─────────────────────────────────────────────────────────────
+
+test('S1 同文件反向划转标的不同（VTI 转出、XEQ 转入）：不自动配对，两端各自暂存，不承接错误成本', async (t) => {
+  const world = freshWorld(t, { transactions: [buyTx()] });
+  const { preview: data, commit } = await previewAndCommit(body(PORTFOLIO_A, csv([
+    { activity_type: 'transfer_out', quantity: '-5', unit_price: '' },
+    { activity_type: 'transfer_in', symbol: 'XEQ', market: 'US', quantity: '5', unit_price: '' }
+  ])));
+  assert.deepEqual(data.rows.map(row => row.disposition), ['stage', 'stage']);
+  assert.equal(commit.status, 201, JSON.stringify(commit.body));
+  assert.equal(world.transactions.filter(tx => tx.action.startsWith('transfer_')).length, 0);
+});
+
+test('S1 暂存的转出端与后到转入端标的不同：不自动配对（转入端暂存）', async (t) => {
+  freshWorld(t, { transactions: [buyTx()] });
+  await previewAndCommit(body(PORTFOLIO_A, csv([{ activity_type: 'transfer_out', quantity: '-5', unit_price: '' }])));
+  const next = await preview(body(PORTFOLIO_B, csv([{ activity_type: 'transfer_in', symbol: 'XEQ', market: 'US', quantity: '5', unit_price: '' }])));
+  assert.equal(next.status, 200, JSON.stringify(next.body));
+  assert.equal(next.body.data.rows[0].disposition, 'stage');
+});
+
+test('S1 非互为唯一候选（两笔转出、一笔转入）：不按先后贪心配对，进入待核对；指定后其余一端暂存', async (t) => {
+  freshWorld(t, { transactions: [buyTx()] });
+  const content = csv([
+    { activity_type: 'transfer_out', quantity: '-2', unit_price: '' },
+    { activity_type: 'transfer_out', quantity: '-2', unit_price: '' },
+    { activity_type: 'transfer_in', quantity: '2', unit_price: '' }
+  ]);
+  const first = await preview(body(PORTFOLIO_A, content));
+  assert.equal(first.status, 200, JSON.stringify(first.body));
+  const rows = first.body.data.rows;
+  assert.ok(rows.every(row => row.disposition !== 'add'), JSON.stringify(rows.map(row => [row.disposition, row.code])));
+  assert.equal(rows[2].code, 'TRANSFER_PAIR_AMBIGUOUS');
+  assert.equal(rows[2].transfer.candidates.length, 2);
+  const resolved = await preview(body(PORTFOLIO_A, content, { resolutions: { [rows[2].rowKey]: { pairWith: rows[1].rowKey } } }));
+  assert.deepEqual(resolved.body.data.rows.map(row => row.disposition), ['stage', 'add', 'add']);
+});
+
+test('S1 同组号两端标的不同：行错误 TRANSFER_PAIR_INVALID', async (t) => {
+  freshWorld(t, { transactions: [buyTx()] });
+  const first = await preview(body(PORTFOLIO_A, csv([
+    { activity_type: 'transfer_out', pair_group: 'G9', quantity: '-5', unit_price: '' },
+    { activity_type: 'transfer_in', pair_group: 'G9', symbol: 'XEQ', market: 'US', quantity: '5', unit_price: '', transfer_cost: '500' }
+  ])));
+  assert.deepEqual(first.body.data.rows.map(row => row.code), ['TRANSFER_PAIR_INVALID', 'TRANSFER_PAIR_INVALID']);
 });

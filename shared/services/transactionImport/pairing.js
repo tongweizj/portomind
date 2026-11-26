@@ -1,4 +1,5 @@
-// 成对流水配对（TASK-101 换汇；#99 证券划转复用同一机制，只需另给一份 spec）。
+// 成对流水配对（TASK-101 换汇）。
+// #99 证券划转另有暂存 / 跨文件 / 跨组合配对（transfers.js），只复用这里的 mutualUniquePairs（互为唯一候选）规则。
 //
 // 配对来源（row.pair.source）：
 // - explicit：两行填写同一组号（pair_group）。组内必须恰好两端且两端相容，否则按行报错 / 待核对；
@@ -62,6 +63,32 @@ function markError(row, code, reason) {
 }
 
 /**
+ * 互为唯一候选的配对（换汇建议配对与 #99 证券划转自动配对共用）：
+ * a 的候选只有 b，且 b 的候选只有 a，才配成一对；不按先后贪心认领。
+ * @param {Array} items 待配对的一端
+ * @param {(item) => Array} candidatesOf 一端的相容候选（可包含 items 之外的一端，如服务端暂存的划转一端）
+ * @param {(item) => string} idOf 一端的唯一键
+ * @returns {{ pairs: Array<[object, object]>, options: Map<string, Array> }} options 为 items 各自的候选
+ */
+function mutualUniquePairs(items, candidatesOf, idOf) {
+  const options = new Map(items.map(item => [idOf(item), candidatesOf(item)]));
+  const optionsOf = item => options.get(idOf(item)) || candidatesOf(item);
+  const taken = new Set();
+  const pairs = [];
+  for (const item of items) {
+    const mine = options.get(idOf(item));
+    if (taken.has(idOf(item)) || mine.length !== 1) continue;
+    const other = mine[0];
+    const theirs = optionsOf(other);
+    if (taken.has(idOf(other)) || theirs.length !== 1 || idOf(theirs[0]) !== idOf(item)) continue;
+    pairs.push([item, other]);
+    taken.add(idOf(item));
+    taken.add(idOf(other));
+  }
+  return { pairs, options };
+}
+
+/**
  * 在 disposition === 'pending' 的成对流水之间配对（就地修改行）。须在 rawHash 计算之后、重复匹配之前调用。
  * @param {Array} rows 预览行（文件顺序）
  * @param {PairSpec} spec
@@ -122,15 +149,11 @@ function pairRows(rows, spec, resolutions = {}) {
   const remaining = free.filter(row => !paired.has(row.rowKey));
   const candidatesOf = row => remaining.filter(other => other !== row &&
     spec.bucketOf(other) === spec.bucketOf(row) && spec.compatible(row, other));
-  const options = new Map(remaining.map(row => [row.rowKey, candidatesOf(row)]));
-  for (const row of remaining) {
-    if (paired.has(row.rowKey)) continue;
-    const mine = options.get(row.rowKey);
-    if (mine.length === 1 && options.get(mine[0].rowKey).length === 1) {
-      link(row, mine[0], generatedGroupId(spec, row, mine[0]), 'suggested');
-      paired.add(row.rowKey);
-      paired.add(mine[0].rowKey);
-    }
+  const { pairs, options } = mutualUniquePairs(remaining, candidatesOf, row => row.rowKey);
+  for (const [row, other] of pairs) {
+    link(row, other, generatedGroupId(spec, row, other), 'suggested');
+    paired.add(row.rowKey);
+    paired.add(other.rowKey);
   }
   for (const row of remaining) {
     if (paired.has(row.rowKey)) continue;
@@ -171,4 +194,4 @@ function enforcePairIntegrity(rows, spec, resolutions = {}) {
   }
 }
 
-module.exports = { pairRows, enforcePairIntegrity };
+module.exports = { pairRows, enforcePairIntegrity, mutualUniquePairs };
