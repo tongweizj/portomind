@@ -1,5 +1,5 @@
 import { Link } from 'react-router';
-import { ASSET_TYPES, TRANSACTION_ACTION_LABELS } from '../../constants/enums';
+import { ASSET_TYPES, MANUAL_TRANSACTION_ACTIONS, TRANSACTION_ACTION_LABELS } from '../../constants/enums';
 import { ROUTES } from '../../constants/routes';
 import { fmtPrice } from '../../utils/priceDisplay';
 import { formatShareChange, formatSplitRatio } from '../../utils/splitDisplay';
@@ -103,8 +103,8 @@ export function TransactionTable({
       case 'operations':
         return (
           <span className="transaction-table__actions">
-            {/* TASK-098：拆股只经流水导入写入，手动编辑表单不支持（可删除后重新导入） */}
-            {onEdit && tx.action !== 'split' && (
+            {/* 决定 10：只有手动录入开放的动作可编辑；导入专有动作（现金类、换汇、划转、拆股）可删除后重新导入 */}
+            {onEdit && MANUAL_TRANSACTION_ACTIONS.includes(tx.action) && (
               <button type="button" className="transaction-table__action" onClick={() => onEdit(tx)}>
                 编辑
               </button>

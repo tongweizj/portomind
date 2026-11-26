@@ -9,7 +9,7 @@ const { assertPortfolioUnlocked } = require('./transactionImport/commit');
 const WRITABLE_FIELDS = ['portfolioId', 'symbol', 'action', 'quantity', 'price', 'fee', 'date', 'notes'];
 const TRANSACTION_SORT = { date: -1, _id: -1 };
 // 手动录入只开放四类动作；税款 / 利息 / 划转 / 独立费用目前仅经导入写入（TASK-097）。
-const { MANUAL_ACTIONS: ACTIONS } = require('../constants/transaction.constants');
+const { MANUAL_ACTIONS: ACTIONS, PAIRED_ACTIONS, TRANSFER_ACTIONS } = require('../constants/transaction.constants');
 
 function businessError(status, code, message) {
   const error = new Error(message);
@@ -164,17 +164,49 @@ async function updateTransaction(id, input) {
   });
 }
 
+// 必须两端共同存在的成对流水（Human 决定 10）：换汇两端、证券划转两端
+const PAIRED_LEG_ACTIONS = Object.freeze([...PAIRED_ACTIONS, ...TRANSFER_ACTIONS]);
+
+/** 成对流水的全部端（含自身）：同一次导入确认（importBatchId）写入的同组号同类流水。 */
+async function pairedLegsOf(transaction) {
+  if (!PAIRED_LEG_ACTIONS.includes(transaction.action) || !transaction.pairGroupId) return [transaction];
+  const family = TRANSFER_ACTIONS.includes(transaction.action) ? TRANSFER_ACTIONS : PAIRED_ACTIONS;
+  const legs = await Transaction.find(visibleQuery({
+    pairGroupId: transaction.pairGroupId,
+    'source.importBatchId': transaction.source?.importBatchId,
+    action: { $in: [...family] }
+  })).lean();
+  return legs.some(leg => String(leg._id) === String(transaction._id)) ? legs : [transaction, ...legs];
+}
+
+/**
+ * 删除流水。成对流水（换汇 / 证券划转）删除一端即两端一起删除（决定 10，界面先确认），不留单边；
+ * 删除后各受影响账本（可能跨组合）重放校验，任一超卖即拒绝且不删除。
+ * 返回被删除的流水，另附 deletedIds（全部被删除的 id）。
+ */
 async function deleteTransaction(id) {
   const existing = await Transaction.findById(id).lean();
   if (!existing) throw businessError(404, 'TRANSACTION_NOT_FOUND', 'Transaction not found');
-  await assertPortfolioUnlocked(existing.portfolioId);
-  const remaining = await Transaction.find(visibleQuery({
-    portfolioId: existing.portfolioId,
-    symbol: existing.symbol,
-    _id: { $ne: id }
-  })).lean();
-  calculatePositions(remaining);
-  return Transaction.findByIdAndDelete(id);
+  const legs = await pairedLegsOf(existing);
+  const legIds = legs.map(leg => String(leg._id));
+  for (const portfolioId of new Set(legs.map(leg => String(leg.portfolioId)))) await assertPortfolioUnlocked(portfolioId);
+  const ledgers = new Map(legs.filter(leg => leg.symbol).map(leg => [`${leg.portfolioId}|${leg.symbol}`, leg]));
+  for (const leg of ledgers.values()) {
+    const remaining = await Transaction.find(visibleQuery({
+      portfolioId: leg.portfolioId,
+      symbol: leg.symbol,
+      _id: { $nin: legIds }
+    })).lean();
+    calculatePositions(remaining);
+  }
+  if (legs.length === 1) {
+    const deleted = await Transaction.findByIdAndDelete(id);
+    const plain = deleted?.toObject ? deleted.toObject() : deleted;
+    return plain ? { ...plain, deletedIds: [String(id)] } : plain;
+  }
+  // 单条语句删除两端
+  await Transaction.deleteMany({ _id: { $in: legIds } });
+  return { ...existing, deletedIds: legIds };
 }
 
 // ───────────────────────── TR-08：A股整手软警告 ─────────────────────────

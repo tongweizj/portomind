@@ -571,3 +571,45 @@ test('S2 第 1 批单独重放不成立（后续行依赖被推迟的成对流�
   assert.equal(commit.status, 422);
   assert.equal(world.transactions.length, 0);
 });
+
+// ─────────────────────────────────────────────────────────────
+// 决定 10 / 代码审查 S8：成对流水删除一端即两端一起删除；导入专有动作不可编辑
+// ─────────────────────────────────────────────────────────────
+
+test('S8 删除划转的一端：两端一起删除（含另一组合），持仓恢复；导入专有动作不可经 PUT 编辑', async (t) => {
+  const world = await stageOut(t);
+  const paired = await previewAndCommit(body(PORTFOLIO_B, csv([{ activity_type: 'transfer_in', trade_date: '2026-03-03', quantity: '5', unit_price: '' }])));
+  assert.equal(paired.commit.status, 201, JSON.stringify(paired.commit.body));
+  const inTx = visible(world).find(tx => tx.action === 'transfer_in');
+
+  const edit = await call('PUT', `/api/transactions/${inTx._id}`, { quantity: 4 });
+  assert.equal(edit.status, 400, JSON.stringify(edit.body));
+
+  const removed = await call('DELETE', `/api/transactions/${inTx._id}`);
+  assert.equal(removed.status, 200, JSON.stringify(removed.body));
+  assert.equal(removed.body.data.deletedIds.length, 2);
+  assert.equal(world.transactions.filter(tx => tx.action.startsWith('transfer_')).length, 0, '不留单边');
+  assert.equal((await positionOf(PORTFOLIO_A, 'VTI.US')).quantity, 20);
+  assert.equal(await positionOf(PORTFOLIO_B, 'VTI.US'), null);
+});
+
+test('S8 删除换汇的一端：同批同组号的另一端一起删除；不同批次的同组号不受影响', async (t) => {
+  const world = freshWorld(t);
+  const fxRows = [
+    { activity_type: 'fx', pair_group: 'FX-7', symbol: '', market: '', quantity: '', unit_price: '', commission: '', cash_currency: 'CAD', notes: '' },
+  ];
+  const HEADER_FX = 'activity_type,trade_date,pair_group,cash_amount,cash_currency';
+  const fxCsv = rows => [HEADER_FX, ...rows.map(row => [row.activity_type, '2026-03-02', row.pair_group, row.cash_amount, row.cash_currency].join(','))].join('\n');
+  const legs = [
+    { ...fxRows[0], cash_amount: '-1370', cash_currency: 'CAD' },
+    { ...fxRows[0], cash_amount: '1000', cash_currency: 'USD' }
+  ];
+  const first = await previewAndCommit(body(PORTFOLIO_A, fxCsv(legs)));
+  assert.equal(first.commit.status, 201, JSON.stringify(first.commit.body));
+  const other = await previewAndCommit(body(PORTFOLIO_A, fxCsv([{ ...legs[0], cash_amount: '-685' }, { ...legs[1], cash_amount: '500' }]), { sourceAccount: { broker: 'other', alias: '另一合成账户' } }));
+  assert.equal(other.commit.status, 201, JSON.stringify(other.commit.body));
+  const target = visible(world).find(tx => tx.action === 'fx' && tx.cashAmount === 1000);
+  const removed = await call('DELETE', `/api/transactions/${target._id}`);
+  assert.equal(removed.status, 200, JSON.stringify(removed.body));
+  assert.deepEqual(visible(world).filter(tx => tx.action === 'fx').map(tx => tx.cashAmount).sort((a, b) => a - b), [-685, 500]);
+});

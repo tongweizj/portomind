@@ -6,6 +6,7 @@ import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router';
 import { TransactionTable } from '../../components/TransactionTable';
 import { ROUTES } from '../../constants/routes';
+import { PAIRED_LEG_ACTIONS, TRANSACTION_ACTION_LABELS } from '../../constants/enums';
 import { colors, radii } from '../../constants/design-tokens';
 import { getApiErrorMessage } from '../../services/api.client';
 import { deleteTransaction, getPortfolioTransactions } from '../../services/transaction.service';
@@ -56,6 +57,11 @@ export default function Transactions() {
 
   // 写路径始终经服务端（DELETE /transactions/:id），前端不做任何业务校验（AC10）
   const handleDelete = async (tx) => {
+    // 决定 10：成对流水（换汇 / 证券划转）删除一端时服务端两端一起删除，先请用户确认
+    if (PAIRED_LEG_ACTIONS.includes(tx.action) && tx.pairGroupId &&
+        !window.confirm(`这是一笔${TRANSACTION_ACTION_LABELS[tx.action]}的一端，删除将同时删除另一端（可能在其他组合）。确定删除？`)) {
+      return;
+    }
     setActionError('');
     try {
       await deleteTransaction(tx._id);

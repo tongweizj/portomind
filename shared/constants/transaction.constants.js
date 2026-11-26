@@ -20,7 +20,8 @@ const PAIRED_ACTIONS = Object.freeze(['fx']);
 
 const TRANSACTION_ACTIONS = Object.freeze([...POSITION_ACTIONS, ...CASH_ACTIONS]);
 
-// 手动录入表单开放的动作（其余现金类动作目前仅经导入写入）。
+// 手动录入 / 编辑开放的动作（其余动作仅经导入写入，界面不提供编辑，决定 10）。
+// 与 client/src/constants/enums.js 的 MANUAL_TRANSACTION_ACTIONS 同步；PAIRED_ACTIONS + TRANSFER_ACTIONS 与其 PAIRED_LEG_ACTIONS 同步。
 const MANUAL_ACTIONS = Object.freeze(['buy', 'sell', 'div_cash', 'div_reinvest']);
 
 function isCashAction(action) {

@@ -160,7 +160,7 @@ AlertRule ──_id──> AlertEvent.ruleId（**可空**：再平衡通知没�
 - 索引：`{portfolioId: 1, date: -1, _id: -1}`（组合内倒序列表）、`{portfolioId: 1, symbol: 1, date: 1, _id: 1}`（组合内单标的重放）；TASK-094 新增部分索引 `{sourceAccountId, source.externalId}`（**非唯一**：跨组合同编号须可被发现）、`{sourceAccountId, source.rawHash}`、`{source.importBatchId}`。
 - **无唯一索引**：允许同一 `(portfolioId, symbol, date, action, quantity, price)` 重复落库。CSV 导入的幂等**不靠数据库约束**，靠业务层判重（当前实现有缺陷，见 §5.2）。
 - `action` 语义：`div_reinvest` 转增持仓且成本含费；现金类（`div_cash`/`tax`/`interest`/`cash_in`/`cash_out`/`fee`/`fx`）不进持仓、不参与超卖重放，持仓计算直接跳过（现金余额核对见后续工单）。
-- 划转语义（TASK-099）：`transfer_out` 按转出前均价减记数量与成本、不产生已实现盈亏、不得超过当时持仓；`transfer_in` 按 `carryCost` 增加数量与成本（缺 `carryCost` 报 `INVALID_CARRY_COST`，不猜成本）。划转流水不支持经 `PUT /api/transactions/:id` 编辑；单独删除一端会留下单边结果，需人工处理（已知限制）。
+- 划转语义（TASK-099）：`transfer_out` 按转出前均价减记数量与成本、不产生已实现盈亏、不得超过当时持仓；`transfer_in` 按 `carryCost` 增加数量与成本（缺 `carryCost` 报 `INVALID_CARRY_COST`，不猜成本）。划转流水不支持经 `PUT /api/transactions/:id` 编辑（界面只对 `MANUAL_ACTIONS` 显示「编辑」，Human 决定 10）；删除划转或换汇的一端时，同一次导入确认写入的同组号另一端一并删除（可跨组合），不留单边。
 - `split` 语义（TASK-098）：份额按 `quantity` 变动、总成本与已实现盈亏不变、单位成本按新份额重算；拆股前须有持仓（否则重放报 `SPLIT_NO_POSITION`），比例与份额变动冲突或拆后份额不为正报 `SPLIT_RATIO_CONFLICT`（均为 `400`，删除 / 编辑使之后拆股失去依据的流水同样被拒）。
 
 ### 4.4 Price（`shared/models/price.js`）
