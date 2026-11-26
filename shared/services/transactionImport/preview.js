@@ -305,6 +305,8 @@ function toPreviewResponse(preview) {
     blocking: preview.blocking,
     blockingReasons: preview.blockingReasons,
     commitLimit: IMPORT_COMMIT_LIMIT,
+    // 全部批次待写入的来源流水总数（add / update / stage）
+    writeCount: preview.batches.reduce((sum, batch) => sum + batch.count, 0),
     batches: preview.batches.map(({ index, count, firstRowNumber, lastRowNumber }) => ({ index, count, firstRowNumber, lastRowNumber })),
     requiresSplit: preview.batches.length > 1,
     // TASK-099：确认时一并写入的对端组合（暂存一端所在组合）

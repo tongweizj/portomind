@@ -13,7 +13,13 @@
 // 模块分工（代码审查 T5）：input（校验 / 解码 / 代码映射）→ candidates（资产 / 佣金 / rawHash）→
 // matching / pairing / transfers → ledger（同日顺序 / 超卖 / 持仓预演）→ batching（拆批）→ preview → confirm（commit.js 原子提交）。
 
-const { IMPORT_COMMIT_LIMIT, IMPORT_PREVIEW_LIMIT } = require('../../constants/import.constants');
+const {
+  IMPORT_FORMATS,
+  BINARY_IMPORT_FORMATS,
+  IMPORT_COMMIT_LIMIT,
+  IMPORT_PREVIEW_LIMIT,
+  IMPORT_TIME_ZONE_CHOICES
+} = require('../../constants/import.constants');
 const standardCsv = require('./standardCsv');
 const transfers = require('./transfers');
 const { previewImport } = require('./preview');
@@ -28,7 +34,11 @@ function describeStandardFormat() {
       required: rule.required || []
     })),
     commitLimit: IMPORT_COMMIT_LIMIT,
-    previewLimit: IMPORT_PREVIEW_LIMIT
+    previewLimit: IMPORT_PREVIEW_LIMIT,
+    // 代码审查 T4：页面的格式 / 二进制上传 / 时区选项取值以此为准，前端只保留展示名
+    formats: [...IMPORT_FORMATS],
+    binaryFormats: [...BINARY_IMPORT_FORMATS],
+    timeZoneChoices: [...IMPORT_TIME_ZONE_CHOICES]
   };
 }
 

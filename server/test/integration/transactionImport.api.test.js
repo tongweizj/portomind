@@ -342,6 +342,7 @@ test('501 条提示拆批：预览分为 500 + 1，确认只写第 1 批，其�
   const { preview, commit } = await previewAndCommit(importBody(csv(manyRows(501))));
   assert.equal(preview.requiresSplit, true);
   assert.deepEqual(preview.batches.map(batch => batch.count), [500, 1]);
+  assert.equal(preview.writeCount, 501, '代码审查 T8：待写入总数由服务端给出');
   assert.equal(commit.status, 201);
   assert.equal(commit.body.data.added, 500);
   assert.equal(commit.body.data.deferred, 1);
@@ -496,4 +497,13 @@ test('T6 导入未翻转的 pending 行：按 id 读取、编辑、删除均 404
   assert.equal((await call('PUT', `/api/transactions/${pendingId}`, { quantity: 2 })).status, 404);
   assert.equal((await call('DELETE', `/api/transactions/${pendingId}`)).status, 404);
   assert.equal(world.transactions.length, 1);
+});
+
+// 代码审查 T4：格式、二进制格式与可选时区由服务端给出，页面不另存一份取值
+test('T4 格式说明端点列出导入格式、二进制格式与页面可选时区', async () => {
+  const format = await call('GET', '/api/transactions/import/format');
+  assert.equal(format.status, 200);
+  assert.deepEqual(format.body.data.formats, ['standard', 'wealthsimple', 'questrade']);
+  assert.deepEqual(format.body.data.binaryFormats, ['questrade']);
+  assert.deepEqual(format.body.data.timeZoneChoices, ['Asia/Shanghai', 'America/Toronto']);
 });

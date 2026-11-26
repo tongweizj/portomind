@@ -35,13 +35,14 @@ const DISPOSITION_STYLES = {
   add: 'text-emerald-700', update: 'text-blue-700', skip: 'text-gray-500', stage: 'text-indigo-700',
   review: 'text-amber-700', error: 'text-red-700', deferred: 'text-gray-500',
 };
-// 导入格式：标准 CSV（可手动列映射）/ Wealthsimple 原格式 CSV（TASK-100）/ Questrade 原格式 XLSX（TASK-102）；
-// 原格式由服务端自带列识别，不做列映射。broker 为新建来源账户时的默认券商。
-const IMPORT_FORMAT_OPTIONS = [
-  { value: 'standard', label: '标准 CSV' },
-  { value: 'wealthsimple', label: 'Wealthsimple 原格式 CSV', broker: 'wealthsimple' },
-  { value: 'questrade', label: 'Questrade 原格式 XLSX', broker: 'questrade' },
-];
+// 导入格式的取值、哪些格式按二进制（base64）上传、可选时区都以服务端 GET /transactions/import/format 为准
+// （formats / binaryFormats / timeZoneChoices，代码审查 T4）；这里只有展示名与新建来源账户时的默认券商。
+// 原格式（非 standard）由服务端自带列识别，不做列映射。
+const IMPORT_FORMAT_LABELS = {
+  standard: { label: '标准 CSV' },
+  wealthsimple: { label: 'Wealthsimple 原格式 CSV', broker: 'wealthsimple' },
+  questrade: { label: 'Questrade 原格式 XLSX', broker: 'questrade' },
+};
 
 // 文件统一按字节读取：文本格式解码为 UTF-8 文本（TextDecoder 去 BOM），二进制格式（XLSX）以 base64 上传
 function toBase64(bytes) {
@@ -50,11 +51,10 @@ function toBase64(bytes) {
   return btoa(binary);
 }
 const FEE_SOURCE_LABELS = { derived: '推算', user: '补填', confirmed_zero: '确认为 0', unknown: '未知' };
-const TIME_ZONE_OPTIONS = [
-  { value: '', label: '未确认（报表时间带时区时无需选择）' },
-  { value: 'America/Toronto', label: '多伦多（America/Toronto）' },
-  { value: 'Asia/Shanghai', label: '北京（Asia/Shanghai）' },
-];
+const TIME_ZONE_LABELS = {
+  'America/Toronto': '多伦多（America/Toronto）',
+  'Asia/Shanghai': '北京（Asia/Shanghai）',
+};
 const PAIR_SOURCE_LABELS = { explicit: '按组号配对', user: '已指定配对', suggested: '建议配对（确认导入即采纳）' };
 
 const ORDER_LABELS = {
@@ -139,10 +139,18 @@ export default function ImportTransactions() {
     return { broker, alias: alias.trim(), ...(accountNumber.trim() ? { accountNumber: accountNumber.trim() } : {}) };
   }, [sourceMode, sourceId, broker, alias, accountNumber]);
 
+  const formatOptions = (format?.formats || ['standard'])
+    .map(value => ({ value, label: IMPORT_FORMAT_LABELS[value]?.label || value, broker: IMPORT_FORMAT_LABELS[value]?.broker }));
+  const isBinaryFormat = (format?.binaryFormats || []).includes(importFormat);
+  const timeZoneOptions = [
+    { value: '', label: '未确认（报表时间带时区时无需选择）' },
+    ...(format?.timeZoneChoices || []).map(value => ({ value, label: TIME_ZONE_LABELS[value] || value })),
+  ];
+
   const buildPayload = (overrides = {}) => ({
     portfolioId,
     format: importFormat,
-    file: file && (importFormat === 'questrade'
+    file: file && (isBinaryFormat
       ? { name: file.name, encoding: 'base64', content: file.base64 }
       : { name: file.name, encoding: 'text', content: file.text }),
     sourceAccount,
@@ -286,7 +294,7 @@ export default function ImportTransactions() {
             </label>
             <select value={timeZone} onChange={e => { setTimeZone(e.target.value); invalidate(); }}
               className="w-full rounded border bg-white px-3 py-2 text-sm">
-              {TIME_ZONE_OPTIONS.map(option => <option key={option.value} value={option.value}>{option.label}</option>)}
+              {timeZoneOptions.map(option => <option key={option.value} value={option.value}>{option.label}</option>)}
             </select>
           </div>
         </div>
@@ -337,7 +345,7 @@ export default function ImportTransactions() {
             <select value={importFormat} aria-label="报表格式"
               onChange={e => {
                 setImportFormat(e.target.value);
-                const option = IMPORT_FORMAT_OPTIONS.find(item => item.value === e.target.value);
+                const option = formatOptions.find(item => item.value === e.target.value);
                 if (option?.broker && sourceMode === 'new') setBroker(option.broker);
                 setSymbolMap({});
                 setMapping(null);
@@ -345,12 +353,12 @@ export default function ImportTransactions() {
                 invalidate();
               }}
               className="rounded border bg-white px-3 py-2 text-sm">
-              {IMPORT_FORMAT_OPTIONS.map(option => <option key={option.value} value={option.value}>{option.label}</option>)}
+              {formatOptions.map(option => <option key={option.value} value={option.value}>{option.label}</option>)}
             </select>
           </div>
           <div className="grow">
             <label className="mb-1 block text-sm text-gray-700">报表文件（标准模板格式可上传后手动列映射；Wealthsimple CSV / Questrade XLSX 原格式直接上传）</label>
-            <input type="file" accept={importFormat === 'questrade' ? '.xlsx' : '.csv,text/csv'} onChange={handleFile} className="w-full rounded border px-3 py-2 text-sm" />
+            <input type="file" accept={isBinaryFormat ? '.xlsx' : '.csv,text/csv'} onChange={handleFile} className="w-full rounded border px-3 py-2 text-sm" />
           </div>
           <button type="button"
             onClick={async () => {
@@ -458,8 +466,8 @@ export default function ImportTransactions() {
           )}
           {preview.requiresSplit && (
             <p className="rounded bg-blue-50 p-3 text-sm text-blue-800">
-              共 {preview.batches.reduce((sum, b) => sum + b.count, 0)} 条待写入，超过每次 {preview.commitLimit} 条上限：
-              本次确认提交第 1 批（{preview.batches[0].count} 条，成对流水不拆开），完成后重新预览继续下一批。
+              共 {preview.writeCount} 条待写入，超过每次 {preview.commitLimit} 条上限：
+              本次确认提交第 1 批（{preview.batches[0].count} 条，成对流水不拆开），完成后重新预览同一文件即继续下一批（已入账的行自动跳过）。
             </p>
           )}
 
