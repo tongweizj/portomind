@@ -40,6 +40,23 @@ exports.commit = async (req, res, next) => {
   }
 };
 
+// TASK-099：暂存待核对的证券划转一端（先到的一端），以及放弃暂存。
+exports.listStagedTransfers = async (req, res, next) => {
+  try {
+    return success(res, await transactionImport.listStagedTransfers({ portfolioId: req.query.portfolioId }));
+  } catch (error) {
+    return respondError(req, res, next, error);
+  }
+};
+
+exports.discardStagedTransfer = async (req, res, next) => {
+  try {
+    return success(res, await transactionImport.discardStagedTransfer(req.params.id));
+  } catch (error) {
+    return respondError(req, res, next, error);
+  }
+};
+
 exports.listSourceAccounts = async (req, res, next) => {
   try {
     return success(res, await sourceAccountService.listSourceAccounts());

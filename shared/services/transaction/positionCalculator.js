@@ -2,7 +2,7 @@ const dayjs = require('dayjs');
 const utc = require('dayjs/plugin/utc');
 const timezone = require('dayjs/plugin/timezone');
 const { MARKET_TIMEZONE } = require('../../utils/marketTime');
-const { TRANSACTION_ACTIONS, POSITION_ACTIONS, isCashAction } = require('../../constants/transaction.constants');
+const { TRANSACTION_ACTIONS, POSITION_ACTIONS, TRANSFER_ACTIONS, isCashAction } = require('../../constants/transaction.constants');
 
 dayjs.extend(utc);
 dayjs.extend(timezone);
@@ -112,12 +112,19 @@ function latestPriceFor(latestPrices, symbol) {
  * - tax / interest / cash_in / cash_out / fee（TASK-097）：纯现金流水，同样不进持仓；
  *   现金类流水可无标的、无数量单价，直接跳过（现金余额另行核对，见 #103）；
  * - div_reinvest：分红再投，等价 buy（数量与成本增加，含 fee）；
+ * - transfer_out（TASK-099）：证券转出，数量 -= qty，成本按转出前均价减记，不产生已实现盈亏；
+ *   不允许超过当时可用数量（同 sell）；price 只是快照，不参与计算；
+ * - transfer_in（TASK-099）：证券转入，数量 += qty，成本 += carryCost（承接成本，转入资产原币种）；
+ *   缺 carryCost 时报 INVALID_CARRY_COST，不按 qty×price 猜成本；
  * - split（TASK-098）：quantity = 带符号份额变动（拆股为正、合股为负），price / fee 不参与；
  *   总成本不变、单位成本按新份额重算、已实现盈亏不变。拆股前须有持仓（SPLIT_NO_POSITION）；
  *   splitRatio（新份额 / 旧份额）已知时须满足 旧份额 ×(ratio-1) = 份额变动，且拆后份额须为正（SPLIT_RATIO_CONFLICT）；
  * - fee 只影响发生之后的持仓，不回溯漂移（重放天然满足）。
+ *
+ * options.onApply(transaction, effect)：每条流水应用后回调（effect.removedCost 为转出 / 卖出减记的成本），
+ * 供导入预览取得转出端的承接成本。
  */
-function replayLedger(transactions) {
+function replayLedger(transactions, options = {}) {
   if (!Array.isArray(transactions)) {
     throw calculationError('INVALID_TRANSACTIONS', 'transactions must be an array');
   }
@@ -142,7 +149,13 @@ function replayLedger(transactions) {
     if (!Number.isFinite(quantity) || (isSplit ? Math.abs(quantity) < EPSILON : quantity <= 0)) {
       throw calculationError('INVALID_QUANTITY', `Invalid transaction quantity for ${symbol}`);
     }
-    if (!isSplit && (!Number.isFinite(tradePrice) || tradePrice <= 0)) {
+    const carryCost = Number(transaction.carryCost);
+    if (action === 'transfer_in' && (transaction.carryCost === null || transaction.carryCost === undefined ||
+        transaction.carryCost === '' || !Number.isFinite(carryCost) || carryCost < 0)) {
+      throw calculationError('INVALID_CARRY_COST', `Transfer-in carry cost is required for ${symbol}`);
+    }
+    // split 不记单价；划转两端的 price 只是成本快照，不参与重放（TASK-099）
+    if (!isSplit && !TRANSFER_ACTIONS.includes(action) && (!Number.isFinite(tradePrice) || tradePrice <= 0)) {
       throw calculationError('INVALID_PRICE', `Invalid transaction price for ${symbol}`);
     }
     if (!Number.isFinite(fee) || fee < 0) {
@@ -162,12 +175,16 @@ function replayLedger(transactions) {
       realizedPnl: 0
     };
 
+    let removedCost = 0;
     if (isSplit) {
       applySplit(position, quantity, transaction.splitRatio, transactionDate);
     } else if (action === 'buy' || action === 'div_reinvest') {
       // div_reinvest 等价买入（分红再投转增持仓）
       position.quantity += quantity;
       position.remainingCost += quantity * tradePrice + fee;
+    } else if (action === 'transfer_in') {
+      position.quantity += quantity;
+      position.remainingCost += carryCost;
     } else {
       if (quantity > position.quantity + EPSILON) {
         throw calculationError(
@@ -178,9 +195,11 @@ function replayLedger(transactions) {
       const averageCost = position.quantity > EPSILON
         ? position.remainingCost / position.quantity
         : 0;
+      removedCost = averageCost * quantity;
       position.quantity -= quantity;
-      position.remainingCost -= averageCost * quantity;
-      position.realizedPnl += (tradePrice - averageCost) * quantity - fee;
+      position.remainingCost -= removedCost;
+      // 划转只移动份额与成本，不产生买卖盈亏
+      if (action === 'sell') position.realizedPnl += (tradePrice - averageCost) * quantity - fee;
       if (Math.abs(position.quantity) < EPSILON) {
         position.quantity = 0;
         position.remainingCost = 0;
@@ -191,6 +210,7 @@ function replayLedger(transactions) {
     position.market = transaction.market || position.market;
     position.currency = transaction.currency || position.currency;
     positions.set(symbol, position);
+    if (options.onApply) options.onApply(transaction, { removedCost, position: { ...position } });
   }
 
   return positions;
@@ -319,5 +339,6 @@ module.exports = {
   compareTransactions,
   PREVIEW_BATCH_KEY,
   POSITION_ACTIONS,
+  TRANSFER_ACTIONS,
   periodKey
 };

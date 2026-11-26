@@ -4,6 +4,8 @@
 //   - 页面只读取文件文本、收集来源账户 / 列映射 / 逐行决议，并展示服务端返回的预览与当次结果；
 //   - 解析、映射应用、标的派生、匹配、超卖与拆批全部由服务端完成（client 不持有业务规则）；
 //   - TASK-096：报表有时间无时区时由用户确认北京 / 多伦多时区；同日顺序影响结果时由用户确认先后（服务端判定）；
+//   - TASK-099：证券划转先到的一端「暂存」（服务端保存，不进账本），另一端导入时自动配对并共同确认；
+//     承接成本、配对与跨币种依据均由服务端核对，页面只展示并收集决议；
 //   - 任何输入变化都使预览失效，必须重新预览后才能确认；服务端检测到账本变化时同样要求重新预览。
 import { useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router';
@@ -14,21 +16,30 @@ import { ROUTES } from '../../constants/routes';
 import { getApiErrorMessage } from '../../services/api.client';
 import {
   commitImport,
+  discardStagedTransfer,
   downloadImportTemplate,
+  listStagedTransfers,
   getImportFormat,
   listSourceAccounts,
   previewImport,
 } from '../../services/transactionImport.service';
 import ImportMatchResolution from './ImportMatchResolution';
 import { formatShareChange, formatSplitRatio } from '../../utils/splitDisplay';
+import ImportTransferResolution from './ImportTransferResolution';
 
 const DISPOSITION_LABELS = {
   add: '新增', update: '更新', skip: '跳过', review: '待核对', error: '错误', deferred: '下一批',
+  stage: '暂存待配对',
 };
 const DISPOSITION_STYLES = {
-  add: 'text-emerald-700', update: 'text-blue-700', skip: 'text-gray-500',
+  add: 'text-emerald-700', update: 'text-blue-700', skip: 'text-gray-500', stage: 'text-indigo-700',
   review: 'text-amber-700', error: 'text-red-700', deferred: 'text-gray-500',
 };
+// 导入格式：标准 CSV（可手动列映射）/ Wealthsimple 原格式 CSV（TASK-100，服务端自带列识别，不做列映射）
+const IMPORT_FORMAT_OPTIONS = [
+  { value: 'standard', label: '标准 CSV' },
+  { value: 'wealthsimple', label: 'Wealthsimple 原格式 CSV' },
+];
 const FEE_SOURCE_LABELS = { derived: '推算', user: '补填', confirmed_zero: '确认为 0', unknown: '未知' };
 const TIME_ZONE_OPTIONS = [
   { value: '', label: '未确认（报表时间带时区时无需选择）' },
@@ -76,6 +87,7 @@ export default function ImportTransactions() {
   const { data: portfolio } = usePortfolio(portfolioId);
 
   const [format, setFormat] = useState(null);
+  const [importFormat, setImportFormat] = useState('standard');
   const [accounts, setAccounts] = useState([]);
   const [sourceMode, setSourceMode] = useState('new');
   const [sourceId, setSourceId] = useState('');
@@ -92,6 +104,11 @@ export default function ImportTransactions() {
   const [result, setResult] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [stagedTransfers, setStagedTransfers] = useState([]);
+
+  const reloadStaged = () => listStagedTransfers().then(setStagedTransfers).catch(() => {});
+
+  useEffect(() => { reloadStaged(); }, []);
 
   useEffect(() => {
     getImportFormat().then(setFormat).catch(() => {});
@@ -113,7 +130,7 @@ export default function ImportTransactions() {
 
   const buildPayload = (overrides = {}) => ({
     portfolioId,
-    format: 'standard',
+    format: importFormat,
     file,
     sourceAccount,
     ...(mapping ? { mapping } : {}),
@@ -170,6 +187,7 @@ export default function ImportTransactions() {
       }));
       setResult(data);
       setStale(true);
+      reloadStaged();
       listSourceAccounts().then(setAccounts).catch(() => {});
       if (sourceMode === 'new' && data.sourceAccountId) {
         // 新建的来源账户已落库：后续批次 / 重新预览按 id 引用同一身份
@@ -225,7 +243,7 @@ export default function ImportTransactions() {
           className="flex items-center gap-1 text-sm text-gray-500 hover:text-gray-800">
           <ArrowLeft className="w-4 h-4" /> 返回
         </Link>
-        <h1 className="text-2xl font-bold text-gray-800">导入流水（标准 CSV）</h1>
+        <h1 className="text-2xl font-bold text-gray-800">导入流水</h1>
       </div>
 
       {/* 目标组合（锁定）、来源账户、文件 */}
@@ -288,8 +306,22 @@ export default function ImportTransactions() {
         </fieldset>
 
         <div className="flex flex-wrap items-end gap-3">
+          <div>
+            <label className="mb-1 block text-sm text-gray-700">报表格式</label>
+            <select value={importFormat} aria-label="报表格式"
+              onChange={e => {
+                setImportFormat(e.target.value);
+                if (e.target.value === 'wealthsimple' && sourceMode === 'new') setBroker('wealthsimple');
+                setMapping(null);
+                setResolutions({});
+                invalidate();
+              }}
+              className="rounded border bg-white px-3 py-2 text-sm">
+              {IMPORT_FORMAT_OPTIONS.map(option => <option key={option.value} value={option.value}>{option.label}</option>)}
+            </select>
+          </div>
           <div className="grow">
-            <label className="mb-1 block text-sm text-gray-700">CSV 文件（标准模板格式，或上传后手动列映射）</label>
+            <label className="mb-1 block text-sm text-gray-700">CSV 文件（标准模板格式可上传后手动列映射；Wealthsimple 原格式直接上传）</label>
             <input type="file" accept=".csv,text/csv" onChange={handleFile} className="w-full rounded border px-3 py-2 text-sm" />
           </div>
           <button type="button"
@@ -308,6 +340,31 @@ export default function ImportTransactions() {
         {file && <p className="text-xs text-gray-500">已读取：{file.name}</p>}
         {error && <div className="rounded bg-red-50 p-3 text-sm text-red-700">{error}</div>}
       </div>
+
+      {stagedTransfers.length > 0 && (
+        <div className="rounded-xl bg-white p-6 shadow space-y-2 text-sm">
+          <p className="font-semibold text-gray-800">暂存待配对的证券划转（{stagedTransfers.length}）</p>
+          <p className="text-gray-500">先到的一端不进账本；导入另一端的报表时自动配对并共同确认。放弃后需重新提供该端的报表行。</p>
+          <ul className="divide-y">
+            {stagedTransfers.map(leg => (
+              <li key={leg.id} className="flex flex-wrap items-center justify-between gap-2 py-1">
+                <span>
+                  {leg.direction === 'out' ? '转出' : '转入'} {leg.symbol} × {leg.quantity} · {String(leg.date).slice(0, 10)}
+                  {' · '}{leg.portfolioName || leg.portfolioId}
+                  {leg.rowNumber ? ` · ${leg.fileName || ''} 第 ${leg.rowNumber} 行` : ''}
+                </span>
+                <button type="button" className="text-red-600 hover:underline"
+                  onClick={async () => {
+                    try { await discardStagedTransfer(leg.id); invalidate(); reloadStaged(); }
+                    catch (err) { setError(getApiErrorMessage(err, '放弃暂存失败')); }
+                  }}>
+                  放弃暂存
+                </button>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
 
       {preview && (
         <div className="rounded-xl bg-white p-6 shadow space-y-5">
@@ -341,6 +398,7 @@ export default function ImportTransactions() {
             </div>
           )}
 
+          {importFormat === 'standard' && (
           <details open={preview.blockingReasons.some(item => item.code === 'MISSING_COLUMNS')}>
             <summary className="cursor-pointer font-semibold text-gray-800">列映射</summary>
             <div className="mt-3 grid grid-cols-2 gap-3 md:grid-cols-4">
@@ -358,10 +416,11 @@ export default function ImportTransactions() {
               ))}
             </div>
           </details>
+          )}
 
           <div className="flex flex-wrap gap-4 text-sm">
-            {['add', 'update', 'skip', 'review', 'error'].map(key => (
-              <span key={key} className={DISPOSITION_STYLES[key]}>{DISPOSITION_LABELS[key]} {preview.counts[key]}</span>
+            {['add', 'update', 'stage', 'skip', 'review', 'error'].map(key => (
+              <span key={key} className={DISPOSITION_STYLES[key]}>{DISPOSITION_LABELS[key]} {preview.counts[key] ?? 0}</span>
             ))}
           </div>
           {preview.blockingReasons.length > 0 && (
@@ -416,7 +475,10 @@ export default function ImportTransactions() {
                         {c ? (c.settlementStatus === 'known' ? formatDate(c.settlementDate, 'date') : '未知') : '—'}
                       </td>
                       <td className="px-2 py-2 text-right">{c?.action === 'split' ? formatShareChange(c.quantity) : (c?.quantity ?? '—')}</td>
-                      <td className="px-2 py-2 text-right whitespace-nowrap">{c?.action === 'split' ? formatSplitRatio(c.splitRatio) : (c?.price ?? '—')}</td>
+                      <td className="px-2 py-2 text-right whitespace-nowrap" title={c?.cashFxRate ? `报表单价为现金币种，已按报表汇率 ${c.cashFxRate} 换算为资产币种` : undefined}>
+                        {c?.action === 'split' ? formatSplitRatio(c.splitRatio) : (c?.price ?? '—')}
+                        {c?.cashFxRate ? <div className="text-xs text-gray-500">汇率 {c.cashFxRate}</div> : null}
+                      </td>
                       <td className="px-2 py-2 text-right whitespace-nowrap">
                         {c?.kind === 'cash' ? '—' : (c?.fee ?? '—')}
                         {c?.kind !== 'cash' && c?.feeSource && FEE_SOURCE_LABELS[c.feeSource] ? <span className="ml-1 text-xs text-gray-500">({FEE_SOURCE_LABELS[c.feeSource]})</span> : null}
@@ -469,20 +531,26 @@ export default function ImportTransactions() {
                             {PAIR_SOURCE_LABELS[row.pair.source] || '已配对'}：与第 {row.pair.partnerRowNumber} 行共同入账
                           </div>
                         )}
-                        {row.options.includes('pairWith') && (
+                        {!row.transfer && row.options.includes('pairWith') && (
                           <select value={resolution.pairWith || ''} aria-label="指定换汇另一端"
                             onChange={e => setResolution(row.rowKey, e.target.value ? { pairWith: e.target.value } : null)}
                             className="mt-1 rounded border bg-white px-1 py-0.5">
                             <option value="">指定另一端…</option>
-                            {row.pairCandidates.map(item => (
+                            {(row.pairCandidates || []).map(item => (
                               <option key={item.rowKey} value={item.rowKey}>
                                 第 {item.rowNumber} 行 · {item.date || '—'} · {item.cashAmount ?? '—'} {item.cashCurrency || ''}
                               </option>
                             ))}
                           </select>
                         )}
-                        <ImportMatchResolution row={row} resolution={resolution}
-                          onChange={value => setResolution(row.rowKey, value)} />
+                        {/* TASK-099：证券划转的配对对端、承接成本与决议 */}
+                        {row.transfer ? (
+                          <ImportTransferResolution row={row} resolution={resolution}
+                            onChange={value => setResolution(row.rowKey, value)} />
+                        ) : (
+                          <ImportMatchResolution row={row} resolution={resolution}
+                            onChange={value => setResolution(row.rowKey, value)} />
+                        )}
                       </td>
                     </tr>
                   );
@@ -533,6 +601,11 @@ export default function ImportTransactions() {
             <div className="rounded bg-gray-50 p-4 text-sm space-y-1">
               <p className="font-medium text-gray-800">当次导入结果</p>
               <p>新增：<strong className="text-emerald-700">{result.added}</strong> 条 · 更新：{result.updated} 条 · 跳过：{result.skipped} 条 · 待核对：{result.review} 条</p>
+              {(result.staged > 0 || result.counterpartsWritten > 0) && (
+                <p className="text-indigo-800">
+                  证券划转：暂存待配对 {result.staged || 0} 端（两边账本未变）· 同次写入对端组合 {result.counterpartsWritten || 0} 条
+                </p>
+              )}
               {result.deferred > 0 && <p className="text-blue-800">尚有 {result.deferred} 条留待下一批：请点击「重新预览」继续。</p>}
               <button type="button" onClick={() => navigate(ROUTES.PORTFOLIO_TX_TAB(portfolioId))}
                 className="mt-2 text-blue-600 hover:underline">查看本组合交易记录 →</button>

@@ -11,6 +11,9 @@ router.get('/import/template', importController.downloadTemplate);
 router.get('/import/format', importController.getFormat);
 router.post('/import/preview', importController.preview);
 router.post('/import/commit', importController.commit);
+// TASK-099：暂存待核对的证券划转一端
+router.get('/import/transfers', importController.listStagedTransfers);
+router.delete('/import/transfers/:id', importController.discardStagedTransfer);
 // 旧版逐行 JSON 导入（已由 preview/commit 取代，保留以兼容脚本）
 router.post('/import', transactionController.importTransactions);
 router.get('/', transactionController.getAllTransactions);

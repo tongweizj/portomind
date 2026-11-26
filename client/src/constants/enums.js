@@ -26,6 +26,9 @@ export const TRANSACTION_ACTIONS = Object.freeze([
   { value: 'cash_out', label: '现金划出' },
   { value: 'fee', label: '独立费用' },
   { value: 'fx', label: '换汇' },
+  // TASK-099：证券划转两端（仅由流水导入写入，手动录入不提供）
+  { value: 'transfer_out', label: '证券转出' },
+  { value: 'transfer_in', label: '证券转入' },
 ]);
 
 /**

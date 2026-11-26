@@ -20,6 +20,10 @@ const ImportBatchSchema = new mongoose.Schema({
   counts: { type: mongoose.Schema.Types.Mixed },
   // 更新类处置（#95）写入前的原值，回滚时恢复。
   updates: [{ _id: false, transactionId: mongoose.Schema.Types.ObjectId, before: mongoose.Schema.Types.Mixed, unset: [String] }],
+  // TASK-099：跨组合划转共同入账时，对端组合的伴随锁指向主批次（主批次结束时一并释放）
+  parentBatchId: { type: mongoose.Schema.Types.ObjectId, ref: 'ImportBatch' },
+  // flipped：pending→committed 翻转已完成；此后故障只向前补完（暂存一端状态），不回滚
+  phase: { type: String, enum: ['writing', 'flipped'], default: undefined },
   error: String
 }, { timestamps: true, versionKey: false });
 

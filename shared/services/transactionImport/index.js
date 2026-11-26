@@ -32,9 +32,11 @@ const {
   IMPORT_TIME_ZONE_CHOICES
 } = require('../../constants/import.constants');
 const standardCsv = require('./standardCsv');
+const wealthsimpleCsv = require('./wealthsimpleCsv');
 const sourceAccounts = require('./sourceAccount.service');
 const { runAtomicCommit } = require('./commit');
 const { matchRows, applyResolutions } = require('./matching');
+const transfers = require('./transfers');
 const { pairRows, enforcePairIntegrity } = require('./pairing');
 const { FX_PAIR_SPEC } = require('./fxPairSpec');
 
@@ -50,9 +52,12 @@ function sha256(value) {
   return crypto.createHash('sha256').update(typeof value === 'string' ? value : JSON.stringify(value)).digest('hex');
 }
 
-// 格式 → 解析器。解析器契约：(text, { mapping, defaultTimeZone }) → { headers, mapping, rows }。
+// 格式 → 解析器。解析器契约：(text, { mapping, defaultTimeZone }) → { headers, mapping, rows, missingColumns? }。
+// rows 必须按时间正序（旧 → 新）输出（#96：sequence 即同时刻重放顺序）。
+// 原格式解析器（非 standard）自带列识别，不接受手动列映射，并自行报告缺失的原报表列（missingColumns）。
 const PARSERS = {
-  standard: standardCsv.parseStandardCsv
+  standard: standardCsv.parseStandardCsv,
+  wealthsimple: wealthsimpleCsv.parseWealthsimpleCsv
 };
 
 function decodeFile(file) {
@@ -83,6 +88,13 @@ async function resolveAssets(rows) {
       row.asset = null;
       continue;
     }
+    // 原格式报表的裸代码（无后缀、无市场列，#100）：在候选市场的已有资产中唯一解析，见下方
+    if (!market && !marketFromSuffix(rawSymbol) && row.candidate.marketCandidates) {
+      row.candidate.symbolOptions = row.candidate.marketCandidates
+        .map(candidateMarket => toStorageSymbol(normalizeSymbol(rawSymbol), candidateMarket));
+      row.candidate.symbolOptions.forEach(symbol => storageSymbols.add(symbol));
+      continue;
+    }
     const effectiveMarket = market || marketFromSuffix(rawSymbol);
     if (!effectiveMarket) {
       rowError(row, 'MARKET_REQUIRED', `标的 ${rawSymbol} 无市场后缀，需填写 market`);
@@ -100,17 +112,33 @@ async function resolveAssets(rows) {
     : [];
   const bySymbol = new Map(assets.map(asset => [asset.symbol, asset]));
   for (const row of rows) {
+    if (row.disposition !== 'pending' || !row.candidate.symbolOptions) continue;
+    const found = row.candidate.symbolOptions.filter(symbol => bySymbol.has(symbol));
+    if (found.length === 1) { row.candidate.symbol = found[0]; continue; }
+    if (found.length > 1) {
+      rowError(row, 'MARKET_AMBIGUOUS', `标的 ${row.candidate.rawSymbol} 在多个市场都有资产（${found.join(' / ')}），报表无法区分`);
+    } else {
+      rowError(row, 'ASSET_NOT_FOUND', `资产 ${row.candidate.symbolOptions.join(' 或 ')} 不存在，请先在资产管理中添加`);
+    }
+  }
+  for (const row of rows) {
     if (row.disposition !== 'pending' || !row.candidate.symbol) continue;
     const asset = bySymbol.get(row.candidate.symbol);
     if (!asset) { rowError(row, 'ASSET_NOT_FOUND', `资产 ${row.candidate.symbol} 不存在，请先在资产管理中添加`); continue; }
     if (!asset.active) { rowError(row, 'ASSET_INACTIVE', `资产 ${row.candidate.symbol} 已停用`); continue; }
     // 现金类流水保留实际现金币种（可与资产币种不同，如美股分红以 CAD 入账）；
-    // 影响持仓成本的成交仍要求同币种（跨币种成交由 #100 / #101 处理）。
-    // 拆股行（TASK-098）可不填币种；填写时同样须与资产币种一致。
-    if (row.candidate.kind !== 'cash' && (row.candidate.action !== 'split' || row.candidate.cashCurrency) &&
+    // 影响持仓成本的跨币种成交：报表给出汇率时（#100 Wealthsimple 描述中的 FX Rate）把单价 / 佣金换回资产币种，
+    // 现金净额仍为现金币种；报表没有汇率则不猜，报错。
+    // 拆股行（TASK-098）可不填币种；填写时须与资产币种一致（拆股不做汇率换算）。
+    // 划转行（TASK-099）不涉及现金，不核对成交币种。
+    if (row.candidate.kind !== 'cash' && !row.candidate.isTransfer &&
+        (row.candidate.action !== 'split' || row.candidate.cashCurrency) &&
         asset.currency !== row.candidate.cashCurrency) {
-      rowError(row, 'CURRENCY_MISMATCH', `成交币种 ${row.candidate.cashCurrency} 与资产币种 ${asset.currency} 不一致（跨币种成交暂不支持）`);
-      continue;
+      if (!row.candidate.reportFxRate || row.candidate.action === 'split') {
+        rowError(row, 'CURRENCY_MISMATCH', `成交币种 ${row.candidate.cashCurrency} 与资产币种 ${asset.currency} 不一致，且报表未给出汇率（跨币种成交需要报表汇率）`);
+        continue;
+      }
+      standardCsv.convertTradeToAssetCurrency(row.candidate, row.candidate.reportFxRate);
     }
     row.asset = { type: asset.type, market: asset.market, currency: asset.currency };
   }
@@ -266,7 +294,7 @@ function checkSameDayOrder(symbol, existing, newRows, resolutions) {
 // 超卖校验：按标的先核对同日顺序（新增行），再把新增 / 更新行按重放顺序逐条并入现有账本；失败行标错并剔除，继续校验后续行。
 // 更新行（#95）以新值替换目标旧流水；标的被更正时同时校验旧标的移除后的账本。
 // 更新写入后归属本次导入批次并带新 sequence（importedFields），预览探针与之一致；同一交易日内沿用目标已确认的 orderRank。
-async function validateLedger(rows, portfolioId, resolutions = {}) {
+async function validateLedger(rows, portfolioId, resolutions = {}, extraProbes = []) {
   // 现金类流水（TASK-097）不影响持仓，不参与同日顺序核对与超卖重放
   const writes = rows.filter(row => (row.disposition === 'add' || row.disposition === 'update') && !isCashAction(row.candidate.action));
   const symbols = [...new Set(writes.flatMap(row => (row.disposition === 'update'
@@ -281,7 +309,8 @@ async function validateLedger(rows, portfolioId, resolutions = {}) {
     }
   }
   for (const symbol of symbols) {
-    const existing = ledger.filter(tx => tx.symbol === symbol);
+    // extraProbes：本次确认一并写入本组合的暂存对端（TASK-099），视同已有流水参与校验
+    const existing = [...ledger, ...extraProbes].filter(tx => tx.symbol === symbol);
     const addRows = writes.filter(row => row.disposition === 'add' && row.candidate.symbol === symbol);
     // 更新行替换的目标不作为同日顺序的锚点
     const updatedIds = new Set(writes.filter(row => row.disposition === 'update').map(row => String(row.target._id)));
@@ -319,7 +348,7 @@ async function validateLedger(rows, portfolioId, resolutions = {}) {
       }
     }
   }
-  return { ledger, positionsAfter: positionsAfterOf(ledger, rows, symbols) };
+  return { ledger, positionsAfter: positionsAfterOf([...ledger, ...extraProbes], rows, symbols) };
 }
 
 function holdSplit(row, error, resolutions) {
@@ -381,11 +410,12 @@ function positionsAfterOf(ledger, rows, symbols) {
 
 // 拆批：按来源流水行计数，pair_group 相同的行留在同一批。
 function planBatches(rows) {
-  const writable = rows.filter(row => row.disposition === 'add' || row.disposition === 'update');
+  // stage（TASK-099 暂存一端）也是来源流水，计入批次
+  const writable = rows.filter(row => ['add', 'update', 'stage'].includes(row.disposition));
   const groups = [];
   const byPair = new Map();
   for (const row of writable) {
-    const key = row.candidate.pairGroup;
+    const key = row.pairKey || row.candidate.pairGroup;
     if (key && byPair.has(key)) { byPair.get(key).push(row); continue; }
     const group = [row];
     if (key) byPair.set(key, group);
@@ -440,10 +470,15 @@ function publicCandidate(row) {
     cashAmount: c.cashAmount,
     cashCurrency: c.cashCurrency,
     cashAmountSource: c.cashAmountSource || null,
+    // 跨币种成交的报表汇率（1 资产币种 = cashFxRate 现金币种）；同币种为 null
+    cashFxRate: c.cashFxRate ?? null,
     // 券商净额与成交金额 ± 佣金的分币差异（保留，不改写净额）
     cashDifference: c.cashDifference ?? null,
     externalId: c.externalId,
     pairGroup: c.pairGroup,
+    transferCost: c.transferCost ?? null,
+    transferCostCurrency: c.transferCostCurrency ?? null,
+    transferFxRate: c.transferFxRate ?? null,
     notes: c.notes
   };
 }
@@ -483,16 +518,21 @@ async function computePreview(input) {
   const parser = PARSERS[format];
   const parsedProbe = parser(file.text, { defaultTimeZone: input.timeZone || undefined });
   if (parsedProbe.headers.length === 0) throw businessError(400, 'EMPTY_IMPORT_FILE', '文件为空或缺少表头');
-  const mappingError = standardCsv.validateMapping(input.mapping, parsedProbe.headers.length);
+  if (format !== 'standard' && input.mapping && Object.keys(input.mapping).length) {
+    throw businessError(400, 'INVALID_MAPPING', `format ${format} does not accept a column mapping`);
+  }
+  const mappingError = format === 'standard' ? standardCsv.validateMapping(input.mapping, parsedProbe.headers.length) : null;
   if (mappingError) throw businessError(400, 'INVALID_MAPPING', mappingError);
-  const parsed = input.mapping ? parser(file.text, { mapping: input.mapping, defaultTimeZone: input.timeZone || undefined }) : parsedProbe;
+  const parsed = input.mapping && format === 'standard' ? parser(file.text, { mapping: input.mapping, defaultTimeZone: input.timeZone || undefined }) : parsedProbe;
   if (parsed.rows.length === 0) throw businessError(400, 'EMPTY_IMPORT_FILE', '文件没有数据行');
   if (parsed.rows.length > IMPORT_PREVIEW_LIMIT) {
     throw businessError(413, 'IMPORT_FILE_TOO_LARGE', `单个文件最多 ${IMPORT_PREVIEW_LIMIT} 行`);
   }
   const mappedColumns = new Set(Object.values(parsed.mapping));
-  // 标的 / 数量 / 单价 / 金额按活动类型逐行校验（现金类文件可以没有数量单价列）
-  const missingColumns = ['activity_type', 'trade_date', 'cash_currency']
+  // 标的 / 数量 / 单价 / 金额按活动类型逐行校验（现金类文件可以没有数量单价列）；
+  // 只有划转行的文件（TASK-099）不涉及现金，可以不映射币种列
+  const onlyTransfers = parsed.rows.length > 0 && parsed.rows.every(row => row.candidate?.isTransfer);
+  const missingColumns = parsed.missingColumns || ['activity_type', 'trade_date', ...(onlyTransfers ? [] : ['cash_currency'])]
     .filter(key => !mappedColumns.has(key));
 
   const resolutions = input.resolutions || {};
@@ -572,6 +612,10 @@ async function computePreview(input) {
   }
   // TASK-101：换汇两端配对（显式组号 / 用户指定 / 同账户同日唯一建议）；未配对端进入待核对
   pairRows(rows, FX_PAIR_SPEC, resolutions);
+  // 划转行（TASK-099）不参与成交匹配，由 transfers.resolveTransfers 配对 / 暂存 / 核对承接成本
+  for (const row of rows) {
+    if (row.disposition === 'pending' && transfers.isTransferRow(row)) row.disposition = 'transfer';
+  }
   const matchedIds = await matchRows(rows, { portfolioId, sourceAccountId });
 
   for (const row of rows) {
@@ -579,11 +623,20 @@ async function computePreview(input) {
   }
   // 用户对 review 行的显式决议：skip / add / update（#95）；同日顺序决议在 validateLedger 内处理（#96）
   applyResolutions(rows, resolutions);
-  const { ledger, positionsAfter } = await validateLedger(rows, portfolioId, resolutions);
-  // 两端要么都写入、要么都不写入
+  const transferPlan = await transfers.resolveTransfers(rows, {
+    portfolioId, portfolioName: portfolio.name, sourceAccountId, resolutions, probeOf
+  });
+  const { ledger, positionsAfter } = await validateLedger(rows, portfolioId, resolutions, transferPlan.extraProbes);
+  // 换汇两端要么都写入、要么都不写入（TASK-101）
   enforcePairIntegrity(rows, FX_PAIR_SPEC, resolutions);
+  // 划转一端在本组合校验失败时，对端不得单独写入（整批因错误阻塞）
+  for (const write of transferPlan.partnerWrites) {
+    const row = rows.find(item => item.rowKey === write.rowKey);
+    if (row.disposition !== 'add') write.dropped = true;
+  }
+  transferPlan.partnerWrites = transferPlan.partnerWrites.filter(write => !write.dropped);
 
-  const counts = { add: 0, update: 0, skip: 0, review: 0, error: 0, total: rows.length };
+  const counts = { add: 0, update: 0, skip: 0, review: 0, error: 0, stage: 0, total: rows.length };
   for (const row of rows) counts[row.disposition] += 1;
   const blockingReasons = [];
   if (missingColumns.length) blockingReasons.push({ code: 'MISSING_COLUMNS', reason: `未映射必需列：${missingColumns.join(', ')}` });
@@ -594,7 +647,7 @@ async function computePreview(input) {
   if (counts.error) blockingReasons.push({ code: 'ROW_ERRORS', reason: `${counts.error} 行存在错误` });
   if (counts.review) blockingReasons.push({ code: 'UNRESOLVED_REVIEW', reason: `${counts.review} 行待核对` });
   const batches = planBatches(rows);
-  if (!blockingReasons.length && counts.add + counts.update === 0) {
+  if (!blockingReasons.length && counts.add + counts.update + counts.stage === 0) {
     blockingReasons.push({ code: 'NOTHING_TO_IMPORT', reason: '没有需要写入的流水' });
   }
 
@@ -606,9 +659,13 @@ async function computePreview(input) {
     format,
     sourceKey,
     alias: resolvedSource.planned.alias,
-    rows: rows.map(row => [row.rowKey, row.disposition, row.code || null, row.rawHash || null, row.candidate?.notes || null, row.targetId || null, row.orderRank ?? null, row.pair?.groupId || null])
+    rows: rows.map(row => [row.rowKey, row.disposition, row.code || null, row.rawHash || null, row.candidate?.notes || null, row.targetId || null, row.orderRank ?? null, row.pair?.groupId || null,
+      row.transfer ? [row.pairKey || null, row.transfer.partner?.id || null, row.transfer.carryCost ?? null, row.transfer.fxRate ?? null] : null]),
+    lockPortfolioIds: transferPlan.lockPortfolioIds
   });
-  const ledgerFingerprint = ledgerFingerprintOf({ portfolioId, sourceAccountId, ledger, matchedIds });
+  const ledgerFingerprint = ledgerFingerprintOf({
+    portfolioId, sourceAccountId, ledger, matchedIds: [...matchedIds, ...transferPlan.fingerprintKeys]
+  });
 
   return {
     format,
@@ -628,7 +685,8 @@ async function computePreview(input) {
     selectedAccount,
     requiresAccountSelection,
     requiresTimeZone,
-    positionsAfter
+    positionsAfter,
+    transferPlan
   };
 }
 
@@ -668,6 +726,7 @@ function toPreviewResponse(preview) {
       targetId: row.targetId || null,
       orderConflict: row.orderConflict || null,
       orderResolved: row.orderResolved || null,
+      transfer: row.transfer || null,
       splitEffect: row.splitEffect || null,
       // TASK-101：成对流水的另一端与配对来源（explicit / user / suggested）；未配对时的可选另一端
       pair: row.pair || null,
@@ -680,7 +739,9 @@ function toPreviewResponse(preview) {
     blockingReasons: preview.blockingReasons,
     commitLimit: IMPORT_COMMIT_LIMIT,
     batches: preview.batches.map(({ index, count, firstRowNumber, lastRowNumber }) => ({ index, count, firstRowNumber, lastRowNumber })),
-    requiresSplit: preview.batches.length > 1
+    requiresSplit: preview.batches.length > 1,
+    // TASK-099：确认时一并写入的对端组合（暂存一端所在组合）
+    counterpartPortfolioIds: preview.transferPlan.lockPortfolioIds
   };
 }
 
@@ -722,6 +783,7 @@ function importedFields(preview, row, { sourceAccountId, importBatchId }) {
     cashAmount: c.cashAmount ?? undefined,
     cashCurrency: c.cashCurrency,
     cashAmountSource: c.cashAmountSource || undefined,
+    cashFxRate: c.cashFxRate ?? undefined,
     feeSource: c.feeSource || undefined,
     grossAmount: c.grossAmount ?? undefined,
     pairGroupId: c.pairGroup || undefined,
@@ -738,10 +800,17 @@ async function commitImport(input) {
     throw businessError(400, 'PREVIEW_REQUIRED', 'previewToken and ledgerFingerprint are required; preview first');
   }
   validateInput(input);
+  // TASK-099：先做一次只读预演，取得需要一并加锁的对端组合（暂存一端所在组合）；锁内重算后再核对
+  const rehearsal = await computePreview(input);
+  const lockPortfolioIds = rehearsal.transferPlan.lockPortfolioIds;
   return runAtomicCommit({
     portfolioId: input.portfolioId,
+    extraLockPortfolioIds: lockPortfolioIds,
     async prepare() {
       const preview = await computePreview(input);
+      if (preview.transferPlan.lockPortfolioIds.some(id => !lockPortfolioIds.includes(id))) {
+        throw businessError(409, 'PREVIEW_STALE', '划转对端已变化，请重新预览并确认', { reason: 'LEDGER_CHANGED' });
+      }
       if (preview.previewToken !== input.previewToken) {
         throw businessError(409, 'PREVIEW_STALE', '导入内容或决议与预览不一致，请重新预览并确认', { reason: 'INPUT_CHANGED' });
       }
@@ -759,15 +828,33 @@ async function commitImport(input) {
     buildDocuments(preview, ctx) {
       const batch = new Set(preview.batches[0].rowKeys);
       const rows = preview.rows.filter(row => batch.has(row.rowKey) && row.disposition === 'add');
-      return rows.map(row => ({
+      const docs = rows.map(row => ({
         rowKey: row.rowKey,
         doc: {
           portfolioId: input.portfolioId,
           ...importedFields(preview, row, ctx),
+          ...(row.transferWrite ? transfers.transferFieldsOfRow(row, ctx) : {}),
           notes: row.candidate.notes || undefined,
           status: 'pending'
         }
       }));
+      // TASK-099：暂存对端与本行同一次确认写入各自组合
+      const partners = preview.transferPlan.partnerWrites
+        .filter(write => batch.has(write.rowKey))
+        .map(write => ({ rowKey: write.rowKey, counterpart: true, doc: transfers.partnerDocument(write, ctx) }));
+      return [...docs, ...partners];
+    },
+    // TASK-099：确认时占用的暂存对端（条件更新 staged → consuming，防止同一端被两次配对）
+    claimLegs(preview) {
+      const batch = new Set(preview.batches[0].rowKeys);
+      return preview.transferPlan.partnerWrites.filter(write => batch.has(write.rowKey)).map(write => write.leg._id);
+    },
+    // TASK-099：先到的一端写入暂存（不进账本）
+    buildStagedLegs(preview, ctx) {
+      const batch = new Set(preview.batches[0].rowKeys);
+      return preview.rows
+        .filter(row => batch.has(row.rowKey) && row.disposition === 'stage')
+        .map(row => ({ rowKey: row.rowKey, doc: transfers.stagedLegDocument(row, preview, ctx) }));
     },
     // 更新（#95）：确认后改写目标旧流水；不覆盖手工备注（notes）与组合归属。
     buildUpdates(preview, ctx) {
@@ -778,11 +865,16 @@ async function commitImport(input) {
     },
     summarize(preview, { importBatchId, sourceAccountId, written }) {
       const batch = new Set(preview.batches[0].rowKeys);
-      const writtenByKey = new Map(written.map(item => [item.rowKey, String(item.transactionId)]));
+      const own = written.filter(item => !item.counterpart);
+      const writtenByKey = new Map(own.filter(item => item.kind !== 'stage').map(item => [item.rowKey, String(item.transactionId)]));
+      const stagedByKey = new Map(own.filter(item => item.kind === 'stage').map(item => [item.rowKey, String(item.transactionId)]));
+      const counterpartByKey = new Map(written.filter(item => item.counterpart).map(item => [item.rowKey, String(item.transactionId)]));
       const rows = preview.rows.map(row => {
         const inBatch = batch.has(row.rowKey);
-        const disposition = inBatch || !['add', 'update'].includes(row.disposition) ? row.disposition : 'deferred';
+        const disposition = inBatch || !['add', 'update', 'stage'].includes(row.disposition) ? row.disposition : 'deferred';
         return {
+          transferLegId: stagedByKey.get(row.rowKey) || null,
+          counterpartTransactionId: counterpartByKey.get(row.rowKey) || null,
           rowKey: row.rowKey,
           rowNumber: row.rowNumber,
           rowNumberKind: row.rowNumberKind,
@@ -796,8 +888,10 @@ async function commitImport(input) {
       return {
         importBatchId: String(importBatchId),
         sourceAccountId: String(sourceAccountId),
-        added: written.filter(item => item.kind !== 'update').length,
-        updated: written.filter(item => item.kind === 'update').length,
+        added: own.filter(item => item.kind === 'add').length,
+        updated: own.filter(item => item.kind === 'update').length,
+        staged: own.filter(item => item.kind === 'stage').length,
+        counterpartsWritten: written.filter(item => item.counterpart).length,
         skipped: preview.counts.skip,
         review: 0,
         deferred,
@@ -822,6 +916,8 @@ function describeStandardFormat() {
 }
 
 module.exports = {
+  listStagedTransfers: transfers.listStagedTransfers,
+  discardStagedTransfer: transfers.discardStagedTransfer,
   buildTemplate: standardCsv.buildTemplate,
   describeStandardFormat,
   previewImport,

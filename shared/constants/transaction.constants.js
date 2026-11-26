@@ -4,7 +4,9 @@
 
 // 影响持仓数量 / 成本的动作：必须有标的与数量；除 split 外必须有单价。
 // split（TASK-098）拆股：quantity 为带符号份额变动，不记单价。
-const POSITION_ACTIONS = Object.freeze(['buy', 'sell', 'div_reinvest', 'split']);
+// transfer_out / transfer_in（TASK-099）证券划转两端：只移动份额与成本，不产生买卖盈亏；单价只是成本快照。
+const TRANSFER_ACTIONS = Object.freeze(['transfer_out', 'transfer_in']);
+const POSITION_ACTIONS = Object.freeze(['buy', 'sell', 'div_reinvest', 'split', ...TRANSFER_ACTIONS]);
 
 // 纯现金流水：不改变持仓与成本，金额记在 cashAmount（带符号）/ cashCurrency（实际现金币种）。
 // div_cash 现金分红（有标的，数量 / 单价可空）；tax 税款（如股息预扣税，可带标的）；interest 利息；
@@ -24,4 +26,4 @@ function isCashAction(action) {
   return CASH_ACTIONS.includes(action);
 }
 
-module.exports = { POSITION_ACTIONS, CASH_ACTIONS, PAIRED_ACTIONS, TRANSACTION_ACTIONS, MANUAL_ACTIONS, isCashAction };
+module.exports = { POSITION_ACTIONS, TRANSFER_ACTIONS, CASH_ACTIONS, PAIRED_ACTIONS, TRANSACTION_ACTIONS, MANUAL_ACTIONS, isCashAction };
