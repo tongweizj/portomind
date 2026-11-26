@@ -2,6 +2,7 @@ const dayjs = require('dayjs');
 const utc = require('dayjs/plugin/utc');
 const timezone = require('dayjs/plugin/timezone');
 const { MARKET_TIMEZONE } = require('../../utils/marketTime');
+const { TRANSACTION_ACTIONS, POSITION_ACTIONS, isCashAction } = require('../../constants/transaction.constants');
 
 dayjs.extend(utc);
 dayjs.extend(timezone);
@@ -15,8 +16,6 @@ function calculationError(code, message) {
   return error;
 }
 
-// 参与持仓重放的动作（split：TASK-098）
-const POSITION_ACTIONS = Object.freeze(['buy', 'sell', 'div_cash', 'div_reinvest', 'split']);
 // 拆股比例核对的相对容差（券商份额变动可带小数位）
 const SPLIT_TOLERANCE = 1e-6;
 
@@ -110,6 +109,8 @@ function latestPriceFor(latestPrices, symbol) {
  * - buy：数量 += qty，成本 += qty×price + fee（成本含费）；
  * - sell：数量 -= qty，成本按卖出前均价减记，realizedPnl += (price - avgCost)×qty - fee（净得扣费）；
  * - div_cash：现金分红，不进持仓（数量/成本不变），realizedPnl 不变；
+ * - tax / interest / cash_in / cash_out / fee（TASK-097）：纯现金流水，同样不进持仓；
+ *   现金类流水可无标的、无数量单价，直接跳过（现金余额另行核对，见 #103）；
  * - div_reinvest：分红再投，等价 buy（数量与成本增加，含 fee）；
  * - split（TASK-098）：quantity = 带符号份额变动（拆股为正、合股为负），price / fee 不参与；
  *   总成本不变、单位成本按新份额重算、已实现盈亏不变。拆股前须有持仓（SPLIT_NO_POSITION）；
@@ -125,15 +126,16 @@ function replayLedger(transactions) {
   const ordered = [...transactions].sort(compareTransactions);
 
   for (const transaction of ordered) {
-    const symbol = String(transaction.symbol || '').trim().toUpperCase();
     const action = String(transaction.action || '').trim().toLowerCase();
+    if (isCashAction(action)) continue;
+    const symbol = String(transaction.symbol || '').trim().toUpperCase();
     const quantity = Number(transaction.quantity);
     const tradePrice = Number(transaction.price);
     const fee = Number(transaction.fee) || 0;
     const transactionDate = new Date(transaction.date);
 
     if (!symbol) throw calculationError('INVALID_SYMBOL', 'transaction symbol is required');
-    if (!POSITION_ACTIONS.includes(action)) {
+    if (!TRANSACTION_ACTIONS.includes(action)) {
       throw calculationError('INVALID_ACTION', `Invalid transaction action for ${symbol}`);
     }
     const isSplit = action === 'split';
@@ -166,8 +168,6 @@ function replayLedger(transactions) {
       // div_reinvest 等价买入（分红再投转增持仓）
       position.quantity += quantity;
       position.remainingCost += quantity * tradePrice + fee;
-    } else if (action === 'div_cash') {
-      // 现金分红：不进持仓，仅记录；数量/成本/已实现盈亏均不变
     } else {
       if (quantity > position.quantity + EPSILON) {
         throw calculationError(
@@ -250,7 +250,8 @@ function calculatePositionHistory(transactions, prices, interval = 'day') {
   const periodKeys = new Set();
   const add = (map, key, value) => map.set(key, [...(map.get(key) || []), value]);
 
-  for (const transaction of transactions) {
+  // 现金类流水不影响持仓，也不应产生额外币种行（TASK-097）
+  for (const transaction of transactions.filter(item => !isCashAction(String(item.action || '').trim().toLowerCase()))) {
     const key = periodKey(transaction.date, interval);
     periodKeys.add(key);
     add(transactionGroups, key, transaction);

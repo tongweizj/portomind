@@ -238,7 +238,9 @@ test('标准格式说明开放 split 类型，模板含 split_ratio 列', async 
   const response = await fetch(`${baseUrl}/api/transactions/import/template`, { headers: { cookie: authHeaders().cookie } });
   const template = await preview(body(await response.text()));
   assert.equal(template.status, 200, JSON.stringify(template.body));
-  assert.deepEqual(template.body.data.rows.map(row => row.disposition), ['add', 'add', 'add'], JSON.stringify(template.body.data.rows));
+  const splitRow = template.body.data.rows.find(row => row.candidate?.action === 'split');
+  assert.equal(splitRow.disposition, 'add', JSON.stringify(splitRow));
+  assert.ok(template.body.data.rows.every(row => row.disposition === 'add'), JSON.stringify(template.body.data.rows));
   const after = template.body.data.positionsAfter.find(item => item.symbol === 'VTI.US');
   closeTo(after.quantity, 12, 'template quantity');
 });
