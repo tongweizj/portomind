@@ -150,7 +150,7 @@ test('未知类型与缺关键字段：显示原行号（缺失时上传文件�
   const content = csv([
     { source_row: '17', activity_type: 'mystery' },
     { unit_price: '' },
-    { activity_type: 'fx' }
+    { activity_type: 'transfer_in' }
   ]);
   const { body } = await call('POST', '/api/transactions/import/preview', importBody(content));
   const [unknown, missing, unsupported] = body.data.rows;

@@ -35,6 +35,8 @@ const standardCsv = require('./standardCsv');
 const sourceAccounts = require('./sourceAccount.service');
 const { runAtomicCommit } = require('./commit');
 const { matchRows, applyResolutions } = require('./matching');
+const { pairRows, enforcePairIntegrity } = require('./pairing');
+const { FX_PAIR_SPEC } = require('./fxPairSpec');
 
 function businessError(status, code, message, details) {
   const error = new Error(message);
@@ -568,6 +570,8 @@ async function computePreview(input) {
   for (const row of rows) {
     if (row.disposition === 'review' && row.code === 'FEE_UNKNOWN') row.rawHash = rawHashOf({ ...row.candidate, fee: null });
   }
+  // TASK-101：换汇两端配对（显式组号 / 用户指定 / 同账户同日唯一建议）；未配对端进入待核对
+  pairRows(rows, FX_PAIR_SPEC, resolutions);
   const matchedIds = await matchRows(rows, { portfolioId, sourceAccountId });
 
   for (const row of rows) {
@@ -576,6 +580,8 @@ async function computePreview(input) {
   // 用户对 review 行的显式决议：skip / add / update（#95）；同日顺序决议在 validateLedger 内处理（#96）
   applyResolutions(rows, resolutions);
   const { ledger, positionsAfter } = await validateLedger(rows, portfolioId, resolutions);
+  // 两端要么都写入、要么都不写入
+  enforcePairIntegrity(rows, FX_PAIR_SPEC, resolutions);
 
   const counts = { add: 0, update: 0, skip: 0, review: 0, error: 0, total: rows.length };
   for (const row of rows) counts[row.disposition] += 1;
@@ -600,7 +606,7 @@ async function computePreview(input) {
     format,
     sourceKey,
     alias: resolvedSource.planned.alias,
-    rows: rows.map(row => [row.rowKey, row.disposition, row.code || null, row.rawHash || null, row.candidate?.notes || null, row.targetId || null, row.orderRank ?? null])
+    rows: rows.map(row => [row.rowKey, row.disposition, row.code || null, row.rawHash || null, row.candidate?.notes || null, row.targetId || null, row.orderRank ?? null, row.pair?.groupId || null])
   });
   const ledgerFingerprint = ledgerFingerprintOf({ portfolioId, sourceAccountId, ledger, matchedIds });
 
@@ -663,6 +669,9 @@ function toPreviewResponse(preview) {
       orderConflict: row.orderConflict || null,
       orderResolved: row.orderResolved || null,
       splitEffect: row.splitEffect || null,
+      // TASK-101：成对流水的另一端与配对来源（explicit / user / suggested）；未配对时的可选另一端
+      pair: row.pair || null,
+      pairCandidates: row.pairCandidates || [],
       candidate: publicCandidate(row)
     })),
     positionsAfter: preview.positionsAfter,

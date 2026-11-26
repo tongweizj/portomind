@@ -13,14 +13,14 @@ dayjs.extend(timezone);
 
 // 列顺序即模板表头顺序（snake_case 英文，便于用户借助 ChatGPT 转换其他券商报表）。
 const STANDARD_COLUMNS = Object.freeze([
-  { key: 'activity_type', label: '活动类型', description: 'buy / sell / div_reinvest / div_cash / tax / interest / cash_in / cash_out / fee / split（换汇、划转陆续开放）' },
+  { key: 'activity_type', label: '活动类型', description: 'buy / sell / div_reinvest / div_cash / tax / interest / cash_in / cash_out / fee / split / fx（划转陆续开放）' },
   { key: 'trade_date', label: '成交日期', description: 'YYYY-MM-DD' },
   { key: 'trade_time', label: '成交时间', description: 'HH:MM 或 HH:MM:SS；填写（含 00:00:00）即保留时刻精度' },
   { key: 'time_zone', label: '时区', description: 'IANA 时区名，如 America/Toronto、Asia/Shanghai；有成交时间而留空时，预览要求在页面确认北京或多伦多时区' },
   { key: 'settlement_date', label: '结算日', description: 'YYYY-MM-DD；留空表示未知' },
   { key: 'external_id', label: '原成交编号', description: '券商成交编号；没有则留空' },
   { key: 'source_row', label: '原行号', description: '原始报表中的行号；留空时预览使用上传文件行号' },
-  { key: 'pair_group', label: '配对组号', description: '换汇 / 划转两条流水的共同组号（成对流水不拆批）' },
+  { key: 'pair_group', label: '配对组号', description: '换汇 / 划转两条流水的共同组号（成对流水不拆批）；换汇未填时按同账户同日配对' },
   { key: 'account_number', label: '账号', description: '可选；多账户报表按账号拆分，只保存哈希与末 4 位' },
   { key: 'symbol', label: '标的代码', description: '如 VTI、XEQT.TO、510300；利息、现金划转、独立费用可留空' },
   { key: 'market', label: '市场', description: `${ASSET_MARKETS.join(' / ')}；代码无市场后缀时必填` },
@@ -52,7 +52,9 @@ const ACTIVITY_RULES = Object.freeze({
   cash_in: { supported: true, kind: 'cash', action: 'cash_in', sign: '+', required: ['trade_date', 'cash_amount', 'cash_currency'] },
   cash_out: { supported: true, kind: 'cash', action: 'cash_out', sign: '-', required: ['trade_date', 'cash_amount', 'cash_currency'] },
   fee: { supported: true, kind: 'cash', action: 'fee', sign: '-', required: ['trade_date', 'cash_amount', 'cash_currency'] },
-  fx: { supported: false },
+  // 换汇（TASK-101）：每端一行，金额保留券商符号（卖出端为负、买入端为正），币种为该端币种；无标的。
+  // 两端以 pair_group 关联；未填组号时由预览按同账户同日配对（见 pairing.js）。
+  fx: { supported: true, kind: 'cash', action: 'fx', noSymbol: true, required: ['trade_date', 'cash_amount', 'cash_currency'] },
   // 拆股（TASK-098）：单价 / 币种 / 佣金可留空；份额变动带符号
   split: { supported: true, kind: 'trade', action: 'split', required: ['trade_date', 'symbol', 'quantity'] },
   transfer_in: { supported: false },
@@ -115,6 +117,14 @@ const TEMPLATE_EXAMPLES = [
   {
     activity_type: 'interest', trade_date: '2026-03-31', source_row: '7', cash_amount: '0.12',
     cash_currency: 'CAD', notes: '示例：利息（无标的）'
+  },
+  {
+    activity_type: 'fx', trade_date: '2026-04-02', source_row: '8', pair_group: 'FX-1', cash_amount: '-1370.00',
+    cash_currency: 'CAD', notes: '示例：换汇卖出端（两端同组号，各记本币种带符号金额）'
+  },
+  {
+    activity_type: 'fx', trade_date: '2026-04-02', source_row: '9', pair_group: 'FX-1', cash_amount: '1000.00',
+    cash_currency: 'USD', notes: '示例：换汇买入端'
   }
 ];
 
@@ -196,6 +206,9 @@ function normalizeRow(fields, { defaultTimeZone } = {}) {
 
   const missing = rule.required.filter(key => String(fields[key] ?? '').trim() === '');
   if (missing.length) return { error: rowError('MISSING_FIELD', `缺少关键字段：${missing.join(', ')}`) };
+  if (rule.noSymbol && String(fields.symbol ?? '').trim() !== '') {
+    return { error: rowError('INVALID_FIELD', `活动类型 ${activity} 不填标的（symbol）`) };
+  }
 
   const tradeDate = String(fields.trade_date).trim();
   if (!isDate(tradeDate)) return { error: rowError('INVALID_DATE', `成交日期格式无效：${tradeDate}（应为 YYYY-MM-DD）`) };
