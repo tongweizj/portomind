@@ -36,6 +36,8 @@ const sourceAccounts = require('./sourceAccount.service');
 const { runAtomicCommit } = require('./commit');
 const { matchRows, applyResolutions } = require('./matching');
 const transfers = require('./transfers');
+const { pairRows, enforcePairIntegrity } = require('./pairing');
+const { FX_PAIR_SPEC } = require('./fxPairSpec');
 
 function businessError(status, code, message, details) {
   const error = new Error(message);
@@ -578,6 +580,8 @@ async function computePreview(input) {
   for (const row of rows) {
     if (row.disposition === 'review' && row.code === 'FEE_UNKNOWN') row.rawHash = rawHashOf({ ...row.candidate, fee: null });
   }
+  // TASK-101：换汇两端配对（显式组号 / 用户指定 / 同账户同日唯一建议）；未配对端进入待核对
+  pairRows(rows, FX_PAIR_SPEC, resolutions);
   // 划转行（TASK-099）不参与成交匹配，由 transfers.resolveTransfers 配对 / 暂存 / 核对承接成本
   for (const row of rows) {
     if (row.disposition === 'pending' && transfers.isTransferRow(row)) row.disposition = 'transfer';
@@ -593,6 +597,8 @@ async function computePreview(input) {
     portfolioId, portfolioName: portfolio.name, sourceAccountId, resolutions, probeOf
   });
   const { ledger, positionsAfter } = await validateLedger(rows, portfolioId, resolutions, transferPlan.extraProbes);
+  // 换汇两端要么都写入、要么都不写入（TASK-101）
+  enforcePairIntegrity(rows, FX_PAIR_SPEC, resolutions);
   // 划转一端在本组合校验失败时，对端不得单独写入（整批因错误阻塞）
   for (const write of transferPlan.partnerWrites) {
     const row = rows.find(item => item.rowKey === write.rowKey);
@@ -623,7 +629,7 @@ async function computePreview(input) {
     format,
     sourceKey,
     alias: resolvedSource.planned.alias,
-    rows: rows.map(row => [row.rowKey, row.disposition, row.code || null, row.rawHash || null, row.candidate?.notes || null, row.targetId || null, row.orderRank ?? null,
+    rows: rows.map(row => [row.rowKey, row.disposition, row.code || null, row.rawHash || null, row.candidate?.notes || null, row.targetId || null, row.orderRank ?? null, row.pair?.groupId || null,
       row.transfer ? [row.pairKey || null, row.transfer.partner?.id || null, row.transfer.carryCost ?? null, row.transfer.fxRate ?? null] : null]),
     lockPortfolioIds: transferPlan.lockPortfolioIds
   });
@@ -692,6 +698,9 @@ function toPreviewResponse(preview) {
       orderResolved: row.orderResolved || null,
       transfer: row.transfer || null,
       splitEffect: row.splitEffect || null,
+      // TASK-101：成对流水的另一端与配对来源（explicit / user / suggested）；未配对时的可选另一端
+      pair: row.pair || null,
+      pairCandidates: row.pairCandidates || [],
       candidate: publicCandidate(row)
     })),
     positionsAfter: preview.positionsAfter,

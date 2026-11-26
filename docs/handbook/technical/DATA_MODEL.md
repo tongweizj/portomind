@@ -134,7 +134,7 @@ AlertRule ──_id──> AlertEvent.ruleId（**可空**：再平衡通知没�
 | `symbol` | String，trim，**uppercase**；持仓类动作（`buy`/`sell`/`div_reinvest`/`split`）required，现金类可空（利息、划转、独立费用） |
 | `market` | String，enum 同 Asset.market；持仓类动作或有标的时 required |
 | `currency` | String，required，enum 同 Asset.currency。有标的为资产币种快照；无标的的现金流水为现金币种 |
-| `action` | String，required，enum 见 `shared/constants/transaction.constants.js`：持仓类 `buy`/`sell`/`div_reinvest`/`split`/`transfer_out`/`transfer_in`（`split` 拆股，TASK-098；`transfer_*` 证券划转两端，TASK-099；均仅经流水导入写入）；现金类 `div_cash`/`tax`/`interest`/`cash_in`/`cash_out`/`fee`（TASK-097，后四类及无数量的分红目前仅经导入写入） |
+| `action` | String，required，enum 见 `shared/constants/transaction.constants.js`：持仓类 `buy`/`sell`/`div_reinvest`/`split`/`transfer_out`/`transfer_in`（`split` 拆股，TASK-098；`transfer_*` 证券划转两端，TASK-099；均仅经流水导入写入）；现金类 `div_cash`/`tax`/`interest`/`cash_in`/`cash_out`/`fee`（TASK-097）、`fx`（TASK-101 换汇，每端一条，两端同 `pairGroupId`）；后五类及无数量的分红目前仅经导入写入 |
 | `quantity` | Number，> 0（`split`：带符号份额变动，拆股为正、合股为负，非零）；持仓类动作 required，现金类可空 |
 | `price` | Number，`min: Number.EPSILON`（> 0）；持仓类动作 required（`split` 除外，拆股不记单价），现金类可空 |
 | `splitRatio` | Number，可选，> 0（TASK-098）：拆股比例 = 新份额 / 旧份额（1 拆 2 为 2，10 合 1 为 0.1）；已知时重放核对 `拆股前份额 ×(splitRatio−1) = quantity` |
@@ -149,7 +149,7 @@ AlertRule ──_id──> AlertEvent.ruleId（**可空**：再平衡通知没�
 | `cashAmount` / `cashCurrency` / `cashAmountSource` | 带符号现金净额（流入正、流出负）、实际现金币种（可与资产 `currency` 不同）、来源（`broker` 券商给出，保留分币差异 / `derived` 由数量 × 单价 ± 佣金推算）。现金类流水的金额即 `cashAmount` |
 | `feeSource` | `broker`/`derived`/`user`/`confirmed_zero`（佣金缺失不按 0 处理，需推算、补填或明确确认） |
 | `grossAmount` | 数量 × 单价（无编号成交匹配字段，不含佣金与净额） |
-| `pairGroupId` / `sequence` | 成对流水组号；同一报表内原行顺序（时间正序），同一时刻同批次按此重放 |
+| `pairGroupId` / `sequence` | 成对流水组号（TASK-101 换汇两端：报表 `pair_group` 原值，或建议 / 用户指定配对生成的 `fx-<hash>`；两端共同入账，单端不入账）；同一报表内原行顺序（时间正序），同一时刻同批次按此重放 |
 | `orderRank` | Number，可选（TASK-096）：用户确认的同日先后，仅在同一 UTC 交易日内生效（默认 0；确认「之前」为负、「之后」为正）。编辑改动成交日时清除 |
 | `carryCost` / `carryCostCurrency` / `carryCostSource` / `transferFxRate` | TASK-099，仅 `transfer_in`：承接成本（转入资产原币种，重放时代替 `qty×price`）；来源 `report`（报表划转成本）/`carried`（同币种承接转出端移动平均成本）/`fx`（转出成本 × 换算依据）/`user`（用户补填）；换算依据 = 1 单位转出资产币种折合的转入资产币种 |
 | `transfer` | TASK-099：`{direction:'out'\|'in', counterpartPortfolioId, counterpartSourceAccountId, stagedLegId?}`。两端以同一 `pairGroupId` 关联、同一 `source.importBatchId` 共同入账；`price` 为每单位成本快照（转出 = 转出前均价，转入 = 承接成本 / 份额），不参与重放 |
@@ -158,7 +158,7 @@ AlertRule ──_id──> AlertEvent.ruleId（**可空**：再平衡通知没�
 
 - 索引：`{portfolioId: 1, date: -1, _id: -1}`（组合内倒序列表）、`{portfolioId: 1, symbol: 1, date: 1, _id: 1}`（组合内单标的重放）；TASK-094 新增部分索引 `{sourceAccountId, source.externalId}`（**非唯一**：跨组合同编号须可被发现）、`{sourceAccountId, source.rawHash}`、`{source.importBatchId}`。
 - **无唯一索引**：允许同一 `(portfolioId, symbol, date, action, quantity, price)` 重复落库。CSV 导入的幂等**不靠数据库约束**，靠业务层判重（当前实现有缺陷，见 §5.2）。
-- `action` 语义：`div_reinvest` 转增持仓且成本含费；现金类（`div_cash`/`tax`/`interest`/`cash_in`/`cash_out`/`fee`）不进持仓、不参与超卖重放，持仓计算直接跳过（现金余额核对见后续工单）。
+- `action` 语义：`div_reinvest` 转增持仓且成本含费；现金类（`div_cash`/`tax`/`interest`/`cash_in`/`cash_out`/`fee`/`fx`）不进持仓、不参与超卖重放，持仓计算直接跳过（现金余额核对见后续工单）。
 - 划转语义（TASK-099）：`transfer_out` 按转出前均价减记数量与成本、不产生已实现盈亏、不得超过当时持仓；`transfer_in` 按 `carryCost` 增加数量与成本（缺 `carryCost` 报 `INVALID_CARRY_COST`，不猜成本）。划转流水不支持经 `PUT /api/transactions/:id` 编辑；单独删除一端会留下单边结果，需人工处理（已知限制）。
 - `split` 语义（TASK-098）：份额按 `quantity` 变动、总成本与已实现盈亏不变、单位成本按新份额重算；拆股前须有持仓（否则重放报 `SPLIT_NO_POSITION`），比例与份额变动冲突或拆后份额不为正报 `SPLIT_RATIO_CONFLICT`（均为 `400`，删除 / 编辑使之后拆股失去依据的流水同样被拒）。
 

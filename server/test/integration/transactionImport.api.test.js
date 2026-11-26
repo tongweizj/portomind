@@ -150,15 +150,17 @@ test('未知类型与缺关键字段：显示原行号（缺失时上传文件�
   const content = csv([
     { source_row: '17', activity_type: 'mystery' },
     { unit_price: '' },
-    { activity_type: 'fx' }
+    // 全部类型均已开放（TASK-099 后）：改用按类型的必填规则——划转缺数量
+    { activity_type: 'transfer_in', quantity: '' }
   ]);
   const { body } = await call('POST', '/api/transactions/import/preview', importBody(content));
-  const [unknown, missing, unsupported] = body.data.rows;
+  const [unknown, missing, transferMissing] = body.data.rows;
   assert.deepEqual([unknown.disposition, unknown.code, unknown.rowNumber, unknown.rowNumberKind], ['error', 'UNKNOWN_ACTIVITY', 17, 'original']);
   assert.match(unknown.reason, /mystery/);
   assert.deepEqual([missing.disposition, missing.code, missing.rowNumber, missing.rowNumberKind], ['error', 'MISSING_FIELD', 3, 'file']);
   assert.match(missing.reason, /unit_price/);
-  assert.equal(unsupported.code, 'UNSUPPORTED_ACTIVITY');
+  assert.deepEqual([transferMissing.disposition, transferMissing.code], ['error', 'MISSING_FIELD']);
+  assert.match(transferMissing.reason, /quantity/);
   assert.equal(body.data.blocking, true);
   assert.ok(body.data.blockingReasons.some(item => item.code === 'ROW_ERRORS'));
 });
