@@ -48,7 +48,11 @@ const TransactionSchema = new mongoose.Schema({
   // 日期精度：datetime 保留明确时刻（含午夜）；date 仅日期（存当日 UTC 零点，同手动录入）
   dateKind: { type: String, enum: ['datetime', 'date'], default: undefined },
   timeZone: { type: String, trim: true, default: undefined },
+  // TASK-096：时区来源 report（报表自带）/ user（报表无时区，用户确认北京或多伦多）
+  timeZoneSource: { type: String, enum: ['report', 'user'], default: undefined },
+  // 结算日独立于成交日；settlementStatus=unknown 表示报表未提供（settlementDate 留空）
   settlementDate: { type: Date, default: undefined },
+  settlementStatus: { type: String, enum: ['known', 'unknown'], default: undefined },
   // 券商带符号现金净额与实际币种（可与资产币种不同，后续工单使用）
   cashAmount: { type: Number, default: undefined },
   cashCurrency: { type: String, enum: ASSET_CURRENCIES, default: undefined },
@@ -57,8 +61,11 @@ const TransactionSchema = new mongoose.Schema({
   // 成交金额 = 数量 × 单价（无编号成交匹配字段，不含佣金/净额）
   grossAmount: { type: Number, default: undefined },
   pairGroupId: { type: String, trim: true, default: undefined },
-  // 同一报表内的原行顺序（按时间正序）
+  // 同一报表内的原行顺序（按时间正序）；同一时刻按 sequence 重放，手动流水无 sequence 排在其后
   sequence: { type: Number, default: undefined },
+  // TASK-096：用户确认的同日先后（同一 UTC 交易日内生效，默认 0；before → 负值，after → 正值）。
+  // 重放顺序 (UTC 交易日, orderRank, date, sequence, _id)，见 transaction/positionCalculator.js
+  orderRank: { type: Number, default: undefined },
   // 应用层整批提交：pending 行对所有读取方不可见（见 transaction/visibility.js）
   status: { type: String, enum: ['pending', 'committed'], default: undefined }
 }, { timestamps: true, versionKey: false });

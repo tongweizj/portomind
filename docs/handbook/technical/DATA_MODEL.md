@@ -137,16 +137,18 @@ AlertRule ──_id──> AlertEvent.ruleId（**可空**：再平衡通知没�
 | `quantity` | Number，required，`min: Number.EPSILON`（> 0） |
 | `price` | Number，required，`min: Number.EPSILON`（> 0） |
 | `fee` | Number，= `0`，min 0。买入计入成本、卖出从净得扣除 |
-| `date` | Date，required，= now。**业务日期**，决定持仓重放的顺序 |
+| `date` | Date，required，= now。**业务日期**，决定持仓重放的顺序。重放顺序 `(UTC 交易日, orderRank, date, 导入批次, sequence, _id)`（`positionCalculator.compareTransactions`，预览 / 确认后重放 / 编辑共用；同一时刻手动流水在导入流水之前，字符串按码位比较） |
 | `notes` | String，trim，≤500 |
 | `sourceAccountId` | ObjectId → SourceAccount，可选（TASK-094：导入流水的来源账户） |
 | `source` | 子文档，可选：`{kind:'import', format, fileName, rowNumber, rowNumberKind:'original'\|'file', externalId(券商原成交编号，无则 null，从不合成), importBatchId, rawHash}` |
 | `dateKind` | `datetime`（保留明确时刻，含午夜）/ `date`（仅日期，存当日 UTC 零点，同手动录入）；手动录入为空 |
-| `timeZone` / `settlementDate` | 成交时刻所用 IANA 时区；券商结算日（空 = 未知） |
+| `timeZone` / `timeZoneSource` | 成交时刻所用 IANA 时区；来源 `report`（报表自带）/ `user`（报表有时间无时区，用户确认北京或多伦多，TASK-096）。仅日期精度不记录 |
+| `settlementDate` / `settlementStatus` | 券商结算日（独立于成交日）；`known` / `unknown`（报表未提供，`settlementDate` 留空，不以成交日代替） |
 | `cashAmount` / `cashCurrency` / `cashAmountSource` | 券商带符号现金净额、实际币种、来源（`broker`/`derived`） |
 | `feeSource` | `broker`/`derived`/`user`/`confirmed_zero`（佣金缺失不按 0 处理，需推算、补填或明确确认） |
 | `grossAmount` | 数量 × 单价（无编号成交匹配字段，不含佣金与净额） |
-| `pairGroupId` / `sequence` | 成对流水组号；同一报表内原行顺序 |
+| `pairGroupId` / `sequence` | 成对流水组号；同一报表内原行顺序（时间正序），同一时刻同批次按此重放 |
+| `orderRank` | Number，可选（TASK-096）：用户确认的同日先后，仅在同一 UTC 交易日内生效（默认 0；确认「之前」为负、「之后」为正）。编辑改动成交日时清除 |
 | `status` | `pending`/`committed`，仅导入写入。`pending` 行对全部读取方不可见（统一经 `shared/services/transaction/visibility.js`），手动录入与旧数据无此字段 |
 | `createdAt` / `updatedAt` | 由 `timestamps: true` 自动维护 |
 

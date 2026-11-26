@@ -14,8 +14,13 @@ const IMPORT_PREVIEW_LIMIT = 5000;
 // 预览行处置。review 由后续工单（#95/#96…）产生，需用户决议；error 与未决 review 阻塞整批。
 const IMPORT_DISPOSITIONS = Object.freeze(['add', 'update', 'skip', 'review', 'error']);
 
+// TASK-096：报表有成交时间但无时区时，用户只能在北京 / 多伦多之间确认（Spec #93 AC-04）。
+// 报表自带的 time_zone 列可以是任意有效 IANA 时区。
+const IMPORT_TIME_ZONE_CHOICES = Object.freeze(['Asia/Shanghai', 'America/Toronto']);
+
 module.exports = {
   SOURCE_BROKERS,
+  IMPORT_TIME_ZONE_CHOICES,
   IMPORT_FORMATS,
   IMPORT_COMMIT_LIMIT,
   IMPORT_PREVIEW_LIMIT,
