@@ -21,7 +21,7 @@ npm run preview   # 预览构建产物
 - 数据获取优先用 TanStack Query hooks（`src/hooks/`），queryKey 模式：`['portfolios']`、`['portfolio', id]`、`['transactions', ...]`；全局 `staleTime: 60s`、`retry: 1`。
 - 每个业务一个 `*.service.js`，位于 `src/services/`，函数签名遵循「参数解构在前、列表返回 `{ data, pagination }`」的现有风格。
 - 路由集中在 `src/router.jsx`，路径模板和生成器在 `src/constants/routes.js`；组合详情使用 Tab 路由 `/portfolios/view/:id/:tab`，各 Tab 独立加载数据，单个 Tab 失败不阻断其他 Tab。
-- 页面按域组织：`pages/Asset`、`pages/Portfolio`、`pages/Prices`、`pages/Transaction`，外加 `Dashboard` 与 `LogViewer`。
+- 页面按域组织：`pages/Asset`、`pages/Portfolio`、`pages/Prices`、`pages/Transaction`，外加 `Dashboard` 与 `LogViewer`（运维中心，`/logs`；子组件在 `components/CronStatus`、`components/OpsCenter`、`components/RawLog`）。
 - 通用状态用 `components/DataState`（`LoadingState` / `EmptyState` / `ErrorState`）；复用按钮走 `components/ButtonGroup`。
 
 ## 代码风格

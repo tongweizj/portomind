@@ -86,7 +86,7 @@ curl "http://localhost:8080/api/prices/date/$(date +%F)?page=1&pageSize=20"
 
 ## 5. 手动 API 端点
 
-这些端点中，除标注「只读」的 `GET /api/cron/status`、`GET /api/ops-center/task-runs` 与 `GET /api/ops-center/task-runs/:id` 外，其余提供**手动触发**能力，与 cron-worker 的定时任务**共用同一业务引擎**（`@portomind/shared`），
+这些端点中，除标注「只读」的 `GET /api/cron/status`、`GET /api/ops-center/assets`、`GET /api/ops-center/task-runs` 与 `GET /api/ops-center/task-runs/:id` 外，其余提供**手动触发**能力，与 cron-worker 的定时任务**共用同一业务引擎**（`@portomind/shared`），
 结果口径一致。自动触发由 cron-worker 负责（见 [cron-worker 总览](./CRON_WORKER.md) §2）。
 
 > ⚠️ 自 TASK-058 U1 起，下表端点均需先登录（会话 cookie `pm_sid`）；直接用 `curl` 调试时先 `POST /api/auth/login` 取 cookie（详见 [DEPLOYMENT §9](./DEPLOYMENT.md) 与 [API 契约](../technical/API_CONTRACT.md)「认证与错误码」）。
@@ -94,6 +94,7 @@ curl "http://localhost:8080/api/prices/date/$(date +%F)?page=1&pageSize=20"
 | 方法 | 路径 | 作用 |
 |---|---|---|
 | `GET` | `/api/cron/status` | **只读**聚合查询：5 个定时任务的最近一次运行（运行态）+ 数据态派生指标（价格完成度 / 完整性缺口 / 提醒 / 汇率 / 再平衡）。**不触发任务、不写库**；详情用 `?detail=rebalance&date=&portfolioId=`（同一端点，不新增第二条路由） |
+| `GET` | `/api/ops-center/assets` | **只读**运维中心资产总表：今日价格、历史完整度、基础信息、有效性；服务端筛选 / 搜索 / 排序 / 分页 |
 | `POST` | `/api/ops-center/integrity-check` | 异步刷新价格完整性检查（`price-integrity-check`）：空 Body，成功 `202 + runId`，已有运行 `409 TASK_ALREADY_RUNNING`；手动刷新固定 `repair:false` |
 | `POST` | `/api/ops-center/price-sync` | 异步同步今日价格（`daily-price-sync`）：空 Body/`{}` = 全部 active，`{marketGroup:'CN'\|'US_CA'}` 指定市场组；成功 `202 + runId`，非法组 `400`，已有运行 `409` |
 | `POST` | `/api/ops-center/assets/<id>/price-backfill` | 同步补采单资产历史：Body `{from?,to?}` 或 `{year}`，默认当前年份；返回 `200 + 摘要`，非法区间 `400`，资产不存在 `404`，同资产运行中 `409` |
@@ -120,6 +121,7 @@ curl -X POST http://localhost:8080/api/ops-center/integrity-check -H 'Content-Ty
 curl -X POST http://localhost:8080/api/ops-center/price-sync -H 'Content-Type: application/json' -d '{"marketGroup":"CN"}'
 curl -X POST http://localhost:8080/api/ops-center/assets/<assetId>/price-backfill -H 'Content-Type: application/json' -d '{"year":2026}'
 curl -X POST http://localhost:8080/api/ops-center/price-backfill -H 'Content-Type: application/json' -d '{"assetIds":["<id1>","<id2>"],"year":2026,"preview":true}'
+curl 'http://localhost:8080/api/ops-center/task-runs?taskName=daily-price-sync&from=2026-11-01&page=1&pageSize=20'
 curl http://localhost:8080/api/ops-center/task-runs/<runId>
 ```
 
