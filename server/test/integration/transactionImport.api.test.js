@@ -53,7 +53,7 @@ test('GET /api/transactions/import/template：下载标准 CSV 模板（表头 +
   assert.equal(
     header,
     'activity_type,trade_date,trade_time,time_zone,settlement_date,external_id,source_row,pair_group,' +
-    'account_number,symbol,market,quantity,unit_price,cash_amount,cash_currency,commission,' +
+    'account_number,symbol,market,quantity,unit_price,cash_amount,cash_currency,commission,split_ratio,' +
     'transfer_cost,transfer_cost_currency,transfer_fx_rate,notes'
   );
   assert.ok(examples.length >= 2, '模板至少含买入与卖出示例行');
@@ -150,7 +150,7 @@ test('未知类型与缺关键字段：显示原行号（缺失时上传文件�
   const content = csv([
     { source_row: '17', activity_type: 'mystery' },
     { unit_price: '' },
-    { activity_type: 'div_cash' }
+    { activity_type: 'fx' }
   ]);
   const { body } = await call('POST', '/api/transactions/import/preview', importBody(content));
   const [unknown, missing, unsupported] = body.data.rows;

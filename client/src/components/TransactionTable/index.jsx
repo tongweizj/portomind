@@ -2,6 +2,7 @@ import { Link } from 'react-router';
 import { ASSET_TYPES, TRANSACTION_ACTION_LABELS } from '../../constants/enums';
 import { ROUTES } from '../../constants/routes';
 import { fmtPrice } from '../../utils/priceDisplay';
+import { formatShareChange, formatSplitRatio } from '../../utils/splitDisplay';
 import './TransactionTable.css';
 
 // TASK-044 R6：交易表格**唯一实现**，两处使用点共用：
@@ -71,7 +72,12 @@ export function TransactionTable({
       case 'assetType':
         // Bug-3：枚举中文，不再直出 stock/etf
         return ASSET_TYPE_LABELS[tx.assetType] || tx.assetType || '—';
+      case 'quantity':
+        // TASK-098：拆股显示带符号份额变动
+        return tx.action === 'split' ? formatShareChange(tx.quantity) : (tx.quantity ?? '—');
       case 'price':
+        // TASK-098：拆股无单价，显示拆股比例
+        if (tx.action === 'split') return formatSplitRatio(tx.splitRatio);
         // Bug-2：按交易自身 currency 显示，不再硬编码 $
         return fmtPrice(tx.price, tx.currency);
       case 'portfolio': {
@@ -97,7 +103,8 @@ export function TransactionTable({
       case 'operations':
         return (
           <span className="transaction-table__actions">
-            {onEdit && (
+            {/* TASK-098：拆股只经流水导入写入，手动编辑表单不支持（可删除后重新导入） */}
+            {onEdit && tx.action !== 'split' && (
               <button type="button" className="transaction-table__action" onClick={() => onEdit(tx)}>
                 编辑
               </button>

@@ -8,6 +8,11 @@
 // 4. 缺来源账户的旧账（手动录入 / 早期导入）：同日同标的同方向即候选，进入人工核对（LEGACY_CANDIDATE）。
 // 唯一且内容一致 → 跳过；有差异 → 展示新旧值，用户确认 update 后才改写旧流水（保留手工备注）。
 // 一致匹配按一对一认领：同文件两笔一致的成交不会同时「跳过」到同一条旧流水。
+//
+// 现金流水（TASK-097：div_cash / tax / interest / cash_in / cash_out / fee）：有编号同上；
+// 无编号时，同来源账户、同日、同类型、同币种、同金额（有标的的分红另比标的）的旧流水或同文件前行
+// 一律进入人工核对（CASH_DUPLICATE / CASH_DUPLICATE_IN_FILE），即使完全一致也不自动跳过——
+// 同额利息、同额划转可能真实重复发生。
 
 const dayjs = require('dayjs');
 const utc = require('dayjs/plugin/utc');
@@ -15,6 +20,7 @@ const timezone = require('dayjs/plugin/timezone');
 const Transaction = require('../../models/transaction');
 const Portfolio = require('../../models/portfolio');
 const { visibleQuery } = require('../transaction/visibility');
+const { CASH_ACTIONS, isCashAction } = require('../../constants/transaction.constants');
 
 dayjs.extend(utc);
 dayjs.extend(timezone);
@@ -23,7 +29,7 @@ const EPSILON = 1e-9;
 
 // 参与「内容一致」判断与差异展示的字段；notes 是手工备注，不参与也不被更新覆盖。
 const DIFF_FIELDS = Object.freeze([
-  'symbol', 'date', 'dateKind', 'quantity', 'price', 'grossAmount', 'fee',
+  'symbol', 'date', 'dateKind', 'quantity', 'price', 'splitRatio', 'grossAmount', 'fee',
   'cashAmount', 'cashCurrency', 'settlementDate', 'externalId'
 ]);
 
@@ -76,6 +82,8 @@ function summaryOf(tx) {
     price: tx.price,
     grossAmount: tx.grossAmount ?? null,
     fee: tx.fee,
+    cashAmount: tx.cashAmount ?? null,
+    cashCurrency: tx.cashCurrency ?? null,
     externalId: tx.source?.externalId ?? null,
     notes: tx.notes || null
   };
@@ -95,6 +103,15 @@ function setSkip(row, tx, reason) {
   row.code = 'ALREADY_IMPORTED';
   row.reason = reason;
   row.matches = [{ id: String(tx._id), portfolioId: String(tx.portfolioId) }];
+}
+
+/** 无编号现金流水的重复判定键：日 + 类型 + 币种 + 金额（现金分红另加标的）。 */
+function sameCashActivity(left, right) {
+  if (left.action !== right.action || dayKeyOf(left) !== dayKeyOf(right)) return false;
+  if ((left.cashCurrency || null) !== (right.cashCurrency || null)) return false;
+  if (left.cashAmount == null || right.cashAmount == null || !sameValue(left.cashAmount, right.cashAmount)) return false;
+  if (left.action === 'div_cash' && (left.symbol || right.symbol) && left.symbol !== right.symbol) return false;
+  return true;
 }
 
 /**
@@ -128,18 +145,37 @@ async function matchRows(rows, { portfolioId, sourceAccountId }) {
     }
   }
 
+  // 同文件无编号现金流水：与前面同日同类型同币种同金额的行重复 → 人工核对（可能是真实的两笔）
+  const cashSeen = [];
+  for (const row of active) {
+    if (row.disposition !== 'pending' || row.candidate.externalId || !isCashAction(row.candidate.action)) continue;
+    const first = cashSeen.find(other => sameCashActivity(other.candidate, row.candidate));
+    if (!first) { cashSeen.push(row); continue; }
+    row.disposition = 'review';
+    row.code = 'CASH_DUPLICATE_IN_FILE';
+    row.reason = `无编号现金流水与第 ${first.rowNumber} 行同日、同类型、同币种、同金额：确认为另一笔可新增，否则跳过`;
+    row.options = ['skip', 'add'];
+    row.duplicateOf = { rowKey: first.rowKey, rowNumber: first.rowNumber, diff: [] };
+  }
+
   const pending = active.filter(row => row.disposition === 'pending');
   if (!pending.length) return [];
-  const symbols = [...new Set(pending.map(row => row.candidate.symbol))];
+  const symbols = [...new Set(pending.map(row => row.candidate.symbol).filter(Boolean))];
+  const hasCashWithoutId = pending.some(row => !row.candidate.externalId && isCashAction(row.candidate.action));
   const externalIds = [...new Set(pending.map(row => row.candidate.externalId).filter(Boolean))];
-  const [byExternal, sameSource, legacy] = await Promise.all([
+  const [byExternal, sameSource, legacy, sameSourceCash] = await Promise.all([
     sourceAccountId && externalIds.length
       ? Transaction.find(visibleQuery({ sourceAccountId, 'source.externalId': { $in: externalIds } })).lean()
       : [],
     sourceAccountId
       ? Transaction.find(visibleQuery({ portfolioId, sourceAccountId, symbol: { $in: symbols } })).lean()
       : [],
-    Transaction.find(visibleQuery({ portfolioId, sourceAccountId: { $exists: false }, symbol: { $in: symbols } })).lean()
+    symbols.length
+      ? Transaction.find(visibleQuery({ portfolioId, sourceAccountId: { $exists: false }, symbol: { $in: symbols } })).lean()
+      : [],
+    sourceAccountId && hasCashWithoutId
+      ? Transaction.find(visibleQuery({ portfolioId, sourceAccountId, action: { $in: [...CASH_ACTIONS] } })).lean()
+      : []
   ]);
 
   const otherPortfolioIds = [...new Set(byExternal.map(tx => String(tx.portfolioId)).filter(id => id !== String(portfolioId)))];
@@ -190,6 +226,14 @@ async function matchRows(rows, { portfolioId, sourceAccountId }) {
         setReview(row, 'EXTERNAL_ID_OTHER_PORTFOLIO', `同一原成交编号已入账到其他组合（${names.join('、')}），可选择跳过`, ['skip'], sameId, describe);
         continue;
       }
+    } else if (isCashAction(c.action)) {
+      // 无编号现金流水：同来源账户同日同类型同币种同金额 → 人工核对（不自动跳过）
+      const hits = sameSourceCash.filter(tx => unclaimed(tx) && sameCashActivity(tx, c));
+      if (hits.length) {
+        setReview(row, 'CASH_DUPLICATE', '无编号现金流水：同一来源账户同日已有同类型、同币种、同金额的流水，请核对后跳过或新增', ['skip', 'add'], hits, describe);
+        continue;
+      }
+      if (!c.symbol) continue;
     } else if (sourceAccountId) {
       const pool = sameSource.filter(tx => sameSide(tx) && tx.symbol === c.symbol);
       if (c.dateKind === 'datetime') {
@@ -229,7 +273,7 @@ async function matchRows(rows, { portfolioId, sourceAccountId }) {
     }
   }
 
-  return [...byExternal, ...sameSource, ...legacy].map(tx => `${tx._id}:${new Date(tx.updatedAt || 0).getTime()}`);
+  return [...byExternal, ...sameSource, ...legacy, ...sameSourceCash].map(tx => `${tx._id}:${new Date(tx.updatedAt || 0).getTime()}`);
 }
 
 /**

@@ -7,7 +7,8 @@ const { visibleQuery } = require('./transaction/visibility');
 
 const WRITABLE_FIELDS = ['portfolioId', 'symbol', 'action', 'quantity', 'price', 'fee', 'date', 'notes'];
 const TRANSACTION_SORT = { date: -1, _id: -1 };
-const ACTIONS = ['buy', 'sell', 'div_cash', 'div_reinvest'];
+// 手动录入只开放四类动作；税款 / 利息 / 划转 / 独立费用目前仅经导入写入（TASK-097）。
+const { MANUAL_ACTIONS: ACTIONS } = require('../constants/transaction.constants');
 
 function businessError(status, code, message) {
   const error = new Error(message);

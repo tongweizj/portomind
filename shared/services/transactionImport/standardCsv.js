@@ -13,7 +13,7 @@ dayjs.extend(timezone);
 
 // 列顺序即模板表头顺序（snake_case 英文，便于用户借助 ChatGPT 转换其他券商报表）。
 const STANDARD_COLUMNS = Object.freeze([
-  { key: 'activity_type', label: '活动类型', description: 'buy / sell（其他类型陆续开放）' },
+  { key: 'activity_type', label: '活动类型', description: 'buy / sell / div_reinvest / div_cash / tax / interest / cash_in / cash_out / fee / split（换汇、划转陆续开放）' },
   { key: 'trade_date', label: '成交日期', description: 'YYYY-MM-DD' },
   { key: 'trade_time', label: '成交时间', description: 'HH:MM 或 HH:MM:SS；填写（含 00:00:00）即保留时刻精度' },
   { key: 'time_zone', label: '时区', description: 'IANA 时区名，如 America/Toronto、Asia/Shanghai；有成交时间而留空时，预览要求在页面确认北京或多伦多时区' },
@@ -22,13 +22,14 @@ const STANDARD_COLUMNS = Object.freeze([
   { key: 'source_row', label: '原行号', description: '原始报表中的行号；留空时预览使用上传文件行号' },
   { key: 'pair_group', label: '配对组号', description: '换汇 / 划转两条流水的共同组号（成对流水不拆批）' },
   { key: 'account_number', label: '账号', description: '可选；多账户报表按账号拆分，只保存哈希与末 4 位' },
-  { key: 'symbol', label: '标的代码', description: '如 VTI、XEQT.TO、510300' },
+  { key: 'symbol', label: '标的代码', description: '如 VTI、XEQT.TO、510300；利息、现金划转、独立费用可留空' },
   { key: 'market', label: '市场', description: `${ASSET_MARKETS.join(' / ')}；代码无市场后缀时必填` },
-  { key: 'quantity', label: '数量', description: '正数；卖出可填负数（取绝对值）' },
-  { key: 'unit_price', label: '单价', description: '大于 0' },
-  { key: 'cash_amount', label: '现金金额', description: '券商带符号现金净额（流出为负，流入为正）' },
-  { key: 'cash_currency', label: '币种', description: ASSET_CURRENCIES.join(' / ') },
-  { key: 'commission', label: '佣金', description: '绝对值；留空表示未知（不等于 0），明确为 0 请填 0' },
+  { key: 'quantity', label: '数量', description: '正数；卖出可填负数（取绝对值）；现金类流水可留空；拆股填带符号份额变动（拆股增加为正，合股减少为负）' },
+  { key: 'unit_price', label: '单价', description: '大于 0；现金类流水可留空' },
+  { key: 'cash_amount', label: '现金金额', description: '券商带符号现金净额（流出为负，流入为正）；现金类流水必填（现金分红可由数量×单价推算）；cash_in / cash_out / fee 方向由类型决定' },
+  { key: 'cash_currency', label: '币种', description: `实际现金币种（可与资产币种不同）：${ASSET_CURRENCIES.join(' / ')}` },
+  { key: 'commission', label: '佣金', description: '成交佣金绝对值；留空表示未知（不等于 0），明确为 0 请填 0；独立费用请单列 fee 行' },
+  { key: 'split_ratio', label: '拆股比例', description: '拆股新旧份额比，如 2:1（1 拆 2）、1:10（10 合 1）或 2；可留空，填写时须与拆股前持仓和份额变动一致' },
   { key: 'transfer_cost', label: '划转成本', description: '证券转入的承接成本（总额，转入资产币种）；留空时承接转出端的移动平均成本' },
   { key: 'transfer_cost_currency', label: '划转成本币种', description: '须与转入资产币种一致；留空按转入资产币种' },
   { key: 'transfer_fx_rate', label: '划转换算依据', description: '跨币种划转：1 单位转出资产币种折合多少转入资产币种；与划转成本二选一' },
@@ -38,22 +39,56 @@ const STANDARD_COLUMNS = Object.freeze([
 const COLUMN_KEYS = STANDARD_COLUMNS.map(column => column.key);
 
 // 每个活动类型的必填字段与写入动作。supported=false 的类型已知但尚未开放，按行报「暂不支持」。
+// kind=trade：影响持仓（标的、数量、单价必填，沿用既有成本规则）；
+// kind=cash：纯现金流水（金额 cash_amount 必填，标的可选；数量 / 单价可空）。
+// sign：+ / - 表示方向由类型决定（金额取绝对值后加符号）；缺省保留券商符号（如退税、负利息）。
 const ACTIVITY_RULES = Object.freeze({
-  buy: { supported: true, action: 'buy', required: ['trade_date', 'symbol', 'quantity', 'unit_price', 'cash_currency'] },
-  sell: { supported: true, action: 'sell', required: ['trade_date', 'symbol', 'quantity', 'unit_price', 'cash_currency'] },
-  div_cash: { supported: false },
-  div_reinvest: { supported: false },
-  tax: { supported: false },
-  interest: { supported: false },
-  cash_in: { supported: false },
-  cash_out: { supported: false },
-  fee: { supported: false },
+  buy: { supported: true, kind: 'trade', action: 'buy', required: ['trade_date', 'symbol', 'quantity', 'unit_price', 'cash_currency'] },
+  sell: { supported: true, kind: 'trade', action: 'sell', required: ['trade_date', 'symbol', 'quantity', 'unit_price', 'cash_currency'] },
+  div_reinvest: { supported: true, kind: 'trade', action: 'div_reinvest', required: ['trade_date', 'symbol', 'quantity', 'unit_price', 'cash_currency'] },
+  // 现金分红：缺 cash_amount 时可由数量 × 单价推算（标明推算值）
+  div_cash: { supported: true, kind: 'cash', action: 'div_cash', required: ['trade_date', 'cash_currency'] },
+  tax: { supported: true, kind: 'cash', action: 'tax', required: ['trade_date', 'cash_amount', 'cash_currency'] },
+  interest: { supported: true, kind: 'cash', action: 'interest', required: ['trade_date', 'cash_amount', 'cash_currency'] },
+  cash_in: { supported: true, kind: 'cash', action: 'cash_in', sign: '+', required: ['trade_date', 'cash_amount', 'cash_currency'] },
+  cash_out: { supported: true, kind: 'cash', action: 'cash_out', sign: '-', required: ['trade_date', 'cash_amount', 'cash_currency'] },
+  fee: { supported: true, kind: 'cash', action: 'fee', sign: '-', required: ['trade_date', 'cash_amount', 'cash_currency'] },
   fx: { supported: false },
-  split: { supported: false },
+  // 拆股（TASK-098）：单价 / 币种 / 佣金可留空；份额变动带符号
+  split: { supported: true, kind: 'trade', action: 'split', required: ['trade_date', 'symbol', 'quantity'] },
   // TASK-099：证券划转两端。数量取绝对值，方向由类型决定；不需要单价、币种与佣金。
   transfer_in: { supported: true, action: 'transfer_in', kind: 'transfer', required: ['trade_date', 'symbol', 'quantity'] },
   transfer_out: { supported: true, action: 'transfer_out', kind: 'transfer', required: ['trade_date', 'symbol', 'quantity'] }
 });
+
+// 金额推算的精度（去除浮点噪声，不做分币舍入：券商净额的分币差异原样保留）
+function roundAmount(value) {
+  return Math.round(value * 1e6) / 1e6;
+}
+
+/**
+ * 成交行（buy / sell）缺券商现金净额、但数量、单价与佣金完整时，推算现金净额（cashAmountSource=derived）。
+ * 买入流出 −(成交金额 + 佣金)，卖出流入 成交金额 − 佣金。分红再投不推算（股息与买入相抵，净额由券商给出）。
+ * 佣金由用户补值 / 确认按零之后同样适用；就地修改 candidate。
+ */
+function deriveCashAmount(candidate) {
+  if (candidate.cashAmount !== null || candidate.fee === null) return;
+  if (candidate.action === 'buy') candidate.cashAmount = roundAmount(-(candidate.grossAmount + candidate.fee));
+  else if (candidate.action === 'sell') candidate.cashAmount = roundAmount(candidate.grossAmount - candidate.fee);
+  else return;
+  candidate.cashAmountSource = 'derived';
+}
+
+/** 券商净额与「成交金额 ± 佣金」之差（保留分币差异，仅供核对展示）；无法比较或一致时为 null。 */
+function cashDifferenceOf(candidate) {
+  if (candidate.cashAmountSource !== 'broker' || candidate.fee === null || candidate.feeSource === 'derived') return null;
+  let expected;
+  if (candidate.action === 'buy') expected = -(candidate.grossAmount + candidate.fee);
+  else if (candidate.action === 'sell') expected = candidate.grossAmount - candidate.fee;
+  else return null;
+  const difference = roundAmount(candidate.cashAmount - expected);
+  return Math.abs(difference) > 1e-9 ? difference : null;
+}
 
 const TEMPLATE_EXAMPLES = [
   {
@@ -66,6 +101,22 @@ const TEMPLATE_EXAMPLES = [
     activity_type: 'sell', trade_date: '2026-02-10', settlement_date: '2026-02-11', source_row: '3',
     symbol: 'VTI', market: 'US', quantity: '-4', unit_price: '260.00', cash_amount: '1040.00',
     cash_currency: 'USD', commission: '0', notes: '示例：卖出（仅日期精度，无原成交编号）'
+  },
+  {
+    activity_type: 'split', trade_date: '2026-03-02', source_row: '4', symbol: 'VTI', market: 'US',
+    quantity: '6', split_ratio: '2:1', notes: '示例：1 拆 2（份额变动 = 拆股前 6 股 ×(2-1)；单价、佣金留空）'
+  },
+  {
+    activity_type: 'div_cash', trade_date: '2026-03-20', source_row: '5', symbol: 'VTI', market: 'US',
+    cash_amount: '4.37', cash_currency: 'USD', notes: '示例：现金分红（数量、单价可空）'
+  },
+  {
+    activity_type: 'tax', trade_date: '2026-03-20', source_row: '6', symbol: 'VTI', market: 'US',
+    cash_amount: '-0.66', cash_currency: 'USD', notes: '示例：股息预扣税（独立一行）'
+  },
+  {
+    activity_type: 'interest', trade_date: '2026-03-31', source_row: '7', cash_amount: '0.12',
+    cash_currency: 'CAD', notes: '示例：利息（无标的）'
   }
 ];
 
@@ -188,20 +239,15 @@ function normalizeRow(fields, { defaultTimeZone } = {}) {
   if (rule.kind === 'transfer') {
     return normalizeTransfer(fields, rule, { activity, tradeDate, date, dateKind, timeZoneName, timeZoneSource, localTime, settlementText });
   }
+  if (rule.action === 'split') {
+    return normalizeSplit(fields, { activity, date, dateKind, timeZoneName, timeZoneSource, tradeDate, localTime, settlementText });
+  }
 
   const quantity = parseNumber(fields.quantity);
   const price = parseNumber(fields.unit_price);
   const commission = parseNumber(fields.commission);
   const cash = parseNumber(fields.cash_amount);
-  if (quantity.invalid || !quantity.value) return { error: rowError('INVALID_NUMBER', `数量无效：${fields.quantity}`) };
-  if (price.invalid || !(price.value > 0)) return { error: rowError('INVALID_NUMBER', `单价必须大于 0：${fields.unit_price}`) };
-  if (commission.invalid || (commission.value !== undefined && commission.value < 0)) {
-    return { error: rowError('INVALID_NUMBER', `佣金无效：${fields.commission}`) };
-  }
   if (cash.invalid) return { error: rowError('INVALID_NUMBER', `现金金额无效：${fields.cash_amount}`) };
-  if (rule.action === 'buy' && quantity.value < 0) {
-    return { error: rowError('INVALID_NUMBER', '买入数量不能为负数') };
-  }
 
   const cashCurrency = String(fields.cash_currency).trim().toUpperCase();
   if (!ASSET_CURRENCIES.includes(cashCurrency)) {
@@ -213,22 +259,17 @@ function normalizeRow(fields, { defaultTimeZone } = {}) {
   const notes = String(fields.notes ?? '').trim();
   if (notes.length > 500) return { error: rowError('INVALID_NOTES', '备注超过 500 字') };
 
-  const absQuantity = Math.abs(quantity.value);
-  const grossAmount = absQuantity * price.value;
-  let fee = commission.blank ? null : commission.value;
-  let feeSource = commission.blank ? 'unknown' : 'broker';
-  // 佣金缺失但有券商现金净额：按 |净额| 与成交金额之差推算（预览标明推算值）。
-  if (fee === null && cash.value !== undefined) {
-    const derived = rule.action === 'buy' ? Math.abs(cash.value) - grossAmount : grossAmount - Math.abs(cash.value);
-    const rounded = Math.round(derived * 1e6) / 1e6;
-    if (rounded >= 0) { fee = rounded; feeSource = 'derived'; }
-  }
+  const amounts = rule.kind === 'cash'
+    ? normalizeCashAmounts(rule, { quantity, price, commission, cash })
+    : normalizeTradeAmounts(rule, { quantity, price, commission, cash, fields });
+  if (amounts.error) return amounts;
 
   return {
     candidate: {
       activityType: activity,
       action: rule.action,
-      rawSymbol: String(fields.symbol).trim(),
+      kind: rule.kind,
+      rawSymbol: String(fields.symbol ?? '').trim(),
       market: market || null,
       date,
       dateKind,
@@ -240,20 +281,148 @@ function normalizeRow(fields, { defaultTimeZone } = {}) {
       // 结算日独立于成交日保存；缺失标记 unknown（不以成交日代替）
       settlementDate: settlementText ? new Date(`${settlementText}T00:00:00.000Z`) : null,
       settlementStatus: settlementText ? 'known' : 'unknown',
-      quantity: absQuantity,
-      price: price.value,
-      grossAmount,
-      fee,
-      feeSource,
-      cashAmount: cash.value ?? null,
+      ...amounts,
       cashCurrency,
-      cashAmountSource: cash.value === undefined ? null : 'broker',
       externalId: String(fields.external_id ?? '').trim() || null,
       sourceRow: String(fields.source_row ?? '').trim() || null,
       pairGroup: String(fields.pair_group ?? '').trim() || null,
       accountNumber: String(fields.account_number ?? '').trim() || null,
       notes
     }
+  };
+}
+
+// 拆股比例：「新:旧」（2:1、1:10，也接受 /）或单个数字（新 / 旧）。
+function parseSplitRatio(value) {
+  const text = String(value ?? '').trim();
+  if (text === '') return { blank: true };
+  const pair = text.match(/^(\d+(?:\.\d+)?)\s*[:/]\s*(\d+(?:\.\d+)?)$/);
+  const ratio = pair ? Number(pair[1]) / Number(pair[2]) : (/^\d+(?:\.\d+)?$/.test(text) ? Number(text) : NaN);
+  return Number.isFinite(ratio) && ratio > 0 && ratio !== 1 ? { value: ratio } : { invalid: true };
+}
+
+/** 拆股行（TASK-098）：份额变动带符号且非零；不记单价；佣金只能留空或为 0；币种可留空（填写时须与资产币种一致）。 */
+function normalizeSplit(fields, context) {
+  const quantity = parseNumber(fields.quantity);
+  if (quantity.invalid || !quantity.value) return { error: rowError('INVALID_NUMBER', `拆股份额变动必须为非零数字：${fields.quantity}`) };
+  const ratio = parseSplitRatio(fields.split_ratio);
+  if (ratio.invalid) return { error: rowError('INVALID_NUMBER', `拆股比例无效：${fields.split_ratio}（应为 2:1、1:10 或正数）`) };
+  if (ratio.value !== undefined && (ratio.value > 1) !== (quantity.value > 0)) {
+    return { error: rowError('SPLIT_RATIO_CONFLICT', `拆股比例 ${fields.split_ratio} 与份额变动 ${fields.quantity} 方向不一致`) };
+  }
+  const commission = parseNumber(fields.commission);
+  if (commission.invalid || (commission.value !== undefined && commission.value !== 0)) {
+    return { error: rowError('INVALID_NUMBER', `拆股不应有佣金：${fields.commission}`) };
+  }
+  const cashCurrency = String(fields.cash_currency ?? '').trim().toUpperCase() || null;
+  if (cashCurrency && !ASSET_CURRENCIES.includes(cashCurrency)) {
+    return { error: rowError('INVALID_CURRENCY', `币种无效：${fields.cash_currency}`) };
+  }
+  const market = String(fields.market ?? '').trim().toUpperCase();
+  if (market && !ASSET_MARKETS.includes(market)) return { error: rowError('INVALID_MARKET', `市场无效：${fields.market}`) };
+  const notes = String(fields.notes ?? '').trim();
+  if (notes.length > 500) return { error: rowError('INVALID_NOTES', '备注超过 500 字') };
+  const { activity, date, dateKind, timeZoneName, timeZoneSource, tradeDate, localTime, settlementText } = context;
+  return {
+    candidate: {
+      activityType: activity,
+      action: 'split',
+      kind: 'trade',
+      rawSymbol: String(fields.symbol).trim(),
+      market: market || null,
+      date,
+      dateKind,
+      timeZone: timeZoneName,
+      timeZoneSource,
+      needsTimeZone: dateKind === 'datetime' && !timeZoneName,
+      localDate: tradeDate,
+      localTime,
+      settlementDate: settlementText ? new Date(`${settlementText}T00:00:00.000Z`) : null,
+      settlementStatus: settlementText ? 'known' : 'unknown',
+      quantity: quantity.value,
+      price: null,
+      splitRatio: ratio.value ?? null,
+      grossAmount: null,
+      fee: 0,
+      feeSource: commission.blank ? undefined : 'broker',
+      cashAmount: null,
+      cashCurrency,
+      cashAmountSource: null,
+      externalId: String(fields.external_id ?? '').trim() || null,
+      sourceRow: String(fields.source_row ?? '').trim() || null,
+      pairGroup: String(fields.pair_group ?? '').trim() || null,
+      accountNumber: String(fields.account_number ?? '').trim() || null,
+      notes
+    }
+  };
+}
+
+// 成交行（buy / sell / div_reinvest）：数量、单价必填；佣金留空 = 未知，可由券商净额推算。
+function normalizeTradeAmounts(rule, { quantity, price, commission, cash, fields }) {
+  if (quantity.invalid || !quantity.value) return { error: rowError('INVALID_NUMBER', `数量无效：${fields.quantity}`) };
+  if (price.invalid || !(price.value > 0)) return { error: rowError('INVALID_NUMBER', `单价必须大于 0：${fields.unit_price}`) };
+  if (commission.invalid || (commission.value !== undefined && commission.value < 0)) {
+    return { error: rowError('INVALID_NUMBER', `佣金无效：${fields.commission}`) };
+  }
+  if (rule.action !== 'sell' && quantity.value < 0) {
+    return { error: rowError('INVALID_NUMBER', `${rule.action === 'buy' ? '买入' : '分红再投'}数量不能为负数`) };
+  }
+
+  const absQuantity = Math.abs(quantity.value);
+  const grossAmount = absQuantity * price.value;
+  let fee = commission.blank ? null : commission.value;
+  let feeSource = commission.blank ? 'unknown' : 'broker';
+  // 佣金缺失但有券商现金净额：按 |净额| 与成交金额之差推算（预览标明推算值）。
+  // 明确填写的佣金（含 0）原样保留，不因净额的分币差异改写。
+  if (fee === null && cash.value !== undefined) {
+    const derived = rule.action === 'sell' ? grossAmount - Math.abs(cash.value) : Math.abs(cash.value) - grossAmount;
+    const rounded = roundAmount(derived);
+    if (rounded >= 0) { fee = rounded; feeSource = 'derived'; }
+  }
+  const amounts = {
+    action: rule.action,
+    quantity: absQuantity,
+    price: price.value,
+    grossAmount,
+    fee,
+    feeSource,
+    cashAmount: cash.value ?? null,
+    cashAmountSource: cash.value === undefined ? null : 'broker'
+  };
+  deriveCashAmount(amounts);
+  return amounts;
+}
+
+// 现金类行：金额 = 券商净额（带符号）；现金分红缺净额时由数量 × 单价推算。成交佣金不适用。
+function normalizeCashAmounts(rule, { quantity, price, commission, cash }) {
+  if (quantity.invalid || price.invalid || (quantity.value !== undefined && quantity.value <= 0) ||
+      (price.value !== undefined && price.value <= 0)) {
+    return { error: rowError('INVALID_NUMBER', '现金类流水的数量 / 单价可留空，填写时必须为正数') };
+  }
+  if (commission.invalid || (commission.value !== undefined && commission.value !== 0)) {
+    return { error: rowError('INVALID_FIELD', '现金类流水不填佣金：独立费用请单列 fee 行') };
+  }
+  const quantityValue = quantity.value ?? null;
+  const priceValue = price.value ?? null;
+  const grossAmount = quantityValue !== null && priceValue !== null ? roundAmount(quantityValue * priceValue) : null;
+  let cashAmount = cash.value ?? null;
+  let cashAmountSource = cashAmount === null ? null : 'broker';
+  if (cashAmount === null && rule.action === 'div_cash' && grossAmount !== null) {
+    cashAmount = grossAmount;
+    cashAmountSource = 'derived';
+  }
+  if (cashAmount === null) return { error: rowError('MISSING_FIELD', '缺少关键字段：cash_amount') };
+  if (cashAmount === 0) return { error: rowError('INVALID_NUMBER', '现金金额不能为 0') };
+  if (rule.sign === '+') cashAmount = Math.abs(cashAmount);
+  if (rule.sign === '-') cashAmount = -Math.abs(cashAmount);
+  return {
+    quantity: quantityValue,
+    price: priceValue,
+    grossAmount,
+    fee: 0,
+    feeSource: null,
+    cashAmount,
+    cashAmountSource
   };
 }
 
@@ -289,6 +458,7 @@ function normalizeTransfer(fields, rule, base) {
     candidate: {
       activityType: base.activity,
       action: rule.action,
+      kind: 'transfer',
       isTransfer: true,
       direction: rule.action === 'transfer_out' ? 'out' : 'in',
       rawSymbol: String(fields.symbol).trim(),
@@ -356,6 +526,8 @@ module.exports = {
   STANDARD_COLUMNS,
   COLUMN_KEYS,
   ACTIVITY_RULES,
+  deriveCashAmount,
+  cashDifferenceOf,
   buildTemplate,
   autoMapping,
   validateMapping,

@@ -4,6 +4,7 @@ import { EmptyState } from '../DataState';
 import { ROUTES } from '../../constants/routes';
 import { TRANSACTION_ACTION_LABELS } from '../../constants/enums';
 import { colors } from '../../constants/design-tokens';
+import { formatShareChange, formatSplitRatio } from '../../utils/splitDisplay';
 
 // 接口 `GET /api/family/summary` 的 RECENT_LIMIT = 10（交易与再平衡同限），本页截到 5 条。
 const PREVIEW_LIMIT = 5;
@@ -46,7 +47,12 @@ export default function RecentTransactions({ transactions }) {
               </div>
               <div className="text-right">
                 <span className="text-gray-800">
-                  {tx.quantity} × {tx.price}
+                  {/* 现金类流水（TASK-097）无数量单价：展示带符号现金金额与实际现金币种；拆股（TASK-098）展示份额变动与比例 */}
+                  {tx.action === 'split'
+                    ? `${formatShareChange(tx.quantity)} 股（${formatSplitRatio(tx.splitRatio)}）`
+                    : tx.quantity != null
+                      ? `${tx.quantity} × ${tx.price}`
+                      : tx.cashAmount != null ? `${tx.cashAmount} ${tx.cashCurrency || tx.currency || ''}`.trim() : '—'}
                 </span>
                 <span className="ml-2 text-xs text-gray-400">{new Date(tx.date).toISOString().slice(0, 10)}</span>
               </div>
