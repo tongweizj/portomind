@@ -22,6 +22,7 @@ const Transaction = require('../../models/transaction');
 const Portfolio = require('../../models/portfolio');
 const { visibleQuery } = require('../transaction/visibility');
 const { CASH_ACTIONS, isCashAction } = require('../../constants/transaction.constants');
+const { markReview, markSkip } = require('./common');
 
 dayjs.extend(utc);
 dayjs.extend(timezone);
@@ -91,18 +92,13 @@ function summaryOf(tx) {
 }
 
 function setReview(row, code, reason, options, candidates, describe) {
-  row.disposition = 'review';
-  row.code = code;
-  row.reason = reason;
-  row.options = options;
+  markReview(row, code, reason, options);
   row.matchTargets = candidates;
   row.matches = candidates.map(tx => describe(tx, row));
 }
 
 function setSkip(row, tx, reason) {
-  row.disposition = 'skip';
-  row.code = 'ALREADY_IMPORTED';
-  row.reason = reason;
+  markSkip(row, 'ALREADY_IMPORTED', reason);
   row.matches = [{ id: String(tx._id), portfolioId: String(tx.portfolioId) }];
 }
 
@@ -160,10 +156,7 @@ async function matchRows(rows, { portfolioId, sourceAccountId }) {
       row.code = 'DUPLICATE_IN_FILE';
       row.reason = `与第 ${first.rowNumber} 行内容一致的重复成交编号`;
     } else {
-      row.disposition = 'review';
-      row.code = 'EXTERNAL_ID_CONFLICT_IN_FILE';
-      row.reason = `原成交编号 ${id} 与第 ${first.rowNumber} 行重复但内容不同：确认为不同成交可新增，否则跳过`;
-      row.options = ['skip', 'add'];
+      markReview(row, 'EXTERNAL_ID_CONFLICT_IN_FILE', `原成交编号 ${id} 与第 ${first.rowNumber} 行重复但内容不同：确认为不同成交可新增，否则跳过`, ['skip', 'add']);
       row.duplicateOf = {
         rowKey: first.rowKey,
         rowNumber: first.rowNumber,
@@ -178,10 +171,7 @@ async function matchRows(rows, { portfolioId, sourceAccountId }) {
     if (row.disposition !== 'pending' || row.candidate.externalId || !isCashAction(row.candidate.action)) continue;
     const first = cashSeen.find(other => sameCashActivity(other.candidate, row.candidate));
     if (!first) { cashSeen.push(row); continue; }
-    row.disposition = 'review';
-    row.code = 'CASH_DUPLICATE_IN_FILE';
-    row.reason = `无编号现金流水与第 ${first.rowNumber} 行同日、同类型、同币种、同金额：确认为另一笔可新增，否则跳过`;
-    row.options = ['skip', 'add'];
+    markReview(row, 'CASH_DUPLICATE_IN_FILE', `无编号现金流水与第 ${first.rowNumber} 行同日、同类型、同币种、同金额：确认为另一笔可新增，否则跳过`, ['skip', 'add']);
     row.duplicateOf = { rowKey: first.rowKey, rowNumber: first.rowNumber, diff: [] };
   }
 

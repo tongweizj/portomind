@@ -20,6 +20,7 @@ const { ASSET_CURRENCIES } = require('../../constants/asset.constants');
 const { CASH_ACTIONS, PAIRED_ACTIONS } = require('../../constants/transaction.constants');
 const { visibleQuery } = require('../transaction/visibility');
 const { toView } = require('./sourceAccount.service');
+const { businessError } = require('./common');
 
 dayjs.extend(utc);
 dayjs.extend(timezone);
@@ -39,13 +40,6 @@ const DEFAULT_TIME_ZONE = process.env.MARKET_TIMEZONE || 'America/Toronto';
 
 const STATUS_LABELS = Object.freeze({ reconciled: '余额已核对', unreconciled: '未核对' });
 
-function businessError(status, code, message, details) {
-  const error = new Error(message);
-  error.status = status;
-  error.code = code;
-  if (details !== undefined) error.details = details;
-  return error;
-}
 
 function roundMoney(value) {
   return Math.round((value + Number.EPSILON) * 100) / 100 || 0;

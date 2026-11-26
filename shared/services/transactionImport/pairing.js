@@ -13,6 +13,7 @@
 // enforcePairIntegrity 在全部决议之后保证两端要么都写入、要么都不写入。
 
 const crypto = require('crypto');
+const { markError, markReview } = require('./common');
 
 /**
  * @typedef {object} PairSpec
@@ -48,19 +49,11 @@ function summarizeLeg(row) {
   };
 }
 
-function markReview(row, code, reason, candidates = []) {
-  row.disposition = 'review';
-  row.code = code;
-  row.reason = reason;
-  row.options = candidates.length ? ['pairWith', 'skip'] : ['skip'];
+function reviewPair(row, code, reason, candidates = []) {
+  markReview(row, code, reason, candidates.length ? ['pairWith', 'skip'] : ['skip']);
   row.pairCandidates = candidates.map(summarizeLeg);
 }
 
-function markError(row, code, reason) {
-  row.disposition = 'error';
-  row.code = code;
-  row.reason = reason;
-}
 
 /**
  * 互为唯一候选的配对（换汇建议配对与 #99 证券划转自动配对共用）：
@@ -111,7 +104,7 @@ function pairRows(rows, spec, resolutions = {}) {
     if (members.length === 2 && spec.compatible(members[0], members[1])) {
       link(members[0], members[1], groupId, 'explicit');
     } else if (members.length === 1) {
-      markReview(members[0], `${prefix}_PAIR_INCOMPLETE`, `${label}组号 ${groupId} 只有一端：另一端缺失或有错误，单端不入账（可跳过）`);
+      reviewPair(members[0], `${prefix}_PAIR_INCOMPLETE`, `${label}组号 ${groupId} 只有一端：另一端缺失或有错误，单端不入账（可跳过）`);
     } else {
       const reason = members.length > 2
         ? `${label}组号 ${groupId} 有 ${members.length} 行，每组只能有两端`
@@ -160,11 +153,11 @@ function pairRows(rows, spec, resolutions = {}) {
     const sameScope = options.get(row.rowKey);
     const note = rejected.has(row.rowKey) ? `（${rejected.get(row.rowKey)}）` : '';
     if (sameScope.length) {
-      markReview(row, `${prefix}_PAIR_AMBIGUOUS`, `同账户同日有多种可能的${label}配对：请指定另一端${note}`, sameScope);
+      reviewPair(row, `${prefix}_PAIR_AMBIGUOUS`, `同账户同日有多种可能的${label}配对：请指定另一端${note}`, sameScope);
     } else {
       // 同范围无候选：列出全文件其余未配对的相容端供用户跨日指定
       const anywhere = remaining.filter(other => other !== row && !paired.has(other.rowKey) && spec.compatible(row, other));
-      markReview(row, `${prefix}_UNPAIRED`, `未找到可配对的${label}另一端：单端不入账，请指定另一端或跳过${note}`, anywhere);
+      reviewPair(row, `${prefix}_UNPAIRED`, `未找到可配对的${label}另一端：单端不入账，请指定另一端或跳过${note}`, anywhere);
     }
   }
 }
@@ -187,10 +180,7 @@ function enforcePairIntegrity(rows, spec, resolutions = {}) {
       row.resolved = true;
       continue;
     }
-    row.disposition = 'review';
-    row.code = `${spec.prefix}_PARTNER_SKIPPED`;
-    row.reason = `${spec.label}另一端（第 ${partner.rowNumber} 行）不入账，单端不能入账：请一并跳过`;
-    row.options = ['skip'];
+    markReview(row, `${spec.prefix}_PARTNER_SKIPPED`, `${spec.label}另一端（第 ${partner.rowNumber} 行）不入账，单端不能入账：请一并跳过`, ['skip']);
   }
 }
 

@@ -23,6 +23,7 @@
 const Transaction = require('../../models/transaction');
 const ImportBatch = require('../../models/importBatch');
 const TransferLeg = require('../../models/transferLeg');
+const { businessError } = require('./common');
 
 const STALE_BATCH_MS = 10 * 60 * 1000;
 
@@ -38,13 +39,6 @@ async function assertPortfolioUnlocked(portfolioId) {
   if (busy) throw businessError(409, 'IMPORT_IN_PROGRESS', '该组合有导入正在确认，请稍后再试');
 }
 
-function businessError(status, code, message, details) {
-  const error = new Error(message);
-  error.status = status;
-  error.code = code;
-  if (details !== undefined) error.details = details;
-  return error;
-}
 
 async function finishLegs(batchId) {
   await TransferLeg.updateMany({ stagedBatchId: batchId, status: 'pending' }, { $set: { status: 'staged' } });

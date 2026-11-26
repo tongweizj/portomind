@@ -10,7 +10,6 @@
 //
 // 扩展点：PARSERS（#100 Wealthsimple / #102 Questrade）、matchRows（#95）、resolutions（#95–#99）。
 
-const crypto = require('crypto');
 const mongoose = require('mongoose');
 const Portfolio = require('../../models/portfolio');
 const Asset = require('../../models/asset');
@@ -30,6 +29,7 @@ const {
   BINARY_IMPORT_FORMATS,
   IMPORT_COMMIT_LIMIT,
   IMPORT_PREVIEW_LIMIT,
+  IMPORT_DISPOSITIONS,
   IMPORT_TIME_ZONE_CHOICES
 } = require('../../constants/import.constants');
 const standardCsv = require('./standardCsv');
@@ -41,18 +41,9 @@ const { skipCommittedRows, matchRows, applyResolutions } = require('./matching')
 const transfers = require('./transfers');
 const { pairRows, enforcePairIntegrity } = require('./pairing');
 const { FX_PAIR_SPEC } = require('./fxPairSpec');
+const { businessError, sha256, markError, markReview } = require('./common');
 
-function businessError(status, code, message, details) {
-  const error = new Error(message);
-  error.status = status;
-  error.code = code;
-  if (details !== undefined) error.details = details;
-  return error;
-}
 
-function sha256(value) {
-  return crypto.createHash('sha256').update(typeof value === 'string' ? value : JSON.stringify(value)).digest('hex');
-}
 
 // 格式 → 解析器。解析器契约：(content, { mapping, defaultTimeZone }) → { headers, mapping, rows, missingColumns? }
 // （可返回 Promise）。文本格式 content 为字符串；二进制格式（BINARY_IMPORT_FORMATS，如 Questrade XLSX）为 Buffer。
@@ -79,11 +70,6 @@ function decodeFile(file, format) {
   return { content: text, name };
 }
 
-function rowError(row, code, reason) {
-  row.disposition = 'error';
-  row.code = code;
-  row.reason = reason;
-}
 
 // 代码映射（#102）：报表代码 → 资产库存储代码（带市场后缀）。键为「代码@币种」（优先）或「代码」。
 // 内部代码与跨币种划转的转入端（candidate.symbolMapRequired）没有映射时进入待核对，不猜。
@@ -111,10 +97,7 @@ function applySymbolMap(rows, symbolMap) {
       continue;
     }
     if (!row.candidate.symbolMapRequired) continue;
-    row.disposition = 'review';
-    row.code = 'SYMBOL_UNMAPPED';
-    row.reason = `${SYMBOL_MAP_REASONS[row.candidate.symbolMapRequired]}：请在代码映射中为 ${key} 指定资产代码（如 VTI.US、XEQT.TO），或跳过此行`;
-    row.options = ['symbolMap', 'skip'];
+    markReview(row, 'SYMBOL_UNMAPPED', `${SYMBOL_MAP_REASONS[row.candidate.symbolMapRequired]}：请在代码映射中为 ${key} 指定资产代码（如 VTI.US、XEQT.TO），或跳过此行`, ['symbolMap', 'skip']);
     row.symbolMapKey = key;
   }
 }
@@ -152,11 +135,11 @@ async function resolveAssets(rows) {
     }
     const effectiveMarket = market || marketFromSuffix(rawSymbol);
     if (!effectiveMarket) {
-      rowError(row, 'MARKET_REQUIRED', `标的 ${rawSymbol} 无市场后缀，需填写 market`);
+      markError(row, 'MARKET_REQUIRED', `标的 ${rawSymbol} 无市场后缀，需填写 market`);
       continue;
     }
     if (market && marketFromSuffix(rawSymbol) && marketFromSuffix(rawSymbol) !== market) {
-      rowError(row, 'MARKET_MISMATCH', `标的 ${rawSymbol} 的后缀与 market=${market} 不一致`);
+      markError(row, 'MARKET_MISMATCH', `标的 ${rawSymbol} 的后缀与 market=${market} 不一致`);
       continue;
     }
     row.candidate.symbol = toStorageSymbol(normalizeSymbol(rawSymbol), effectiveMarket);
@@ -174,16 +157,16 @@ async function resolveAssets(rows) {
       (!listingCurrency || bySymbol.get(symbol).currency === listingCurrency));
     if (found.length === 1) { row.candidate.symbol = found[0]; continue; }
     if (found.length > 1) {
-      rowError(row, 'MARKET_AMBIGUOUS', `标的 ${row.candidate.rawSymbol} 在多个市场都有资产（${found.join(' / ')}），报表无法区分`);
+      markError(row, 'MARKET_AMBIGUOUS', `标的 ${row.candidate.rawSymbol} 在多个市场都有资产（${found.join(' / ')}），报表无法区分`);
     } else {
-      rowError(row, 'ASSET_NOT_FOUND', `资产 ${row.candidate.symbolOptions.join(' 或 ')}${listingCurrency ? `（${listingCurrency}）` : ''} 不存在，请先在资产管理中添加或提供代码映射`);
+      markError(row, 'ASSET_NOT_FOUND', `资产 ${row.candidate.symbolOptions.join(' 或 ')}${listingCurrency ? `（${listingCurrency}）` : ''} 不存在，请先在资产管理中添加或提供代码映射`);
     }
   }
   for (const row of rows) {
     if (row.disposition !== 'pending' || !row.candidate.symbol) continue;
     const asset = bySymbol.get(row.candidate.symbol);
-    if (!asset) { rowError(row, 'ASSET_NOT_FOUND', `资产 ${row.candidate.symbol} 不存在，请先在资产管理中添加`); continue; }
-    if (!asset.active) { rowError(row, 'ASSET_INACTIVE', `资产 ${row.candidate.symbol} 已停用`); continue; }
+    if (!asset) { markError(row, 'ASSET_NOT_FOUND', `资产 ${row.candidate.symbol} 不存在，请先在资产管理中添加`); continue; }
+    if (!asset.active) { markError(row, 'ASSET_INACTIVE', `资产 ${row.candidate.symbol} 已停用`); continue; }
     // 现金类流水保留实际现金币种（可与资产币种不同，如美股分红以 CAD 入账）；
     // 影响持仓成本的跨币种成交：报表给出汇率时（#100 Wealthsimple 描述中的 FX Rate）把单价 / 佣金换回资产币种，
     // 现金净额仍为现金币种；报表没有汇率则不猜，报错。
@@ -193,7 +176,7 @@ async function resolveAssets(rows) {
         (row.candidate.action !== 'split' || row.candidate.cashCurrency) &&
         asset.currency !== row.candidate.cashCurrency) {
       if (!row.candidate.reportFxRate || row.candidate.action === 'split') {
-        rowError(row, 'CURRENCY_MISMATCH', `成交币种 ${row.candidate.cashCurrency} 与资产币种 ${asset.currency} 不一致，且报表未给出汇率（跨币种成交需要报表汇率）`);
+        markError(row, 'CURRENCY_MISMATCH', `成交币种 ${row.candidate.cashCurrency} 与资产币种 ${asset.currency} 不一致，且报表未给出汇率（跨币种成交需要报表汇率）`);
         continue;
       }
       standardCsv.convertTradeToAssetCurrency(row.candidate, row.candidate.reportFxRate);
@@ -232,10 +215,7 @@ function applyFeeResolution(row, resolution) {
       return;
     }
   }
-  row.disposition = 'review';
-  row.code = 'FEE_UNKNOWN';
-  row.reason = '佣金缺失且无法由现金净额推导：请补填佣金或确认按 0 处理';
-  row.options = ['fee', 'confirmZeroFee', 'skip'];
+  markReview(row, 'FEE_UNKNOWN', '佣金缺失且无法由现金净额推导：请补填佣金或确认按 0 处理', ['fee', 'confirmZeroFee', 'skip']);
 }
 
 const ORDER_CHOICES = ['before', 'after'];
@@ -404,10 +384,10 @@ async function validateLedger(rows, portfolioId, resolutions = {}, extraProbes =
           continue;
         }
         if (SPLIT_ERRORS.includes(error.code)) {
-          rowError(row, error.code, `写入此行会使之后的拆股失去依据：${error.message}`);
+          markError(row, error.code, `写入此行会使之后的拆股失去依据：${error.message}`);
           continue;
         }
-        rowError(row, 'INSUFFICIENT_POSITION', `${row.disposition === 'update' ? '更新后' : ''}卖出数量超过 ${symbol} 当时的可用持仓`);
+        markError(row, 'INSUFFICIENT_POSITION', `${row.disposition === 'update' ? '更新后' : ''}卖出数量超过 ${symbol} 当时的可用持仓`);
       }
     }
   }
@@ -659,10 +639,7 @@ async function computePreview(input) {
   // TASK-096：报表有成交时间但无时区 → 待用户确认北京 / 多伦多时区（文件级 timeZone），确认前不猜时刻。
   for (const row of rows) {
     if (row.disposition !== 'pending' || !row.candidate.needsTimeZone) continue;
-    row.disposition = 'review';
-    row.code = 'TIME_ZONE_UNCONFIRMED';
-    row.reason = '报表有成交时间但没有时区：请确认按北京或多伦多时间解读';
-    row.options = ['timeZone', 'skip'];
+    markReview(row, 'TIME_ZONE_UNCONFIRMED', '报表有成交时间但没有时区：请确认按北京或多伦多时间解读', ['timeZone', 'skip']);
   }
   const requiresTimeZone = rows.some(row => row.code === 'TIME_ZONE_UNCONFIRMED');
 
@@ -688,7 +665,7 @@ async function computePreview(input) {
   }
   if (accounts.length && rows.some(row => row.candidate && !row.candidate.accountNumber)) {
     for (const row of rows) {
-      if (row.disposition === 'pending' && !row.candidate.accountNumber) rowError(row, 'MISSING_FIELD', '同一文件中其他行有账号，此行缺少账号（account_number）');
+      if (row.disposition === 'pending' && !row.candidate.accountNumber) markError(row, 'MISSING_FIELD', '同一文件中其他行有账号，此行缺少账号（account_number）');
     }
   }
   for (const row of rows) {
@@ -751,7 +728,7 @@ async function computePreview(input) {
   }
   transferPlan.partnerWrites = transferPlan.partnerWrites.filter(write => !write.dropped);
 
-  const counts = { add: 0, update: 0, skip: 0, review: 0, error: 0, stage: 0, total: rows.length };
+  const counts = { ...Object.fromEntries(IMPORT_DISPOSITIONS.map(disposition => [disposition, 0])), total: rows.length };
   for (const row of rows) counts[row.disposition] += 1;
   const blockingReasons = [];
   if (missingColumns.length) blockingReasons.push({ code: 'MISSING_COLUMNS', reason: `未映射必需列：${missingColumns.join(', ')}` });

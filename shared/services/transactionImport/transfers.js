@@ -18,7 +18,6 @@
 //    这里的换算只用于记录用户 / 报表给出的承接成本依据，不引用汇率表，不产生跨币种合计（规则 10）。
 // 5. 转出端不产生买卖盈亏；转入端以 carryCost 进入移动平均成本（positionCalculator）。
 
-const crypto = require('crypto');
 const mongoose = require('mongoose');
 const Transaction = require('../../models/transaction');
 const TransferLeg = require('../../models/transferLeg');
@@ -29,33 +28,14 @@ const { visibleQuery } = require('../transaction/visibility');
 const { TRANSFER_PAIR_WINDOW_DAYS } = require('../../constants/import.constants');
 const { baseSymbol } = require('../../utils/symbol');
 const { mutualUniquePairs } = require('./pairing');
+const { businessError, sha256, markError, markReview } = require('./common');
 
 const EPSILON = 1e-9;
 const DAY_MS = 24 * 60 * 60 * 1000;
 
-function businessError(status, code, message) {
-  const error = new Error(message);
-  error.status = status;
-  error.code = code;
-  return error;
-}
 
-function sha256(value) {
-  return crypto.createHash('sha256').update(JSON.stringify(value)).digest('hex');
-}
 
-function rowError(row, code, reason) {
-  row.disposition = 'error';
-  row.code = code;
-  row.reason = reason;
-}
 
-function setReview(row, code, reason, options) {
-  row.disposition = 'review';
-  row.code = code;
-  row.reason = reason;
-  row.options = options;
-}
 
 const isTransferRow = row => Boolean(row.candidate?.isTransfer);
 
@@ -257,7 +237,7 @@ async function resolveTransfers(rows, ctx) {
     if (members.length !== 2) continue;
     const [left, right] = members.map(row => rowLegs.get(row.rowKey));
     if (left.direction !== right.direction && !sameSecurity(left, right)) {
-      members.forEach(row => rowError(row, 'TRANSFER_PAIR_INVALID', `划转组号 ${group} 的两端不是同一证券（${left.symbol} / ${right.symbol}）`));
+      members.forEach(row => markError(row, 'TRANSFER_PAIR_INVALID', `划转组号 ${group} 的两端不是同一证券（${left.symbol} / ${right.symbol}）`));
     }
   }
 
@@ -277,7 +257,7 @@ async function resolveTransfers(rows, ctx) {
     : [...freeRowLegs().filter(leg => leg !== self), ...stagedLegs.filter(leg => !claimedStaged.has(leg.id))]
       .filter(leg => compatible(self, leg)));
   const ambiguous = (row, candidates, reason) => {
-    setReview(row, 'TRANSFER_PAIR_AMBIGUOUS', reason, ['pairWith', 'skip']);
+    markReview(row, 'TRANSFER_PAIR_AMBIGUOUS', reason, ['pairWith', 'skip']);
     row.transfer = { direction: rowLegs.get(row.rowKey).direction, candidates: candidates.map(leg => legSummary(leg, names)) };
   };
 
@@ -338,7 +318,7 @@ async function resolveTransfers(rows, ctx) {
     const pairKey = self.pairGroup || partner.pairGroup ||
       `xfer-${sha256([out.kind === 'row' ? out.row.rawHash : out.id, inn.kind === 'row' ? inn.row.rawHash : inn.id]).slice(0, 16)}`;
     const fail = (code, reason) => pairRows.forEach(item => {
-      rowError(item, code, reason);
+      markError(item, code, reason);
       item.transfer = { direction: rowLegs.get(item.rowKey).direction, partner: legSummary(item === row ? partner : self, names) };
     });
 
@@ -404,7 +384,7 @@ async function resolveTransfers(rows, ctx) {
 
     if (carryCost === null) {
       pairRows.forEach(item => {
-        setReview(item, 'TRANSFER_COST_REQUIRED',
+        markReview(item, 'TRANSFER_COST_REQUIRED',
           `跨币种划转（${outCurrency} → ${inCurrency}）缺少转入成本与换算依据：请补充转入成本（${inCurrency}）或换算依据（1 ${outCurrency} = ? ${inCurrency}）其中一项`,
           ['transferCost', 'fxRate', 'skip']);
         item.transfer = transferInfo(item);
@@ -470,7 +450,7 @@ async function resolveTransfers(rows, ctx) {
     } catch (error) {
       if (error.code !== 'INSUFFICIENT_POSITION' && error.code !== 'INVALID_CARRY_COST') throw error;
       const row = rows.find(item => item.rowKey === write.rowKey);
-      rowError(row, 'TRANSFER_INSUFFICIENT_POSITION', `对端组合（${names.portfolios.get(pid) || pid}）写入划转后持仓不足`);
+      markError(row, 'TRANSFER_INSUFFICIENT_POSITION', `对端组合（${names.portfolios.get(pid) || pid}）写入划转后持仓不足`);
     }
   }
   result.lockPortfolioIds.sort();
