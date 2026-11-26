@@ -32,6 +32,7 @@ const {
   IMPORT_TIME_ZONE_CHOICES
 } = require('../../constants/import.constants');
 const standardCsv = require('./standardCsv');
+const wealthsimpleCsv = require('./wealthsimpleCsv');
 const sourceAccounts = require('./sourceAccount.service');
 const { runAtomicCommit } = require('./commit');
 const { matchRows, applyResolutions } = require('./matching');
@@ -48,9 +49,12 @@ function sha256(value) {
   return crypto.createHash('sha256').update(typeof value === 'string' ? value : JSON.stringify(value)).digest('hex');
 }
 
-// 格式 → 解析器。解析器契约：(text, { mapping, defaultTimeZone }) → { headers, mapping, rows }。
+// 格式 → 解析器。解析器契约：(text, { mapping, defaultTimeZone }) → { headers, mapping, rows, missingColumns? }。
+// rows 必须按时间正序（旧 → 新）输出（#96：sequence 即同时刻重放顺序）。
+// 原格式解析器（非 standard）自带列识别，不接受手动列映射，并自行报告缺失的原报表列（missingColumns）。
 const PARSERS = {
-  standard: standardCsv.parseStandardCsv
+  standard: standardCsv.parseStandardCsv,
+  wealthsimple: wealthsimpleCsv.parseWealthsimpleCsv
 };
 
 function decodeFile(file) {
@@ -81,6 +85,13 @@ async function resolveAssets(rows) {
       row.asset = null;
       continue;
     }
+    // 原格式报表的裸代码（无后缀、无市场列，#100）：在候选市场的已有资产中唯一解析，见下方
+    if (!market && !marketFromSuffix(rawSymbol) && row.candidate.marketCandidates) {
+      row.candidate.symbolOptions = row.candidate.marketCandidates
+        .map(candidateMarket => toStorageSymbol(normalizeSymbol(rawSymbol), candidateMarket));
+      row.candidate.symbolOptions.forEach(symbol => storageSymbols.add(symbol));
+      continue;
+    }
     const effectiveMarket = market || marketFromSuffix(rawSymbol);
     if (!effectiveMarket) {
       rowError(row, 'MARKET_REQUIRED', `标的 ${rawSymbol} 无市场后缀，需填写 market`);
@@ -98,15 +109,29 @@ async function resolveAssets(rows) {
     : [];
   const bySymbol = new Map(assets.map(asset => [asset.symbol, asset]));
   for (const row of rows) {
+    if (row.disposition !== 'pending' || !row.candidate.symbolOptions) continue;
+    const found = row.candidate.symbolOptions.filter(symbol => bySymbol.has(symbol));
+    if (found.length === 1) { row.candidate.symbol = found[0]; continue; }
+    if (found.length > 1) {
+      rowError(row, 'MARKET_AMBIGUOUS', `标的 ${row.candidate.rawSymbol} 在多个市场都有资产（${found.join(' / ')}），报表无法区分`);
+    } else {
+      rowError(row, 'ASSET_NOT_FOUND', `资产 ${row.candidate.symbolOptions.join(' 或 ')} 不存在，请先在资产管理中添加`);
+    }
+  }
+  for (const row of rows) {
     if (row.disposition !== 'pending' || !row.candidate.symbol) continue;
     const asset = bySymbol.get(row.candidate.symbol);
     if (!asset) { rowError(row, 'ASSET_NOT_FOUND', `资产 ${row.candidate.symbol} 不存在，请先在资产管理中添加`); continue; }
     if (!asset.active) { rowError(row, 'ASSET_INACTIVE', `资产 ${row.candidate.symbol} 已停用`); continue; }
     // 现金类流水保留实际现金币种（可与资产币种不同，如美股分红以 CAD 入账）；
-    // 影响持仓成本的成交仍要求同币种（跨币种成交由 #100 / #101 处理）。
+    // 影响持仓成本的跨币种成交：报表给出汇率时（#100 Wealthsimple 描述中的 FX Rate）把单价 / 佣金换回资产币种，
+    // 现金净额仍为现金币种；报表没有汇率则不猜，报错。
     if (row.candidate.kind !== 'cash' && asset.currency !== row.candidate.cashCurrency) {
-      rowError(row, 'CURRENCY_MISMATCH', `成交币种 ${row.candidate.cashCurrency} 与资产币种 ${asset.currency} 不一致（跨币种成交暂不支持）`);
-      continue;
+      if (!row.candidate.reportFxRate) {
+        rowError(row, 'CURRENCY_MISMATCH', `成交币种 ${row.candidate.cashCurrency} 与资产币种 ${asset.currency} 不一致，且报表未给出汇率（跨币种成交需要报表汇率）`);
+        continue;
+      }
+      standardCsv.convertTradeToAssetCurrency(row.candidate, row.candidate.reportFxRate);
     }
     row.asset = { type: asset.type, market: asset.market, currency: asset.currency };
   }
@@ -365,6 +390,8 @@ function publicCandidate(row) {
     cashAmount: c.cashAmount,
     cashCurrency: c.cashCurrency,
     cashAmountSource: c.cashAmountSource || null,
+    // 跨币种成交的报表汇率（1 资产币种 = cashFxRate 现金币种）；同币种为 null
+    cashFxRate: c.cashFxRate ?? null,
     // 券商净额与成交金额 ± 佣金的分币差异（保留，不改写净额）
     cashDifference: c.cashDifference ?? null,
     externalId: c.externalId,
@@ -408,16 +435,19 @@ async function computePreview(input) {
   const parser = PARSERS[format];
   const parsedProbe = parser(file.text, { defaultTimeZone: input.timeZone || undefined });
   if (parsedProbe.headers.length === 0) throw businessError(400, 'EMPTY_IMPORT_FILE', '文件为空或缺少表头');
-  const mappingError = standardCsv.validateMapping(input.mapping, parsedProbe.headers.length);
+  if (format !== 'standard' && input.mapping && Object.keys(input.mapping).length) {
+    throw businessError(400, 'INVALID_MAPPING', `format ${format} does not accept a column mapping`);
+  }
+  const mappingError = format === 'standard' ? standardCsv.validateMapping(input.mapping, parsedProbe.headers.length) : null;
   if (mappingError) throw businessError(400, 'INVALID_MAPPING', mappingError);
-  const parsed = input.mapping ? parser(file.text, { mapping: input.mapping, defaultTimeZone: input.timeZone || undefined }) : parsedProbe;
+  const parsed = input.mapping && format === 'standard' ? parser(file.text, { mapping: input.mapping, defaultTimeZone: input.timeZone || undefined }) : parsedProbe;
   if (parsed.rows.length === 0) throw businessError(400, 'EMPTY_IMPORT_FILE', '文件没有数据行');
   if (parsed.rows.length > IMPORT_PREVIEW_LIMIT) {
     throw businessError(413, 'IMPORT_FILE_TOO_LARGE', `单个文件最多 ${IMPORT_PREVIEW_LIMIT} 行`);
   }
   const mappedColumns = new Set(Object.values(parsed.mapping));
   // 标的 / 数量 / 单价 / 金额按活动类型逐行校验（现金类文件可以没有数量单价列）
-  const missingColumns = ['activity_type', 'trade_date', 'cash_currency']
+  const missingColumns = parsed.missingColumns || ['activity_type', 'trade_date', 'cash_currency']
     .filter(key => !mappedColumns.has(key));
 
   const resolutions = input.resolutions || {};
@@ -636,6 +666,7 @@ function importedFields(preview, row, { sourceAccountId, importBatchId }) {
     cashAmount: c.cashAmount ?? undefined,
     cashCurrency: c.cashCurrency,
     cashAmountSource: c.cashAmountSource || undefined,
+    cashFxRate: c.cashFxRate ?? undefined,
     feeSource: c.feeSource || undefined,
     grossAmount: c.grossAmount ?? undefined,
     pairGroupId: c.pairGroup || undefined,
