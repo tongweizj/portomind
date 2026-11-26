@@ -6,7 +6,8 @@
 //    仅成交金额不同 → 列出旧流水候选并暂停（AMOUNT_CHANGED），由用户决定更新或新增。
 // 3. 无编号且仅有日期：同日同标的同方向的旧流水均为候选，进入人工核对（DATE_ONLY_MATCH）。
 // 4. 缺来源账户的旧账（手动录入 / 早期导入）：同日同标的同方向即候选，进入人工核对（LEGACY_CANDIDATE）。
-// 唯一且内容一致 → 跳过；有差异 → 展示新旧值，用户确认 update 后才改写旧流水（保留手工备注）。
+// 唯一且内容一致 → 跳过；多条内容一致 → 待核对（MULTIPLE_CANDIDATES）；
+// 有差异 → 展示新旧值，用户确认 update 后才改写旧流水（保留手工备注）。
 // 一致匹配按一对一认领：同文件两笔一致的成交不会同时「跳过」到同一条旧流水。
 //
 // 现金流水（TASK-097：div_cash / tax / interest / cash_in / cash_out / fee）：有编号同上；
@@ -221,11 +222,17 @@ async function matchRows(rows, { portfolioId, sourceAccountId }) {
   // 续传识别（skipCommittedRows）已认领的旧流水不再参与一对一认领
   const claimed = new Set(rows.map(row => row.claimedId).filter(Boolean));
   const identical = (tx, row) => diffOf(tx, row.candidate).length === 0;
-  const claimIdentical = (row, pool, reason) => {
-    const hit = pool.find(tx => !claimed.has(String(tx._id)) && identical(tx, row));
-    if (!hit) return false;
-    claimed.add(String(hit._id));
-    setSkip(row, hit, reason);
+  // 唯一一条内容一致的旧流水 → 认领并跳过；多条内容一致 → 无法确定是哪一条，待核对（代码审查 S4）。
+  // 返回 true 表示本行已处置（跳过或待核对）。
+  const claimIdentical = (row, pool, reason, options = ['update', 'add', 'skip']) => {
+    const hits = pool.filter(tx => !claimed.has(String(tx._id)) && identical(tx, row));
+    if (!hits.length) return false;
+    if (hits.length > 1) {
+      setReview(row, 'MULTIPLE_CANDIDATES', `有 ${hits.length} 条内容一致的旧流水，无法确定对应哪一条：请跳过、新增或指定更新对象`, options, hits, describe);
+      return true;
+    }
+    claimed.add(String(hits[0]._id));
+    setSkip(row, hits[0], reason);
     return true;
   };
   const unclaimed = tx => !claimed.has(String(tx._id));
@@ -239,7 +246,7 @@ async function matchRows(rows, { portfolioId, sourceAccountId }) {
       const sameId = byExternal.filter(tx => sameSide(tx) && tx.source?.externalId === c.externalId);
       const here = sameId.filter(inPortfolio);
       if (here.length) {
-        if (claimIdentical(row, here, '同一原成交编号已入账且内容一致')) continue;
+        if (claimIdentical(row, here, '同一原成交编号已入账且内容一致', ['update', 'skip'])) continue;
         const open = here.filter(unclaimed);
         if (open.length === 1) {
           setReview(row, 'EXTERNAL_ID_CHANGED', '同一原成交编号已入账但内容不同：核对新旧值后可更新旧流水（保留手工备注）或跳过', ['update', 'skip'], open, describe);

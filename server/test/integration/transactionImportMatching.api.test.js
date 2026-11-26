@@ -425,3 +425,25 @@ test('S3 导入确认进行中：手动新增 / 修改 / 删除同组合流水�
   assert.equal(removed.status, 409);
   assert.equal(world.transactions.length, 1);
 });
+
+// ─────────────────────────────────────────────────────────────
+// 代码审查 S4：多条内容一致的旧流水不得自动跳过
+// ─────────────────────────────────────────────────────────────
+
+test('S4 另一报表中的成交与两条内容一致的旧流水都相同：多候选待核对，不自动跳过', async (t) => {
+  freshWorld(t);
+  const row = { ...TIMED, quantity: '3' };
+  const { sourceAccount } = await seedImport([row, row]);
+  const other = await preview(body(csv([{ ...TIMED, quantity: '7' }, { ...TIMED, quantity: '8' }, row]), { sourceAccount }));
+  assert.equal(other.rows[2].disposition, 'review', JSON.stringify(other.rows[2]));
+  assert.equal(other.rows[2].code, 'MULTIPLE_CANDIDATES');
+  assert.equal(other.rows[2].matches.length, 2);
+});
+
+test('S4 仅日期：同日两条内容一致的旧流水 → 多候选待核对', async (t) => {
+  freshWorld(t);
+  const row = { trade_date: '2026-01-09', quantity: '2' };
+  const { sourceAccount } = await seedImport([row, row]);
+  const other = await preview(body(csv([{ trade_date: '2026-01-02', quantity: '9' }, { trade_date: '2026-01-03', quantity: '9' }, row]), { sourceAccount }));
+  assert.equal(other.rows[2].code, 'MULTIPLE_CANDIDATES', JSON.stringify(other.rows[2]));
+});
