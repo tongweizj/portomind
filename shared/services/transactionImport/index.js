@@ -104,7 +104,9 @@ async function resolveAssets(rows) {
     if (!asset.active) { rowError(row, 'ASSET_INACTIVE', `资产 ${row.candidate.symbol} 已停用`); continue; }
     // 现金类流水保留实际现金币种（可与资产币种不同，如美股分红以 CAD 入账）；
     // 影响持仓成本的成交仍要求同币种（跨币种成交由 #100 / #101 处理）。
-    if (row.candidate.kind !== 'cash' && asset.currency !== row.candidate.cashCurrency) {
+    // 拆股行（TASK-098）可不填币种；填写时同样须与资产币种一致。
+    if (row.candidate.kind !== 'cash' && (row.candidate.action !== 'split' || row.candidate.cashCurrency) &&
+        asset.currency !== row.candidate.cashCurrency) {
       rowError(row, 'CURRENCY_MISMATCH', `成交币种 ${row.candidate.cashCurrency} 与资产币种 ${asset.currency} 不一致（跨币种成交暂不支持）`);
       continue;
     }
@@ -116,7 +118,7 @@ function rawHashOf(candidate) {
   return sha256([
     candidate.action, candidate.symbol, new Date(candidate.date).toISOString(), candidate.dateKind,
     candidate.quantity, candidate.price, candidate.fee, candidate.cashAmount, candidate.cashCurrency,
-    candidate.externalId
+    candidate.externalId, candidate.splitRatio ?? null
   ]);
 }
 
@@ -149,6 +151,9 @@ function applyFeeResolution(row, resolution) {
 }
 
 const ORDER_CHOICES = ['before', 'after'];
+// 重放中可归因到具体行的账本错误：超卖（#94）与拆股前提不成立（#98）
+const SPLIT_ERRORS = ['SPLIT_NO_POSITION', 'SPLIT_RATIO_CONFLICT'];
+const LEDGER_ERRORS = ['INSUFFICIENT_POSITION', ...SPLIT_ERRORS];
 const STATE_EPSILON = 1e-9;
 
 function probeOf(row) {
@@ -170,7 +175,7 @@ function outcomeOf(transactions, symbol, day) {
       const position = replayLedger(list).get(symbol) || { quantity: 0, remainingCost: 0, realizedPnl: 0 };
       return { quantity: position.quantity, remainingCost: position.remainingCost, realizedPnl: position.realizedPnl };
     } catch (error) {
-      if (error.code !== 'INSUFFICIENT_POSITION') throw error;
+      if (!LEDGER_ERRORS.includes(error.code)) throw error;
       return { error: error.code };
     }
   };
@@ -294,15 +299,82 @@ async function validateLedger(rows, portfolioId, resolutions = {}) {
       try {
         calculatePositions(next);
         accepted = next;
+        if (row.candidate.action === 'split' && row.candidate.symbol === symbol) row.splitEffect = splitEffectOf(accepted, probe, symbol);
       } catch (error) {
-        if (error.code !== 'INSUFFICIENT_POSITION') throw error;
+        if (!LEDGER_ERRORS.includes(error.code)) throw error;
         // 顺序待确认的行：超卖与否取决于用户确认的顺序，保持 review，不另报错
         if (row.disposition === 'review') continue;
+        if (SPLIT_ERRORS.includes(error.code) && row.candidate.action === 'split' && row.candidate.symbol === symbol) {
+          // TASK-098：拆股前提不成立（无拆股前持仓 / 比例与份额变动冲突）→ 暂停入账等待核对，只可跳过或修正文件后重新预览
+          holdSplit(row, error, resolutions);
+          continue;
+        }
+        if (SPLIT_ERRORS.includes(error.code)) {
+          rowError(row, error.code, `写入此行会使之后的拆股失去依据：${error.message}`);
+          continue;
+        }
         rowError(row, 'INSUFFICIENT_POSITION', `${row.disposition === 'update' ? '更新后' : ''}卖出数量超过 ${symbol} 当时的可用持仓`);
       }
     }
   }
-  return ledger;
+  return { ledger, positionsAfter: positionsAfterOf(ledger, rows, symbols) };
+}
+
+function holdSplit(row, error, resolutions) {
+  row.disposition = 'review';
+  row.code = error.code;
+  row.reason = error.code === 'SPLIT_NO_POSITION'
+    ? `${error.message}：请核对是否缺少更早的买入或划转流水，补齐后重新预览，或跳过此行`
+    : `${error.message}：请核对拆股比例与份额变动，修正后重新预览，或跳过此行`;
+  row.options = ['skip'];
+  if (resolutions[row.rowKey]?.action === 'skip') {
+    row.disposition = 'skip';
+    row.resolved = true;
+  }
+}
+
+// 拆股前后对照（预览展示）：拆股前份额 / 单位成本 → 拆股后份额 / 单位成本，总成本不变。
+function splitEffectOf(accepted, probe, symbol) {
+  const before = replayLedger(accepted.filter(tx => tx !== probe && compareTransactions(tx, probe) < 0)).get(symbol);
+  const after = replayLedger(accepted.filter(tx => tx === probe || compareTransactions(tx, probe) < 0)).get(symbol);
+  return {
+    quantityBefore: before.quantity,
+    quantityAfter: after.quantity,
+    remainingCost: after.remainingCost,
+    avgCostBefore: before.remainingCost / before.quantity,
+    avgCostAfter: after.remainingCost / after.quantity
+  };
+}
+
+/**
+ * 确认后的持仓结果预演（TASK-098 / AC-07）：现有账本 + 本次新增 / 更新行按同一重放规则计算，
+ * 与确认后持仓回读口径一致。仅含本次涉及的标的（已清仓的也列出，便于核对已实现盈亏）；无法重放时为 null。
+ */
+function positionsAfterOf(ledger, rows, symbols) {
+  const writes = rows.filter(row => row.disposition === 'add' || row.disposition === 'update');
+  const replaced = new Set(writes.filter(row => row.disposition === 'update').map(row => String(row.target._id)));
+  const list = [
+    ...ledger.filter(tx => !replaced.has(String(tx._id))),
+    ...writes.map(row => (row.disposition === 'update' ? { ...probeOf(row), _id: row.target._id } : probeOf(row)))
+  ];
+  let positions;
+  try {
+    positions = replayLedger(list);
+  } catch (error) {
+    if (!LEDGER_ERRORS.includes(error.code)) throw error;
+    return null;
+  }
+  return symbols.filter(symbol => positions.has(symbol)).map(symbol => {
+    const position = positions.get(symbol);
+    return {
+      symbol,
+      currency: position.currency,
+      quantity: position.quantity,
+      remainingCost: position.remainingCost,
+      avgCost: position.quantity > STATE_EPSILON ? position.remainingCost / position.quantity : null,
+      realizedPnl: position.realizedPnl
+    };
+  });
 }
 
 // 拆批：按来源流水行计数，pair_group 相同的行留在同一批。
@@ -359,6 +431,7 @@ function publicCandidate(row) {
     settlementStatus: c.settlementStatus,
     quantity: c.quantity,
     price: c.price,
+    splitRatio: c.splitRatio ?? null,
     grossAmount: c.grossAmount,
     fee: c.fee,
     feeSource: c.feeSource,
@@ -502,7 +575,7 @@ async function computePreview(input) {
   }
   // 用户对 review 行的显式决议：skip / add / update（#95）；同日顺序决议在 validateLedger 内处理（#96）
   applyResolutions(rows, resolutions);
-  const ledger = await validateLedger(rows, portfolioId, resolutions);
+  const { ledger, positionsAfter } = await validateLedger(rows, portfolioId, resolutions);
 
   const counts = { add: 0, update: 0, skip: 0, review: 0, error: 0, total: rows.length };
   for (const row of rows) counts[row.disposition] += 1;
@@ -548,7 +621,8 @@ async function computePreview(input) {
     accounts,
     selectedAccount,
     requiresAccountSelection,
-    requiresTimeZone
+    requiresTimeZone,
+    positionsAfter
   };
 }
 
@@ -588,8 +662,10 @@ function toPreviewResponse(preview) {
       targetId: row.targetId || null,
       orderConflict: row.orderConflict || null,
       orderResolved: row.orderResolved || null,
+      splitEffect: row.splitEffect || null,
       candidate: publicCandidate(row)
     })),
+    positionsAfter: preview.positionsAfter,
     counts: preview.counts,
     blocking: preview.blocking,
     blockingReasons: preview.blockingReasons,
@@ -615,6 +691,7 @@ function importedFields(preview, row, { sourceAccountId, importBatchId }) {
     action: c.action,
     quantity: c.quantity ?? undefined,
     price: c.price ?? undefined,
+    splitRatio: c.splitRatio ?? undefined,
     fee: c.fee,
     date: c.date,
     sourceAccountId,

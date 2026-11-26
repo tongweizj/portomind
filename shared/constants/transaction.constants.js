@@ -2,8 +2,9 @@
 // TRANSACTION_ACTIONS 与 client/src/constants/enums.js 的 TRANSACTION_ACTIONS / TRANSACTION_ACTION_LABELS 必须同步
 // （同 ASSET_* 双份规则）。
 
-// 影响持仓数量 / 成本的动作：必须有标的、数量与单价。
-const POSITION_ACTIONS = Object.freeze(['buy', 'sell', 'div_reinvest']);
+// 影响持仓数量 / 成本的动作：必须有标的与数量；除 split 外必须有单价。
+// split（TASK-098）拆股：quantity 为带符号份额变动，不记单价。
+const POSITION_ACTIONS = Object.freeze(['buy', 'sell', 'div_reinvest', 'split']);
 
 // 纯现金流水：不改变持仓与成本，金额记在 cashAmount（带符号）/ cashCurrency（实际现金币种）。
 // div_cash 现金分红（有标的，数量 / 单价可空）；tax 税款（如股息预扣税，可带标的）；interest 利息；
