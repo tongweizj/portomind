@@ -209,6 +209,10 @@ function installImportWorld(t, world = {}, hooks = {}) {
     return { deletedCount };
   });
 
+  t.mock.method(ImportBatch, 'exists', async (filter) => {
+    const doc = importBatches.find(item => matches(item, filter));
+    return doc ? { _id: doc._id } : null;
+  });
   t.mock.method(ImportBatch, 'find', (filter) => query(() => importBatches.filter(doc => matches(doc, filter))));
   t.mock.method(ImportBatch, 'updateOne', async (filter, update) => {
     const doc = importBatches.find(item => matches(item, filter));

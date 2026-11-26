@@ -37,7 +37,7 @@ const standardCsv = require('./standardCsv');
 const wealthsimpleCsv = require('./wealthsimpleCsv');
 const questradeXlsx = require('./questradeXlsx');
 const sourceAccounts = require('./sourceAccount.service');
-const { runAtomicCommit } = require('./commit');
+const { runAtomicCommit, sourceLockKey } = require('./commit');
 const { matchRows, applyResolutions } = require('./matching');
 const transfers = require('./transfers');
 const { pairRows, enforcePairIntegrity } = require('./pairing');
@@ -789,6 +789,7 @@ async function computePreview(input) {
     format,
     file,
     portfolio,
+    sourceKey,
     resolvedSource,
     rows,
     counts,
@@ -926,8 +927,12 @@ async function commitImport(input) {
   return runAtomicCommit({
     portfolioId: input.portfolioId,
     extraLockPortfolioIds: lockPortfolioIds,
+    extraLockKeys: [sourceLockKey(rehearsal.sourceKey)],
     async prepare() {
       const preview = await computePreview(input);
+      if (preview.sourceKey !== rehearsal.sourceKey) {
+        throw businessError(409, 'PREVIEW_STALE', '来源账户已变化，请重新预览并确认', { reason: 'INPUT_CHANGED' });
+      }
       if (preview.transferPlan.lockPortfolioIds.some(id => !lockPortfolioIds.includes(id))) {
         throw businessError(409, 'PREVIEW_STALE', '划转对端已变化，请重新预览并确认', { reason: 'LEDGER_CHANGED' });
       }

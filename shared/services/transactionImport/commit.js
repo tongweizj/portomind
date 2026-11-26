@@ -2,6 +2,7 @@
 //
 // 1. 取锁：插入 ImportBatch{status:'committing', lockKey:'portfolio:<id>'}；
 //    部分唯一索引保证同组合并发确认只有一个成功，其余 409 IMPORT_IN_PROGRESS。
+//    同时取来源账户伴随锁 source:<key>（同一来源账户并发确认到不同组合互斥）；手动写入检查组合锁（assertPortfolioUnlocked）。
 // 2. 锁内重算预览并核对 token / 账本指纹（prepare），确保写入与确认一致。
 // 3. 新行以 status='pending' 写入（对所有读取方不可见，见 transaction/visibility.js）。
 //    更新（#95）：先把目标旧流水的原值写入 ImportBatch.updates（预写日志），再改写旧流水。
@@ -24,6 +25,18 @@ const ImportBatch = require('../../models/importBatch');
 const TransferLeg = require('../../models/transferLeg');
 
 const STALE_BATCH_MS = 10 * 60 * 1000;
+
+const portfolioLockKey = portfolioId => `portfolio:${portfolioId}`;
+const sourceLockKey = sourceKey => `source:${sourceKey}`;
+
+/**
+ * 手动新增 / 修改 / 删除流水前检查组合导入锁（代码审查 S3）：确认进行中（pending 写入到翻转之间）不接受手动写入，
+ * 避免手动写入绕过锁内的账本校验。只读检查，不取锁（残余窗口：检查与写入之间的毫秒级竞态）。
+ */
+async function assertPortfolioUnlocked(portfolioId) {
+  const busy = await ImportBatch.exists({ lockKey: portfolioLockKey(portfolioId), status: 'committing' });
+  if (busy) throw businessError(409, 'IMPORT_IN_PROGRESS', '该组合有导入正在确认，请稍后再试');
+}
 
 function businessError(status, code, message, details) {
   const error = new Error(message);
@@ -110,15 +123,20 @@ async function recoverStaleBatches(lockKey, now = Date.now()) {
  * @param {(preview, ctx) => Array<{rowKey, transactionId, set}>} [plan.buildUpdates]
  * @param {(preview, ctx) => object} plan.summarize
  * @param {string[]} [plan.extraLockPortfolioIds] TASK-099：一并加锁的对端组合
+ * @param {string[]} [plan.extraLockKeys] 其他伴随锁键（来源账户 source:<key>）
  * @param {(preview, ctx) => Array} [plan.claimLegs] TASK-099：要占用的暂存对端 id
  * @param {(preview, ctx) => Array<{rowKey, doc}>} [plan.buildStagedLegs] TASK-099：要暂存的先到一端
  */
 async function runAtomicCommit(plan) {
-  const lockKey = `portfolio:${plan.portfolioId}`;
-  const extraIds = [...new Set((plan.extraLockPortfolioIds || []).map(String))]
-    .filter(id => id !== String(plan.portfolioId)).sort();
+  const lockKey = portfolioLockKey(plan.portfolioId);
+  // 伴随锁：对端组合（TASK-099）+ 来源账户（代码审查 S3：外部编号按来源账户跨组合匹配，
+  // 同一来源账户并发确认到不同组合时须互斥，否则双方都看不到对方的 pending 行而重复入账）
+  const extraKeys = [...new Set([
+    ...(plan.extraLockPortfolioIds || []).map(String).filter(id => id !== String(plan.portfolioId)).map(portfolioLockKey),
+    ...(plan.extraLockKeys || [])
+  ])].sort();
   await recoverStaleBatches(lockKey);
-  for (const id of extraIds) await recoverStaleBatches(`portfolio:${id}`);
+  for (const key of extraKeys) await recoverStaleBatches(key);
 
   let batch;
   try {
@@ -129,13 +147,16 @@ async function runAtomicCommit(plan) {
     }
     throw error;
   }
-  for (const id of extraIds) {
+  for (const key of extraKeys) {
+    const ownerId = key.startsWith('portfolio:') ? key.slice('portfolio:'.length) : plan.portfolioId;
     try {
-      await ImportBatch.create({ portfolioId: id, status: 'committing', lockKey: `portfolio:${id}`, parentBatchId: batch._id });
+      await ImportBatch.create({ portfolioId: ownerId, status: 'committing', lockKey: key, parentBatchId: batch._id });
     } catch (error) {
-      await rollbackBatch(batch._id, [], 'counterpart lock busy');
+      await rollbackBatch(batch._id, [], 'companion lock busy');
       if (error.code === 11000) {
-        throw businessError(409, 'IMPORT_IN_PROGRESS', '划转对端组合有另一个导入正在确认，请稍后重新预览');
+        throw businessError(409, 'IMPORT_IN_PROGRESS', key.startsWith('portfolio:')
+          ? '划转对端组合有另一个导入正在确认，请稍后重新预览'
+          : '同一来源账户有另一个导入正在确认，请稍后重新预览');
       }
       throw error;
     }
@@ -234,4 +255,4 @@ async function runAtomicCommit(plan) {
   }
 }
 
-module.exports = { runAtomicCommit, recoverStaleBatches, rollbackBatch, STALE_BATCH_MS };
+module.exports = { runAtomicCommit, recoverStaleBatches, rollbackBatch, assertPortfolioUnlocked, sourceLockKey, STALE_BATCH_MS };

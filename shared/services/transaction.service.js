@@ -4,6 +4,7 @@ const Portfolio = require('../models/portfolio');
 const Asset = require('../models/asset');
 const { calculatePositions, replayDayKey } = require('./transaction/positionCalculator');
 const { visibleQuery } = require('./transaction/visibility');
+const { assertPortfolioUnlocked } = require('./transactionImport/commit');
 
 const WRITABLE_FIELDS = ['portfolioId', 'symbol', 'action', 'quantity', 'price', 'fee', 'date', 'notes'];
 const TRANSACTION_SORT = { date: -1, _id: -1 };
@@ -114,6 +115,7 @@ async function getTransactionById(id) {
 async function createTransaction(input) {
   const data = normalizeInput(input);
   const asset = await validateReferences(data);
+  await assertPortfolioUnlocked(data.portfolioId);
   const transaction = {
     ...data,
     assetType: asset.type,
@@ -140,6 +142,7 @@ async function updateTransaction(id, input) {
   }
   const data = normalizeInput(input, existing);
   const asset = await validateReferences(data);
+  await assertPortfolioUnlocked(existing.portfolioId);
   const transaction = {
     ...data,
     assetType: asset.type,
@@ -164,6 +167,7 @@ async function updateTransaction(id, input) {
 async function deleteTransaction(id) {
   const existing = await Transaction.findById(id).lean();
   if (!existing) throw businessError(404, 'TRANSACTION_NOT_FOUND', 'Transaction not found');
+  await assertPortfolioUnlocked(existing.portfolioId);
   const remaining = await Transaction.find(visibleQuery({
     portfolioId: existing.portfolioId,
     symbol: existing.symbol,
