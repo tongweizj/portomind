@@ -11,17 +11,21 @@ export const ACTION_TYPE = Object.freeze({
  * 取值必须与 shared/constants/transaction.constants.js 的 TRANSACTION_ACTIONS 同步（同 ASSET_* 双份规则）。
  * 两处使用点（组合内交易 Tab、「全部交易」聚合页）共用本表，杜绝再次出现「分红显示为卖出」的二元判断。
  * TASK-097：税款 / 利息 / 现金划入划出 / 独立费用为纯现金流水（目前仅经导入写入，不进持仓）。
+ * TASK-101：换汇（fx）两端各一条，按组号成对入账，同样仅经导入写入。
  */
 export const TRANSACTION_ACTIONS = Object.freeze([
   { value: 'buy', label: '买入' },
   { value: 'sell', label: '卖出' },
   { value: 'div_cash', label: '现金分红' },
   { value: 'div_reinvest', label: '分红再投' },
+  // TASK-098：拆股 / 合股（仅经流水导入写入；quantity 为带符号份额变动，无单价）
+  { value: 'split', label: '拆股' },
   { value: 'tax', label: '税款' },
   { value: 'interest', label: '利息' },
   { value: 'cash_in', label: '现金划入' },
   { value: 'cash_out', label: '现金划出' },
   { value: 'fee', label: '独立费用' },
+  { value: 'fx', label: '换汇' },
 ]);
 
 /**

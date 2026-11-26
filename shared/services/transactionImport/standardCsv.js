@@ -13,22 +13,23 @@ dayjs.extend(timezone);
 
 // 列顺序即模板表头顺序（snake_case 英文，便于用户借助 ChatGPT 转换其他券商报表）。
 const STANDARD_COLUMNS = Object.freeze([
-  { key: 'activity_type', label: '活动类型', description: 'buy / sell / div_reinvest / div_cash / tax / interest / cash_in / cash_out / fee（换汇、拆股、划转陆续开放）' },
+  { key: 'activity_type', label: '活动类型', description: 'buy / sell / div_reinvest / div_cash / tax / interest / cash_in / cash_out / fee / split / fx（划转陆续开放）' },
   { key: 'trade_date', label: '成交日期', description: 'YYYY-MM-DD' },
   { key: 'trade_time', label: '成交时间', description: 'HH:MM 或 HH:MM:SS；填写（含 00:00:00）即保留时刻精度' },
   { key: 'time_zone', label: '时区', description: 'IANA 时区名，如 America/Toronto、Asia/Shanghai；有成交时间而留空时，预览要求在页面确认北京或多伦多时区' },
   { key: 'settlement_date', label: '结算日', description: 'YYYY-MM-DD；留空表示未知' },
   { key: 'external_id', label: '原成交编号', description: '券商成交编号；没有则留空' },
   { key: 'source_row', label: '原行号', description: '原始报表中的行号；留空时预览使用上传文件行号' },
-  { key: 'pair_group', label: '配对组号', description: '换汇 / 划转两条流水的共同组号（成对流水不拆批）' },
+  { key: 'pair_group', label: '配对组号', description: '换汇 / 划转两条流水的共同组号（成对流水不拆批）；换汇未填时按同账户同日配对' },
   { key: 'account_number', label: '账号', description: '可选；多账户报表按账号拆分，只保存哈希与末 4 位' },
   { key: 'symbol', label: '标的代码', description: '如 VTI、XEQT.TO、510300；利息、现金划转、独立费用可留空' },
   { key: 'market', label: '市场', description: `${ASSET_MARKETS.join(' / ')}；代码无市场后缀时必填` },
-  { key: 'quantity', label: '数量', description: '正数；卖出可填负数（取绝对值）；现金类流水可留空' },
+  { key: 'quantity', label: '数量', description: '正数；卖出可填负数（取绝对值）；现金类流水可留空；拆股填带符号份额变动（拆股增加为正，合股减少为负）' },
   { key: 'unit_price', label: '单价', description: '大于 0；现金类流水可留空' },
   { key: 'cash_amount', label: '现金金额', description: '券商带符号现金净额（流出为负，流入为正）；现金类流水必填（现金分红可由数量×单价推算）；cash_in / cash_out / fee 方向由类型决定' },
   { key: 'cash_currency', label: '币种', description: `实际现金币种（可与资产币种不同）：${ASSET_CURRENCIES.join(' / ')}` },
   { key: 'commission', label: '佣金', description: '成交佣金绝对值；留空表示未知（不等于 0），明确为 0 请填 0；独立费用请单列 fee 行' },
+  { key: 'split_ratio', label: '拆股比例', description: '拆股新旧份额比，如 2:1（1 拆 2）、1:10（10 合 1）或 2；可留空，填写时须与拆股前持仓和份额变动一致' },
   { key: 'transfer_cost', label: '划转成本', description: '证券转入的承接成本（后续开放）' },
   { key: 'transfer_cost_currency', label: '划转成本币种', description: '后续开放' },
   { key: 'notes', label: '备注', description: '≤500 字' }
@@ -51,8 +52,11 @@ const ACTIVITY_RULES = Object.freeze({
   cash_in: { supported: true, kind: 'cash', action: 'cash_in', sign: '+', required: ['trade_date', 'cash_amount', 'cash_currency'] },
   cash_out: { supported: true, kind: 'cash', action: 'cash_out', sign: '-', required: ['trade_date', 'cash_amount', 'cash_currency'] },
   fee: { supported: true, kind: 'cash', action: 'fee', sign: '-', required: ['trade_date', 'cash_amount', 'cash_currency'] },
-  fx: { supported: false },
-  split: { supported: false },
+  // 换汇（TASK-101）：每端一行，金额保留券商符号（卖出端为负、买入端为正），币种为该端币种；无标的。
+  // 两端以 pair_group 关联；未填组号时由预览按同账户同日配对（见 pairing.js）。
+  fx: { supported: true, kind: 'cash', action: 'fx', noSymbol: true, required: ['trade_date', 'cash_amount', 'cash_currency'] },
+  // 拆股（TASK-098）：单价 / 币种 / 佣金可留空；份额变动带符号
+  split: { supported: true, kind: 'trade', action: 'split', required: ['trade_date', 'symbol', 'quantity'] },
   transfer_in: { supported: false },
   transfer_out: { supported: false }
 });
@@ -119,16 +123,28 @@ const TEMPLATE_EXAMPLES = [
     cash_currency: 'USD', commission: '0', notes: '示例：卖出（仅日期精度，无原成交编号）'
   },
   {
-    activity_type: 'div_cash', trade_date: '2026-03-20', source_row: '4', symbol: 'VTI', market: 'US',
+    activity_type: 'split', trade_date: '2026-03-02', source_row: '4', symbol: 'VTI', market: 'US',
+    quantity: '6', split_ratio: '2:1', notes: '示例：1 拆 2（份额变动 = 拆股前 6 股 ×(2-1)；单价、佣金留空）'
+  },
+  {
+    activity_type: 'div_cash', trade_date: '2026-03-20', source_row: '5', symbol: 'VTI', market: 'US',
     cash_amount: '4.37', cash_currency: 'USD', notes: '示例：现金分红（数量、单价可空）'
   },
   {
-    activity_type: 'tax', trade_date: '2026-03-20', source_row: '5', symbol: 'VTI', market: 'US',
+    activity_type: 'tax', trade_date: '2026-03-20', source_row: '6', symbol: 'VTI', market: 'US',
     cash_amount: '-0.66', cash_currency: 'USD', notes: '示例：股息预扣税（独立一行）'
   },
   {
-    activity_type: 'interest', trade_date: '2026-03-31', source_row: '6', cash_amount: '0.12',
+    activity_type: 'interest', trade_date: '2026-03-31', source_row: '7', cash_amount: '0.12',
     cash_currency: 'CAD', notes: '示例：利息（无标的）'
+  },
+  {
+    activity_type: 'fx', trade_date: '2026-04-02', source_row: '8', pair_group: 'FX-1', cash_amount: '-1370.00',
+    cash_currency: 'CAD', notes: '示例：换汇卖出端（两端同组号，各记本币种带符号金额）'
+  },
+  {
+    activity_type: 'fx', trade_date: '2026-04-02', source_row: '9', pair_group: 'FX-1', cash_amount: '1000.00',
+    cash_currency: 'USD', notes: '示例：换汇买入端'
   }
 ];
 
@@ -210,6 +226,9 @@ function normalizeRow(fields, { defaultTimeZone } = {}) {
 
   const missing = rule.required.filter(key => String(fields[key] ?? '').trim() === '');
   if (missing.length) return { error: rowError('MISSING_FIELD', `缺少关键字段：${missing.join(', ')}`) };
+  if (rule.noSymbol && String(fields.symbol ?? '').trim() !== '') {
+    return { error: rowError('INVALID_FIELD', `活动类型 ${activity} 不填标的（symbol）`) };
+  }
 
   const tradeDate = String(fields.trade_date).trim();
   if (!isDate(tradeDate)) return { error: rowError('INVALID_DATE', `成交日期格式无效：${tradeDate}（应为 YYYY-MM-DD）`) };
@@ -246,6 +265,10 @@ function normalizeRow(fields, { defaultTimeZone } = {}) {
   const settlementText = String(fields.settlement_date ?? '').trim();
   if (settlementText && !isDate(settlementText)) {
     return { error: rowError('INVALID_DATE', `结算日格式无效：${settlementText}`) };
+  }
+
+  if (rule.action === 'split') {
+    return normalizeSplit(fields, { activity, date, dateKind, timeZoneName, timeZoneSource, tradeDate, localTime, settlementText });
   }
 
   const quantity = parseNumber(fields.quantity);
@@ -288,6 +311,71 @@ function normalizeRow(fields, { defaultTimeZone } = {}) {
       settlementStatus: settlementText ? 'known' : 'unknown',
       ...amounts,
       cashCurrency,
+      externalId: String(fields.external_id ?? '').trim() || null,
+      sourceRow: String(fields.source_row ?? '').trim() || null,
+      pairGroup: String(fields.pair_group ?? '').trim() || null,
+      accountNumber: String(fields.account_number ?? '').trim() || null,
+      notes
+    }
+  };
+}
+
+// 拆股比例：「新:旧」（2:1、1:10，也接受 /）或单个数字（新 / 旧）。
+function parseSplitRatio(value) {
+  const text = String(value ?? '').trim();
+  if (text === '') return { blank: true };
+  const pair = text.match(/^(\d+(?:\.\d+)?)\s*[:/]\s*(\d+(?:\.\d+)?)$/);
+  const ratio = pair ? Number(pair[1]) / Number(pair[2]) : (/^\d+(?:\.\d+)?$/.test(text) ? Number(text) : NaN);
+  return Number.isFinite(ratio) && ratio > 0 && ratio !== 1 ? { value: ratio } : { invalid: true };
+}
+
+/** 拆股行（TASK-098）：份额变动带符号且非零；不记单价；佣金只能留空或为 0；币种可留空（填写时须与资产币种一致）。 */
+function normalizeSplit(fields, context) {
+  const quantity = parseNumber(fields.quantity);
+  if (quantity.invalid || !quantity.value) return { error: rowError('INVALID_NUMBER', `拆股份额变动必须为非零数字：${fields.quantity}`) };
+  const ratio = parseSplitRatio(fields.split_ratio);
+  if (ratio.invalid) return { error: rowError('INVALID_NUMBER', `拆股比例无效：${fields.split_ratio}（应为 2:1、1:10 或正数）`) };
+  if (ratio.value !== undefined && (ratio.value > 1) !== (quantity.value > 0)) {
+    return { error: rowError('SPLIT_RATIO_CONFLICT', `拆股比例 ${fields.split_ratio} 与份额变动 ${fields.quantity} 方向不一致`) };
+  }
+  const commission = parseNumber(fields.commission);
+  if (commission.invalid || (commission.value !== undefined && commission.value !== 0)) {
+    return { error: rowError('INVALID_NUMBER', `拆股不应有佣金：${fields.commission}`) };
+  }
+  const cashCurrency = String(fields.cash_currency ?? '').trim().toUpperCase() || null;
+  if (cashCurrency && !ASSET_CURRENCIES.includes(cashCurrency)) {
+    return { error: rowError('INVALID_CURRENCY', `币种无效：${fields.cash_currency}`) };
+  }
+  const market = String(fields.market ?? '').trim().toUpperCase();
+  if (market && !ASSET_MARKETS.includes(market)) return { error: rowError('INVALID_MARKET', `市场无效：${fields.market}`) };
+  const notes = String(fields.notes ?? '').trim();
+  if (notes.length > 500) return { error: rowError('INVALID_NOTES', '备注超过 500 字') };
+  const { activity, date, dateKind, timeZoneName, timeZoneSource, tradeDate, localTime, settlementText } = context;
+  return {
+    candidate: {
+      activityType: activity,
+      action: 'split',
+      kind: 'trade',
+      rawSymbol: String(fields.symbol).trim(),
+      market: market || null,
+      date,
+      dateKind,
+      timeZone: timeZoneName,
+      timeZoneSource,
+      needsTimeZone: dateKind === 'datetime' && !timeZoneName,
+      localDate: tradeDate,
+      localTime,
+      settlementDate: settlementText ? new Date(`${settlementText}T00:00:00.000Z`) : null,
+      settlementStatus: settlementText ? 'known' : 'unknown',
+      quantity: quantity.value,
+      price: null,
+      splitRatio: ratio.value ?? null,
+      grossAmount: null,
+      fee: 0,
+      feeSource: commission.blank ? undefined : 'broker',
+      cashAmount: null,
+      cashCurrency,
+      cashAmountSource: null,
       externalId: String(fields.external_id ?? '').trim() || null,
       sourceRow: String(fields.source_row ?? '').trim() || null,
       pairGroup: String(fields.pair_group ?? '').trim() || null,

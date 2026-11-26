@@ -20,6 +20,7 @@ import {
   previewImport,
 } from '../../services/transactionImport.service';
 import ImportMatchResolution from './ImportMatchResolution';
+import { formatShareChange, formatSplitRatio } from '../../utils/splitDisplay';
 
 const DISPOSITION_LABELS = {
   add: '新增', update: '更新', skip: '跳过', review: '待核对', error: '错误', deferred: '下一批',
@@ -39,10 +40,18 @@ const TIME_ZONE_OPTIONS = [
   { value: 'America/Toronto', label: '多伦多（America/Toronto）' },
   { value: 'Asia/Shanghai', label: '北京（Asia/Shanghai）' },
 ];
+const PAIR_SOURCE_LABELS = { explicit: '按组号配对', user: '已指定配对', suggested: '建议配对（确认导入即采纳）' };
+
 const ORDER_LABELS = {
   cross_report: { before: '在已有流水之前', after: '在已有流水之后' },
   mixed_precision: { before: '在带时刻成交之前', after: '在带时刻成交之后' },
 };
+
+// 预览金额 / 份额：只做显示取整（不参与计算）；缺值显示「—」
+function formatAmount(value) {
+  if (value == null || !Number.isFinite(Number(value))) return '—';
+  return String(Number(Number(value).toFixed(6)));
+}
 
 function formatTradeTime(c) {
   if (!c) return '—';
@@ -428,9 +437,9 @@ export default function ImportTransactions() {
                       <td className="px-2 py-2 whitespace-nowrap">
                         {c ? (c.settlementStatus === 'known' ? formatDate(c.settlementDate, 'date') : '未知') : '—'}
                       </td>
-                      <td className="px-2 py-2 text-right">{c?.quantity ?? '—'}</td>
-                      <td className="px-2 py-2 text-right" title={c?.cashFxRate ? `报表单价为现金币种，已按报表汇率 ${c.cashFxRate} 换算为资产币种` : undefined}>
-                        {c?.price ?? '—'}
+                      <td className="px-2 py-2 text-right">{c?.action === 'split' ? formatShareChange(c.quantity) : (c?.quantity ?? '—')}</td>
+                      <td className="px-2 py-2 text-right whitespace-nowrap" title={c?.cashFxRate ? `报表单价为现金币种，已按报表汇率 ${c.cashFxRate} 换算为资产币种` : undefined}>
+                        {c?.action === 'split' ? formatSplitRatio(c.splitRatio) : (c?.price ?? '—')}
                         {c?.cashFxRate ? <div className="text-xs text-gray-500">汇率 {c.cashFxRate}</div> : null}
                       </td>
                       <td className="px-2 py-2 text-right whitespace-nowrap">
@@ -446,6 +455,13 @@ export default function ImportTransactions() {
                       <td className="px-2 py-2">{c?.externalId || '—'}</td>
                       <td className="px-2 py-2 text-xs">
                         {row.reason && <div className="text-gray-700">{row.reason}</div>}
+                        {row.splitEffect && (
+                          <div className="text-gray-600">
+                            拆股前 {formatAmount(row.splitEffect.quantityBefore)} 股 @ {formatAmount(row.splitEffect.avgCostBefore)}
+                            {' → '}拆股后 {formatAmount(row.splitEffect.quantityAfter)} 股 @ {formatAmount(row.splitEffect.avgCostAfter)}
+                            （总成本 {formatAmount(row.splitEffect.remainingCost)} 不变）
+                          </div>
+                        )}
                         {row.options.includes('confirmZeroFee') && (
                           <div className="mt-1 flex flex-wrap items-center gap-2">
                             <input type="number" min="0" step="any" placeholder="补填佣金"
@@ -472,6 +488,24 @@ export default function ImportTransactions() {
                         {row.orderResolved && !row.options.includes('order') && (
                           <div className="text-gray-500">已确认顺序：{row.orderResolved === 'before' ? '之前' : '之后'}</div>
                         )}
+                        {/* TASK-101：换汇两端配对。配对与候选全部由服务端给出，页面只展示并回传用户指定的另一端 */}
+                        {row.pair && (
+                          <div className="text-gray-500">
+                            {PAIR_SOURCE_LABELS[row.pair.source] || '已配对'}：与第 {row.pair.partnerRowNumber} 行共同入账
+                          </div>
+                        )}
+                        {row.options.includes('pairWith') && (
+                          <select value={resolution.pairWith || ''} aria-label="指定换汇另一端"
+                            onChange={e => setResolution(row.rowKey, e.target.value ? { pairWith: e.target.value } : null)}
+                            className="mt-1 rounded border bg-white px-1 py-0.5">
+                            <option value="">指定另一端…</option>
+                            {row.pairCandidates.map(item => (
+                              <option key={item.rowKey} value={item.rowKey}>
+                                第 {item.rowNumber} 行 · {item.date || '—'} · {item.cashAmount ?? '—'} {item.cashCurrency || ''}
+                              </option>
+                            ))}
+                          </select>
+                        )}
                         <ImportMatchResolution row={row} resolution={resolution}
                           onChange={value => setResolution(row.rowKey, value)} />
                       </td>
@@ -481,6 +515,36 @@ export default function ImportTransactions() {
               </tbody>
             </table>
           </div>
+
+          {preview.positionsAfter?.length > 0 && (
+            <div className="space-y-1 text-sm">
+              <p className="font-medium text-gray-800">确认后持仓（本次涉及的标的，按原币种）</p>
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b text-left text-gray-500">
+                    <th className="px-2 py-1">代码</th>
+                    <th className="px-2 py-1 text-right">份额</th>
+                    <th className="px-2 py-1 text-right">总成本</th>
+                    <th className="px-2 py-1 text-right">单位成本</th>
+                    <th className="px-2 py-1 text-right">已实现盈亏</th>
+                    <th className="px-2 py-1">币种</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {preview.positionsAfter.map(item => (
+                    <tr key={item.symbol} className="border-b">
+                      <td className="px-2 py-1">{item.symbol}</td>
+                      <td className="px-2 py-1 text-right">{formatAmount(item.quantity)}</td>
+                      <td className="px-2 py-1 text-right">{formatAmount(item.remainingCost)}</td>
+                      <td className="px-2 py-1 text-right">{formatAmount(item.avgCost)}</td>
+                      <td className="px-2 py-1 text-right">{formatAmount(item.realizedPnl)}</td>
+                      <td className="px-2 py-1">{item.currency || '—'}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
 
           <div className="flex items-center gap-3">
             <button type="button" onClick={handleCommit} disabled={!canCommit}
