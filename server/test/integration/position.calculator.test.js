@@ -187,3 +187,79 @@ test('历史数据库适配层使用 portfolioId、timestamp 和 price', async (
   assert.equal(history[0].positions[0].quantity, 10);
   assert.equal(history[0].positions[0].latestPrice, 120);
 });
+
+// ─────────────────────────────────────────────────────────────
+// TASK-096（#96）：重放顺序 = (UTC 交易日, orderRank, date, sequence, _id)
+// ─────────────────────────────────────────────────────────────
+
+const replayOrderCases = [
+  {
+    name: '同一时刻按 sequence（原行顺序）而非 _id 重放：先买后卖合法',
+    transactions: [
+      { _id: 'b', sequence: 0, action: 'buy', quantity: 10, price: 100, date: '2026-03-02T00:00:00Z' },
+      { _id: 'a', sequence: 1, action: 'sell', quantity: 10, price: 110, date: '2026-03-02T00:00:00Z' },
+      { _id: 'c', sequence: 2, action: 'buy', quantity: 5, price: 120, date: '2026-03-02T00:00:00Z' }
+    ],
+    expected: { quantity: 5, remainingCost: 600 }
+  },
+  {
+    name: '同一时刻手动流水（无批次）排在导入流水之前，不受 _id 字面顺序影响',
+    transactions: [
+      { _id: 'ffff', action: 'buy', quantity: 10, price: 100, date: '2026-03-02T00:00:00Z' },
+      { _id: '0001', sequence: 0, source: { importBatchId: 'aaaa' }, action: 'sell', quantity: 4, price: 120, date: '2026-03-02T00:00:00Z' }
+    ],
+    expected: { quantity: 6, remainingCost: 600 }
+  },
+  {
+    name: '同一时刻不同导入批次按批次先后，再按批内 sequence',
+    transactions: [
+      { _id: '0001', sequence: 0, source: { importBatchId: 'b1' }, action: 'sell', quantity: 4, price: 120, date: '2026-03-02T00:00:00Z' },
+      { _id: '0002', sequence: 5, source: { importBatchId: 'b0' }, action: 'buy', quantity: 10, price: 100, date: '2026-03-02T00:00:00Z' }
+    ],
+    expected: { quantity: 6, remainingCost: 600 }
+  },
+  {
+    // 回归（#95 发现）：localeCompare 把 '~' 排在十六进制之前，导致同一时刻导入卖出被排到已有买入之前而误报超卖
+    name: '预览行（_id 以 ~ 开头）排在同一时刻已入账 ObjectId 流水之后',
+    transactions: [
+      { _id: '~000000', action: 'sell', quantity: 4, price: 120, date: '2026-03-02T15:00:00Z' },
+      { _id: '64b000000000000000000e01', action: 'buy', quantity: 10, price: 100, date: '2026-03-02T15:00:00Z' }
+    ],
+    expected: { quantity: 6, remainingCost: 600 }
+  },
+  {
+    name: 'orderRank 把仅日期流水排在同日带时刻流水之后（不改写成交时刻）',
+    transactions: [
+      { _id: '0001', action: 'buy', quantity: 10, price: 100, date: '2026-03-02T15:00:00Z' },
+      { _id: '0002', action: 'buy', quantity: 10, price: 200, date: '2026-03-02T00:00:00Z', dateKind: 'date', orderRank: 1 },
+      { _id: '0003', action: 'sell', quantity: 15, price: 150, date: '2026-03-02T16:00:00Z' }
+    ],
+    // 无 orderRank：200 买入 → 100 买入 → 卖出 15 合法；orderRank=1：卖出发生在 200 买入之前 → 超卖
+    throws: 'INSUFFICIENT_POSITION'
+  },
+  {
+    name: 'orderRank 只在同一 UTC 交易日内生效，不跨日',
+    transactions: [
+      { _id: '0001', action: 'buy', quantity: 10, price: 100, date: '2026-03-01T15:00:00Z', orderRank: 5 },
+      { _id: '0002', action: 'sell', quantity: 10, price: 100, date: '2026-03-02T00:00:00Z', orderRank: -5 }
+    ],
+    expected: null
+  }
+];
+
+for (const scenario of replayOrderCases) {
+  test(`持仓表格用例（重放顺序）：${scenario.name}`, () => {
+    const rows = scenario.transactions.map(row => ({
+      portfolioId: '64b000000000000000000010', symbol: 'VTI', assetType: 'etf', market: 'US', currency: 'USD',
+      ...row, date: new Date(row.date)
+    }));
+    if (scenario.throws) {
+      assert.throws(() => calculatePositions(rows), error => error.code === scenario.throws);
+      return;
+    }
+    const positions = calculatePositions(rows);
+    if (scenario.expected === null) { assert.equal(positions.length, 0); return; }
+    closeTo(positions[0].quantity, scenario.expected.quantity, 'quantity');
+    closeTo(positions[0].remainingCost, scenario.expected.remainingCost, 'remainingCost');
+  });
+}
