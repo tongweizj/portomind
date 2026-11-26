@@ -23,6 +23,7 @@ const valuationRoutes = require('./routes/valuation.routes');
 const cronStatusRoutes = require('./routes/cron-status.routes');
 const opsCenterRoutes = require('./routes/opsCenter.routes');
 const opsTaskRoutes = require('./routes/opsTask.routes');
+const sourceAccountRoutes = require('./routes/sourceAccount.routes');
 
 // ---------------------------------------------------------------------------
 // CORS 白名单（TASK-058 / FS §6 U1-R10）
@@ -97,7 +98,14 @@ app.use(cors({
   credentials: true
 }));
 app.use(cookieParser());
-app.use(bodyParser.json());
+// TASK-094：流水导入以 JSON 携带完整报表内容（500 行确认 / 完整预览），默认 100kb 不够；
+// 只对 /api/transactions/import 放宽到 2mb，其余路由保持默认上限。生产 nginx 需同步 client_max_body_size。
+const IMPORT_BODY_LIMIT = '2mb';
+const importJsonParser = bodyParser.json({ limit: IMPORT_BODY_LIMIT });
+const defaultJsonParser = bodyParser.json();
+app.use((req, res, next) => (
+  req.path.startsWith('/api/transactions/import') ? importJsonParser : defaultJsonParser
+)(req, res, next));
 // 不挂 urlencoded：FS §8 要求「仅接受 application/json」（同时消除表单类 CSRF 面）。
 
 app.get('/', (req, res) => success(res, { message: 'Welcome to Portomind API.' }));
@@ -112,6 +120,8 @@ app.use('/api', requireAuth);
 
 app.use('/api/transactions', transactionRoutes);
 app.use('/api/portfolios', portfolioRoutes);
+// TASK-094：来源账户（列表 / 改别名）
+app.use('/api/source-accounts', sourceAccountRoutes);
 app.use('/api/assets', assetRoutes);
 app.use('/api/logs', logsRouter);
 app.use('/api/rebalance', rebalanceRecordRoutes);

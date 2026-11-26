@@ -41,6 +41,8 @@ const Asset = require('@portomind/shared/models/asset');
 | **TaskRun** | 定时任务运行记录 | `{taskName, runKey}`；活跃 `lockKey` 部分唯一 | [PL-0](../product/lines/PL-0-platform-foundation.md) |
 | **User** | 登录账号（单租户多账号；`admin`/`member`） | `username` | [PL-0](../product/lines/PL-0-platform-foundation.md)（认证内核） |
 | **Session** | 服务端会话（绝对 7 天 TTL，存 Mongo） | `sid` | [PL-0](../product/lines/PL-0-platform-foundation.md)（认证内核） |
+| **SourceAccount** | 流水导入来源账户（TASK-094） | `{broker, accountKeyHash}`（部分唯一） | [PL-1](../product/lines/PL-1-ledger.md) |
+| **ImportBatch** | 导入整批提交的锁与补偿记录（非长期历史） | 活跃 `lockKey` 部分唯一 | [PL-1](../product/lines/PL-1-ledger.md) |
 
 ---
 
@@ -137,9 +139,18 @@ AlertRule ──_id──> AlertEvent.ruleId（**可空**：再平衡通知没�
 | `fee` | Number，= `0`，min 0。买入计入成本、卖出从净得扣除 |
 | `date` | Date，required，= now。**业务日期**，决定持仓重放的顺序 |
 | `notes` | String，trim，≤500 |
+| `sourceAccountId` | ObjectId → SourceAccount，可选（TASK-094：导入流水的来源账户） |
+| `source` | 子文档，可选：`{kind:'import', format, fileName, rowNumber, rowNumberKind:'original'\|'file', externalId(券商原成交编号，无则 null，从不合成), importBatchId, rawHash}` |
+| `dateKind` | `datetime`（保留明确时刻，含午夜）/ `date`（仅日期，存当日 UTC 零点，同手动录入）；手动录入为空 |
+| `timeZone` / `settlementDate` | 成交时刻所用 IANA 时区；券商结算日（空 = 未知） |
+| `cashAmount` / `cashCurrency` / `cashAmountSource` | 券商带符号现金净额、实际币种、来源（`broker`/`derived`） |
+| `feeSource` | `broker`/`derived`/`user`/`confirmed_zero`（佣金缺失不按 0 处理，需推算、补填或明确确认） |
+| `grossAmount` | 数量 × 单价（无编号成交匹配字段，不含佣金与净额） |
+| `pairGroupId` / `sequence` | 成对流水组号；同一报表内原行顺序 |
+| `status` | `pending`/`committed`，仅导入写入。`pending` 行对全部读取方不可见（统一经 `shared/services/transaction/visibility.js`），手动录入与旧数据无此字段 |
 | `createdAt` / `updatedAt` | 由 `timestamps: true` 自动维护 |
 
-- 索引：`{portfolioId: 1, date: -1, _id: -1}`（组合内倒序列表）、`{portfolioId: 1, symbol: 1, date: 1, _id: 1}`（组合内单标的重放）。
+- 索引：`{portfolioId: 1, date: -1, _id: -1}`（组合内倒序列表）、`{portfolioId: 1, symbol: 1, date: 1, _id: 1}`（组合内单标的重放）；TASK-094 新增部分索引 `{sourceAccountId, source.externalId}`（**非唯一**：跨组合同编号须可被发现）、`{sourceAccountId, source.rawHash}`、`{source.importBatchId}`。
 - **无唯一索引**：允许同一 `(portfolioId, symbol, date, action, quantity, price)` 重复落库。CSV 导入的幂等**不靠数据库约束**，靠业务层判重（当前实现有缺陷，见 §5.2）。
 - `action` 语义：`div_cash` 进现金不进持仓；`div_reinvest` 转增持仓且成本含费。
 
@@ -324,6 +335,32 @@ AlertRule ──_id──> AlertEvent.ruleId（**可空**：再平衡通知没�
 - Cookie：`httpOnly` + `SameSite=Lax` + `Path=/` + 生产 `Secure` + `maxAge=TTL`（`COOKIE_SECURE` 可覆盖）。
 
 ---
+
+### 4.13 SourceAccount（`shared/models/sourceAccount.js`，TASK-094）
+
+| 字段 | 定义 |
+|---|---|
+| `broker` | enum `wealthsimple`/`questrade`/`other`（与 client `SOURCE_BROKERS` 同步） |
+| `accountKeyHash` | `sha256(broker + ':' + 规范化账号)`；**不存完整账号**。无账号的来源为空 |
+| `accountKeyLast4` | 账号末 4 位，仅展示 |
+| `alias` | 用户别名，必填，≤60，可改，**不参与身份识别** |
+| `accountType` | 报表中的账户类型（可选） |
+| `portfolioIds` | 曾导入过的组合（信息记录；一个账户可关联多个组合，每笔流水仍只属一个组合） |
+
+- 唯一索引：`{broker, accountKeyHash}`（`partialFilterExpression: accountKeyHash 为字符串`）。同账号跨批、跨组合识别为同一来源。
+
+### 4.14 ImportBatch（`shared/models/importBatch.js`，TASK-094）
+
+| 字段 | 定义 |
+|---|---|
+| `portfolioId` / `sourceAccountId` | 目标组合 / 来源账户 |
+| `status` | `committing` → `committed` 或 `rolled_back` |
+| `lockKey` | `portfolio:<id>`；仅 `committing` 期间存在，终态 `$unset` |
+| `previewToken` / `ledgerFingerprint` | 本次确认核对过的预览凭据 |
+| `counts` / `updates` / `error` | 当次结果计数；更新前原值（回滚恢复）；失败原因 |
+
+- 部分唯一索引 `{lockKey}`（`status:'committing'`）：同组合并发确认只有一个成功。
+- 整批写入：新行先以 `status:'pending'` 写入，单语句翻转为 `committed`；失败即删除本批 pending 行并标 `rolled_back`；超过 10 分钟仍为 `committing` 的批次在下一次确认前回收。单机 MongoDB 无多文档事务，故采用应用层方案。
 
 ## 5. 已知契约缺口（改之前先读这一节）
 

@@ -177,9 +177,11 @@ test('历史数据库适配层使用 portfolioId、timestamp 和 price', async (
   };
 
   const history = await getHistory('64b000000000000000000010', 'vti', 'day');
+  // TASK-094：pending（导入未翻转）行对历史快照不可见
   assert.deepEqual(transactionQuery, {
     portfolioId: '64b000000000000000000010',
-    symbol: 'VTI'
+    symbol: 'VTI',
+    status: { $ne: 'pending' }
   });
   assert.deepEqual(priceQuery, { symbol: { $in: ['VTI'] } });
   assert.equal(history[0].positions[0].quantity, 10);

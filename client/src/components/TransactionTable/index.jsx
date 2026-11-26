@@ -22,6 +22,7 @@ const COLUMN_LABELS = {
   quantity: '份额',
   price: '价格',
   portfolio: '组合',
+  source: '来源',
   operations: '操作',
 };
 
@@ -31,6 +32,7 @@ const COLUMN_LABELS = {
  * @param {string[]} [props.columns]              展示字段（默认 日期/代码/类型/证券类型/份额/价格）
  * @param {boolean} [props.showPortfolio]         显示「组合」列（聚合页 true，组合内 false）
  * @param {Array} [props.portfolios]              showPortfolio 时用于按 _id 查组合名
+ * @param {Array} [props.sourceAccounts]          columns 含 source 时按 sourceAccountId 查来源账户别名（TASK-094）
  * @param {(tx:Object)=>void} [props.onEdit]      提供则渲染「编辑」（组合内）
  * @param {(tx:Object)=>void} [props.onDelete]    提供则渲染「删除」（组合内）
  * @param {(tx:Object)=>void} [props.onViewPortfolio] 提供则把组合名渲染成跳回组合交易 Tab 的链接
@@ -41,6 +43,7 @@ export function TransactionTable({
   columns = DEFAULT_COLUMNS,
   showPortfolio = false,
   portfolios = [],
+  sourceAccounts = [],
   onEdit,
   onDelete,
   onViewPortfolio,
@@ -55,6 +58,7 @@ export function TransactionTable({
   ];
 
   const portfolioNames = new Map(portfolios.map(p => [String(p._id), p.name]));
+  const sourceAliases = new Map(sourceAccounts.map(a => [String(a.id), a.alias]));
 
   const renderCell = (tx, col) => {
     switch (col) {
@@ -81,6 +85,14 @@ export function TransactionTable({
             {name}
           </Link>
         );
+      }
+      case 'source': {
+        // TASK-094：导入流水的来源追溯（来源账户 · 原行号 · 原成交编号）；手动录入显示「手动」
+        if (!tx.source || tx.source.kind !== 'import') return '手动';
+        const parts = [sourceAliases.get(String(tx.sourceAccountId)) || '导入'];
+        if (tx.source.rowNumber) parts.push(`${tx.source.rowNumberKind === 'original' ? '原行' : '文件行'} ${tx.source.rowNumber}`);
+        if (tx.source.externalId) parts.push(`#${tx.source.externalId}`);
+        return <span title={tx.source.fileName || ''}>{parts.join(' · ')}</span>;
       }
       case 'operations':
         return (

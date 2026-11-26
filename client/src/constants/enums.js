@@ -29,6 +29,16 @@ export const TRANSACTION_ACTION_LABELS = Object.freeze(
   Object.fromEntries(TRANSACTION_ACTIONS.map(({ value, label }) => [value, label]))
 );
 
+/**
+ * 流水导入来源券商（TASK-094）。取值必须与 shared/constants/import.constants.js 的
+ * SOURCE_BROKERS 同步（同 ASSET_* 双份规则）：改一处必须改另一处。
+ */
+export const SOURCE_BROKERS = Object.freeze([
+  { value: 'wealthsimple', label: 'Wealthsimple' },
+  { value: 'questrade', label: 'Questrade' },
+  { value: 'other', label: '其他券商' },
+]);
+
 export const ASSET_TYPES = Object.freeze([
   { value: 'stock', label: '股票' },
   { value: 'etf', label: 'ETF' },
