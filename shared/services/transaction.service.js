@@ -3,7 +3,7 @@ const Transaction = require('../models/transaction');
 const Portfolio = require('../models/portfolio');
 const Asset = require('../models/asset');
 const { calculatePositions, localTradeDay } = require('./transaction/positionCalculator');
-const { visibleQuery } = require('./transaction/visibility');
+const { visibleQuery, isVisible } = require('./transaction/visibility');
 const { assertPortfolioUnlocked } = require('./transactionImport/commit');
 
 const WRITABLE_FIELDS = ['portfolioId', 'symbol', 'action', 'quantity', 'price', 'fee', 'date', 'notes'];
@@ -109,7 +109,8 @@ function getTransactionsByPortfolio(portfolioId, options = {}) {
 }
 
 async function getTransactionById(id) {
-  return Transaction.findById(id);
+  const transaction = await Transaction.findById(id);
+  return isVisible(transaction) ? transaction : null;
 }
 
 async function createTransaction(input) {
@@ -128,7 +129,7 @@ async function createTransaction(input) {
 
 async function updateTransaction(id, input) {
   const existing = await Transaction.findById(id).lean();
-  if (!existing) throw businessError(404, 'TRANSACTION_NOT_FOUND', 'Transaction not found');
+  if (!isVisible(existing)) throw businessError(404, 'TRANSACTION_NOT_FOUND', 'Transaction not found');
   // M-2（TASK-047）：归属不可变，由数据层保证，不依赖界面。
   // 必须在 normalizeInput 合并入参「之前」比较：之后 existing 已被入参覆盖。
   // 只拒「值不一致」，不拒「字段出现」——编辑页每次提交都会携带该字段（卡内 R-1b）。
@@ -186,7 +187,7 @@ async function pairedLegsOf(transaction) {
  */
 async function deleteTransaction(id) {
   const existing = await Transaction.findById(id).lean();
-  if (!existing) throw businessError(404, 'TRANSACTION_NOT_FOUND', 'Transaction not found');
+  if (!isVisible(existing)) throw businessError(404, 'TRANSACTION_NOT_FOUND', 'Transaction not found');
   const legs = await pairedLegsOf(existing);
   const legIds = legs.map(leg => String(leg._id));
   for (const portfolioId of new Set(legs.map(leg => String(leg.portfolioId)))) await assertPortfolioUnlocked(portfolioId);

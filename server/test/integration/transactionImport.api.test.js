@@ -483,3 +483,17 @@ test('S9 旧版 POST /api/transactions/import 已移除：404', async () => {
   });
   assert.equal(response.status, 404, JSON.stringify(response.body));
 });
+
+// 代码审查 T6：按 id 读取 / 编辑 / 删除同样只看已入账流水（pending 行不可见）
+test('T6 导入未翻转的 pending 行：按 id 读取、编辑、删除均 404', async (t) => {
+  const world = freshWorld(t);
+  const pendingId = '64b0000000000000000f0001';
+  world.transactions.push({
+    _id: pendingId, portfolioId: PORTFOLIO_A, symbol: 'VTI.US', assetType: 'etf', market: 'US', currency: 'USD',
+    action: 'buy', quantity: 1, price: 100, fee: 0, date: new Date('2026-01-05T00:00:00Z'), status: 'pending'
+  });
+  assert.equal((await call('GET', `/api/transactions/${pendingId}`)).status, 404);
+  assert.equal((await call('PUT', `/api/transactions/${pendingId}`, { quantity: 2 })).status, 404);
+  assert.equal((await call('DELETE', `/api/transactions/${pendingId}`)).status, 404);
+  assert.equal(world.transactions.length, 1);
+});

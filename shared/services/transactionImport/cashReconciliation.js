@@ -18,7 +18,7 @@ const SourceAccount = require('../../models/sourceAccount');
 const ImportBatch = require('../../models/importBatch');
 const { ASSET_CURRENCIES } = require('../../constants/asset.constants');
 const { CASH_ACTIONS, PAIRED_ACTIONS } = require('../../constants/transaction.constants');
-const { visibleQuery } = require('../transaction/visibility');
+const { visibleQuery, pendingQuery } = require('../transaction/visibility');
 const { toView } = require('./sourceAccount.service');
 const { businessError } = require('./common');
 
@@ -144,7 +144,7 @@ async function reconcileCash(sourceAccountId, input) {
 
   const [visible, pending, batches] = await Promise.all([
     Transaction.find(visibleQuery({ sourceAccountId })).lean(),
-    Transaction.find({ sourceAccountId, status: 'pending' }).lean(),
+    Transaction.find(pendingQuery({ sourceAccountId })).lean(),
     ImportBatch.find({ sourceAccountId }).lean()
   ]);
 
