@@ -1,7 +1,8 @@
 import { Link } from 'react-router';
-import { ASSET_TYPES, TRANSACTION_ACTION_LABELS } from '../../constants/enums';
+import { ASSET_TYPES, MANUAL_TRANSACTION_ACTIONS, TRANSACTION_ACTION_LABELS } from '../../constants/enums';
 import { ROUTES } from '../../constants/routes';
 import { fmtPrice } from '../../utils/priceDisplay';
+import { formatShareChange, formatSplitRatio } from '../../utils/splitDisplay';
 import './TransactionTable.css';
 
 // TASK-044 R6：交易表格**唯一实现**，两处使用点共用：
@@ -22,6 +23,7 @@ const COLUMN_LABELS = {
   quantity: '份额',
   price: '价格',
   portfolio: '组合',
+  source: '来源',
   operations: '操作',
 };
 
@@ -31,6 +33,7 @@ const COLUMN_LABELS = {
  * @param {string[]} [props.columns]              展示字段（默认 日期/代码/类型/证券类型/份额/价格）
  * @param {boolean} [props.showPortfolio]         显示「组合」列（聚合页 true，组合内 false）
  * @param {Array} [props.portfolios]              showPortfolio 时用于按 _id 查组合名
+ * @param {Array} [props.sourceAccounts]          columns 含 source 时按 sourceAccountId 查来源账户别名（TASK-094）
  * @param {(tx:Object)=>void} [props.onEdit]      提供则渲染「编辑」（组合内）
  * @param {(tx:Object)=>void} [props.onDelete]    提供则渲染「删除」（组合内）
  * @param {(tx:Object)=>void} [props.onViewPortfolio] 提供则把组合名渲染成跳回组合交易 Tab 的链接
@@ -41,6 +44,7 @@ export function TransactionTable({
   columns = DEFAULT_COLUMNS,
   showPortfolio = false,
   portfolios = [],
+  sourceAccounts = [],
   onEdit,
   onDelete,
   onViewPortfolio,
@@ -55,6 +59,7 @@ export function TransactionTable({
   ];
 
   const portfolioNames = new Map(portfolios.map(p => [String(p._id), p.name]));
+  const sourceAliases = new Map(sourceAccounts.map(a => [String(a.id), a.alias]));
 
   const renderCell = (tx, col) => {
     switch (col) {
@@ -67,7 +72,12 @@ export function TransactionTable({
       case 'assetType':
         // Bug-3：枚举中文，不再直出 stock/etf
         return ASSET_TYPE_LABELS[tx.assetType] || tx.assetType || '—';
+      case 'quantity':
+        // TASK-098：拆股显示带符号份额变动
+        return tx.action === 'split' ? formatShareChange(tx.quantity) : (tx.quantity ?? '—');
       case 'price':
+        // TASK-098：拆股无单价，显示拆股比例
+        if (tx.action === 'split') return formatSplitRatio(tx.splitRatio);
         // Bug-2：按交易自身 currency 显示，不再硬编码 $
         return fmtPrice(tx.price, tx.currency);
       case 'portfolio': {
@@ -82,10 +92,19 @@ export function TransactionTable({
           </Link>
         );
       }
+      case 'source': {
+        // TASK-094：导入流水的来源追溯（来源账户 · 原行号 · 原成交编号）；手动录入显示「手动」
+        if (!tx.source || tx.source.kind !== 'import') return '手动';
+        const parts = [sourceAliases.get(String(tx.sourceAccountId)) || '导入'];
+        if (tx.source.rowNumber) parts.push(`${tx.source.rowNumberKind === 'original' ? '原行' : '文件行'} ${tx.source.rowNumber}`);
+        if (tx.source.externalId) parts.push(`#${tx.source.externalId}`);
+        return <span title={tx.source.fileName || ''}>{parts.join(' · ')}</span>;
+      }
       case 'operations':
         return (
           <span className="transaction-table__actions">
-            {onEdit && (
+            {/* 决定 10：只有手动录入开放的动作可编辑；导入专有动作（现金类、换汇、划转、拆股）可删除后重新导入 */}
+            {onEdit && MANUAL_TRANSACTION_ACTIONS.includes(tx.action) && (
               <button type="button" className="transaction-table__action" onClick={() => onEdit(tx)}>
                 编辑
               </button>

@@ -103,7 +103,7 @@
 | TR-07 | 分红类型 | `div_cash` 现金分红（不进持仓，数量/成本/已实现盈亏均不变）；`div_reinvest` 分红再投（等价买入，转增持仓、成本含费） | 表单 action 选择 + 动态提示 |
 | TR-08 | A 股整手提示 | CN-SH / CN-SZ **买入**非 100 股整数倍 → **软警告不阻断**（前端 `confirm` + 后端 `warnings:['CN_LOT_SIZE:symbol']`）；卖出与基金不受限 | 提交时提示 |
 | TR-09 | CSV 批量导入 | 上传 → 解析 → 自动列映射 → 人工校正 → 预览校验 → 提交 → 结果报告；失败**整批回滚**（`422`）、幂等去重、超卖重放、≤500 行 / 批；**入口仅在组合内** | `/portfolios/:id/transactions/import` |
-| — | CSV 前端工具集 | `parseCsv`（引号/转义/`\n`/`\r\n` 兼容）、`mapColumns`（内置天天基金 / 雪球常见列名，宽松匹配）、`normalizeAction`（买入/申购/赎回…→ 枚举）、`normalizeDate`（多格式 → `YYYY-MM-DD`）、预览前 50 行错误标红 | `utils/csvImport.js` |
+| — | 导入解析 | 解析、列映射、判重与校验全部在服务端完成，前端只上传文件并展示预览 | `shared/services/transactionImport/` |
 
 **组合列表页职责扩展（TASK-050，2026-10-21）**：`/portfolios` 除组合卡片外，同一页还承接家庭横向汇总——币种分桶、组合占比条（点图例直达该组合持仓）、**最近交易 5 条预览**（全量走 `查看全部 →` `/portfolios/transactions`）、最近再平衡 10 条、家庭汇率折叠面板。原独立「家庭视图」页已下线；这些区块的数据仍来自 `GET /api/family/summary`，**口径归 [PL-6](./PL-6-household.md)**，本线只负责其中的交易与再平衡展示（交易类型标签走 `constants/enums.js` 的 `TRANSACTION_ACTION_LABELS`，再平衡状态标签走 `REBALANCE_STATUS_LABELS`）。
 
@@ -178,27 +178,13 @@
 
 #### TR-09 CSV 导入功能细节
 
-**后端**（`POST /api/transactions/import`）：
-
-1. 逐条字段校验 → 任一失败则**整批回滚**（`imported:0`，返回 `422` + `errors[]`）。
-2. **幂等去重**：批次内去重 + 与库中按 `(portfolioId, symbol, action, quantity, price, 日, fee)` 比对 → `skipped`。
-   > ⚠️ **当前实现失效**（2026-10-19 核实）：库内比对因 `select()` 投影漏 `portfolioId` 而**永不命中**，`skipped` 恒为 0（批次内去重仍有效）。缺陷跟踪 **TASK-046**，修复后删除本注。
-3. **超卖重放**：含批次内新增，按 symbol 分组重放，任意时点不足即整批回滚。
-4. `insertMany` 批量写入（上限 **500** 行）。
-
-**前端**（`ImportTransactions` + `utils/csvImport.js`）：
-
-- `parseCsv`：手写解析器，支持引号包裹与 `""` 转义，兼容 `\n` / `\r\n`，跳过全空行。
-- `mapColumns`：表头 → 字段自动映射，内置 **天天基金 / 雪球** 常见列名提示（代码、证券代码、份额、成交价格、单位净值、方向…），宽松匹配（忽略大小写/空格/括号）。
-- `normalizeAction`：`买入/申购/买` → `buy`，`卖出/赎回/卖` → `sell`，`现金分红/分红/股息` → `div_cash`，`分红再投/红利再投/再投` → `div_reinvest`。
-- `normalizeDate`：`YYYY-MM-DD` / `YYYY/MM/DD` / `YYYYMMDD` → `YYYY-MM-DD`。
-- 预览前 50 行并逐行校验（错误行标红），有无效行则阻止提交。
+流水导入（Spec #93，TASK-094~103）只经 **预览 → 整批确认** 两个端点完成：服务端解析标准 CSV / Wealthsimple CSV / Questrade XLSX，按来源账户识别重复、核对时区与同日顺序、配对换汇与证券划转，错误或未决待核对行阻塞整批；每次确认最多写入 500 条来源流水，超出部分重新上传同一文件续传（已入账的报表行按「来源账户 + 行号 + 内容」自动跳过）。旧版逐行 JSON 导入 `POST /api/transactions/import` 已移除（Human 决定 9）。字段、处置码与错误码以 [API 契约「流水导入」](../../technical/API_CONTRACT.md) 为准，本节不重复。
 
 **API**
 
 | 方法 | 路径 | 说明 |
 |---|---|---|
-| POST | `/api/transactions/import` | 批量导入（整批回滚 + 幂等 + 超卖校验） |
+| POST | `/api/transactions/import/preview`、`/api/transactions/import/commit` | 流水导入预览 / 整批确认（见 API 契约） |
 | GET | `/api/transactions` | 全局列表：`page,pageSize,portfolioId,symbol` |
 | POST | `/api/transactions` | 新建（返回 `warnings`） |
 | GET / PUT / DELETE | `/api/transactions/:id` | 详情 / 更新 / 删除（均重放校验账本） |

@@ -41,6 +41,9 @@ const Asset = require('@portomind/shared/models/asset');
 | **TaskRun** | 定时任务运行记录 | `{taskName, runKey}`；活跃 `lockKey` 部分唯一 | [PL-0](../product/lines/PL-0-platform-foundation.md) |
 | **User** | 登录账号（单租户多账号；`admin`/`member`） | `username` | [PL-0](../product/lines/PL-0-platform-foundation.md)（认证内核） |
 | **Session** | 服务端会话（绝对 7 天 TTL，存 Mongo） | `sid` | [PL-0](../product/lines/PL-0-platform-foundation.md)（认证内核） |
+| **SourceAccount** | 流水导入来源账户（TASK-094） | `{broker, accountKeyHash}`（部分唯一） | [PL-1](../product/lines/PL-1-ledger.md) |
+| **ImportBatch** | 导入整批提交的锁与补偿记录（非长期历史） | 活跃 `lockKey` 部分唯一 | [PL-1](../product/lines/PL-1-ledger.md) |
+| **TransferLeg** | 证券划转先到一端的服务端暂存（TASK-099，不进账本） | 无 | [PL-1](../product/lines/PL-1-ledger.md) |
 
 ---
 
@@ -127,21 +130,38 @@ AlertRule ──_id──> AlertEvent.ruleId（**可空**：再平衡通知没�
 | 字段 | 定义 |
 |---|---|
 | `portfolioId` | ObjectId → Portfolio，required，`index: true` |
-| `assetType` | String，required，enum 同 Asset.type |
-| `symbol` | String，required，trim，**uppercase** |
-| `market` | String，required，enum 同 Asset.market |
-| `currency` | String，required，enum 同 Asset.currency |
-| `action` | String，required，enum `buy`/`sell`/`div_cash`/`div_reinvest` |
-| `quantity` | Number，required，`min: Number.EPSILON`（> 0） |
-| `price` | Number，required，`min: Number.EPSILON`（> 0） |
+| `assetType` | String，enum 同 Asset.type；持仓类动作或有标的时 required |
+| `symbol` | String，trim，**uppercase**；持仓类动作（`buy`/`sell`/`div_reinvest`/`split`）required，现金类可空（利息、划转、独立费用） |
+| `market` | String，enum 同 Asset.market；持仓类动作或有标的时 required |
+| `currency` | String，required，enum 同 Asset.currency。有标的为资产币种快照；无标的的现金流水为现金币种 |
+| `action` | String，required，enum 见 `shared/constants/transaction.constants.js`：持仓类 `buy`/`sell`/`div_reinvest`/`split`/`transfer_out`/`transfer_in`（`split` 拆股，TASK-098；`transfer_*` 证券划转两端，TASK-099；均仅经流水导入写入）；现金类 `div_cash`/`tax`/`interest`/`cash_in`/`cash_out`/`fee`（TASK-097）、`fx`（TASK-101 换汇，每端一条，两端同 `pairGroupId`）；后五类及无数量的分红目前仅经导入写入 |
+| `quantity` | Number，> 0（`split`：带符号份额变动，拆股为正、合股为负，非零）；持仓类动作 required，现金类可空 |
+| `price` | Number，`min: Number.EPSILON`（> 0）；持仓类动作 required（`split` 除外，拆股不记单价），现金类可空 |
+| `splitRatio` | Number，可选，> 0（TASK-098）：拆股比例 = 新份额 / 旧份额（1 拆 2 为 2，10 合 1 为 0.1）；已知时重放核对 `拆股前份额 ×(splitRatio−1) = quantity` |
 | `fee` | Number，= `0`，min 0。买入计入成本、卖出从净得扣除 |
-| `date` | Date，required，= now。**业务日期**，决定持仓重放的顺序 |
+| `date` | Date，required，= now。**业务日期**，决定持仓重放的顺序。重放顺序 `(当地交易日, orderRank, date, 导入批次, sequence, _id)`（当地交易日：带时刻流水按其 `timeZone`（缺省 `MARKET_TIMEZONE`）取日历日，仅日期流水取存储的 UTC 日期；`positionCalculator.localTradeDay`）（`positionCalculator.compareTransactions`，预览 / 确认后重放 / 编辑共用；同一时刻手动流水在导入流水之前，字符串按码位比较） |
 | `notes` | String，trim，≤500 |
+| `sourceAccountId` | ObjectId → SourceAccount，可选（TASK-094：导入流水的来源账户） |
+| `source` | 子文档，可选：`{kind:'import', format:'standard'\|'wealthsimple'\|'questrade', fileName, rowNumber, rowNumberKind:'original'\|'file', externalId(券商原成交编号，无则 null，从不合成), importBatchId, rawHash}` |
+| `dateKind` | `datetime`（保留明确时刻，含午夜）/ `date`（仅日期，存当日 UTC 零点，同手动录入）；手动录入为空 |
+| `timeZone` / `timeZoneSource` | 成交时刻所用 IANA 时区；来源 `report`（报表自带）/ `user`（报表有时间无时区，用户确认北京或多伦多，TASK-096）。仅日期精度不记录 |
+| `settlementDate` / `settlementStatus` | 券商结算日（独立于成交日）；`known` / `unknown`（报表未提供，`settlementDate` 留空，不以成交日代替） |
+| `cashAmount` / `cashCurrency` / `cashAmountSource` | 带符号现金净额（流入正、流出负）、实际现金币种（可与资产 `currency` 不同）、来源（`broker` 券商给出，保留分币差异 / `derived` 由数量 × 单价 ± 佣金推算）。现金类流水的金额即 `cashAmount` |
+| `cashFxRate` | TASK-100：跨币种成交的报表汇率（1 资产币种 = `cashFxRate` 现金币种，如 Wealthsimple 美股以 CAD 结算）。`price` / `fee` / `grossAmount` 已按它换回资产币种（持仓成本保留资产币种），`cashAmount` 保持券商现金净额；同币种成交留空 |
+| `feeSource` | `broker`/`derived`/`user`/`confirmed_zero`（佣金缺失不按 0 处理，需推算、补填或明确确认） |
+| `grossAmount` | 数量 × 单价（无编号成交匹配字段，不含佣金与净额） |
+| `pairGroupId` / `sequence` | 成对流水组号（TASK-101 换汇两端：报表 `pair_group` 原值，或建议 / 用户指定配对生成的 `fx-<hash>`；两端共同入账，单端不入账）；同一报表内原行顺序（时间正序），同一时刻同批次按此重放 |
+| `orderRank` | Number，可选（TASK-096）：用户确认的同日先后，仅在同一当地交易日内生效（默认 0；确认「之前」为负、「之后」为正）。编辑改动成交日时清除 |
+| `carryCost` / `carryCostCurrency` / `carryCostSource` / `transferFxRate` | TASK-099，仅 `transfer_in`：承接成本（转入资产原币种，重放时代替 `qty×price`）；来源 `report`（报表划转成本）/`carried`（同币种承接转出端移动平均成本）/`fx`（转出成本 × 换算依据）/`user`（用户补填）；换算依据 = 1 单位转出资产币种折合的转入资产币种 |
+| `transfer` | TASK-099：`{direction:'out'\|'in', counterpartPortfolioId, counterpartSourceAccountId, stagedLegId?}`。两端以同一 `pairGroupId` 关联、同一 `source.importBatchId` 共同入账；`price` 为每单位成本快照（转出 = 转出前均价，转入 = 承接成本 / 份额），不参与重放 |
+| `status` | `pending`/`committed`，仅导入写入。`pending` 行对全部读取方不可见（统一经 `shared/services/transaction/visibility.js`），手动录入与旧数据无此字段 |
 | `createdAt` / `updatedAt` | 由 `timestamps: true` 自动维护 |
 
-- 索引：`{portfolioId: 1, date: -1, _id: -1}`（组合内倒序列表）、`{portfolioId: 1, symbol: 1, date: 1, _id: 1}`（组合内单标的重放）。
+- 索引：`{portfolioId: 1, date: -1, _id: -1}`（组合内倒序列表）、`{portfolioId: 1, symbol: 1, date: 1, _id: 1}`（组合内单标的重放）；TASK-094 新增部分索引 `{sourceAccountId, source.externalId}`（**非唯一**：跨组合同编号须可被发现）、`{sourceAccountId, source.rawHash}`、`{source.importBatchId}`。
 - **无唯一索引**：允许同一 `(portfolioId, symbol, date, action, quantity, price)` 重复落库。CSV 导入的幂等**不靠数据库约束**，靠业务层判重（当前实现有缺陷，见 §5.2）。
-- `action` 语义：`div_cash` 进现金不进持仓；`div_reinvest` 转增持仓且成本含费。
+- `action` 语义：`div_reinvest` 转增持仓且成本含费；现金类（`div_cash`/`tax`/`interest`/`cash_in`/`cash_out`/`fee`/`fx`）不进持仓、不参与超卖重放，持仓计算直接跳过（现金余额核对见后续工单）。
+- 划转语义（TASK-099）：`transfer_out` 按转出前均价减记数量与成本、不产生已实现盈亏、不得超过当时持仓；`transfer_in` 按 `carryCost` 增加数量与成本（缺 `carryCost` 报 `INVALID_CARRY_COST`，不猜成本）。划转流水不支持经 `PUT /api/transactions/:id` 编辑（界面只对 `MANUAL_ACTIONS` 显示「编辑」，Human 决定 10）；删除划转或换汇的一端时，同一次导入确认写入的同组号另一端一并删除（可跨组合），不留单边。
+- `split` 语义（TASK-098）：份额按 `quantity` 变动、总成本与已实现盈亏不变、单位成本按新份额重算；拆股前须有持仓（否则重放报 `SPLIT_NO_POSITION`），比例与份额变动冲突或拆后份额不为正报 `SPLIT_RATIO_CONFLICT`（均为 `400`，删除 / 编辑使之后拆股失去依据的流水同样被拒）。
 
 ### 4.4 Price（`shared/models/price.js`）
 
@@ -325,6 +345,56 @@ AlertRule ──_id──> AlertEvent.ruleId（**可空**：再平衡通知没�
 
 ---
 
+### 4.13 SourceAccount（`shared/models/sourceAccount.js`，TASK-094）
+
+| 字段 | 定义 |
+|---|---|
+| `broker` | enum `wealthsimple`/`questrade`/`other`（与 client `SOURCE_BROKERS` 同步） |
+| `accountKeyHash` | `sha256(broker + ':' + 规范化账号)`；**不存完整账号**。无账号的来源为空 |
+| `accountKeyLast4` | 账号末 4 位，仅展示 |
+| `alias` | 用户别名，必填，≤60，可改，**不参与身份识别** |
+| `accountType` | 报表中的账户类型（可选） |
+| `portfolioIds` | 曾导入过的组合（信息记录；一个账户可关联多个组合，每笔流水仍只属一个组合） |
+
+- 唯一索引：`{broker, accountKeyHash}`（`partialFilterExpression: accountKeyHash 为字符串`）。同账号跨批、跨组合识别为同一来源。
+- 现金核对（TASK-103，`shared/services/transactionImport/cashReconciliation.js`）：按 `sourceAccountId` 读取跨组合可见流水，按 `cashCurrency` 分币种、按现金日期（成交用 `settlementDate`，`settlementStatus='unknown'` 的成交单列；现金类无结算日用活动日）归入期间；换汇两端按 `(source.importBatchId, pairGroupId)` 分组。期初 / 期末余额由请求提供，不落库，无新字段。接口见 [API_CONTRACT](API_CONTRACT.md)。
+
+### 4.14 ImportBatch（`shared/models/importBatch.js`，TASK-094）
+
+| 字段 | 定义 |
+|---|---|
+| `portfolioId` / `sourceAccountId` | 目标组合 / 来源账户 |
+| `status` | `committing` → `committed` 或 `rolled_back` |
+| `lockKey` | 主批次 `portfolio:<id>`；伴随锁 `portfolio:<对端组合 id>`（TASK-099）或 `source:<来源账户 id \| new:<broker>:<账号哈希或别名>>`（代码审查 S3）；仅 `committing` 期间存在，终态 `$unset` |
+| `previewToken` / `ledgerFingerprint` | 本次确认核对过的预览凭据 |
+| `parentBatchId` | 伴随锁（对端组合 / 来源账户）指向主批次；随主批次终态一并释放 |
+| `phase` | `flipped`：pending→committed 翻转已完成，之后的故障只向前补完暂存一端状态，不回滚 |
+| `counts` / `updates` / `error` | 当次结果计数；更新类处置（TASK-095）改写前的原值 `[{transactionId, before, unset}]`（先写后改，回滚 / 崩溃回收时恢复）；失败原因 |
+
+- 部分唯一索引 `{lockKey}`（`status:'committing'`）：同组合并发确认只有一个成功；每次确认另取来源账户伴随锁 `source:<key>`，同一来源账户并发确认到不同组合时后到者 `409 IMPORT_IN_PROGRESS`（外部编号按来源账户跨组合匹配，pending 行互不可见，否则会重复入账）。手动新增 / 编辑 / 删除流水在该组合有 `committing` 批次时返回 `409 IMPORT_IN_PROGRESS`（只读检查，不取锁）。
+- 整批写入：新行先以 `status:'pending'` 写入，单语句翻转为 `committed`；失败即删除本批 pending 行并标 `rolled_back`；超过 10 分钟仍为 `committing` 的批次在下一次确认前回收。单机 MongoDB 无多文档事务，故采用应用层方案。
+- 跨组合划转（TASK-099）：主锁之后按组合 id 顺序取对端伴随锁，任一被占 → `409 IMPORT_IN_PROGRESS`；两端流水同属一次翻转，不会单边可见。
+
+### 4.15 TransferLeg（`shared/models/transferLeg.js`，TASK-099）
+
+证券划转先到的一端（Human 决定：服务端暂存）。只存在于本集合，对任何账本读取方不可见。
+
+| 字段 | 定义 |
+|---|---|
+| `portfolioId` / `sourceAccountId` | 该端的组合与来源账户（各端各自保留） |
+| `direction` | `out` / `in` |
+| `symbol` / `assetType` / `market` / `currency` | 资产快照（ADR-003 存储代码，资产原币种） |
+| `mappedFrom` | 经代码映射（`symbolMap`，TASK-102）前的报表代码，可选；后到一端据此判断是否同一证券 |
+| `quantity` / `date` / `dateKind` / `timeZone` / `timeZoneSource` / `settlementDate` / `settlementStatus` / `sequence` | 与导入流水同口径 |
+| `pairGroup` | 报表配对组号（可选） |
+| `transferCost` / `transferCostCurrency` / `transferFxRate` | 报表给出的转入成本与换算依据（转入端） |
+| `source` | `{format, fileName, rowNumber, rowNumberKind, externalId, rawHash}`（重复导入识别用 `rawHash`） |
+| `status` | `pending`（随批次写入中）→ `staged`（待核对）→ `consuming`（被某次确认占用）→ `committed`；或 `discarded`（用户放弃，需重新提供该端） |
+| `stagedBatchId` / `consumedBatchId` / `transactionId` | 暂存批次 / 占用批次 / 共同入账后写入的账本流水 |
+
+- 占用以条件更新 `staged → consuming` 实现，同一端只会被一次确认配对；失败回滚恢复为 `staged`。
+- 索引：`{status, direction, date}`、`{stagedBatchId}`（部分）、`{consumedBatchId}`（部分）。
+
 ## 5. 已知契约缺口（改之前先读这一节）
 
 > 以下均为**当前代码的真实状态**，不是待办清单。每条标注了影响面，避免被当成「已修」。
@@ -337,11 +407,11 @@ AlertRule ──_id──> AlertEvent.ruleId（**可空**：再平衡通知没�
 
 后果：`suggestionGenerator` 按 `000191.CN` 查 `Price` 恒失败 → 相关组合的再平衡每日 `FAILED`。查任何「资产 ↔ 交易 ↔ 价格」关联时，**不要假设 symbol 可直接相等比较**。
 
-### 5.2 CSV 导入幂等不靠数据库
+### 5.2 导入判重不靠数据库
 
-`Transaction` 无唯一索引，导入判重依赖业务层查询。当前该查询漏取 `portfolioId`（`transaction.service.js` 的 `select()`），导致判重键恒为 `undefined` → 重复导入不报错、也不跳过。
+`Transaction` 无唯一索引，导入判重依赖业务层查询：预览 / 确认导入（TASK-094/095）在 `shared/services/transactionImport/matching.js` 中按 (组合, 来源账户, 方向) 以原成交编号或「时间戳 + 标的 + 数量 + 成交金额」匹配，同一报表行（来源账户 + 行号 + 内容）重新上传自动跳过，差异与歧义进入人工核对。旧版 `POST /api/transactions/import`（判重键漏取 `portfolioId`）已移除（Human 决定 9）。
 
-**含义**：不能因为「导入成功」就认为没有重复数据。核对重复须自行按 `(portfolioId, symbol, date, action, quantity, price)` 分组统计。
+**含义**：早期经旧版导入写入的数据可能有重复。核对重复须自行按 `(portfolioId, symbol, date, action, quantity, price)` 分组统计。
 
 ### 5.3 `FxRate.rateToCny` 方向与采集端不一致（High，已立项 TASK-051）
 

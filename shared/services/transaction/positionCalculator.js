@@ -2,6 +2,7 @@ const dayjs = require('dayjs');
 const utc = require('dayjs/plugin/utc');
 const timezone = require('dayjs/plugin/timezone');
 const { MARKET_TIMEZONE } = require('../../utils/marketTime');
+const { TRANSACTION_ACTIONS, POSITION_ACTIONS, TRANSFER_ACTIONS, isCashAction } = require('../../constants/transaction.constants');
 
 dayjs.extend(utc);
 dayjs.extend(timezone);
@@ -15,10 +16,100 @@ function calculationError(code, message) {
   return error;
 }
 
+// 拆股比例核对的相对容差（券商份额变动可带小数位）
+const SPLIT_TOLERANCE = 1e-6;
+
+/** 拆股：份额按带符号变动调整，剩余成本与已实现盈亏保持不变。 */
+function applySplit(position, delta, splitRatio, transactionDate) {
+  const on = transactionDate.toISOString().slice(0, 10);
+  if (position.quantity <= EPSILON) {
+    throw calculationError('SPLIT_NO_POSITION', `拆股前没有 ${position.symbol} 的持仓（${on}）`);
+  }
+  const after = position.quantity + delta;
+  if (after <= EPSILON) {
+    throw calculationError('SPLIT_RATIO_CONFLICT', `${position.symbol} 份额变动 ${delta} 使拆股后份额不为正（拆股前 ${position.quantity}，${on}）`);
+  }
+  if (splitRatio !== undefined && splitRatio !== null && splitRatio !== '') {
+    const ratio = Number(splitRatio);
+    if (!Number.isFinite(ratio) || ratio <= 0) {
+      throw calculationError('INVALID_SPLIT_RATIO', `Invalid split ratio for ${position.symbol}`);
+    }
+    const expected = position.quantity * (ratio - 1);
+    if (Math.abs(expected - delta) > SPLIT_TOLERANCE * Math.max(1, Math.abs(expected))) {
+      throw calculationError(
+        'SPLIT_RATIO_CONFLICT',
+        `${position.symbol} 拆股比例 ${ratio} 与份额变动不一致：拆股前 ${position.quantity}，按比例应变动 ${expected}，实际 ${delta}（${on}）`
+      );
+    }
+  }
+  position.quantity = after;
+}
+
+function orderNumber(value, fallback) {
+  const number = Number(value);
+  return value === null || value === undefined || value === '' || !Number.isFinite(number) ? fallback : number;
+}
+
+// 预览中尚未写入的导入行使用的批次键：按码位比较排在任何已入账 ObjectId 之后。
+const PREVIEW_BATCH_KEY = '~preview';
+
+function codeUnitCompare(left, right) {
+  if (left === right) return 0;
+  return left < right ? -1 : 1;
+}
+
+function batchKeyOf(transaction) {
+  const batchId = transaction.source?.importBatchId;
+  return batchId === undefined || batchId === null ? '' : String(batchId);
+}
+
+/**
+ * 重放顺序（TASK-096）：(当地交易日 localTradeDay, orderRank, date, 导入批次, sequence, _id)。
+ * - 带时刻流水按其时区的日历日分桶，仅日期流水按报表日期（存当日 UTC 零点）分桶，二者在同一当地交易日比较；
+ * - orderRank：用户确认的同日先后（默认 0），只在同一交易日内生效，不改写成交时刻；
+ * - 同一时刻：手动 / 旧流水（无批次）在前，导入流水按批次先后（ObjectId 时间序），
+ *   同批次内按 sequence（原行顺序，时间正序）；预览行用 PREVIEW_BATCH_KEY 排在全部已入账流水之后；
+ * - _id：最终稳定次序。字符串一律按码位比较（localeCompare 会把 '~' 排在十六进制字符之前）。
+ * 预览、确认后重放与后续编辑共用此比较器，保证三者顺序一致。
+ */
 function compareTransactions(left, right) {
-  const dateDifference = new Date(left.date) - new Date(right.date);
-  if (dateDifference !== 0) return dateDifference;
-  return String(left._id || '').localeCompare(String(right._id || ''));
+  const leftTime = new Date(left.date).getTime();
+  const rightTime = new Date(right.date).getTime();
+  const leftDay = localTradeDay(left) || '';
+  const rightDay = localTradeDay(right) || '';
+  if (leftDay !== rightDay) return leftDay < rightDay ? -1 : 1;
+  const rankDifference = orderNumber(left.orderRank, 0) - orderNumber(right.orderRank, 0);
+  if (rankDifference !== 0) return rankDifference;
+  if (leftTime !== rightTime) return leftTime - rightTime;
+  const batchDifference = codeUnitCompare(batchKeyOf(left), batchKeyOf(right));
+  if (batchDifference !== 0) return batchDifference;
+  const sequenceDifference = orderNumber(left.sequence, -1) - orderNumber(right.sequence, -1);
+  if (sequenceDifference !== 0) return sequenceDifference;
+  return codeUnitCompare(String(left._id || ''), String(right._id || ''));
+}
+
+// 带时刻流水的当地日缓存（重放排序中比较器会被调用很多次；键 = 时刻 + 时区）
+const localDayCache = new Map();
+const LOCAL_DAY_CACHE_LIMIT = 50000;
+
+/**
+ * 流水的当地交易日（YYYY-MM-DD，代码审查 S5）：带时刻（dateKind='datetime'）按其时区（缺省 MARKET_TIMEZONE）取日历日；
+ * 仅日期流水与旧数据（无 dateKind）存当日 UTC 零点，直接取 UTC 日期。compareTransactions 与导入同日顺序核对共用。
+ */
+function localTradeDay(transaction) {
+  const date = new Date(transaction.date);
+  const time = date.getTime();
+  if (Number.isNaN(time)) return null;
+  if (transaction.dateKind !== 'datetime') return date.toISOString().slice(0, 10);
+  const zone = transaction.timeZone || MARKET_TIMEZONE;
+  const key = `${time}|${zone}`;
+  let day = localDayCache.get(key);
+  if (day === undefined) {
+    if (localDayCache.size >= LOCAL_DAY_CACHE_LIMIT) localDayCache.clear();
+    day = dayjs(date).tz(zone).format('YYYY-MM-DD');
+    localDayCache.set(key, day);
+  }
+  return day;
 }
 
 function latestPriceFor(latestPrices, symbol) {
@@ -36,10 +127,22 @@ function latestPriceFor(latestPrices, symbol) {
  * - buy：数量 += qty，成本 += qty×price + fee（成本含费）；
  * - sell：数量 -= qty，成本按卖出前均价减记，realizedPnl += (price - avgCost)×qty - fee（净得扣费）；
  * - div_cash：现金分红，不进持仓（数量/成本不变），realizedPnl 不变；
+ * - tax / interest / cash_in / cash_out / fee（TASK-097）：纯现金流水，同样不进持仓；
+ *   现金类流水可无标的、无数量单价，直接跳过（现金余额另行核对，见 #103）；
  * - div_reinvest：分红再投，等价 buy（数量与成本增加，含 fee）；
+ * - transfer_out（TASK-099）：证券转出，数量 -= qty，成本按转出前均价减记，不产生已实现盈亏；
+ *   不允许超过当时可用数量（同 sell）；price 只是快照，不参与计算；
+ * - transfer_in（TASK-099）：证券转入，数量 += qty，成本 += carryCost（承接成本，转入资产原币种）；
+ *   缺 carryCost 时报 INVALID_CARRY_COST，不按 qty×price 猜成本；
+ * - split（TASK-098）：quantity = 带符号份额变动（拆股为正、合股为负），price / fee 不参与；
+ *   总成本不变、单位成本按新份额重算、已实现盈亏不变。拆股前须有持仓（SPLIT_NO_POSITION）；
+ *   splitRatio（新份额 / 旧份额）已知时须满足 旧份额 ×(ratio-1) = 份额变动，且拆后份额须为正（SPLIT_RATIO_CONFLICT）；
  * - fee 只影响发生之后的持仓，不回溯漂移（重放天然满足）。
+ *
+ * options.onApply(transaction, effect)：每条流水应用后回调（effect.removedCost 为转出 / 卖出减记的成本），
+ * 供导入预览取得转出端的承接成本。
  */
-function calculatePositions(transactions, latestPrices = {}) {
+function replayLedger(transactions, options = {}) {
   if (!Array.isArray(transactions)) {
     throw calculationError('INVALID_TRANSACTIONS', 'transactions must be an array');
   }
@@ -48,21 +151,29 @@ function calculatePositions(transactions, latestPrices = {}) {
   const ordered = [...transactions].sort(compareTransactions);
 
   for (const transaction of ordered) {
-    const symbol = String(transaction.symbol || '').trim().toUpperCase();
     const action = String(transaction.action || '').trim().toLowerCase();
+    if (isCashAction(action)) continue;
+    const symbol = String(transaction.symbol || '').trim().toUpperCase();
     const quantity = Number(transaction.quantity);
     const tradePrice = Number(transaction.price);
     const fee = Number(transaction.fee) || 0;
     const transactionDate = new Date(transaction.date);
 
     if (!symbol) throw calculationError('INVALID_SYMBOL', 'transaction symbol is required');
-    if (!['buy', 'sell', 'div_cash', 'div_reinvest'].includes(action)) {
+    if (!TRANSACTION_ACTIONS.includes(action)) {
       throw calculationError('INVALID_ACTION', `Invalid transaction action for ${symbol}`);
     }
-    if (!Number.isFinite(quantity) || quantity <= 0) {
+    const isSplit = action === 'split';
+    if (!Number.isFinite(quantity) || (isSplit ? Math.abs(quantity) < EPSILON : quantity <= 0)) {
       throw calculationError('INVALID_QUANTITY', `Invalid transaction quantity for ${symbol}`);
     }
-    if (!Number.isFinite(tradePrice) || tradePrice <= 0) {
+    const carryCost = Number(transaction.carryCost);
+    if (action === 'transfer_in' && (transaction.carryCost === null || transaction.carryCost === undefined ||
+        transaction.carryCost === '' || !Number.isFinite(carryCost) || carryCost < 0)) {
+      throw calculationError('INVALID_CARRY_COST', `Transfer-in carry cost is required for ${symbol}`);
+    }
+    // split 不记单价；划转两端的 price 只是成本快照，不参与重放（TASK-099）
+    if (!isSplit && !TRANSFER_ACTIONS.includes(action) && (!Number.isFinite(tradePrice) || tradePrice <= 0)) {
       throw calculationError('INVALID_PRICE', `Invalid transaction price for ${symbol}`);
     }
     if (!Number.isFinite(fee) || fee < 0) {
@@ -82,12 +193,16 @@ function calculatePositions(transactions, latestPrices = {}) {
       realizedPnl: 0
     };
 
-    if (action === 'buy' || action === 'div_reinvest') {
+    let removedCost = 0;
+    if (isSplit) {
+      applySplit(position, quantity, transaction.splitRatio, transactionDate);
+    } else if (action === 'buy' || action === 'div_reinvest') {
       // div_reinvest 等价买入（分红再投转增持仓）
       position.quantity += quantity;
       position.remainingCost += quantity * tradePrice + fee;
-    } else if (action === 'div_cash') {
-      // 现金分红：不进持仓，仅记录；数量/成本/已实现盈亏均不变
+    } else if (action === 'transfer_in') {
+      position.quantity += quantity;
+      position.remainingCost += carryCost;
     } else {
       if (quantity > position.quantity + EPSILON) {
         throw calculationError(
@@ -98,9 +213,11 @@ function calculatePositions(transactions, latestPrices = {}) {
       const averageCost = position.quantity > EPSILON
         ? position.remainingCost / position.quantity
         : 0;
+      removedCost = averageCost * quantity;
       position.quantity -= quantity;
-      position.remainingCost -= averageCost * quantity;
-      position.realizedPnl += (tradePrice - averageCost) * quantity - fee;
+      position.remainingCost -= removedCost;
+      // 划转只移动份额与成本，不产生买卖盈亏
+      if (action === 'sell') position.realizedPnl += (tradePrice - averageCost) * quantity - fee;
       if (Math.abs(position.quantity) < EPSILON) {
         position.quantity = 0;
         position.remainingCost = 0;
@@ -111,8 +228,18 @@ function calculatePositions(transactions, latestPrices = {}) {
     position.market = transaction.market || position.market;
     position.currency = transaction.currency || position.currency;
     positions.set(symbol, position);
+    if (options.onApply) options.onApply(transaction, { removedCost, position: { ...position } });
   }
 
+  return positions;
+}
+
+/**
+ * 持仓（仅数量 > 0）。重放口径见 replayLedger；
+ * replayLedger 另返回已清仓标的（含已实现盈亏），供导入顺序核对比较同日结果。
+ */
+function calculatePositions(transactions, latestPrices = {}) {
+  const positions = replayLedger(transactions);
   return [...positions.values()]
     .filter(position => position.quantity > EPSILON)
     .sort((left, right) => left.symbol.localeCompare(right.symbol))
@@ -161,7 +288,8 @@ function calculatePositionHistory(transactions, prices, interval = 'day') {
   const periodKeys = new Set();
   const add = (map, key, value) => map.set(key, [...(map.get(key) || []), value]);
 
-  for (const transaction of transactions) {
+  // 现金类流水不影响持仓，也不应产生额外币种行（TASK-097）
+  for (const transaction of transactions.filter(item => !isCashAction(String(item.action || '').trim().toLowerCase()))) {
     const key = periodKey(transaction.date, interval);
     periodKeys.add(key);
     add(transactionGroups, key, transaction);
@@ -223,7 +351,12 @@ function calculatePositionHistory(transactions, prices, interval = 'day') {
 
 module.exports = {
   calculatePositions,
+  replayLedger,
+  localTradeDay,
   calculatePositionHistory,
   compareTransactions,
+  PREVIEW_BATCH_KEY,
+  POSITION_ACTIONS,
+  TRANSFER_ACTIONS,
   periodKey
 };

@@ -8,14 +8,27 @@ export const ACTION_TYPE = Object.freeze({
 
 /**
  * 交易类型（TASK-044 R8）。
- * 取值来自 shared/models/transaction.js 的 action 枚举，两处使用点（组合内交易 Tab、
- * 「全部交易」聚合页）共用本表，杜绝再次出现「分红显示为卖出」的二元判断。
+ * 取值必须与 shared/constants/transaction.constants.js 的 TRANSACTION_ACTIONS 同步（同 ASSET_* 双份规则）。
+ * 两处使用点（组合内交易 Tab、「全部交易」聚合页）共用本表，杜绝再次出现「分红显示为卖出」的二元判断。
+ * TASK-097：税款 / 利息 / 现金划入划出 / 独立费用为纯现金流水（目前仅经导入写入，不进持仓）。
+ * TASK-101：换汇（fx）两端各一条，按组号成对入账，同样仅经导入写入。
  */
 export const TRANSACTION_ACTIONS = Object.freeze([
   { value: 'buy', label: '买入' },
   { value: 'sell', label: '卖出' },
   { value: 'div_cash', label: '现金分红' },
   { value: 'div_reinvest', label: '分红再投' },
+  // TASK-098：拆股 / 合股（仅经流水导入写入；quantity 为带符号份额变动，无单价）
+  { value: 'split', label: '拆股' },
+  { value: 'tax', label: '税款' },
+  { value: 'interest', label: '利息' },
+  { value: 'cash_in', label: '现金划入' },
+  { value: 'cash_out', label: '现金划出' },
+  { value: 'fee', label: '独立费用' },
+  { value: 'fx', label: '换汇' },
+  // TASK-099：证券划转两端（仅由流水导入写入，手动录入不提供）
+  { value: 'transfer_out', label: '证券转出' },
+  { value: 'transfer_in', label: '证券转入' },
 ]);
 
 /**
@@ -28,6 +41,28 @@ export const TRANSACTION_ACTIONS = Object.freeze([
 export const TRANSACTION_ACTION_LABELS = Object.freeze(
   Object.fromEntries(TRANSACTION_ACTIONS.map(({ value, label }) => [value, label]))
 );
+
+/**
+ * 手动录入 / 编辑开放的动作。必须与 shared/constants/transaction.constants.js 的 MANUAL_ACTIONS 同步。
+ * 其余动作（现金类、换汇、划转、拆股）只经导入写入：界面不提供「编辑」（Human 决定 10），可删除后重新导入。
+ */
+export const MANUAL_TRANSACTION_ACTIONS = Object.freeze(['buy', 'sell', 'div_cash', 'div_reinvest']);
+
+/**
+ * 成对入账的动作：删除一端时服务端两端一起删除（Human 决定 10），界面先确认。
+ * 必须与 shared/constants/transaction.constants.js 的 PAIRED_ACTIONS + TRANSFER_ACTIONS 同步。
+ */
+export const PAIRED_LEG_ACTIONS = Object.freeze(['fx', 'transfer_out', 'transfer_in']);
+
+/**
+ * 流水导入来源券商（TASK-094）。取值必须与 shared/constants/import.constants.js 的
+ * SOURCE_BROKERS 同步（同 ASSET_* 双份规则）：改一处必须改另一处。
+ */
+export const SOURCE_BROKERS = Object.freeze([
+  { value: 'wealthsimple', label: 'Wealthsimple' },
+  { value: 'questrade', label: 'Questrade' },
+  { value: 'other', label: '其他券商' },
+]);
 
 export const ASSET_TYPES = Object.freeze([
   { value: 'stock', label: '股票' },

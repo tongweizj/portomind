@@ -79,6 +79,58 @@ const calculationCases = [
     ],
     prices: { VTI: 15 },
     expected: [{ symbol: 'VTI', quantity: 0.3, avgCost: 10, remainingCost: 3, marketValue: 4.5, unrealizedPnl: 1.5, pnlPct: 50, realizedPnl: 0.4 }]
+  },
+  // TASK-099：证券划转。转出按转出前平均成本减记，不产生买卖盈亏；转入按承接成本（carryCost）增加。
+  {
+    name: '证券转出按平均成本减记且不产生已实现盈亏',
+    transactions: () => [
+      trade({ price: 100 }),
+      trade({ price: 200 }),
+      trade({ action: 'transfer_out', quantity: 5, price: 999 })
+    ],
+    prices: { VTI: 300 },
+    expected: [{ symbol: 'VTI', quantity: 15, avgCost: 150, remainingCost: 2250, realizedPnl: 0 }]
+  },
+  {
+    name: '证券转入承接成本而非单价',
+    transactions: () => [trade({ symbol: 'XUS.US', action: 'transfer_in', quantity: 8, price: 1, carryCost: 600 })],
+    prices: { 'XUS.US': 80 },
+    expected: [{ symbol: 'XUS.US', quantity: 8, avgCost: 75, remainingCost: 600, marketValue: 640, unrealizedPnl: 40, realizedPnl: 0 }]
+  },
+  {
+    name: '转入后再卖出按承接成本计算已实现盈亏',
+    transactions: () => [
+      trade({ action: 'transfer_in', quantity: 10, price: 1, carryCost: 500 }),
+      trade({ action: 'sell', quantity: 4, price: 60 })
+    ],
+    prices: { VTI: 60 },
+    expected: [{ symbol: 'VTI', quantity: 6, avgCost: 50, remainingCost: 300, realizedPnl: 40 }]
+  },
+  // TASK-097：现金类流水不改变持仓；导入的现金分红可无数量 / 单价
+  {
+    name: '现金分红（数量单价为空）与税款、利息、划转、独立费用不改变持仓与成本',
+    transactions: () => [
+      trade({ quantity: 10, price: 100, fee: 1 }),
+      trade({ action: 'div_cash', quantity: undefined, price: undefined, cashAmount: 12.34, cashCurrency: 'USD' }),
+      trade({ action: 'tax', quantity: undefined, price: undefined, cashAmount: -1.85 }),
+      trade({ action: 'interest', symbol: undefined, assetType: undefined, market: undefined, quantity: undefined, price: undefined, cashAmount: 0.42 }),
+      trade({ action: 'cash_in', symbol: undefined, assetType: undefined, market: undefined, quantity: undefined, price: undefined, cashAmount: 500 }),
+      trade({ action: 'cash_out', symbol: undefined, assetType: undefined, market: undefined, quantity: undefined, price: undefined, cashAmount: -200 }),
+      trade({ action: 'fee', symbol: undefined, assetType: undefined, market: undefined, quantity: undefined, price: undefined, cashAmount: -9.99 })
+    ],
+    prices: { VTI: 110 },
+    expected: [{ symbol: 'VTI', quantity: 10, avgCost: 100.1, remainingCost: 1001, realizedPnl: 0 }]
+  },
+  {
+    name: '分红再投成本含费，随后卖出净得扣费',
+    transactions: () => [
+      trade({ quantity: 10, price: 100 }),
+      trade({ action: 'div_reinvest', quantity: 0.5, price: 110, fee: 0.5 }),
+      trade({ action: 'sell', quantity: 5.25, price: 120, fee: 2 })
+    ],
+    prices: { VTI: 120 },
+    // 再投后：10.5 股、成本 1000 + 55 + 0.5 = 1055.5，均价 100.5238…；卖出 5.25 股
+    expected: [{ symbol: 'VTI', quantity: 5.25, remainingCost: 527.75, avgCost: 100.52380952380952, realizedPnl: (120 - 1055.5 / 10.5) * 5.25 - 2 }]
   }
 ];
 
@@ -107,6 +159,22 @@ test('持仓表格用例：先卖后买是非法账本', () => {
       trade({ action: 'buy', quantity: 2 })
     ], { VTI: 100 }),
     error => error.code === 'INSUFFICIENT_POSITION' && error.status === 400
+  );
+});
+
+test('持仓表格用例：转出超过可用持仓视为超卖', () => {
+  sequence = 0;
+  assert.throws(
+    () => calculatePositions([trade({ quantity: 2 }), trade({ action: 'transfer_out', quantity: 3 })]),
+    error => error.code === 'INSUFFICIENT_POSITION'
+  );
+});
+
+test('持仓表格用例：转入缺少承接成本不猜成本', () => {
+  sequence = 0;
+  assert.throws(
+    () => calculatePositions([trade({ action: 'transfer_in', quantity: 2 })]),
+    error => error.code === 'INVALID_CARRY_COST'
   );
 });
 
@@ -153,6 +221,20 @@ test('多币种历史按原币种分行而不直接相加', () => {
   ]);
 });
 
+test('历史快照忽略现金类流水：不同币种的现金分红 / 利息不产生额外币种行（TASK-097）', () => {
+  sequence = 0;
+  const transactions = [
+    trade({ quantity: 1, price: 100, date: new Date('2026-01-01T12:00:00Z') }),
+    trade({ action: 'div_cash', quantity: undefined, price: undefined, currency: 'USD', cashAmount: 5, cashCurrency: 'CAD',
+      date: new Date('2026-01-02T12:00:00Z') }),
+    trade({ action: 'interest', symbol: undefined, assetType: undefined, market: undefined, currency: 'CAD',
+      quantity: undefined, price: undefined, cashAmount: 1, cashCurrency: 'CAD', date: new Date('2026-01-02T13:00:00Z') })
+  ];
+  const prices = [{ symbol: 'VTI', timestamp: new Date('2026-01-01T20:00:00Z'), price: 110 }];
+  const history = calculatePositionHistory(transactions, prices, 'day');
+  assert.deepEqual(history.map(item => [item.date, item.currency, item.quantity]), [['2026-01-01', 'USD', 1]]);
+});
+
 const originalTransactionFind = Transaction.find;
 const originalPriceFind = Price.find;
 
@@ -177,11 +259,198 @@ test('历史数据库适配层使用 portfolioId、timestamp 和 price', async (
   };
 
   const history = await getHistory('64b000000000000000000010', 'vti', 'day');
+  // TASK-094：pending（导入未翻转）行对历史快照不可见
   assert.deepEqual(transactionQuery, {
     portfolioId: '64b000000000000000000010',
-    symbol: 'VTI'
+    symbol: 'VTI',
+    status: { $ne: 'pending' }
   });
   assert.deepEqual(priceQuery, { symbol: { $in: ['VTI'] } });
   assert.equal(history[0].positions[0].quantity, 10);
   assert.equal(history[0].positions[0].latestPrice, 120);
+});
+
+// ─────────────────────────────────────────────────────────────
+// TASK-096（#96）：重放顺序 = (当地交易日, orderRank, date, sequence, _id)
+// ─────────────────────────────────────────────────────────────
+
+const replayOrderCases = [
+  {
+    name: '同一时刻按 sequence（原行顺序）而非 _id 重放：先买后卖合法',
+    transactions: [
+      { _id: 'b', sequence: 0, action: 'buy', quantity: 10, price: 100, date: '2026-03-02T00:00:00Z' },
+      { _id: 'a', sequence: 1, action: 'sell', quantity: 10, price: 110, date: '2026-03-02T00:00:00Z' },
+      { _id: 'c', sequence: 2, action: 'buy', quantity: 5, price: 120, date: '2026-03-02T00:00:00Z' }
+    ],
+    expected: { quantity: 5, remainingCost: 600 }
+  },
+  {
+    name: '同一时刻手动流水（无批次）排在导入流水之前，不受 _id 字面顺序影响',
+    transactions: [
+      { _id: 'ffff', action: 'buy', quantity: 10, price: 100, date: '2026-03-02T00:00:00Z' },
+      { _id: '0001', sequence: 0, source: { importBatchId: 'aaaa' }, action: 'sell', quantity: 4, price: 120, date: '2026-03-02T00:00:00Z' }
+    ],
+    expected: { quantity: 6, remainingCost: 600 }
+  },
+  {
+    name: '同一时刻不同导入批次按批次先后，再按批内 sequence',
+    transactions: [
+      { _id: '0001', sequence: 0, source: { importBatchId: 'b1' }, action: 'sell', quantity: 4, price: 120, date: '2026-03-02T00:00:00Z' },
+      { _id: '0002', sequence: 5, source: { importBatchId: 'b0' }, action: 'buy', quantity: 10, price: 100, date: '2026-03-02T00:00:00Z' }
+    ],
+    expected: { quantity: 6, remainingCost: 600 }
+  },
+  {
+    // 回归（#95 发现）：localeCompare 把 '~' 排在十六进制之前，导致同一时刻导入卖出被排到已有买入之前而误报超卖
+    name: '预览行（_id 以 ~ 开头）排在同一时刻已入账 ObjectId 流水之后',
+    transactions: [
+      { _id: '~000000', action: 'sell', quantity: 4, price: 120, date: '2026-03-02T15:00:00Z' },
+      { _id: '64b000000000000000000e01', action: 'buy', quantity: 10, price: 100, date: '2026-03-02T15:00:00Z' }
+    ],
+    expected: { quantity: 6, remainingCost: 600 }
+  },
+  {
+    name: 'orderRank 把仅日期流水排在同日带时刻流水之后（不改写成交时刻）',
+    transactions: [
+      { _id: '0001', action: 'buy', quantity: 10, price: 100, date: '2026-03-02T15:00:00Z' },
+      { _id: '0002', action: 'buy', quantity: 10, price: 200, date: '2026-03-02T00:00:00Z', dateKind: 'date', orderRank: 1 },
+      { _id: '0003', action: 'sell', quantity: 15, price: 150, date: '2026-03-02T16:00:00Z' }
+    ],
+    // 无 orderRank：200 买入 → 100 买入 → 卖出 15 合法；orderRank=1：卖出发生在 200 买入之前 → 超卖
+    throws: 'INSUFFICIENT_POSITION'
+  },
+  {
+    name: 'orderRank 只在同一当地交易日内生效，不跨日',
+    transactions: [
+      { _id: '0001', action: 'buy', quantity: 10, price: 100, date: '2026-03-01T15:00:00Z', orderRank: 5 },
+      { _id: '0002', action: 'sell', quantity: 10, price: 100, date: '2026-03-02T00:00:00Z', orderRank: -5 }
+    ],
+    expected: null
+  }
+];
+
+for (const scenario of replayOrderCases) {
+  test(`持仓表格用例（重放顺序）：${scenario.name}`, () => {
+    const rows = scenario.transactions.map(row => ({
+      portfolioId: '64b000000000000000000010', symbol: 'VTI', assetType: 'etf', market: 'US', currency: 'USD',
+      ...row, date: new Date(row.date)
+    }));
+    if (scenario.throws) {
+      assert.throws(() => calculatePositions(rows), error => error.code === scenario.throws);
+      return;
+    }
+    const positions = calculatePositions(rows);
+    if (scenario.expected === null) { assert.equal(positions.length, 0); return; }
+    closeTo(positions[0].quantity, scenario.expected.quantity, 'quantity');
+    closeTo(positions[0].remainingCost, scenario.expected.remainingCost, 'remainingCost');
+  });
+}
+
+// ─────────────────────────────────────────────────────────────
+// TASK-098（#98）：拆股。quantity = 带符号份额变动（正拆为正、合股为负），
+// 总成本不变、单位成本按新份额重算，已实现盈亏不变；splitRatio（新/旧）可选，已知时须与份额变动一致。
+// ─────────────────────────────────────────────────────────────
+const splitCases = [
+  {
+    name: '1 拆 2：份额翻倍、总成本保持、单位成本减半',
+    transactions: [
+      { action: 'buy', quantity: 10, price: 100, fee: 2, date: '2026-03-02T00:00:00Z' },
+      { action: 'split', quantity: 10, splitRatio: 2, date: '2026-03-05T00:00:00Z' }
+    ],
+    expected: { quantity: 20, remainingCost: 1002, avgCost: 50.1, realizedPnl: 0 }
+  },
+  {
+    name: '未给比例的拆股按份额变动入账',
+    transactions: [
+      { action: 'buy', quantity: 10, price: 100, date: '2026-03-02T00:00:00Z' },
+      { action: 'split', quantity: 30, date: '2026-03-05T00:00:00Z' }
+    ],
+    expected: { quantity: 40, remainingCost: 1000, avgCost: 25, realizedPnl: 0 }
+  },
+  {
+    name: '10 合 1（份额变动为负）：份额缩小、总成本保持',
+    transactions: [
+      { action: 'buy', quantity: 100, price: 10, date: '2026-03-02T00:00:00Z' },
+      { action: 'split', quantity: -90, splitRatio: 0.1, date: '2026-03-05T00:00:00Z' }
+    ],
+    expected: { quantity: 10, remainingCost: 1000, avgCost: 100, realizedPnl: 0 }
+  },
+  {
+    name: '买入 → 拆股 → 卖出：卖出按拆股后单位成本计算已实现盈亏',
+    transactions: [
+      { action: 'buy', quantity: 10, price: 100, date: '2026-03-02T00:00:00Z' },
+      { action: 'split', quantity: 10, splitRatio: 2, date: '2026-03-05T00:00:00Z' },
+      { action: 'sell', quantity: 5, price: 60, fee: 1, date: '2026-03-09T00:00:00Z' }
+    ],
+    // 拆股后均价 50；卖出 5 股：成本减 250，盈亏 (60-50)×5-1 = 49
+    expected: { quantity: 15, remainingCost: 750, avgCost: 50, realizedPnl: 49 }
+  },
+  {
+    name: '拆股前无持仓：拒绝',
+    transactions: [{ action: 'split', quantity: 10, splitRatio: 2, date: '2026-03-05T00:00:00Z' }],
+    throws: 'SPLIT_NO_POSITION'
+  },
+  {
+    name: '拆股前已清仓：拒绝',
+    transactions: [
+      { action: 'buy', quantity: 10, price: 100, date: '2026-03-02T00:00:00Z' },
+      { action: 'sell', quantity: 10, price: 100, date: '2026-03-03T00:00:00Z' },
+      { action: 'split', quantity: 10, date: '2026-03-05T00:00:00Z' }
+    ],
+    throws: 'SPLIT_NO_POSITION'
+  },
+  {
+    name: '已知比例与份额变动冲突：拒绝',
+    transactions: [
+      { action: 'buy', quantity: 10, price: 100, date: '2026-03-02T00:00:00Z' },
+      { action: 'split', quantity: 12, splitRatio: 2, date: '2026-03-05T00:00:00Z' }
+    ],
+    throws: 'SPLIT_RATIO_CONFLICT'
+  },
+  {
+    name: '合股份额变动超过持仓（拆后份额不为正）：拒绝',
+    transactions: [
+      { action: 'buy', quantity: 10, price: 100, date: '2026-03-02T00:00:00Z' },
+      { action: 'split', quantity: -10, date: '2026-03-05T00:00:00Z' }
+    ],
+    throws: 'SPLIT_RATIO_CONFLICT'
+  },
+  {
+    name: '份额变动为 0：无效数量',
+    transactions: [
+      { action: 'buy', quantity: 10, price: 100, date: '2026-03-02T00:00:00Z' },
+      { action: 'split', quantity: 0, date: '2026-03-05T00:00:00Z' }
+    ],
+    throws: 'INVALID_QUANTITY'
+  }
+];
+
+for (const scenario of splitCases) {
+  test(`持仓表格用例（拆股）：${scenario.name}`, () => {
+    const rows = scenario.transactions.map((row, index) => ({
+      _id: String(index).padStart(4, '0'),
+      portfolioId: '64b000000000000000000010', symbol: 'VTI', assetType: 'etf', market: 'US', currency: 'USD',
+      ...row, date: new Date(row.date)
+    }));
+    if (scenario.throws) {
+      assert.throws(() => calculatePositions(rows), error => error.code === scenario.throws && error.status === 400);
+      return;
+    }
+    const [position] = calculatePositions(rows);
+    for (const key of ['quantity', 'remainingCost', 'avgCost', 'realizedPnl']) {
+      closeTo(position[key], scenario.expected[key], key);
+    }
+  });
+}
+
+// 代码审查 S5：重放日分桶按流水的当地交易日
+test('S5 同日顺序确认（orderRank）只在当地交易日内生效：次日仅日期卖出不会排到前一晚的多伦多成交之前', () => {
+  const buy = trade({
+    date: new Date('2026-01-06T01:30:00Z'), dateKind: 'datetime', timeZone: 'America/Toronto', quantity: 10
+  });
+  const sell = trade({
+    action: 'sell', date: new Date('2026-01-06T00:00:00Z'), dateKind: 'date', orderRank: -1, quantity: 10, price: 110
+  });
+  const [position] = calculatePositions([sell, buy]).concat([]);
+  assert.equal(position, undefined, '买入（当地 01-05）在先、卖出（01-06）在后，清仓且不超卖');
 });

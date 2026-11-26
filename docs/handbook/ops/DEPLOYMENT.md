@@ -257,6 +257,9 @@ server {
   index index.html;
 
   location /api/ {
+    # 流水导入以 JSON 携带完整报表（服务端仅对 /api/transactions/import 放宽到 2mb）；
+    # nginx 默认 1m 会先于应用返回 413，需同步放宽
+    client_max_body_size 2m;
     proxy_pass http://127.0.0.1:8080;
     proxy_set_header Host $host;
     proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;

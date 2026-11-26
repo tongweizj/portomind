@@ -2,11 +2,14 @@ const mongoose = require('mongoose');
 const Transaction = require('../models/transaction');
 const Portfolio = require('../models/portfolio');
 const Asset = require('../models/asset');
-const { calculatePositions } = require('./transaction/positionCalculator');
+const { calculatePositions, localTradeDay } = require('./transaction/positionCalculator');
+const { visibleQuery, isVisible } = require('./transaction/visibility');
+const { assertPortfolioUnlocked } = require('./transactionImport/commit');
 
 const WRITABLE_FIELDS = ['portfolioId', 'symbol', 'action', 'quantity', 'price', 'fee', 'date', 'notes'];
 const TRANSACTION_SORT = { date: -1, _id: -1 };
-const ACTIONS = ['buy', 'sell', 'div_cash', 'div_reinvest'];
+// 手动录入只开放四类动作；税款 / 利息 / 划转 / 独立费用目前仅经导入写入（TASK-097）。
+const { MANUAL_ACTIONS: ACTIONS, PAIRED_ACTIONS, TRANSFER_ACTIONS } = require('../constants/transaction.constants');
 
 function businessError(status, code, message) {
   const error = new Error(message);
@@ -78,7 +81,7 @@ async function validateLedger(candidate, transactionId, previous) {
   for (const ledger of ledgers.values()) {
     const query = { portfolioId: ledger.portfolioId, symbol: ledger.symbol };
     if (transactionId) query._id = { $ne: transactionId };
-    const transactions = await Transaction.find(query).lean();
+    const transactions = await Transaction.find(visibleQuery(query)).lean();
     const isCandidateLedger = String(candidate.portfolioId) === String(ledger.portfolioId) &&
       candidate.symbol === ledger.symbol;
     calculatePositions(
@@ -88,7 +91,7 @@ async function validateLedger(candidate, transactionId, previous) {
 }
 
 async function getTransactions({ page = 1, pageSize = 20, portfolioId, symbol } = {}) {
-  const query = {};
+  const query = visibleQuery();
   if (portfolioId) query.portfolioId = portfolioId;
   if (symbol) query.symbol = symbol.trim().toUpperCase();
   const [total, data] = await Promise.all([
@@ -106,12 +109,14 @@ function getTransactionsByPortfolio(portfolioId, options = {}) {
 }
 
 async function getTransactionById(id) {
-  return Transaction.findById(id);
+  const transaction = await Transaction.findById(id);
+  return isVisible(transaction) ? transaction : null;
 }
 
 async function createTransaction(input) {
   const data = normalizeInput(input);
   const asset = await validateReferences(data);
+  await assertPortfolioUnlocked(data.portfolioId);
   const transaction = {
     ...data,
     assetType: asset.type,
@@ -124,7 +129,7 @@ async function createTransaction(input) {
 
 async function updateTransaction(id, input) {
   const existing = await Transaction.findById(id).lean();
-  if (!existing) throw businessError(404, 'TRANSACTION_NOT_FOUND', 'Transaction not found');
+  if (!isVisible(existing)) throw businessError(404, 'TRANSACTION_NOT_FOUND', 'Transaction not found');
   // M-2（TASK-047）：归属不可变，由数据层保证，不依赖界面。
   // 必须在 normalizeInput 合并入参「之前」比较：之后 existing 已被入参覆盖。
   // 只拒「值不一致」，不拒「字段出现」——编辑页每次提交都会携带该字段（卡内 R-1b）。
@@ -138,30 +143,71 @@ async function updateTransaction(id, input) {
   }
   const data = normalizeInput(input, existing);
   const asset = await validateReferences(data);
+  await assertPortfolioUnlocked(existing.portfolioId);
   const transaction = {
     ...data,
     assetType: asset.type,
     market: asset.market,
     currency: asset.currency
   };
-  await validateLedger(transaction, id, existing);
-  return Transaction.findByIdAndUpdate(id, transaction, {
+  // TASK-096：编辑沿用已确认的重放顺序（sequence / orderRank），超卖校验与编辑后重放一致；
+  // 成交日（当地交易日）改变时，原交易日上确认的 orderRank 不再适用，一并清除。
+  const dayChanged = localTradeDay(existing) !== localTradeDay({ ...existing, date: transaction.date });
+  const ordering = { sequence: existing.sequence, orderRank: dayChanged ? undefined : existing.orderRank };
+  await validateLedger({ ...transaction, ...ordering }, id, existing);
+  const update = dayChanged && existing.orderRank !== undefined
+    ? { ...transaction, $unset: { orderRank: '' } }
+    : transaction;
+  return Transaction.findByIdAndUpdate(id, update, {
     new: true,
     runValidators: true,
     context: 'query'
   });
 }
 
+// 必须两端共同存在的成对流水（Human 决定 10）：换汇两端、证券划转两端
+const PAIRED_LEG_ACTIONS = Object.freeze([...PAIRED_ACTIONS, ...TRANSFER_ACTIONS]);
+
+/** 成对流水的全部端（含自身）：同一次导入确认（importBatchId）写入的同组号同类流水。 */
+async function pairedLegsOf(transaction) {
+  if (!PAIRED_LEG_ACTIONS.includes(transaction.action) || !transaction.pairGroupId) return [transaction];
+  const family = TRANSFER_ACTIONS.includes(transaction.action) ? TRANSFER_ACTIONS : PAIRED_ACTIONS;
+  const legs = await Transaction.find(visibleQuery({
+    pairGroupId: transaction.pairGroupId,
+    'source.importBatchId': transaction.source?.importBatchId,
+    action: { $in: [...family] }
+  })).lean();
+  return legs.some(leg => String(leg._id) === String(transaction._id)) ? legs : [transaction, ...legs];
+}
+
+/**
+ * 删除流水。成对流水（换汇 / 证券划转）删除一端即两端一起删除（决定 10，界面先确认），不留单边；
+ * 删除后各受影响账本（可能跨组合）重放校验，任一超卖即拒绝且不删除。
+ * 返回被删除的流水，另附 deletedIds（全部被删除的 id）。
+ */
 async function deleteTransaction(id) {
   const existing = await Transaction.findById(id).lean();
-  if (!existing) throw businessError(404, 'TRANSACTION_NOT_FOUND', 'Transaction not found');
-  const remaining = await Transaction.find({
-    portfolioId: existing.portfolioId,
-    symbol: existing.symbol,
-    _id: { $ne: id }
-  }).lean();
-  calculatePositions(remaining);
-  return Transaction.findByIdAndDelete(id);
+  if (!isVisible(existing)) throw businessError(404, 'TRANSACTION_NOT_FOUND', 'Transaction not found');
+  const legs = await pairedLegsOf(existing);
+  const legIds = legs.map(leg => String(leg._id));
+  for (const portfolioId of new Set(legs.map(leg => String(leg.portfolioId)))) await assertPortfolioUnlocked(portfolioId);
+  const ledgers = new Map(legs.filter(leg => leg.symbol).map(leg => [`${leg.portfolioId}|${leg.symbol}`, leg]));
+  for (const leg of ledgers.values()) {
+    const remaining = await Transaction.find(visibleQuery({
+      portfolioId: leg.portfolioId,
+      symbol: leg.symbol,
+      _id: { $nin: legIds }
+    })).lean();
+    calculatePositions(remaining);
+  }
+  if (legs.length === 1) {
+    const deleted = await Transaction.findByIdAndDelete(id);
+    const plain = deleted?.toObject ? deleted.toObject() : deleted;
+    return plain ? { ...plain, deletedIds: [String(id)] } : plain;
+  }
+  // 单条语句删除两端
+  await Transaction.deleteMany({ _id: { $in: legIds } });
+  return { ...existing, deletedIds: legIds };
 }
 
 // ───────────────────────── TR-08：A股整手软警告 ─────────────────────────
@@ -183,119 +229,6 @@ function detectLotWarnings({ asset, action, quantity }) {
   return [];
 }
 
-// ───────────────────────── TR-09：CSV 批量导入 ─────────────────────────
-
-/**
- * 批量导入交易（幂等 + 整批回滚）。
- * - 数据校验失败（字段非法/引用不存在/超卖）→ 整批回滚，不写入任何记录；
- * - 幂等：与库中已有交易按 (portfolioId, symbol, action, quantity, price, date, fee) 完全
- *   一致则跳过（skipped），同一批次内重复条目去重；
- * - 返回 { imported, skipped, errors: [{ index, message }] }。
- */
-async function importTransactions({ portfolioId, transactions = [] }) {
-  if (!mongoose.Types.ObjectId.isValid(portfolioId)) {
-    throw businessError(400, 'INVALID_PORTFOLIO_ID', 'Invalid or missing portfolioId');
-  }
-  if (!Array.isArray(transactions) || transactions.length === 0) {
-    throw businessError(400, 'INVALID_IMPORT_BODY', 'transactions must be a non-empty array');
-  }
-  if (transactions.length > 500) {
-    throw businessError(400, 'IMPORT_TOO_LARGE', 'Import batch cannot exceed 500 rows');
-  }
-
-  // 1. 逐条规范化 + 引用校验（失败收集，整批回滚）
-  const portfolioExists = await Portfolio.exists({ _id: portfolioId });
-  if (!portfolioExists) throw businessError(404, 'PORTFOLIO_NOT_FOUND', 'Portfolio not found');
-
-  const normalized = [];
-  const errors = [];
-  const assetsBySymbol = new Map();
-  for (let index = 0; index < transactions.length; index += 1) {
-    try {
-      const data = normalizeInput({ ...transactions[index], portfolioId });
-      const asset = await validateReferences(data);
-      assetsBySymbol.set(data.symbol, asset);
-      normalized.push({ index, data, asset });
-    } catch (error) {
-      errors.push({ index, message: error.message || 'Invalid row' });
-    }
-  }
-  if (errors.length > 0) {
-    return { imported: 0, skipped: 0, errors };
-  }
-
-  // 2. 幂等：批次内去重 + 与库中记录比对（按日比较，避免时刻差异）
-  const dayKey = value => new Date(value).toISOString().slice(0, 10);
-  const dedupKey = item => [
-    String(item.data.portfolioId), item.data.symbol, item.data.action,
-    item.data.quantity, item.data.price, dayKey(item.data.date), item.data.fee || 0
-  ].join('|');
-  const seen = new Set();
-  const unique = [];
-  for (const item of normalized) {
-    const key = dedupKey(item);
-    if (seen.has(key)) continue;
-    seen.add(key);
-    unique.push(item);
-  }
-
-  const existingKeys = new Set();
-  if (unique.length > 0) {
-    // 投影必须包含 portfolioId：下方拼键读取 tx.portfolioId，缺该字段会得到 "undefined"，
-    // 使库侧键与导入侧键永不相等、幂等失效（TASK-046）。
-    const existing = await Transaction.find({ portfolioId }).select(
-      'portfolioId symbol action quantity price date fee'
-    ).lean();
-    for (const tx of existing) {
-      existingKeys.add([
-        String(tx.portfolioId), tx.symbol, tx.action, tx.quantity, tx.price,
-        dayKey(tx.date), tx.fee || 0
-      ].join('|'));
-    }
-  }
-  const toImport = [];
-  let skipped = 0;
-  for (const item of unique) {
-    if (existingKeys.has(dedupKey(item))) {
-      skipped += 1;
-      continue;
-    }
-    toImport.push(item);
-  }
-
-  // 3. 超卖重放校验（含批次内新增，按 symbol 分组）
-  const symbols = [...new Set(toImport.map(item => item.data.symbol))];
-  for (const symbol of symbols) {
-    const ledger = await Transaction.find({ portfolioId, symbol }).lean();
-    const additions = toImport
-      .filter(item => item.data.symbol === symbol)
-      .map(item => ({ ...item.data, _id: `import-${item.index}` }));
-    calculatePositions([...ledger, ...additions]);
-  }
-
-  // 4. 写入（批量创建）
-  const created = await Transaction.insertMany(
-    toImport.map(item => ({
-      portfolioId,
-      symbol: item.data.symbol,
-      assetType: item.asset.type,
-      market: item.asset.market,
-      currency: item.asset.currency,
-      action: item.data.action,
-      quantity: item.data.quantity,
-      price: item.data.price,
-      fee: item.data.fee || 0,
-      date: item.data.date,
-      notes: item.data.notes || ''
-    }))
-  );
-  return {
-    imported: created.length,
-    skipped,
-    errors
-  };
-}
-
 module.exports = {
   TRANSACTION_SORT,
   getTransactions,
@@ -304,6 +237,5 @@ module.exports = {
   createTransaction,
   updateTransaction,
   deleteTransaction,
-  detectLotWarnings,
-  importTransactions
+  detectLotWarnings
 };

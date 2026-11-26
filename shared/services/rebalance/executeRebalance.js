@@ -1,3 +1,4 @@
+const { visibleQuery } = require('../transaction/visibility');
 const Transaction = require('../../models/transaction');
 const transactionService = require('../transaction.service');
 const recorder = require('./recorder');
@@ -95,7 +96,7 @@ async function revokeExecution(recordId) {
   if (ids.length === 0) {
     throw businessError(409, 'EXECUTED_TRADES_MISSING', 'Executed transactions are missing');
   }
-  const transactions = await Transaction.find({ _id: { $in: ids } }).lean();
+  const transactions = await Transaction.find(visibleQuery({ _id: { $in: ids } })).lean();
   const byId = new Map(transactions.map(transaction => [String(transaction._id), transaction]));
   const originals = ids.map(id => byId.get(id));
   if (originals.some(transaction => !transaction)) {
