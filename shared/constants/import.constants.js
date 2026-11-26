@@ -3,7 +3,7 @@
 
 const SOURCE_BROKERS = Object.freeze(['wealthsimple', 'questrade', 'other']);
 
-// 导入格式 → 解析器在 shared/services/transactionImport/index.js 的 PARSERS 注册；
+// 导入格式 → 解析器在 shared/services/transactionImport/input.js 的 PARSERS 注册；
 // standard 标准 CSV（#94）、wealthsimple 原格式 CSV（#100）、questrade 原格式 XLSX（#102）。
 const IMPORT_FORMATS = Object.freeze(['standard', 'wealthsimple', 'questrade']);
 // 二进制格式：file.encoding 必须为 base64，解析器收到 Buffer。
