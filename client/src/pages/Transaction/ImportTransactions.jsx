@@ -34,6 +34,8 @@ const TIME_ZONE_OPTIONS = [
   { value: 'America/Toronto', label: '多伦多（America/Toronto）' },
   { value: 'Asia/Shanghai', label: '北京（Asia/Shanghai）' },
 ];
+const PAIR_SOURCE_LABELS = { explicit: '按组号配对', user: '已指定配对', suggested: '建议配对（确认导入即采纳）' };
+
 const ORDER_LABELS = {
   cross_report: { before: '在已有流水之前', after: '在已有流水之后' },
   mixed_precision: { before: '在带时刻成交之前', after: '在带时刻成交之后' },
@@ -446,6 +448,24 @@ export default function ImportTransactions() {
                         )}
                         {row.orderResolved && !row.options.includes('order') && (
                           <div className="text-gray-500">已确认顺序：{row.orderResolved === 'before' ? '之前' : '之后'}</div>
+                        )}
+                        {/* TASK-101：换汇两端配对。配对与候选全部由服务端给出，页面只展示并回传用户指定的另一端 */}
+                        {row.pair && (
+                          <div className="text-gray-500">
+                            {PAIR_SOURCE_LABELS[row.pair.source] || '已配对'}：与第 {row.pair.partnerRowNumber} 行共同入账
+                          </div>
+                        )}
+                        {row.options.includes('pairWith') && (
+                          <select value={resolution.pairWith || ''} aria-label="指定换汇另一端"
+                            onChange={e => setResolution(row.rowKey, e.target.value ? { pairWith: e.target.value } : null)}
+                            className="mt-1 rounded border bg-white px-1 py-0.5">
+                            <option value="">指定另一端…</option>
+                            {row.pairCandidates.map(item => (
+                              <option key={item.rowKey} value={item.rowKey}>
+                                第 {item.rowNumber} 行 · {item.date || '—'} · {item.cashAmount ?? '—'} {item.cashCurrency || ''}
+                              </option>
+                            ))}
+                          </select>
                         )}
                         <ImportMatchResolution row={row} resolution={resolution}
                           onChange={value => setResolution(row.rowKey, value)} />

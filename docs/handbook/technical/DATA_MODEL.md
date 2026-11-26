@@ -133,7 +133,7 @@ AlertRule ──_id──> AlertEvent.ruleId（**可空**：再平衡通知没�
 | `symbol` | String，trim，**uppercase**；持仓类动作（`buy`/`sell`/`div_reinvest`）required，现金类可空（利息、划转、独立费用） |
 | `market` | String，enum 同 Asset.market；持仓类动作或有标的时 required |
 | `currency` | String，required，enum 同 Asset.currency。有标的为资产币种快照；无标的的现金流水为现金币种 |
-| `action` | String，required，enum 见 `shared/constants/transaction.constants.js`：持仓类 `buy`/`sell`/`div_reinvest`；现金类 `div_cash`/`tax`/`interest`/`cash_in`/`cash_out`/`fee`（TASK-097，后四类及无数量的分红目前仅经导入写入） |
+| `action` | String，required，enum 见 `shared/constants/transaction.constants.js`：持仓类 `buy`/`sell`/`div_reinvest`；现金类 `div_cash`/`tax`/`interest`/`cash_in`/`cash_out`/`fee`（TASK-097）、`fx`（TASK-101 换汇，每端一条，两端同 `pairGroupId`）；后五类及无数量的分红目前仅经导入写入 |
 | `quantity` | Number，`min: Number.EPSILON`（> 0）；持仓类动作 required，现金类可空 |
 | `price` | Number，`min: Number.EPSILON`（> 0）；持仓类动作 required，现金类可空 |
 | `fee` | Number，= `0`，min 0。买入计入成本、卖出从净得扣除 |
@@ -147,14 +147,14 @@ AlertRule ──_id──> AlertEvent.ruleId（**可空**：再平衡通知没�
 | `cashAmount` / `cashCurrency` / `cashAmountSource` | 带符号现金净额（流入正、流出负）、实际现金币种（可与资产 `currency` 不同）、来源（`broker` 券商给出，保留分币差异 / `derived` 由数量 × 单价 ± 佣金推算）。现金类流水的金额即 `cashAmount` |
 | `feeSource` | `broker`/`derived`/`user`/`confirmed_zero`（佣金缺失不按 0 处理，需推算、补填或明确确认） |
 | `grossAmount` | 数量 × 单价（无编号成交匹配字段，不含佣金与净额） |
-| `pairGroupId` / `sequence` | 成对流水组号；同一报表内原行顺序（时间正序），同一时刻同批次按此重放 |
+| `pairGroupId` / `sequence` | 成对流水组号（TASK-101 换汇两端：报表 `pair_group` 原值，或建议 / 用户指定配对生成的 `fx-<hash>`；两端共同入账，单端不入账）；同一报表内原行顺序（时间正序），同一时刻同批次按此重放 |
 | `orderRank` | Number，可选（TASK-096）：用户确认的同日先后，仅在同一 UTC 交易日内生效（默认 0；确认「之前」为负、「之后」为正）。编辑改动成交日时清除 |
 | `status` | `pending`/`committed`，仅导入写入。`pending` 行对全部读取方不可见（统一经 `shared/services/transaction/visibility.js`），手动录入与旧数据无此字段 |
 | `createdAt` / `updatedAt` | 由 `timestamps: true` 自动维护 |
 
 - 索引：`{portfolioId: 1, date: -1, _id: -1}`（组合内倒序列表）、`{portfolioId: 1, symbol: 1, date: 1, _id: 1}`（组合内单标的重放）；TASK-094 新增部分索引 `{sourceAccountId, source.externalId}`（**非唯一**：跨组合同编号须可被发现）、`{sourceAccountId, source.rawHash}`、`{source.importBatchId}`。
 - **无唯一索引**：允许同一 `(portfolioId, symbol, date, action, quantity, price)` 重复落库。CSV 导入的幂等**不靠数据库约束**，靠业务层判重（当前实现有缺陷，见 §5.2）。
-- `action` 语义：`div_reinvest` 转增持仓且成本含费；现金类（`div_cash`/`tax`/`interest`/`cash_in`/`cash_out`/`fee`）不进持仓、不参与超卖重放，持仓计算直接跳过（现金余额核对见后续工单）。
+- `action` 语义：`div_reinvest` 转增持仓且成本含费；现金类（`div_cash`/`tax`/`interest`/`cash_in`/`cash_out`/`fee`/`fx`）不进持仓、不参与超卖重放，持仓计算直接跳过（现金余额核对见后续工单）。
 
 ### 4.4 Price（`shared/models/price.js`）
 
