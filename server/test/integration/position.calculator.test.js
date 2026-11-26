@@ -79,6 +79,32 @@ const calculationCases = [
     ],
     prices: { VTI: 15 },
     expected: [{ symbol: 'VTI', quantity: 0.3, avgCost: 10, remainingCost: 3, marketValue: 4.5, unrealizedPnl: 1.5, pnlPct: 50, realizedPnl: 0.4 }]
+  },
+  // TASK-099：证券划转。转出按转出前平均成本减记，不产生买卖盈亏；转入按承接成本（carryCost）增加。
+  {
+    name: '证券转出按平均成本减记且不产生已实现盈亏',
+    transactions: () => [
+      trade({ price: 100 }),
+      trade({ price: 200 }),
+      trade({ action: 'transfer_out', quantity: 5, price: 999 })
+    ],
+    prices: { VTI: 300 },
+    expected: [{ symbol: 'VTI', quantity: 15, avgCost: 150, remainingCost: 2250, realizedPnl: 0 }]
+  },
+  {
+    name: '证券转入承接成本而非单价',
+    transactions: () => [trade({ symbol: 'XUS.US', action: 'transfer_in', quantity: 8, price: 1, carryCost: 600 })],
+    prices: { 'XUS.US': 80 },
+    expected: [{ symbol: 'XUS.US', quantity: 8, avgCost: 75, remainingCost: 600, marketValue: 640, unrealizedPnl: 40, realizedPnl: 0 }]
+  },
+  {
+    name: '转入后再卖出按承接成本计算已实现盈亏',
+    transactions: () => [
+      trade({ action: 'transfer_in', quantity: 10, price: 1, carryCost: 500 }),
+      trade({ action: 'sell', quantity: 4, price: 60 })
+    ],
+    prices: { VTI: 60 },
+    expected: [{ symbol: 'VTI', quantity: 6, avgCost: 50, remainingCost: 300, realizedPnl: 40 }]
   }
 ];
 
@@ -107,6 +133,22 @@ test('持仓表格用例：先卖后买是非法账本', () => {
       trade({ action: 'buy', quantity: 2 })
     ], { VTI: 100 }),
     error => error.code === 'INSUFFICIENT_POSITION' && error.status === 400
+  );
+});
+
+test('持仓表格用例：转出超过可用持仓视为超卖', () => {
+  sequence = 0;
+  assert.throws(
+    () => calculatePositions([trade({ quantity: 2 }), trade({ action: 'transfer_out', quantity: 3 })]),
+    error => error.code === 'INSUFFICIENT_POSITION'
+  );
+});
+
+test('持仓表格用例：转入缺少承接成本不猜成本', () => {
+  sequence = 0;
+  assert.throws(
+    () => calculatePositions([trade({ action: 'transfer_in', quantity: 2 })]),
+    error => error.code === 'INVALID_CARRY_COST'
   );
 });
 

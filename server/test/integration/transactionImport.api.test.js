@@ -54,7 +54,7 @@ test('GET /api/transactions/import/template：下载标准 CSV 模板（表头 +
     header,
     'activity_type,trade_date,trade_time,time_zone,settlement_date,external_id,source_row,pair_group,' +
     'account_number,symbol,market,quantity,unit_price,cash_amount,cash_currency,commission,' +
-    'transfer_cost,transfer_cost_currency,notes'
+    'transfer_cost,transfer_cost_currency,transfer_fx_rate,notes'
   );
   assert.ok(examples.length >= 2, '模板至少含买入与卖出示例行');
 });

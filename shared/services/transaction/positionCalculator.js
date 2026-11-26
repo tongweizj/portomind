@@ -15,6 +15,10 @@ function calculationError(code, message) {
   return error;
 }
 
+// 影响持仓的动作；transfer_out / transfer_in 为证券划转两端（TASK-099）。
+const POSITION_ACTIONS = Object.freeze(['buy', 'sell', 'div_cash', 'div_reinvest', 'transfer_out', 'transfer_in']);
+const TRANSFER_ACTIONS = Object.freeze(['transfer_out', 'transfer_in']);
+
 const DAY_MS = 24 * 60 * 60 * 1000;
 
 function orderNumber(value, fallback) {
@@ -80,9 +84,16 @@ function latestPriceFor(latestPrices, symbol) {
  * - sell：数量 -= qty，成本按卖出前均价减记，realizedPnl += (price - avgCost)×qty - fee（净得扣费）；
  * - div_cash：现金分红，不进持仓（数量/成本不变），realizedPnl 不变；
  * - div_reinvest：分红再投，等价 buy（数量与成本增加，含 fee）；
+ * - transfer_out（TASK-099）：证券转出，数量 -= qty，成本按转出前均价减记，不产生已实现盈亏；
+ *   不允许超过当时可用数量（同 sell）；price 只是快照，不参与计算；
+ * - transfer_in（TASK-099）：证券转入，数量 += qty，成本 += carryCost（承接成本，转入资产原币种）；
+ *   缺 carryCost 时报 INVALID_CARRY_COST，不按 qty×price 猜成本；
  * - fee 只影响发生之后的持仓，不回溯漂移（重放天然满足）。
+ *
+ * options.onApply(transaction, effect)：每条流水应用后回调（effect.removedCost 为转出 / 卖出减记的成本），
+ * 供导入预览取得转出端的承接成本。
  */
-function replayLedger(transactions) {
+function replayLedger(transactions, options = {}) {
   if (!Array.isArray(transactions)) {
     throw calculationError('INVALID_TRANSACTIONS', 'transactions must be an array');
   }
@@ -99,13 +110,18 @@ function replayLedger(transactions) {
     const transactionDate = new Date(transaction.date);
 
     if (!symbol) throw calculationError('INVALID_SYMBOL', 'transaction symbol is required');
-    if (!['buy', 'sell', 'div_cash', 'div_reinvest'].includes(action)) {
+    if (!POSITION_ACTIONS.includes(action)) {
       throw calculationError('INVALID_ACTION', `Invalid transaction action for ${symbol}`);
     }
     if (!Number.isFinite(quantity) || quantity <= 0) {
       throw calculationError('INVALID_QUANTITY', `Invalid transaction quantity for ${symbol}`);
     }
-    if (!Number.isFinite(tradePrice) || tradePrice <= 0) {
+    const carryCost = Number(transaction.carryCost);
+    if (action === 'transfer_in' && (transaction.carryCost === null || transaction.carryCost === undefined ||
+        transaction.carryCost === '' || !Number.isFinite(carryCost) || carryCost < 0)) {
+      throw calculationError('INVALID_CARRY_COST', `Transfer-in carry cost is required for ${symbol}`);
+    }
+    if (!TRANSFER_ACTIONS.includes(action) && (!Number.isFinite(tradePrice) || tradePrice <= 0)) {
       throw calculationError('INVALID_PRICE', `Invalid transaction price for ${symbol}`);
     }
     if (!Number.isFinite(fee) || fee < 0) {
@@ -125,10 +141,14 @@ function replayLedger(transactions) {
       realizedPnl: 0
     };
 
+    let removedCost = 0;
     if (action === 'buy' || action === 'div_reinvest') {
       // div_reinvest 等价买入（分红再投转增持仓）
       position.quantity += quantity;
       position.remainingCost += quantity * tradePrice + fee;
+    } else if (action === 'transfer_in') {
+      position.quantity += quantity;
+      position.remainingCost += carryCost;
     } else if (action === 'div_cash') {
       // 现金分红：不进持仓，仅记录；数量/成本/已实现盈亏均不变
     } else {
@@ -141,9 +161,11 @@ function replayLedger(transactions) {
       const averageCost = position.quantity > EPSILON
         ? position.remainingCost / position.quantity
         : 0;
+      removedCost = averageCost * quantity;
       position.quantity -= quantity;
-      position.remainingCost -= averageCost * quantity;
-      position.realizedPnl += (tradePrice - averageCost) * quantity - fee;
+      position.remainingCost -= removedCost;
+      // 划转只移动份额与成本，不产生买卖盈亏
+      if (action === 'sell') position.realizedPnl += (tradePrice - averageCost) * quantity - fee;
       if (Math.abs(position.quantity) < EPSILON) {
         position.quantity = 0;
         position.remainingCost = 0;
@@ -154,6 +176,7 @@ function replayLedger(transactions) {
     position.market = transaction.market || position.market;
     position.currency = transaction.currency || position.currency;
     positions.set(symbol, position);
+    if (options.onApply) options.onApply(transaction, { removedCost, position: { ...position } });
   }
 
   return positions;
@@ -280,5 +303,7 @@ module.exports = {
   calculatePositionHistory,
   compareTransactions,
   PREVIEW_BATCH_KEY,
+  POSITION_ACTIONS,
+  TRANSFER_ACTIONS,
   periodKey
 };

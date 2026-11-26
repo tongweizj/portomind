@@ -4,6 +4,8 @@
 //   - 页面只读取文件文本、收集来源账户 / 列映射 / 逐行决议，并展示服务端返回的预览与当次结果；
 //   - 解析、映射应用、标的派生、匹配、超卖与拆批全部由服务端完成（client 不持有业务规则）；
 //   - TASK-096：报表有时间无时区时由用户确认北京 / 多伦多时区；同日顺序影响结果时由用户确认先后（服务端判定）；
+//   - TASK-099：证券划转先到的一端「暂存」（服务端保存，不进账本），另一端导入时自动配对并共同确认；
+//     承接成本、配对与跨币种依据均由服务端核对，页面只展示并收集决议；
 //   - 任何输入变化都使预览失效，必须重新预览后才能确认；服务端检测到账本变化时同样要求重新预览。
 import { useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router';
@@ -14,18 +16,22 @@ import { ROUTES } from '../../constants/routes';
 import { getApiErrorMessage } from '../../services/api.client';
 import {
   commitImport,
+  discardStagedTransfer,
   downloadImportTemplate,
+  listStagedTransfers,
   getImportFormat,
   listSourceAccounts,
   previewImport,
 } from '../../services/transactionImport.service';
 import ImportMatchResolution from './ImportMatchResolution';
+import ImportTransferResolution from './ImportTransferResolution';
 
 const DISPOSITION_LABELS = {
   add: '新增', update: '更新', skip: '跳过', review: '待核对', error: '错误', deferred: '下一批',
+  stage: '暂存待配对',
 };
 const DISPOSITION_STYLES = {
-  add: 'text-emerald-700', update: 'text-blue-700', skip: 'text-gray-500',
+  add: 'text-emerald-700', update: 'text-blue-700', skip: 'text-gray-500', stage: 'text-indigo-700',
   review: 'text-amber-700', error: 'text-red-700', deferred: 'text-gray-500',
 };
 const FEE_SOURCE_LABELS = { derived: '推算', user: '补填', confirmed_zero: '确认为 0', unknown: '未知' };
@@ -83,6 +89,11 @@ export default function ImportTransactions() {
   const [result, setResult] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [stagedTransfers, setStagedTransfers] = useState([]);
+
+  const reloadStaged = () => listStagedTransfers().then(setStagedTransfers).catch(() => {});
+
+  useEffect(() => { reloadStaged(); }, []);
 
   useEffect(() => {
     getImportFormat().then(setFormat).catch(() => {});
@@ -161,6 +172,7 @@ export default function ImportTransactions() {
       }));
       setResult(data);
       setStale(true);
+      reloadStaged();
       listSourceAccounts().then(setAccounts).catch(() => {});
       if (sourceMode === 'new' && data.sourceAccountId) {
         // 新建的来源账户已落库：后续批次 / 重新预览按 id 引用同一身份
@@ -300,6 +312,31 @@ export default function ImportTransactions() {
         {error && <div className="rounded bg-red-50 p-3 text-sm text-red-700">{error}</div>}
       </div>
 
+      {stagedTransfers.length > 0 && (
+        <div className="rounded-xl bg-white p-6 shadow space-y-2 text-sm">
+          <p className="font-semibold text-gray-800">暂存待配对的证券划转（{stagedTransfers.length}）</p>
+          <p className="text-gray-500">先到的一端不进账本；导入另一端的报表时自动配对并共同确认。放弃后需重新提供该端的报表行。</p>
+          <ul className="divide-y">
+            {stagedTransfers.map(leg => (
+              <li key={leg.id} className="flex flex-wrap items-center justify-between gap-2 py-1">
+                <span>
+                  {leg.direction === 'out' ? '转出' : '转入'} {leg.symbol} × {leg.quantity} · {String(leg.date).slice(0, 10)}
+                  {' · '}{leg.portfolioName || leg.portfolioId}
+                  {leg.rowNumber ? ` · ${leg.fileName || ''} 第 ${leg.rowNumber} 行` : ''}
+                </span>
+                <button type="button" className="text-red-600 hover:underline"
+                  onClick={async () => {
+                    try { await discardStagedTransfer(leg.id); invalidate(); reloadStaged(); }
+                    catch (err) { setError(getApiErrorMessage(err, '放弃暂存失败')); }
+                  }}>
+                  放弃暂存
+                </button>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+
       {preview && (
         <div className="rounded-xl bg-white p-6 shadow space-y-5">
           {stale && (
@@ -351,8 +388,8 @@ export default function ImportTransactions() {
           </details>
 
           <div className="flex flex-wrap gap-4 text-sm">
-            {['add', 'update', 'skip', 'review', 'error'].map(key => (
-              <span key={key} className={DISPOSITION_STYLES[key]}>{DISPOSITION_LABELS[key]} {preview.counts[key]}</span>
+            {['add', 'update', 'stage', 'skip', 'review', 'error'].map(key => (
+              <span key={key} className={DISPOSITION_STYLES[key]}>{DISPOSITION_LABELS[key]} {preview.counts[key] ?? 0}</span>
             ))}
           </div>
           {preview.blockingReasons.length > 0 && (
@@ -441,8 +478,13 @@ export default function ImportTransactions() {
                         {row.orderResolved && !row.options.includes('order') && (
                           <div className="text-gray-500">已确认顺序：{row.orderResolved === 'before' ? '之前' : '之后'}</div>
                         )}
-                        <ImportMatchResolution row={row} resolution={resolution}
-                          onChange={value => setResolution(row.rowKey, value)} />
+                        {row.transfer ? (
+                          <ImportTransferResolution row={row} resolution={resolution}
+                            onChange={value => setResolution(row.rowKey, value)} />
+                        ) : (
+                          <ImportMatchResolution row={row} resolution={resolution}
+                            onChange={value => setResolution(row.rowKey, value)} />
+                        )}
                       </td>
                     </tr>
                   );
@@ -463,6 +505,11 @@ export default function ImportTransactions() {
             <div className="rounded bg-gray-50 p-4 text-sm space-y-1">
               <p className="font-medium text-gray-800">当次导入结果</p>
               <p>新增：<strong className="text-emerald-700">{result.added}</strong> 条 · 更新：{result.updated} 条 · 跳过：{result.skipped} 条 · 待核对：{result.review} 条</p>
+              {(result.staged > 0 || result.counterpartsWritten > 0) && (
+                <p className="text-indigo-800">
+                  证券划转：暂存待配对 {result.staged || 0} 端（两边账本未变）· 同次写入对端组合 {result.counterpartsWritten || 0} 条
+                </p>
+              )}
               {result.deferred > 0 && <p className="text-blue-800">尚有 {result.deferred} 条留待下一批：请点击「重新预览」继续。</p>}
               <button type="button" onClick={() => navigate(ROUTES.PORTFOLIO_TX_TAB(portfolioId))}
                 className="mt-2 text-blue-600 hover:underline">查看本组合交易记录 →</button>

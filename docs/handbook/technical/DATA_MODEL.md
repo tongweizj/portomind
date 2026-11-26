@@ -43,6 +43,7 @@ const Asset = require('@portomind/shared/models/asset');
 | **Session** | 服务端会话（绝对 7 天 TTL，存 Mongo） | `sid` | [PL-0](../product/lines/PL-0-platform-foundation.md)（认证内核） |
 | **SourceAccount** | 流水导入来源账户（TASK-094） | `{broker, accountKeyHash}`（部分唯一） | [PL-1](../product/lines/PL-1-ledger.md) |
 | **ImportBatch** | 导入整批提交的锁与补偿记录（非长期历史） | 活跃 `lockKey` 部分唯一 | [PL-1](../product/lines/PL-1-ledger.md) |
+| **TransferLeg** | 证券划转先到一端的服务端暂存（TASK-099，不进账本） | 无 | [PL-1](../product/lines/PL-1-ledger.md) |
 
 ---
 
@@ -133,7 +134,7 @@ AlertRule ──_id──> AlertEvent.ruleId（**可空**：再平衡通知没�
 | `symbol` | String，required，trim，**uppercase** |
 | `market` | String，required，enum 同 Asset.market |
 | `currency` | String，required，enum 同 Asset.currency |
-| `action` | String，required，enum `buy`/`sell`/`div_cash`/`div_reinvest` |
+| `action` | String，required，enum `buy`/`sell`/`div_cash`/`div_reinvest`/`transfer_out`/`transfer_in`（划转两端仅由流水导入写入，TASK-099） |
 | `quantity` | Number，required，`min: Number.EPSILON`（> 0） |
 | `price` | Number，required，`min: Number.EPSILON`（> 0） |
 | `fee` | Number，= `0`，min 0。买入计入成本、卖出从净得扣除 |
@@ -149,12 +150,15 @@ AlertRule ──_id──> AlertEvent.ruleId（**可空**：再平衡通知没�
 | `grossAmount` | 数量 × 单价（无编号成交匹配字段，不含佣金与净额） |
 | `pairGroupId` / `sequence` | 成对流水组号；同一报表内原行顺序（时间正序），同一时刻同批次按此重放 |
 | `orderRank` | Number，可选（TASK-096）：用户确认的同日先后，仅在同一 UTC 交易日内生效（默认 0；确认「之前」为负、「之后」为正）。编辑改动成交日时清除 |
+| `carryCost` / `carryCostCurrency` / `carryCostSource` / `transferFxRate` | TASK-099，仅 `transfer_in`：承接成本（转入资产原币种，重放时代替 `qty×price`）；来源 `report`（报表划转成本）/`carried`（同币种承接转出端移动平均成本）/`fx`（转出成本 × 换算依据）/`user`（用户补填）；换算依据 = 1 单位转出资产币种折合的转入资产币种 |
+| `transfer` | TASK-099：`{direction:'out'\|'in', counterpartPortfolioId, counterpartSourceAccountId, stagedLegId?}`。两端以同一 `pairGroupId` 关联、同一 `source.importBatchId` 共同入账；`price` 为每单位成本快照（转出 = 转出前均价，转入 = 承接成本 / 份额），不参与重放 |
 | `status` | `pending`/`committed`，仅导入写入。`pending` 行对全部读取方不可见（统一经 `shared/services/transaction/visibility.js`），手动录入与旧数据无此字段 |
 | `createdAt` / `updatedAt` | 由 `timestamps: true` 自动维护 |
 
 - 索引：`{portfolioId: 1, date: -1, _id: -1}`（组合内倒序列表）、`{portfolioId: 1, symbol: 1, date: 1, _id: 1}`（组合内单标的重放）；TASK-094 新增部分索引 `{sourceAccountId, source.externalId}`（**非唯一**：跨组合同编号须可被发现）、`{sourceAccountId, source.rawHash}`、`{source.importBatchId}`。
 - **无唯一索引**：允许同一 `(portfolioId, symbol, date, action, quantity, price)` 重复落库。CSV 导入的幂等**不靠数据库约束**，靠业务层判重（当前实现有缺陷，见 §5.2）。
-- `action` 语义：`div_cash` 进现金不进持仓；`div_reinvest` 转增持仓且成本含费。
+- `action` 语义：`div_cash` 进现金不进持仓；`div_reinvest` 转增持仓且成本含费；`transfer_out` 按转出前均价减记数量与成本、不产生已实现盈亏、不得超过当时持仓；`transfer_in` 按 `carryCost` 增加数量与成本（缺 `carryCost` 报 `INVALID_CARRY_COST`，不猜成本）。
+- 划转流水不支持经 `PUT /api/transactions/:id` 编辑（动作不在手动录入枚举内）；单独删除一端会留下单边结果，需人工处理（已知限制）。
 
 ### 4.4 Price（`shared/models/price.js`）
 
@@ -359,10 +363,32 @@ AlertRule ──_id──> AlertEvent.ruleId（**可空**：再平衡通知没�
 | `status` | `committing` → `committed` 或 `rolled_back` |
 | `lockKey` | `portfolio:<id>`；仅 `committing` 期间存在，终态 `$unset` |
 | `previewToken` / `ledgerFingerprint` | 本次确认核对过的预览凭据 |
+| `parentBatchId` | TASK-099：跨组合划转共同入账时，对端组合的伴随锁指向主批次；随主批次终态一并释放 |
+| `phase` | `flipped`：pending→committed 翻转已完成，之后的故障只向前补完暂存一端状态，不回滚 |
 | `counts` / `updates` / `error` | 当次结果计数；更新类处置（TASK-095）改写前的原值 `[{transactionId, before, unset}]`（先写后改，回滚 / 崩溃回收时恢复）；失败原因 |
 
 - 部分唯一索引 `{lockKey}`（`status:'committing'`）：同组合并发确认只有一个成功。
 - 整批写入：新行先以 `status:'pending'` 写入，单语句翻转为 `committed`；失败即删除本批 pending 行并标 `rolled_back`；超过 10 分钟仍为 `committing` 的批次在下一次确认前回收。单机 MongoDB 无多文档事务，故采用应用层方案。
+- 跨组合划转（TASK-099）：主锁之后按组合 id 顺序取对端伴随锁，任一被占 → `409 IMPORT_IN_PROGRESS`；两端流水同属一次翻转，不会单边可见。
+
+### 4.15 TransferLeg（`shared/models/transferLeg.js`，TASK-099）
+
+证券划转先到的一端（Human 决定：服务端暂存）。只存在于本集合，对任何账本读取方不可见。
+
+| 字段 | 定义 |
+|---|---|
+| `portfolioId` / `sourceAccountId` | 该端的组合与来源账户（各端各自保留） |
+| `direction` | `out` / `in` |
+| `symbol` / `assetType` / `market` / `currency` | 资产快照（ADR-003 存储代码，资产原币种） |
+| `quantity` / `date` / `dateKind` / `timeZone` / `timeZoneSource` / `settlementDate` / `settlementStatus` / `sequence` | 与导入流水同口径 |
+| `pairGroup` | 报表配对组号（可选） |
+| `transferCost` / `transferCostCurrency` / `transferFxRate` | 报表给出的转入成本与换算依据（转入端） |
+| `source` | `{format, fileName, rowNumber, rowNumberKind, externalId, rawHash}`（重复导入识别用 `rawHash`） |
+| `status` | `pending`（随批次写入中）→ `staged`（待核对）→ `consuming`（被某次确认占用）→ `committed`；或 `discarded`（用户放弃，需重新提供该端） |
+| `stagedBatchId` / `consumedBatchId` / `transactionId` | 暂存批次 / 占用批次 / 共同入账后写入的账本流水 |
+
+- 占用以条件更新 `staged → consuming` 实现，同一端只会被一次确认配对；失败回滚恢复为 `staged`。
+- 索引：`{status, direction, date}`、`{stagedBatchId}`（部分）、`{consumedBatchId}`（部分）。
 
 ## 5. 已知契约缺口（改之前先读这一节）
 

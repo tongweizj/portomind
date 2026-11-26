@@ -18,7 +18,8 @@ const TransactionSchema = new mongoose.Schema({
   currency: { type: String, enum: ASSET_CURRENCIES, required: true },
   // buy 增加持仓；sell 减少持仓，且不允许超过交易日期当时的可用数量。
   // div_cash 现金分红（不进持仓，记 quantity×price 现金）；div_reinvest 分红再投（转增持仓）。
-  action: { type: String, enum: ['buy', 'sell', 'div_cash', 'div_reinvest'], required: true },
+  // TASK-099：transfer_out / transfer_in 为证券划转两端（跨账户 / 跨组合），只移动份额与成本，不产生买卖盈亏。
+  action: { type: String, enum: ['buy', 'sell', 'div_cash', 'div_reinvest', 'transfer_out', 'transfer_in'], required: true },
   quantity: { type: Number, required: true, min: [Number.EPSILON, 'quantity must be greater than zero'] },
   price: { type: Number, required: true, min: [Number.EPSILON, 'price must be greater than zero'] },
   // fee（TR-06）：买入成本含费（remainingCost += qty×price + fee）；卖出净得扣费
@@ -66,6 +67,25 @@ const TransactionSchema = new mongoose.Schema({
   // TASK-096：用户确认的同日先后（同一 UTC 交易日内生效，默认 0；before → 负值，after → 正值）。
   // 重放顺序 (UTC 交易日, orderRank, date, sequence, _id)，见 transaction/positionCalculator.js
   orderRank: { type: Number, default: undefined },
+  // ── TASK-099：证券划转 ──
+  // transfer_in 的承接成本（转入资产原币种，重放时代替 qty×price）；price 仅为每单位快照
+  carryCost: { type: Number, min: 0, default: undefined },
+  carryCostCurrency: { type: String, enum: ASSET_CURRENCIES, default: undefined },
+  // report 报表给出 / carried 同币种承接转出成本 / fx 按换算依据折算 / user 用户补填
+  carryCostSource: { type: String, enum: ['report', 'carried', 'fx', 'user'], default: undefined },
+  // 换算依据：1 单位转出资产币种折合多少转入资产币种（跨币种划转）
+  transferFxRate: { type: Number, default: undefined },
+  // 对端归属（两端以 pairGroupId 关联，同一 importBatchId 共同入账）
+  transfer: {
+    type: new mongoose.Schema({
+      direction: { type: String, enum: ['out', 'in'] },
+      counterpartPortfolioId: { type: mongoose.Schema.Types.ObjectId, ref: 'Portfolio' },
+      counterpartSourceAccountId: { type: mongoose.Schema.Types.ObjectId, ref: 'SourceAccount' },
+      // 该端曾在服务端暂存（TransferLeg）时的记录 id
+      stagedLegId: { type: mongoose.Schema.Types.ObjectId, ref: 'TransferLeg' }
+    }, { _id: false }),
+    default: undefined
+  },
   // 应用层整批提交：pending 行对所有读取方不可见（见 transaction/visibility.js）
   status: { type: String, enum: ['pending', 'committed'], default: undefined }
 }, { timestamps: true, versionKey: false });

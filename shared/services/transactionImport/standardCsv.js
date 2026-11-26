@@ -29,8 +29,9 @@ const STANDARD_COLUMNS = Object.freeze([
   { key: 'cash_amount', label: '现金金额', description: '券商带符号现金净额（流出为负，流入为正）' },
   { key: 'cash_currency', label: '币种', description: ASSET_CURRENCIES.join(' / ') },
   { key: 'commission', label: '佣金', description: '绝对值；留空表示未知（不等于 0），明确为 0 请填 0' },
-  { key: 'transfer_cost', label: '划转成本', description: '证券转入的承接成本（后续开放）' },
-  { key: 'transfer_cost_currency', label: '划转成本币种', description: '后续开放' },
+  { key: 'transfer_cost', label: '划转成本', description: '证券转入的承接成本（总额，转入资产币种）；留空时承接转出端的移动平均成本' },
+  { key: 'transfer_cost_currency', label: '划转成本币种', description: '须与转入资产币种一致；留空按转入资产币种' },
+  { key: 'transfer_fx_rate', label: '划转换算依据', description: '跨币种划转：1 单位转出资产币种折合多少转入资产币种；与划转成本二选一' },
   { key: 'notes', label: '备注', description: '≤500 字' }
 ]);
 
@@ -49,8 +50,9 @@ const ACTIVITY_RULES = Object.freeze({
   fee: { supported: false },
   fx: { supported: false },
   split: { supported: false },
-  transfer_in: { supported: false },
-  transfer_out: { supported: false }
+  // TASK-099：证券划转两端。数量取绝对值，方向由类型决定；不需要单价、币种与佣金。
+  transfer_in: { supported: true, action: 'transfer_in', kind: 'transfer', required: ['trade_date', 'symbol', 'quantity'] },
+  transfer_out: { supported: true, action: 'transfer_out', kind: 'transfer', required: ['trade_date', 'symbol', 'quantity'] }
 });
 
 const TEMPLATE_EXAMPLES = [
@@ -183,6 +185,10 @@ function normalizeRow(fields, { defaultTimeZone } = {}) {
     return { error: rowError('INVALID_DATE', `结算日格式无效：${settlementText}`) };
   }
 
+  if (rule.kind === 'transfer') {
+    return normalizeTransfer(fields, rule, { activity, tradeDate, date, dateKind, timeZoneName, timeZoneSource, localTime, settlementText });
+  }
+
   const quantity = parseNumber(fields.quantity);
   const price = parseNumber(fields.unit_price);
   const commission = parseNumber(fields.commission);
@@ -242,6 +248,71 @@ function normalizeRow(fields, { defaultTimeZone } = {}) {
       cashAmount: cash.value ?? null,
       cashCurrency,
       cashAmountSource: cash.value === undefined ? null : 'broker',
+      externalId: String(fields.external_id ?? '').trim() || null,
+      sourceRow: String(fields.source_row ?? '').trim() || null,
+      pairGroup: String(fields.pair_group ?? '').trim() || null,
+      accountNumber: String(fields.account_number ?? '').trim() || null,
+      notes
+    }
+  };
+}
+
+// TASK-099：证券划转行。承接成本 / 换算依据在预览配对后结算（transfers.js），这里只做字段校验。
+function normalizeTransfer(fields, rule, base) {
+  const quantity = parseNumber(fields.quantity);
+  if (quantity.invalid || !quantity.value) return { error: rowError('INVALID_NUMBER', `数量无效：${fields.quantity}`) };
+  const cost = parseNumber(fields.transfer_cost);
+  if (cost.invalid || (cost.value !== undefined && cost.value < 0)) {
+    return { error: rowError('INVALID_NUMBER', `划转成本无效：${fields.transfer_cost}`) };
+  }
+  const fxRate = parseNumber(fields.transfer_fx_rate);
+  if (fxRate.invalid || (fxRate.value !== undefined && !(fxRate.value > 0))) {
+    return { error: rowError('INVALID_NUMBER', `划转换算依据必须大于 0：${fields.transfer_fx_rate}`) };
+  }
+  if (rule.action === 'transfer_out' && (cost.value !== undefined || fxRate.value !== undefined)) {
+    return { error: rowError('INVALID_FIELD', '划转成本与换算依据只填在转入行（转出端按移动平均成本减记）') };
+  }
+  const costCurrency = String(fields.transfer_cost_currency ?? '').trim().toUpperCase();
+  if (costCurrency && !ASSET_CURRENCIES.includes(costCurrency)) {
+    return { error: rowError('INVALID_CURRENCY', `划转成本币种无效：${fields.transfer_cost_currency}`) };
+  }
+  const cashCurrency = String(fields.cash_currency ?? '').trim().toUpperCase();
+  if (cashCurrency && !ASSET_CURRENCIES.includes(cashCurrency)) {
+    return { error: rowError('INVALID_CURRENCY', `币种无效：${fields.cash_currency}`) };
+  }
+  const market = String(fields.market ?? '').trim().toUpperCase();
+  if (market && !ASSET_MARKETS.includes(market)) return { error: rowError('INVALID_MARKET', `市场无效：${fields.market}`) };
+  const notes = String(fields.notes ?? '').trim();
+  if (notes.length > 500) return { error: rowError('INVALID_NOTES', '备注超过 500 字') };
+
+  return {
+    candidate: {
+      activityType: base.activity,
+      action: rule.action,
+      isTransfer: true,
+      direction: rule.action === 'transfer_out' ? 'out' : 'in',
+      rawSymbol: String(fields.symbol).trim(),
+      market: market || null,
+      date: base.date,
+      dateKind: base.dateKind,
+      timeZone: base.timeZoneName,
+      timeZoneSource: base.timeZoneSource,
+      needsTimeZone: base.dateKind === 'datetime' && !base.timeZoneName,
+      localDate: base.tradeDate,
+      localTime: base.localTime,
+      settlementDate: base.settlementText ? new Date(`${base.settlementText}T00:00:00.000Z`) : null,
+      settlementStatus: base.settlementText ? 'known' : 'unknown',
+      quantity: Math.abs(quantity.value),
+      price: null,
+      grossAmount: null,
+      fee: 0,
+      feeSource: 'broker',
+      cashAmount: null,
+      cashCurrency: cashCurrency || null,
+      cashAmountSource: null,
+      transferCost: cost.value ?? null,
+      transferCostCurrency: costCurrency || null,
+      transferFxRate: fxRate.value ?? null,
       externalId: String(fields.external_id ?? '').trim() || null,
       sourceRow: String(fields.source_row ?? '').trim() || null,
       pairGroup: String(fields.pair_group ?? '').trim() || null,
