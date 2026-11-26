@@ -455,7 +455,7 @@ async function resolveTransfers(rows, ctx) {
       const probe = probeOfLeg(partner, { price: write.price, ...write.carry });
       const key = `${partner.portfolioId}|${partner.symbol}`;
       partnerProbesIn.set(key, [...(partnerProbesIn.get(key) || []), probe]);
-      if (partner.portfolioId === String(portfolioId)) result.extraProbes.push(probe);
+      if (partner.portfolioId === String(portfolioId)) result.extraProbes.push({ ...probe, importRowKey: row.rowKey });
       else if (!result.lockPortfolioIds.includes(partner.portfolioId)) result.lockPortfolioIds.push(partner.portfolioId);
     }
   }

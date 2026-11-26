@@ -529,3 +529,45 @@ test('S1 同组号两端标的不同：行错误 TRANSFER_PAIR_INVALID', async (
   ])));
   assert.deepEqual(first.body.data.rows.map(row => row.code), ['TRANSFER_PAIR_INVALID', 'TRANSFER_PAIR_INVALID']);
 });
+
+// ─────────────────────────────────────────────────────────────
+// 代码审查 S2：只写第 1 批时，第 1 批必须单独成立（按时间正序拆批）
+// ─────────────────────────────────────────────────────────────
+
+test('S2 新 → 旧排列的标准 CSV 超过 500 行：第 1 批写入最早的 500 条，单独重放不超卖', async (t) => {
+  const world = freshWorld(t);
+  const sells = Array.from({ length: 300 }, () => ({ activity_type: 'sell', trade_date: '2026-03-02', quantity: '1' }));
+  const buys = Array.from({ length: 300 }, () => ({ activity_type: 'buy', trade_date: '2026-02-02', quantity: '1' }));
+  const { preview: data, commit } = await previewAndCommit(body(PORTFOLIO_A, csv([...sells, ...buys])));
+  assert.equal(data.batches[0].count, 500);
+  assert.equal(commit.status, 201, JSON.stringify(commit.body));
+  const written = visible(world);
+  assert.equal(written.filter(tx => tx.action === 'buy').length, 300, '最早的买入全部在第 1 批');
+  assert.equal(written.filter(tx => tx.action === 'sell').length, 200);
+  assert.equal((await positionOf(PORTFOLIO_A, 'VTI.US')).quantity, 100);
+});
+
+const xeqBuys = count => Array.from({ length: count }, () => ({
+  activity_type: 'buy', trade_date: '2026-02-02', symbol: 'XEQ', market: 'CA', cash_currency: 'CAD', quantity: '1', unit_price: '30'
+}));
+const earlyIn = { activity_type: 'transfer_in', trade_date: '2026-01-10', pair_group: 'G2', symbol: 'XEQ', market: 'US', quantity: '550', unit_price: '', transfer_cost: '12000' };
+const lateOut = { activity_type: 'transfer_out', trade_date: '2026-03-30', pair_group: 'G2', symbol: 'XEQ', market: 'CA', cash_currency: 'CAD', quantity: '-550', unit_price: '' };
+
+test('S2 成对流水跨越拆批边界：不把依赖后续买入的一端提前进第 1 批', async (t) => {
+  const world = freshWorld(t);
+  const { preview: data, commit } = await previewAndCommit(body(PORTFOLIO_A, csv([earlyIn, ...xeqBuys(600), lateOut])));
+  assert.equal(data.blocking, false, JSON.stringify(data.blockingReasons));
+  assert.equal(commit.status, 201, JSON.stringify(commit.body));
+  assert.equal(visible(world).filter(tx => tx.action.startsWith('transfer_')).length, 0, '这一对留到后续批次');
+  assert.equal((await positionOf(PORTFOLIO_A, 'XEQ.TO')).quantity, 500);
+});
+
+test('S2 第 1 批单独重放不成立（后续行依赖被推迟的成对流水）：整批阻塞并说明原因', async (t) => {
+  const world = freshWorld(t);
+  const sellUsd = { activity_type: 'sell', trade_date: '2026-01-11', symbol: 'XEQ', market: 'US', quantity: '1', unit_price: '25' };
+  const { preview: data, commit } = await previewAndCommit(body(PORTFOLIO_A, csv([earlyIn, sellUsd, ...xeqBuys(600), lateOut])));
+  assert.equal(data.blocking, true);
+  assert.ok(data.blockingReasons.some(item => item.code === 'FIRST_BATCH_INVALID'), JSON.stringify(data.blockingReasons));
+  assert.equal(commit.status, 422);
+  assert.equal(world.transactions.length, 0);
+});

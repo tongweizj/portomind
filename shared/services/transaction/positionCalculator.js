@@ -89,9 +89,20 @@ function compareTransactions(left, right) {
   return codeUnitCompare(String(left._id || ''), String(right._id || ''));
 }
 
-/** UTC 交易日键（YYYY-MM-DD），与 compareTransactions 的日分桶一致。 */
+/** UTC 日历日键（YYYY-MM-DD）。 */
 function replayDayKey(value) {
   return new Date(value).toISOString().slice(0, 10);
+}
+
+/**
+ * 流水的当地交易日（YYYY-MM-DD）：带时刻（dateKind='datetime'）按其时区（缺省 MARKET_TIMEZONE）取日历日；
+ * 仅日期流水存当日 UTC 零点，直接取 UTC 日期。与 compareTransactions 的日分桶一致。
+ */
+function localTradeDay(transaction) {
+  const date = new Date(transaction.date);
+  if (Number.isNaN(date.getTime())) return null;
+  if (transaction.dateKind === 'datetime') return dayjs(date).tz(transaction.timeZone || MARKET_TIMEZONE).format('YYYY-MM-DD');
+  return date.toISOString().slice(0, 10);
 }
 
 function latestPriceFor(latestPrices, symbol) {
@@ -335,6 +346,7 @@ module.exports = {
   calculatePositions,
   replayLedger,
   replayDayKey,
+  localTradeDay,
   calculatePositionHistory,
   compareTransactions,
   PREVIEW_BATCH_KEY,

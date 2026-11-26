@@ -20,6 +20,7 @@ const {
   compareTransactions,
   replayLedger,
   replayDayKey,
+  localTradeDay,
   PREVIEW_BATCH_KEY
 } = require('../transaction/positionCalculator');
 const { visibleQuery } = require('../transaction/visibility');
@@ -244,6 +245,11 @@ const SPLIT_ERRORS = ['SPLIT_NO_POSITION', 'SPLIT_RATIO_CONFLICT'];
 const LEDGER_ERRORS = ['INSUFFICIENT_POSITION', ...SPLIT_ERRORS];
 const STATE_EPSILON = 1e-9;
 
+// 行的交易日（报表日历日）：仅日期行即报表日期，带时刻行按其时区（缺省 MARKET_TIMEZONE）取当地日。
+function tradeDayKey(candidate) {
+  return localTradeDay(candidate);
+}
+
 function probeOf(row) {
   // 同一时刻：预览行排在全部已入账流水之后（与确认后「本批次最新」一致），批内按原行顺序
   return {
@@ -466,10 +472,29 @@ function positionsAfterOf(ledger, rows, symbols) {
   });
 }
 
-// 拆批：按来源流水行计数，pair_group 相同的行留在同一批。
+/**
+ * 时间正序编号（代码审查 S2 / #96）：sequence = 按交易日排序后的位置，供拆批与同一时刻重放使用。
+ * 报表整体为新 → 旧（首个有日期的行晚于最后一个）时先翻转，同日行因此仍按「旧 → 新」的原报表先后；
+ * 排序稳定，不改变预览展示的行顺序。无日期的行（解析错误）排在最后。
+ */
+function assignChronologicalSequence(rows) {
+  const dayOf = row => (row.candidate?.date ? tradeDayKey(row.candidate) : null);
+  const dated = rows.filter(dayOf);
+  const descending = dated.length > 1 && dayOf(dated[0]) > dayOf(dated.at(-1));
+  const fileOrder = descending ? [...rows].reverse() : [...rows];
+  const keyed = fileOrder.map((row, index) => ({ row, index, day: dayOf(row) || '9999-99-99' }));
+  keyed.sort((left, right) => (left.day === right.day ? left.index - right.index : (left.day < right.day ? -1 : 1)));
+  keyed.forEach(({ row }, sequence) => { row.sequence = sequence; });
+}
+
+/**
+ * 拆批：按来源流水行计数，按时间正序（sequence）切分；pair_group 相同的行留在同一批，
+ * 整组排在组内最晚一端的位置（较早一端随之推后，不会把依赖后续行的一端提前进上一批）。
+ */
 function planBatches(rows) {
   // stage（TASK-099 暂存一端）也是来源流水，计入批次
-  const writable = rows.filter(row => ['add', 'update', 'stage'].includes(row.disposition));
+  const writable = rows.filter(row => ['add', 'update', 'stage'].includes(row.disposition))
+    .sort((left, right) => left.sequence - right.sequence);
   const groups = [];
   const byPair = new Map();
   for (const row of writable) {
@@ -479,6 +504,8 @@ function planBatches(rows) {
     if (key) byPair.set(key, group);
     groups.push(group);
   }
+  const position = group => Math.max(...group.map(row => row.sequence));
+  groups.sort((left, right) => position(left) - position(right));
   const batches = [];
   let current = [];
   for (const group of groups) {
@@ -496,6 +523,30 @@ function planBatches(rows) {
     firstRowNumber: batch[0].rowNumber,
     lastRowNumber: batch.at(-1).rowNumber
   }));
+}
+
+/**
+ * 确认只写第 1 批（代码审查 S2）：第 1 批必须单独成立——现有账本 + 第 1 批的新增 / 更新（含同组合暂存对端）
+ * 按同一规则重放不超卖、拆股有据。不成立时返回原因（整批阻塞），不写入半个账本。
+ */
+function firstBatchProblem(rows, batches, ledger, extraProbes) {
+  if (batches.length <= 1) return null;
+  const batch = new Set(batches[0].rowKeys);
+  const writes = rows.filter(row => batch.has(row.rowKey) && (row.disposition === 'add' || row.disposition === 'update') &&
+    !isCashAction(row.candidate.action));
+  const replaced = new Set(writes.filter(row => row.disposition === 'update').map(row => String(row.target._id)));
+  const list = [
+    ...ledger.filter(tx => !replaced.has(String(tx._id))),
+    ...extraProbes.filter(probe => batch.has(probe.importRowKey)),
+    ...writes.map(row => (row.disposition === 'update' ? { ...probeOf(row), _id: row.target._id } : probeOf(row)))
+  ];
+  try {
+    replayLedger(list);
+    return null;
+  } catch (error) {
+    if (!LEDGER_ERRORS.includes(error.code)) throw error;
+    return `第 1 批（${batches[0].count} 条）单独入账时账本不成立（${error.message}）：成对流水被整组推迟到后续批次，而第 1 批中有行依赖它。请把报表按日期拆成较小的文件分别导入`;
+  }
 }
 
 function ledgerFingerprintOf({ portfolioId, sourceAccountId, ledger, matchedIds }) {
@@ -604,6 +655,7 @@ async function computePreview(input) {
     code: row.error?.code,
     reason: row.error?.reason
   }));
+  assignChronologicalSequence(rows);
 
   // TASK-096：报表有成交时间但无时区 → 待用户确认北京 / 多伦多时区（文件级 timeZone），确认前不猜时刻。
   for (const row of rows) {
@@ -709,6 +761,10 @@ async function computePreview(input) {
   if (counts.error) blockingReasons.push({ code: 'ROW_ERRORS', reason: `${counts.error} 行存在错误` });
   if (counts.review) blockingReasons.push({ code: 'UNRESOLVED_REVIEW', reason: `${counts.review} 行待核对` });
   const batches = planBatches(rows);
+  if (!blockingReasons.length) {
+    const problem = firstBatchProblem(rows, batches, ledger, transferPlan.extraProbes);
+    if (problem) blockingReasons.push({ code: 'FIRST_BATCH_INVALID', reason: problem });
+  }
   if (!blockingReasons.length && counts.add + counts.update + counts.stage === 0) {
     blockingReasons.push({ code: 'NOTHING_TO_IMPORT', reason: '没有需要写入的流水' });
   }
