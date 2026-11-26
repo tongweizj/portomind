@@ -357,7 +357,7 @@ AlertRule ──_id──> AlertEvent.ruleId（**可空**：再平衡通知没�
 | `status` | `committing` → `committed` 或 `rolled_back` |
 | `lockKey` | `portfolio:<id>`；仅 `committing` 期间存在，终态 `$unset` |
 | `previewToken` / `ledgerFingerprint` | 本次确认核对过的预览凭据 |
-| `counts` / `updates` / `error` | 当次结果计数；更新前原值（回滚恢复）；失败原因 |
+| `counts` / `updates` / `error` | 当次结果计数；更新类处置（TASK-095）改写前的原值 `[{transactionId, before, unset}]`（先写后改，回滚 / 崩溃回收时恢复）；失败原因 |
 
 - 部分唯一索引 `{lockKey}`（`status:'committing'`）：同组合并发确认只有一个成功。
 - 整批写入：新行先以 `status:'pending'` 写入，单语句翻转为 `committed`；失败即删除本批 pending 行并标 `rolled_back`；超过 10 分钟仍为 `committing` 的批次在下一次确认前回收。单机 MongoDB 无多文档事务，故采用应用层方案。
@@ -377,6 +377,8 @@ AlertRule ──_id──> AlertEvent.ruleId（**可空**：再平衡通知没�
 ### 5.2 CSV 导入幂等不靠数据库
 
 `Transaction` 无唯一索引，导入判重依赖业务层查询。当前该查询漏取 `portfolioId`（`transaction.service.js` 的 `select()`），导致判重键恒为 `undefined` → 重复导入不报错、也不跳过。
+
+> 新版预览 / 确认导入（TASK-094/095）的判重在 `shared/services/transactionImport/matching.js`：按 (组合, 来源账户, 方向) 以原成交编号或「时间戳 + 标的 + 数量 + 成交金额」匹配，差异与歧义进入人工核对；上述缺陷只影响旧版 `POST /api/transactions/import`。
 
 **含义**：不能因为「导入成功」就认为没有重复数据。核对重复须自行按 `(portfolioId, symbol, date, action, quantity, price)` 分组统计。
 

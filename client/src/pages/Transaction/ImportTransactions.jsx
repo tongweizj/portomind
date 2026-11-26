@@ -18,6 +18,7 @@ import {
   listSourceAccounts,
   previewImport,
 } from '../../services/transactionImport.service';
+import ImportMatchResolution from './ImportMatchResolution';
 
 const DISPOSITION_LABELS = {
   add: '新增', update: '更新', skip: '跳过', review: '待核对', error: '错误', deferred: '下一批',
@@ -397,13 +398,8 @@ export default function ImportTransactions() {
                             </label>
                           </div>
                         )}
-                        {row.options.includes('skip') && (
-                          <label className="mt-1 flex items-center gap-1">
-                            <input type="checkbox" checked={resolution.action === 'skip'}
-                              onChange={e => setResolution(row.rowKey, e.target.checked ? { action: 'skip' } : null)} />
-                            跳过此行
-                          </label>
-                        )}
+                        <ImportMatchResolution row={row} resolution={resolution}
+                          onChange={value => setResolution(row.rowKey, value)} />
                       </td>
                     </tr>
                   );
