@@ -6,7 +6,7 @@ import { useMemo, useState } from 'react';
 import { colors, radii } from '../../constants/design-tokens';
 import { ASSET_CURRENCIES, TRANSACTION_ACTION_LABELS } from '../../constants/enums';
 import { getApiErrorMessage } from '../../services/api.client';
-import { reconcileSourceAccountCash } from '../../services/transactionImport.service';
+import { useCashReconciliation } from '../../hooks/useTransactionImport';
 
 const inputStyle = { border: `1px solid ${colors.border}`, borderRadius: radii.md, padding: '4px 8px', fontSize: 13 };
 
@@ -109,9 +109,10 @@ export default function CashReconciliation({ portfolioId, sourceAccounts }) {
   const [from, setFrom] = useState('');
   const [to, setTo] = useState('');
   const [balances, setBalances] = useState({});
-  const [result, setResult] = useState(null);
-  const [error, setError] = useState('');
-  const [loading, setLoading] = useState(false);
+  const reconciliation = useCashReconciliation();
+  const result = reconciliation.data || null;
+  const error = reconciliation.isError ? getApiErrorMessage(reconciliation.error, '现金核对失败') : '';
+  const loading = reconciliation.isPending;
 
   if (candidates.length === 0) return null;
   const selectedId = accountId || candidates[0].id;
@@ -119,24 +120,15 @@ export default function CashReconciliation({ portfolioId, sourceAccounts }) {
   const setBalance = (currency, key, value) =>
     setBalances(previous => ({ ...previous, [currency]: { ...previous[currency], [key]: value } }));
 
-  const submit = async (event) => {
+  const submit = (event) => {
     event.preventDefault();
-    setError('');
-    setLoading(true);
     const payload = {};
     for (const [currency, entry] of Object.entries(balances)) {
       const opening = toNumberOrNull(entry.opening);
       const closing = toNumberOrNull(entry.closing);
       if (opening !== null || closing !== null) payload[currency] = { opening, closing };
     }
-    try {
-      setResult(await reconcileSourceAccountCash(selectedId, { from, to, balances: payload }));
-    } catch (err) {
-      setResult(null);
-      setError(getApiErrorMessage(err, '现金核对失败'));
-    } finally {
-      setLoading(false);
-    }
+    reconciliation.mutate({ id: selectedId, from, to, balances: payload });
   };
 
   return (

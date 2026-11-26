@@ -14,15 +14,15 @@ import { usePortfolio } from '../../hooks/usePortfolio';
 import { SOURCE_BROKERS, TRANSACTION_ACTION_LABELS } from '../../constants/enums';
 import { ROUTES } from '../../constants/routes';
 import { getApiErrorMessage } from '../../services/api.client';
+import { downloadImportTemplate } from '../../services/transactionImport.service';
 import {
-  commitImport,
-  discardStagedTransfer,
-  downloadImportTemplate,
-  listStagedTransfers,
-  getImportFormat,
-  listSourceAccounts,
-  previewImport,
-} from '../../services/transactionImport.service';
+  useDiscardStagedTransfer,
+  useImportCommit,
+  useImportFormat,
+  useImportPreview,
+  useSourceAccounts,
+  useStagedTransfers,
+} from '../../hooks/useTransactionImport';
 import ImportMatchResolution from './ImportMatchResolution';
 import { formatShareChange, formatSplitRatio } from '../../utils/splitDisplay';
 import ImportTransferResolution from './ImportTransferResolution';
@@ -95,9 +95,9 @@ export default function ImportTransactions() {
   const navigate = useNavigate();
   const { data: portfolio } = usePortfolio(portfolioId);
 
-  const [format, setFormat] = useState(null);
+  const { data: format = null } = useImportFormat();
   const [importFormat, setImportFormat] = useState('standard');
-  const [accounts, setAccounts] = useState([]);
+  const { data: accounts = [] } = useSourceAccounts();
   const [sourceMode, setSourceMode] = useState('new');
   const [sourceId, setSourceId] = useState('');
   const [broker, setBroker] = useState('other');
@@ -115,21 +115,19 @@ export default function ImportTransactions() {
   const [result, setResult] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-  const [stagedTransfers, setStagedTransfers] = useState([]);
+  const { data: stagedTransfers = [] } = useStagedTransfers();
+  const discardStaged = useDiscardStagedTransfer();
+  const previewMutation = useImportPreview();
+  const commitMutation = useImportCommit();
 
-  const reloadStaged = () => listStagedTransfers().then(setStagedTransfers).catch(() => {});
-
-  useEffect(() => { reloadStaged(); }, []);
-
+  // 已有来源账户时默认选择第一个（只在首次加载到列表时）
+  const [accountsDefaulted, setAccountsDefaulted] = useState(false);
   useEffect(() => {
-    getImportFormat().then(setFormat).catch(() => {});
-    listSourceAccounts()
-      .then(list => {
-        setAccounts(list);
-        if (list.length) { setSourceMode('existing'); setSourceId(list[0].id); }
-      })
-      .catch(() => {});
-  }, []);
+    if (accountsDefaulted || !accounts.length) return;
+    setAccountsDefaulted(true);
+    setSourceMode('existing');
+    setSourceId(accounts[0].id);
+  }, [accounts, accountsDefaulted]);
 
   // 任一输入变化 → 预览失效（必须重新预览才能确认）
   const invalidate = () => { if (preview) setStale(true); setResult(null); };
@@ -188,7 +186,7 @@ export default function ImportTransactions() {
     setError('');
     setResult(null);
     try {
-      const data = await previewImport(buildPayload(overrides));
+      const data = await previewMutation.mutateAsync(buildPayload(overrides));
       setPreview(data);
       setMapping(data.mapping);
       setAccountSelector(data.accountSelector || '');
@@ -205,14 +203,12 @@ export default function ImportTransactions() {
     setLoading(true);
     setError('');
     try {
-      const data = await commitImport(buildPayload({
+      const data = await commitMutation.mutateAsync(buildPayload({
         previewToken: preview.previewToken,
         ledgerFingerprint: preview.ledgerFingerprint,
       }));
       setResult(data);
       setStale(true);
-      reloadStaged();
-      listSourceAccounts().then(setAccounts).catch(() => {});
       if (sourceMode === 'new' && data.sourceAccountId) {
         // 新建的来源账户已落库：后续批次 / 重新预览按 id 引用同一身份
         setSourceMode('existing');
@@ -391,7 +387,7 @@ export default function ImportTransactions() {
                 </span>
                 <button type="button" className="text-red-600 hover:underline"
                   onClick={async () => {
-                    try { await discardStagedTransfer(leg.id); invalidate(); reloadStaged(); }
+                    try { await discardStaged.mutateAsync(leg.id); invalidate(); }
                     catch (err) { setError(getApiErrorMessage(err, '放弃暂存失败')); }
                   }}>
                   放弃暂存
