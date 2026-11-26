@@ -357,6 +357,7 @@ AlertRule ──_id──> AlertEvent.ruleId（**可空**：再平衡通知没�
 | `portfolioIds` | 曾导入过的组合（信息记录；一个账户可关联多个组合，每笔流水仍只属一个组合） |
 
 - 唯一索引：`{broker, accountKeyHash}`（`partialFilterExpression: accountKeyHash 为字符串`）。同账号跨批、跨组合识别为同一来源。
+- 现金核对（TASK-103，`shared/services/transactionImport/cashReconciliation.js`）：按 `sourceAccountId` 读取跨组合可见流水，按 `cashCurrency` 分币种、按现金日期（成交用 `settlementDate`，`settlementStatus='unknown'` 的成交单列；现金类无结算日用活动日）归入期间；换汇两端按 `(source.importBatchId, pairGroupId)` 分组。期初 / 期末余额由请求提供，不落库，无新字段。接口见 [API_CONTRACT](API_CONTRACT.md)。
 
 ### 4.14 ImportBatch（`shared/models/importBatch.js`，TASK-094）
 

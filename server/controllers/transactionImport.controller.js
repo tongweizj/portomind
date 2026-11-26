@@ -4,6 +4,7 @@
 const mongoose = require('mongoose');
 const transactionImport = require('@portomind/shared/services/transactionImport');
 const sourceAccountService = require('@portomind/shared/services/transactionImport/sourceAccount.service');
+const cashReconciliation = require('@portomind/shared/services/transactionImport/cashReconciliation');
 const { success, failure } = require('../utils/apiResponse');
 
 // 业务错误（带 status + code）在此直接响应，以便透出 details（如 PREVIEW_STALE 的原因、拆批提示）。
@@ -68,6 +69,16 @@ exports.renameSourceAccount = async (req, res, next) => {
   if (!mongoose.Types.ObjectId.isValid(req.params.id)) return failure(req, res, 400, 'Invalid source account ID');
   try {
     return success(res, await sourceAccountService.renameSourceAccount(req.params.id, req.body?.alias));
+  } catch (error) {
+    return respondError(req, res, next, error);
+  }
+};
+
+// TASK-103：来源账户按币种核对已结算现金（只读计算；期初 / 期末余额随请求提供，不落库）
+exports.reconcileCash = async (req, res, next) => {
+  if (!mongoose.Types.ObjectId.isValid(req.params.id)) return failure(req, res, 400, 'Invalid source account ID');
+  try {
+    return success(res, await cashReconciliation.reconcileCash(req.params.id, req.body || {}));
   } catch (error) {
     return respondError(req, res, next, error);
   }

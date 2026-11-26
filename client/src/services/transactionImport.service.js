@@ -29,3 +29,7 @@ export const listStagedTransfers = async (params = {}) =>
 
 export const discardStagedTransfer = async (id) =>
   (await api.delete(`/transactions/import/transfers/${id}`)).data;
+
+// TASK-103：按来源账户、币种核对已结算现金（期初 / 期末余额随请求提交，服务端不落库）
+export const reconcileSourceAccountCash = async (id, { from, to, balances }) =>
+  (await api.post(`/source-accounts/${id}/cash-reconciliation`, { from, to, balances })).data;

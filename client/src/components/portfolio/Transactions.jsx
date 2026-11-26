@@ -10,6 +10,7 @@ import { colors, radii } from '../../constants/design-tokens';
 import { getApiErrorMessage } from '../../services/api.client';
 import { deleteTransaction, getPortfolioTransactions } from '../../services/transaction.service';
 import { listSourceAccounts } from '../../services/transactionImport.service';
+import CashReconciliation from './CashReconciliation';
 
 const TABLE_COLUMNS = ['date', 'symbol', 'action', 'assetType', 'quantity', 'price', 'source'];
 
@@ -126,6 +127,8 @@ export default function Transactions() {
           <button disabled={page >= totalPages} onClick={() => setPage(value => value + 1)} className="disabled:opacity-40">下一页</button>
         </div>
       )}
+
+      <CashReconciliation portfolioId={id} sourceAccounts={sourceAccounts} />
     </section>
   );
 }
