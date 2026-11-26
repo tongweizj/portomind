@@ -23,7 +23,7 @@ const EPSILON = 1e-9;
 
 // 参与「内容一致」判断与差异展示的字段；notes 是手工备注，不参与也不被更新覆盖。
 const DIFF_FIELDS = Object.freeze([
-  'symbol', 'date', 'dateKind', 'quantity', 'price', 'grossAmount', 'fee',
+  'symbol', 'date', 'dateKind', 'quantity', 'price', 'splitRatio', 'grossAmount', 'fee',
   'cashAmount', 'cashCurrency', 'settlementDate', 'externalId'
 ]);
 

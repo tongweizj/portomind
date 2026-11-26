@@ -133,9 +133,10 @@ AlertRule ──_id──> AlertEvent.ruleId（**可空**：再平衡通知没�
 | `symbol` | String，required，trim，**uppercase** |
 | `market` | String，required，enum 同 Asset.market |
 | `currency` | String，required，enum 同 Asset.currency |
-| `action` | String，required，enum `buy`/`sell`/`div_cash`/`div_reinvest` |
-| `quantity` | Number，required，`min: Number.EPSILON`（> 0） |
-| `price` | Number，required，`min: Number.EPSILON`（> 0） |
+| `action` | String，required，enum `buy`/`sell`/`div_cash`/`div_reinvest`/`split`（`split` 拆股，TASK-098，仅经流水导入写入） |
+| `quantity` | Number，required；> 0（`split`：带符号份额变动，拆股为正、合股为负，非零） |
+| `price` | Number，`min: Number.EPSILON`（> 0）；除 `split` 外 required（拆股不记单价） |
+| `splitRatio` | Number，可选，> 0（TASK-098）：拆股比例 = 新份额 / 旧份额（1 拆 2 为 2，10 合 1 为 0.1）；已知时重放核对 `拆股前份额 ×(splitRatio−1) = quantity` |
 | `fee` | Number，= `0`，min 0。买入计入成本、卖出从净得扣除 |
 | `date` | Date，required，= now。**业务日期**，决定持仓重放的顺序。重放顺序 `(UTC 交易日, orderRank, date, 导入批次, sequence, _id)`（`positionCalculator.compareTransactions`，预览 / 确认后重放 / 编辑共用；同一时刻手动流水在导入流水之前，字符串按码位比较） |
 | `notes` | String，trim，≤500 |
@@ -154,7 +155,7 @@ AlertRule ──_id──> AlertEvent.ruleId（**可空**：再平衡通知没�
 
 - 索引：`{portfolioId: 1, date: -1, _id: -1}`（组合内倒序列表）、`{portfolioId: 1, symbol: 1, date: 1, _id: 1}`（组合内单标的重放）；TASK-094 新增部分索引 `{sourceAccountId, source.externalId}`（**非唯一**：跨组合同编号须可被发现）、`{sourceAccountId, source.rawHash}`、`{source.importBatchId}`。
 - **无唯一索引**：允许同一 `(portfolioId, symbol, date, action, quantity, price)` 重复落库。CSV 导入的幂等**不靠数据库约束**，靠业务层判重（当前实现有缺陷，见 §5.2）。
-- `action` 语义：`div_cash` 进现金不进持仓；`div_reinvest` 转增持仓且成本含费。
+- `action` 语义：`div_cash` 进现金不进持仓；`div_reinvest` 转增持仓且成本含费；`split` 份额按 `quantity` 变动、总成本与已实现盈亏不变、单位成本按新份额重算，拆股前须有持仓（否则重放报 `SPLIT_NO_POSITION`），比例与份额变动冲突或拆后份额不为正报 `SPLIT_RATIO_CONFLICT`（均为 `400`，删除 / 编辑使之后拆股失去依据的流水同样被拒）。
 
 ### 4.4 Price（`shared/models/price.js`）
 

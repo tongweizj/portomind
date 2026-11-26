@@ -18,9 +18,24 @@ const TransactionSchema = new mongoose.Schema({
   currency: { type: String, enum: ASSET_CURRENCIES, required: true },
   // buy 增加持仓；sell 减少持仓，且不允许超过交易日期当时的可用数量。
   // div_cash 现金分红（不进持仓，记 quantity×price 现金）；div_reinvest 分红再投（转增持仓）。
-  action: { type: String, enum: ['buy', 'sell', 'div_cash', 'div_reinvest'], required: true },
-  quantity: { type: Number, required: true, min: [Number.EPSILON, 'quantity must be greater than zero'] },
-  price: { type: Number, required: true, min: [Number.EPSILON, 'price must be greater than zero'] },
+  // split（TASK-098）拆股：quantity 为带符号份额变动（拆股为正、合股为负），不记单价；
+  // 总成本不变、单位成本按新份额重算（见 transaction/positionCalculator.js）。
+  action: { type: String, enum: ['buy', 'sell', 'div_cash', 'div_reinvest', 'split'], required: true },
+  quantity: {
+    type: Number,
+    required: true,
+    validate: {
+      validator(value) { return this.action === 'split' ? value !== 0 : value >= Number.EPSILON; },
+      message: 'quantity must be greater than zero (split: non-zero share change)'
+    }
+  },
+  price: {
+    type: Number,
+    required() { return this.action !== 'split'; },
+    min: [Number.EPSILON, 'price must be greater than zero']
+  },
+  // 拆股比例 = 新份额 / 旧份额（如 1 拆 2 为 2、10 合 1 为 0.1）；可选，已知时重放核对份额变动
+  splitRatio: { type: Number, default: undefined, min: [Number.EPSILON, 'splitRatio must be greater than zero'] },
   // fee（TR-06）：买入成本含费（remainingCost += qty×price + fee）；卖出净得扣费
   // （realizedPnl 扣 fee）；div_reinvest 成本含费。与再平衡建议费用模型口径统一（RB-10）。
   fee: { type: Number, default: 0, min: 0 },

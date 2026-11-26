@@ -13,7 +13,7 @@ dayjs.extend(timezone);
 
 // 列顺序即模板表头顺序（snake_case 英文，便于用户借助 ChatGPT 转换其他券商报表）。
 const STANDARD_COLUMNS = Object.freeze([
-  { key: 'activity_type', label: '活动类型', description: 'buy / sell（其他类型陆续开放）' },
+  { key: 'activity_type', label: '活动类型', description: 'buy / sell / split（其他类型陆续开放）' },
   { key: 'trade_date', label: '成交日期', description: 'YYYY-MM-DD' },
   { key: 'trade_time', label: '成交时间', description: 'HH:MM 或 HH:MM:SS；填写（含 00:00:00）即保留时刻精度' },
   { key: 'time_zone', label: '时区', description: 'IANA 时区名，如 America/Toronto、Asia/Shanghai；有成交时间而留空时，预览要求在页面确认北京或多伦多时区' },
@@ -24,11 +24,12 @@ const STANDARD_COLUMNS = Object.freeze([
   { key: 'account_number', label: '账号', description: '可选；多账户报表按账号拆分，只保存哈希与末 4 位' },
   { key: 'symbol', label: '标的代码', description: '如 VTI、XEQT.TO、510300' },
   { key: 'market', label: '市场', description: `${ASSET_MARKETS.join(' / ')}；代码无市场后缀时必填` },
-  { key: 'quantity', label: '数量', description: '正数；卖出可填负数（取绝对值）' },
+  { key: 'quantity', label: '数量', description: '正数；卖出可填负数（取绝对值）；拆股填带符号份额变动（拆股增加为正，合股减少为负）' },
   { key: 'unit_price', label: '单价', description: '大于 0' },
   { key: 'cash_amount', label: '现金金额', description: '券商带符号现金净额（流出为负，流入为正）' },
   { key: 'cash_currency', label: '币种', description: ASSET_CURRENCIES.join(' / ') },
   { key: 'commission', label: '佣金', description: '绝对值；留空表示未知（不等于 0），明确为 0 请填 0' },
+  { key: 'split_ratio', label: '拆股比例', description: '拆股新旧份额比，如 2:1（1 拆 2）、1:10（10 合 1）或 2；可留空，填写时须与拆股前持仓和份额变动一致' },
   { key: 'transfer_cost', label: '划转成本', description: '证券转入的承接成本（后续开放）' },
   { key: 'transfer_cost_currency', label: '划转成本币种', description: '后续开放' },
   { key: 'notes', label: '备注', description: '≤500 字' }
@@ -48,7 +49,8 @@ const ACTIVITY_RULES = Object.freeze({
   cash_out: { supported: false },
   fee: { supported: false },
   fx: { supported: false },
-  split: { supported: false },
+  // 拆股（TASK-098）：单价 / 币种 / 佣金可留空；份额变动带符号
+  split: { supported: true, action: 'split', required: ['trade_date', 'symbol', 'quantity'] },
   transfer_in: { supported: false },
   transfer_out: { supported: false }
 });
@@ -64,6 +66,10 @@ const TEMPLATE_EXAMPLES = [
     activity_type: 'sell', trade_date: '2026-02-10', settlement_date: '2026-02-11', source_row: '3',
     symbol: 'VTI', market: 'US', quantity: '-4', unit_price: '260.00', cash_amount: '1040.00',
     cash_currency: 'USD', commission: '0', notes: '示例：卖出（仅日期精度，无原成交编号）'
+  },
+  {
+    activity_type: 'split', trade_date: '2026-03-02', source_row: '4', symbol: 'VTI', market: 'US',
+    quantity: '6', split_ratio: '2:1', notes: '示例：1 拆 2（份额变动 = 拆股前 6 股 ×(2-1)；单价、佣金留空）'
   }
 ];
 
@@ -183,6 +189,10 @@ function normalizeRow(fields, { defaultTimeZone } = {}) {
     return { error: rowError('INVALID_DATE', `结算日格式无效：${settlementText}`) };
   }
 
+  if (rule.action === 'split') {
+    return normalizeSplit(fields, { activity, date, dateKind, timeZoneName, timeZoneSource, tradeDate, localTime, settlementText });
+  }
+
   const quantity = parseNumber(fields.quantity);
   const price = parseNumber(fields.unit_price);
   const commission = parseNumber(fields.commission);
@@ -242,6 +252,70 @@ function normalizeRow(fields, { defaultTimeZone } = {}) {
       cashAmount: cash.value ?? null,
       cashCurrency,
       cashAmountSource: cash.value === undefined ? null : 'broker',
+      externalId: String(fields.external_id ?? '').trim() || null,
+      sourceRow: String(fields.source_row ?? '').trim() || null,
+      pairGroup: String(fields.pair_group ?? '').trim() || null,
+      accountNumber: String(fields.account_number ?? '').trim() || null,
+      notes
+    }
+  };
+}
+
+// 拆股比例：「新:旧」（2:1、1:10，也接受 /）或单个数字（新 / 旧）。
+function parseSplitRatio(value) {
+  const text = String(value ?? '').trim();
+  if (text === '') return { blank: true };
+  const pair = text.match(/^(\d+(?:\.\d+)?)\s*[:/]\s*(\d+(?:\.\d+)?)$/);
+  const ratio = pair ? Number(pair[1]) / Number(pair[2]) : (/^\d+(?:\.\d+)?$/.test(text) ? Number(text) : NaN);
+  return Number.isFinite(ratio) && ratio > 0 && ratio !== 1 ? { value: ratio } : { invalid: true };
+}
+
+/** 拆股行（TASK-098）：份额变动带符号且非零；不记单价；佣金只能留空或为 0；币种可留空（填写时须与资产币种一致）。 */
+function normalizeSplit(fields, context) {
+  const quantity = parseNumber(fields.quantity);
+  if (quantity.invalid || !quantity.value) return { error: rowError('INVALID_NUMBER', `拆股份额变动必须为非零数字：${fields.quantity}`) };
+  const ratio = parseSplitRatio(fields.split_ratio);
+  if (ratio.invalid) return { error: rowError('INVALID_NUMBER', `拆股比例无效：${fields.split_ratio}（应为 2:1、1:10 或正数）`) };
+  if (ratio.value !== undefined && (ratio.value > 1) !== (quantity.value > 0)) {
+    return { error: rowError('SPLIT_RATIO_CONFLICT', `拆股比例 ${fields.split_ratio} 与份额变动 ${fields.quantity} 方向不一致`) };
+  }
+  const commission = parseNumber(fields.commission);
+  if (commission.invalid || (commission.value !== undefined && commission.value !== 0)) {
+    return { error: rowError('INVALID_NUMBER', `拆股不应有佣金：${fields.commission}`) };
+  }
+  const cashCurrency = String(fields.cash_currency ?? '').trim().toUpperCase() || null;
+  if (cashCurrency && !ASSET_CURRENCIES.includes(cashCurrency)) {
+    return { error: rowError('INVALID_CURRENCY', `币种无效：${fields.cash_currency}`) };
+  }
+  const market = String(fields.market ?? '').trim().toUpperCase();
+  if (market && !ASSET_MARKETS.includes(market)) return { error: rowError('INVALID_MARKET', `市场无效：${fields.market}`) };
+  const notes = String(fields.notes ?? '').trim();
+  if (notes.length > 500) return { error: rowError('INVALID_NOTES', '备注超过 500 字') };
+  const { activity, date, dateKind, timeZoneName, timeZoneSource, tradeDate, localTime, settlementText } = context;
+  return {
+    candidate: {
+      activityType: activity,
+      action: 'split',
+      rawSymbol: String(fields.symbol).trim(),
+      market: market || null,
+      date,
+      dateKind,
+      timeZone: timeZoneName,
+      timeZoneSource,
+      needsTimeZone: dateKind === 'datetime' && !timeZoneName,
+      localDate: tradeDate,
+      localTime,
+      settlementDate: settlementText ? new Date(`${settlementText}T00:00:00.000Z`) : null,
+      settlementStatus: settlementText ? 'known' : 'unknown',
+      quantity: quantity.value,
+      price: null,
+      splitRatio: ratio.value ?? null,
+      grossAmount: null,
+      fee: 0,
+      feeSource: commission.blank ? undefined : 'broker',
+      cashAmount: null,
+      cashCurrency,
+      cashAmountSource: null,
       externalId: String(fields.external_id ?? '').trim() || null,
       sourceRow: String(fields.source_row ?? '').trim() || null,
       pairGroup: String(fields.pair_group ?? '').trim() || null,

@@ -263,3 +263,100 @@ for (const scenario of replayOrderCases) {
     closeTo(positions[0].remainingCost, scenario.expected.remainingCost, 'remainingCost');
   });
 }
+
+// ─────────────────────────────────────────────────────────────
+// TASK-098（#98）：拆股。quantity = 带符号份额变动（正拆为正、合股为负），
+// 总成本不变、单位成本按新份额重算，已实现盈亏不变；splitRatio（新/旧）可选，已知时须与份额变动一致。
+// ─────────────────────────────────────────────────────────────
+const splitCases = [
+  {
+    name: '1 拆 2：份额翻倍、总成本保持、单位成本减半',
+    transactions: [
+      { action: 'buy', quantity: 10, price: 100, fee: 2, date: '2026-03-02T00:00:00Z' },
+      { action: 'split', quantity: 10, splitRatio: 2, date: '2026-03-05T00:00:00Z' }
+    ],
+    expected: { quantity: 20, remainingCost: 1002, avgCost: 50.1, realizedPnl: 0 }
+  },
+  {
+    name: '未给比例的拆股按份额变动入账',
+    transactions: [
+      { action: 'buy', quantity: 10, price: 100, date: '2026-03-02T00:00:00Z' },
+      { action: 'split', quantity: 30, date: '2026-03-05T00:00:00Z' }
+    ],
+    expected: { quantity: 40, remainingCost: 1000, avgCost: 25, realizedPnl: 0 }
+  },
+  {
+    name: '10 合 1（份额变动为负）：份额缩小、总成本保持',
+    transactions: [
+      { action: 'buy', quantity: 100, price: 10, date: '2026-03-02T00:00:00Z' },
+      { action: 'split', quantity: -90, splitRatio: 0.1, date: '2026-03-05T00:00:00Z' }
+    ],
+    expected: { quantity: 10, remainingCost: 1000, avgCost: 100, realizedPnl: 0 }
+  },
+  {
+    name: '买入 → 拆股 → 卖出：卖出按拆股后单位成本计算已实现盈亏',
+    transactions: [
+      { action: 'buy', quantity: 10, price: 100, date: '2026-03-02T00:00:00Z' },
+      { action: 'split', quantity: 10, splitRatio: 2, date: '2026-03-05T00:00:00Z' },
+      { action: 'sell', quantity: 5, price: 60, fee: 1, date: '2026-03-09T00:00:00Z' }
+    ],
+    // 拆股后均价 50；卖出 5 股：成本减 250，盈亏 (60-50)×5-1 = 49
+    expected: { quantity: 15, remainingCost: 750, avgCost: 50, realizedPnl: 49 }
+  },
+  {
+    name: '拆股前无持仓：拒绝',
+    transactions: [{ action: 'split', quantity: 10, splitRatio: 2, date: '2026-03-05T00:00:00Z' }],
+    throws: 'SPLIT_NO_POSITION'
+  },
+  {
+    name: '拆股前已清仓：拒绝',
+    transactions: [
+      { action: 'buy', quantity: 10, price: 100, date: '2026-03-02T00:00:00Z' },
+      { action: 'sell', quantity: 10, price: 100, date: '2026-03-03T00:00:00Z' },
+      { action: 'split', quantity: 10, date: '2026-03-05T00:00:00Z' }
+    ],
+    throws: 'SPLIT_NO_POSITION'
+  },
+  {
+    name: '已知比例与份额变动冲突：拒绝',
+    transactions: [
+      { action: 'buy', quantity: 10, price: 100, date: '2026-03-02T00:00:00Z' },
+      { action: 'split', quantity: 12, splitRatio: 2, date: '2026-03-05T00:00:00Z' }
+    ],
+    throws: 'SPLIT_RATIO_CONFLICT'
+  },
+  {
+    name: '合股份额变动超过持仓（拆后份额不为正）：拒绝',
+    transactions: [
+      { action: 'buy', quantity: 10, price: 100, date: '2026-03-02T00:00:00Z' },
+      { action: 'split', quantity: -10, date: '2026-03-05T00:00:00Z' }
+    ],
+    throws: 'SPLIT_RATIO_CONFLICT'
+  },
+  {
+    name: '份额变动为 0：无效数量',
+    transactions: [
+      { action: 'buy', quantity: 10, price: 100, date: '2026-03-02T00:00:00Z' },
+      { action: 'split', quantity: 0, date: '2026-03-05T00:00:00Z' }
+    ],
+    throws: 'INVALID_QUANTITY'
+  }
+];
+
+for (const scenario of splitCases) {
+  test(`持仓表格用例（拆股）：${scenario.name}`, () => {
+    const rows = scenario.transactions.map((row, index) => ({
+      _id: String(index).padStart(4, '0'),
+      portfolioId: '64b000000000000000000010', symbol: 'VTI', assetType: 'etf', market: 'US', currency: 'USD',
+      ...row, date: new Date(row.date)
+    }));
+    if (scenario.throws) {
+      assert.throws(() => calculatePositions(rows), error => error.code === scenario.throws && error.status === 400);
+      return;
+    }
+    const [position] = calculatePositions(rows);
+    for (const key of ['quantity', 'remainingCost', 'avgCost', 'realizedPnl']) {
+      closeTo(position[key], scenario.expected[key], key);
+    }
+  });
+}
