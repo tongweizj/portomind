@@ -300,3 +300,16 @@ test('入参校验：期间无效 400，未知币种 400，来源账户不存在
   const missing = await call('POST', '/api/source-accounts/64b000000000000000000cff/cash-reconciliation', PERIOD);
   assert.equal(missing.status, 404);
 });
+
+// 决定 7 / 代码审查 S6：无结算日的现金类流水按活动日计入，规则随结果返回供界面展示
+test('S6 现金日期规则：无结算日的现金类流水按活动日计入并标注依据，响应附带规则说明', async (t) => {
+  freshWorld(t);
+  await seedTwoPortfolios();
+  const data = await reconcile({ ...PERIOD });
+  assert.ok(Array.isArray(data.cashDateRules) && data.cashDateRules.length >= 2, JSON.stringify(data.cashDateRules));
+  assert.ok(data.cashDateRules.some(rule => rule.code === 'CASH_ACTIVITY_DATE' && rule.text.includes('活动日')));
+  const { CAD } = byCurrency(data);
+  const interest = CAD.items.find(item => item.action === 'interest');
+  assert.equal(interest.cashDateBasis, 'activity');
+  assert.equal(interest.cashDate, '2026-03-20');
+});

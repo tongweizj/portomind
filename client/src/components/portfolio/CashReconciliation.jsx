@@ -24,7 +24,10 @@ function toNumberOrNull(text) {
 function ItemRows({ items }) {
   return items.map(item => (
     <tr key={item.id} style={{ borderTop: `1px solid ${colors.border}` }}>
-      <td className="px-2 py-1">{item.cashDate ?? '—'}</td>
+      <td className="px-2 py-1">
+        {item.cashDate ?? '—'}
+        {item.cashDateBasis === 'activity' && <span style={{ color: colors.textMuted }}>（活动日）</span>}
+      </td>
       <td className="px-2 py-1">{item.tradeDate ?? '—'}</td>
       <td className="px-2 py-1">{item.portfolioName ?? item.portfolioId}</td>
       <td className="px-2 py-1">{TRANSACTION_ACTION_LABELS[item.action] ?? item.action}{item.symbol ? ` · ${item.symbol}` : ''}</td>
@@ -141,7 +144,7 @@ export default function CashReconciliation({ portfolioId, sourceAccounts }) {
       <div>
         <h3 style={{ fontSize: 15, fontWeight: 600, color: colors.textPrimary, margin: 0 }}>来源账户现金核对</h3>
         <p style={{ fontSize: 12, color: colors.textMuted, margin: '4px 0 0' }}>
-          汇总该来源账户在所有组合中的流水，按币种分别核对；成交按结算日，结算日未知的单列。
+          汇总该来源账户在所有组合中的流水，按币种分别核对；成交按结算日（未知的单列），无结算日的现金类流水按活动日。
         </p>
       </div>
       <form onSubmit={submit} className="space-y-2 text-sm">
@@ -184,6 +187,11 @@ export default function CashReconciliation({ portfolioId, sourceAccounts }) {
       {error && <div className="rounded bg-red-50 p-3 text-sm text-red-700">{error}</div>}
       {result && (
         <div className="space-y-2">
+          {result.cashDateRules?.length > 0 && (
+            <ul className="list-disc pl-5 text-xs" style={{ color: colors.textSecondary }} aria-label="现金日期规则">
+              {result.cashDateRules.map(rule => <li key={rule.code}>{rule.text}</li>)}
+            </ul>
+          )}
           {result.currencies.length === 0 ? (
             <div className="text-sm" style={{ color: colors.textMuted }}>该期间没有现金流水，也未填写余额。</div>
           ) : (
