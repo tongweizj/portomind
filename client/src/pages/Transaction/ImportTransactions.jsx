@@ -354,7 +354,8 @@ export default function ImportTransactions() {
                   <th className="px-2 py-2 text-right">数量</th>
                   <th className="px-2 py-2 text-right">单价</th>
                   <th className="px-2 py-2 text-right">佣金</th>
-                  <th className="px-2 py-2">币种</th>
+                  <th className="px-2 py-2 text-right">现金净额</th>
+                  <th className="px-2 py-2">现金币种</th>
                   <th className="px-2 py-2">原成交编号</th>
                   <th className="px-2 py-2">原因 / 决议</th>
                 </tr>
@@ -379,8 +380,13 @@ export default function ImportTransactions() {
                       <td className="px-2 py-2 text-right">{c?.quantity ?? '—'}</td>
                       <td className="px-2 py-2 text-right">{c?.price ?? '—'}</td>
                       <td className="px-2 py-2 text-right whitespace-nowrap">
-                        {c?.fee ?? '—'}
-                        {c?.feeSource && FEE_SOURCE_LABELS[c.feeSource] ? <span className="ml-1 text-xs text-gray-500">({FEE_SOURCE_LABELS[c.feeSource]})</span> : null}
+                        {c?.kind === 'cash' ? '—' : (c?.fee ?? '—')}
+                        {c?.kind !== 'cash' && c?.feeSource && FEE_SOURCE_LABELS[c.feeSource] ? <span className="ml-1 text-xs text-gray-500">({FEE_SOURCE_LABELS[c.feeSource]})</span> : null}
+                      </td>
+                      <td className="px-2 py-2 text-right whitespace-nowrap">
+                        {c?.cashAmount ?? '—'}
+                        {c?.cashAmountSource === 'derived' ? <span className="ml-1 text-xs text-gray-500">(推算)</span> : null}
+                        {c?.cashDifference != null ? <div className="text-xs text-amber-700" title="券商净额与 数量×单价±佣金 的差异（保留券商净额）">差 {c.cashDifference}</div> : null}
                       </td>
                       <td className="px-2 py-2">{c?.cashCurrency || '—'}</td>
                       <td className="px-2 py-2">{c?.externalId || '—'}</td>

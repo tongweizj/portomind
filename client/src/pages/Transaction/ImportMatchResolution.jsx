@@ -3,7 +3,7 @@
 //   - 只展示服务端给出的候选旧流水、新旧值差异与可选处置（row.options），不自行判断是否重复；
 //   - 用户选择 跳过 / 新增 / 更新（更新须指定候选之一），决议随下一次预览提交给服务端。
 
-const ACTION_LABELS = { skip: '跳过此行', add: '作为新成交新增', update: '更新旧流水' };
+const ACTION_LABELS = { skip: '跳过此行', add: '作为新流水新增', update: '更新旧流水' };
 const FIELD_LABELS = {
   symbol: '代码', date: '成交时间', dateKind: '时间精度', quantity: '数量', price: '单价',
   grossAmount: '成交金额', fee: '佣金', cashAmount: '现金金额', cashCurrency: '币种',
@@ -64,7 +64,10 @@ export default function ImportMatchResolution({ row, resolution, onChange }) {
           <div>
             <div className="text-gray-600">
               旧流水{match.portfolioName ? `（组合：${match.portfolioName}）` : ''}
-              {match.transaction ? ` · ${formatValue(match.transaction.date).slice(0, 10)} · 数量 ${formatValue(match.transaction.quantity)} · 单价 ${formatValue(match.transaction.price)}` : ''}
+              {match.transaction ? ` · ${formatValue(match.transaction.date).slice(0, 10)}` : ''}
+              {/* 现金流水（TASK-097）无数量单价：展示现金金额与币种 */}
+              {match.transaction && match.transaction.quantity != null ? ` · 数量 ${formatValue(match.transaction.quantity)} · 单价 ${formatValue(match.transaction.price)}` : ''}
+              {match.transaction && match.transaction.quantity == null ? ` · 现金 ${formatValue(match.transaction.cashAmount)} ${formatValue(match.transaction.cashCurrency)}` : ''}
               {match.transaction?.notes ? ` · 备注「${match.transaction.notes}」（更新时保留）` : ''}
             </div>
             <DiffList diff={match.diff} />

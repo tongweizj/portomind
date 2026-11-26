@@ -205,7 +205,8 @@ test('无编号有时间、仅佣金不同：匹配同一成交并显示差异�
   const content = csv([{ ...TIMED, commission: '2' }]);
   const first = await preview(body(content, { sourceAccount }));
   assert.deepEqual([first.rows[0].code, first.rows[0].options.sort()], ['TRADE_CHANGED', ['skip', 'update']]);
-  assert.deepEqual(first.rows[0].matches[0].diff, [{ field: 'fee', before: 1, after: 2 }]);
+  // TASK-097：缺券商净额时净额由数量×单价±佣金推算，佣金变化随之体现在推算净额上
+  assert.deepEqual(first.rows[0].matches[0].diff, [{ field: 'fee', before: 1, after: 2 }, { field: 'cashAmount', before: -1001, after: -1002 }]);
   const { commit } = await previewAndCommit(body(content, { sourceAccount, resolutions: { [first.rows[0].rowKey]: { action: 'update' } } }));
   assert.equal(commit.status, 201, JSON.stringify(commit.body));
   assert.equal(world.transactions.length, 1);

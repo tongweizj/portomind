@@ -8,14 +8,20 @@ export const ACTION_TYPE = Object.freeze({
 
 /**
  * 交易类型（TASK-044 R8）。
- * 取值来自 shared/models/transaction.js 的 action 枚举，两处使用点（组合内交易 Tab、
- * 「全部交易」聚合页）共用本表，杜绝再次出现「分红显示为卖出」的二元判断。
+ * 取值必须与 shared/constants/transaction.constants.js 的 TRANSACTION_ACTIONS 同步（同 ASSET_* 双份规则）。
+ * 两处使用点（组合内交易 Tab、「全部交易」聚合页）共用本表，杜绝再次出现「分红显示为卖出」的二元判断。
+ * TASK-097：税款 / 利息 / 现金划入划出 / 独立费用为纯现金流水（目前仅经导入写入，不进持仓）。
  */
 export const TRANSACTION_ACTIONS = Object.freeze([
   { value: 'buy', label: '买入' },
   { value: 'sell', label: '卖出' },
   { value: 'div_cash', label: '现金分红' },
   { value: 'div_reinvest', label: '分红再投' },
+  { value: 'tax', label: '税款' },
+  { value: 'interest', label: '利息' },
+  { value: 'cash_in', label: '现金划入' },
+  { value: 'cash_out', label: '现金划出' },
+  { value: 'fee', label: '独立费用' },
 ]);
 
 /**

@@ -4,6 +4,15 @@ const {
   ASSET_MARKETS,
   ASSET_CURRENCIES
 } = require('../constants/asset.constants');
+const { TRANSACTION_ACTIONS, POSITION_ACTIONS } = require('../constants/transaction.constants');
+
+// 影响持仓的动作必须有标的、数量与单价；现金类流水（TASK-097）可无标的、无数量单价。
+function isPositionAction() {
+  return POSITION_ACTIONS.includes(this.action);
+}
+function hasSymbolOrPositionAction() {
+  return POSITION_ACTIONS.includes(this.action) || Boolean(this.symbol);
+}
 
 const TransactionSchema = new mongoose.Schema({
   portfolioId: {
@@ -12,15 +21,18 @@ const TransactionSchema = new mongoose.Schema({
     ref: 'Portfolio',
     index: true
   },
-  assetType: { type: String, enum: ASSET_TYPES, required: true },
-  symbol: { type: String, required: true, trim: true, uppercase: true },
-  market: { type: String, enum: ASSET_MARKETS, required: true },
+  // 资产快照（有标的时从 Asset 复制）。无标的的现金流水（利息、划转、独立费用）无 assetType/market/symbol，
+  // currency 记现金币种（组合层金额保留原币种，规则 10）。
+  assetType: { type: String, enum: ASSET_TYPES, required: hasSymbolOrPositionAction },
+  symbol: { type: String, required: isPositionAction, trim: true, uppercase: true },
+  market: { type: String, enum: ASSET_MARKETS, required: hasSymbolOrPositionAction },
   currency: { type: String, enum: ASSET_CURRENCIES, required: true },
-  // buy 增加持仓；sell 减少持仓，且不允许超过交易日期当时的可用数量。
-  // div_cash 现金分红（不进持仓，记 quantity×price 现金）；div_reinvest 分红再投（转增持仓）。
-  action: { type: String, enum: ['buy', 'sell', 'div_cash', 'div_reinvest'], required: true },
-  quantity: { type: Number, required: true, min: [Number.EPSILON, 'quantity must be greater than zero'] },
-  price: { type: Number, required: true, min: [Number.EPSILON, 'price must be greater than zero'] },
+  // buy 增加持仓；sell 减少持仓，且不允许超过交易日期当时的可用数量；div_reinvest 分红再投（转增持仓）。
+  // 现金类（不进持仓，金额见 cashAmount / cashCurrency）：div_cash 现金分红（手动录入记 quantity×price）、
+  // tax 税款、interest 利息、cash_in / cash_out 现金划入 / 划出、fee 独立费用。
+  action: { type: String, enum: TRANSACTION_ACTIONS, required: true },
+  quantity: { type: Number, required: isPositionAction, min: [Number.EPSILON, 'quantity must be greater than zero'] },
+  price: { type: Number, required: isPositionAction, min: [Number.EPSILON, 'price must be greater than zero'] },
   // fee（TR-06）：买入成本含费（remainingCost += qty×price + fee）；卖出净得扣费
   // （realizedPnl 扣 fee）；div_reinvest 成本含费。与再平衡建议费用模型口径统一（RB-10）。
   fee: { type: Number, default: 0, min: 0 },
@@ -49,7 +61,8 @@ const TransactionSchema = new mongoose.Schema({
   dateKind: { type: String, enum: ['datetime', 'date'], default: undefined },
   timeZone: { type: String, trim: true, default: undefined },
   settlementDate: { type: Date, default: undefined },
-  // 券商带符号现金净额与实际币种（可与资产币种不同，后续工单使用）
+  // 券商带符号现金净额（流入为正、流出为负）与实际现金币种（可与资产币种 currency 不同）。
+  // 现金类流水的金额即 cashAmount；成交行优先保存券商净额，缺失时按数量×单价±佣金推算（cashAmountSource=derived）。
   cashAmount: { type: Number, default: undefined },
   cashCurrency: { type: String, enum: ASSET_CURRENCIES, default: undefined },
   cashAmountSource: { type: String, enum: ['broker', 'derived'], default: undefined },
