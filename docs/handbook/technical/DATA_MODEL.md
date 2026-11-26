@@ -129,13 +129,13 @@ AlertRule ──_id──> AlertEvent.ruleId（**可空**：再平衡通知没�
 | 字段 | 定义 |
 |---|---|
 | `portfolioId` | ObjectId → Portfolio，required，`index: true` |
-| `assetType` | String，required，enum 同 Asset.type |
-| `symbol` | String，required，trim，**uppercase** |
-| `market` | String，required，enum 同 Asset.market |
-| `currency` | String，required，enum 同 Asset.currency |
-| `action` | String，required，enum `buy`/`sell`/`div_cash`/`div_reinvest` |
-| `quantity` | Number，required，`min: Number.EPSILON`（> 0） |
-| `price` | Number，required，`min: Number.EPSILON`（> 0） |
+| `assetType` | String，enum 同 Asset.type；持仓类动作或有标的时 required |
+| `symbol` | String，trim，**uppercase**；持仓类动作（`buy`/`sell`/`div_reinvest`）required，现金类可空（利息、划转、独立费用） |
+| `market` | String，enum 同 Asset.market；持仓类动作或有标的时 required |
+| `currency` | String，required，enum 同 Asset.currency。有标的为资产币种快照；无标的的现金流水为现金币种 |
+| `action` | String，required，enum 见 `shared/constants/transaction.constants.js`：持仓类 `buy`/`sell`/`div_reinvest`；现金类 `div_cash`/`tax`/`interest`/`cash_in`/`cash_out`/`fee`（TASK-097，后四类及无数量的分红目前仅经导入写入） |
+| `quantity` | Number，`min: Number.EPSILON`（> 0）；持仓类动作 required，现金类可空 |
+| `price` | Number，`min: Number.EPSILON`（> 0）；持仓类动作 required，现金类可空 |
 | `fee` | Number，= `0`，min 0。买入计入成本、卖出从净得扣除 |
 | `date` | Date，required，= now。**业务日期**，决定持仓重放的顺序。重放顺序 `(UTC 交易日, orderRank, date, 导入批次, sequence, _id)`（`positionCalculator.compareTransactions`，预览 / 确认后重放 / 编辑共用；同一时刻手动流水在导入流水之前，字符串按码位比较） |
 | `notes` | String，trim，≤500 |
@@ -144,7 +144,7 @@ AlertRule ──_id──> AlertEvent.ruleId（**可空**：再平衡通知没�
 | `dateKind` | `datetime`（保留明确时刻，含午夜）/ `date`（仅日期，存当日 UTC 零点，同手动录入）；手动录入为空 |
 | `timeZone` / `timeZoneSource` | 成交时刻所用 IANA 时区；来源 `report`（报表自带）/ `user`（报表有时间无时区，用户确认北京或多伦多，TASK-096）。仅日期精度不记录 |
 | `settlementDate` / `settlementStatus` | 券商结算日（独立于成交日）；`known` / `unknown`（报表未提供，`settlementDate` 留空，不以成交日代替） |
-| `cashAmount` / `cashCurrency` / `cashAmountSource` | 券商带符号现金净额、实际币种、来源（`broker`/`derived`） |
+| `cashAmount` / `cashCurrency` / `cashAmountSource` | 带符号现金净额（流入正、流出负）、实际现金币种（可与资产 `currency` 不同）、来源（`broker` 券商给出，保留分币差异 / `derived` 由数量 × 单价 ± 佣金推算）。现金类流水的金额即 `cashAmount` |
 | `feeSource` | `broker`/`derived`/`user`/`confirmed_zero`（佣金缺失不按 0 处理，需推算、补填或明确确认） |
 | `grossAmount` | 数量 × 单价（无编号成交匹配字段，不含佣金与净额） |
 | `pairGroupId` / `sequence` | 成对流水组号；同一报表内原行顺序（时间正序），同一时刻同批次按此重放 |
@@ -154,7 +154,7 @@ AlertRule ──_id──> AlertEvent.ruleId（**可空**：再平衡通知没�
 
 - 索引：`{portfolioId: 1, date: -1, _id: -1}`（组合内倒序列表）、`{portfolioId: 1, symbol: 1, date: 1, _id: 1}`（组合内单标的重放）；TASK-094 新增部分索引 `{sourceAccountId, source.externalId}`（**非唯一**：跨组合同编号须可被发现）、`{sourceAccountId, source.rawHash}`、`{source.importBatchId}`。
 - **无唯一索引**：允许同一 `(portfolioId, symbol, date, action, quantity, price)` 重复落库。CSV 导入的幂等**不靠数据库约束**，靠业务层判重（当前实现有缺陷，见 §5.2）。
-- `action` 语义：`div_cash` 进现金不进持仓；`div_reinvest` 转增持仓且成本含费。
+- `action` 语义：`div_reinvest` 转增持仓且成本含费；现金类（`div_cash`/`tax`/`interest`/`cash_in`/`cash_out`/`fee`）不进持仓、不参与超卖重放，持仓计算直接跳过（现金余额核对见后续工单）。
 
 ### 4.4 Price（`shared/models/price.js`）
 

@@ -12,7 +12,7 @@ async function aggregate(portfolioId, symbolFilter) {
   const match = { portfolioId };
   if (symbolFilter) match.symbol = String(symbolFilter).trim().toUpperCase();
   const transactions = await Transaction.find(visibleQuery(match)).sort({ date: 1, _id: 1 }).lean();
-  const symbols = [...new Set(transactions.map(transaction => transaction.symbol))];
+  const symbols = [...new Set(transactions.map(transaction => transaction.symbol).filter(Boolean))];
   const latestPrices = symbols.length ? await marketData.getLatestPrices(symbols) : {};
   return calculatePositions(transactions, latestPrices);
 }
@@ -35,7 +35,7 @@ async function getHistory(portfolioId, symbol, interval) {
     .lean();
   if (transactions.length === 0) return [];
 
-  const symbols = [...new Set(transactions.map(transaction => transaction.symbol))];
+  const symbols = [...new Set(transactions.map(transaction => transaction.symbol).filter(Boolean))];
   const prices = await Price
     .find({ symbol: { $in: symbols } })
     .sort({ timestamp: 1, _id: 1 })

@@ -79,6 +79,32 @@ const calculationCases = [
     ],
     prices: { VTI: 15 },
     expected: [{ symbol: 'VTI', quantity: 0.3, avgCost: 10, remainingCost: 3, marketValue: 4.5, unrealizedPnl: 1.5, pnlPct: 50, realizedPnl: 0.4 }]
+  },
+  // TASK-097：现金类流水不改变持仓；导入的现金分红可无数量 / 单价
+  {
+    name: '现金分红（数量单价为空）与税款、利息、划转、独立费用不改变持仓与成本',
+    transactions: () => [
+      trade({ quantity: 10, price: 100, fee: 1 }),
+      trade({ action: 'div_cash', quantity: undefined, price: undefined, cashAmount: 12.34, cashCurrency: 'USD' }),
+      trade({ action: 'tax', quantity: undefined, price: undefined, cashAmount: -1.85 }),
+      trade({ action: 'interest', symbol: undefined, assetType: undefined, market: undefined, quantity: undefined, price: undefined, cashAmount: 0.42 }),
+      trade({ action: 'cash_in', symbol: undefined, assetType: undefined, market: undefined, quantity: undefined, price: undefined, cashAmount: 500 }),
+      trade({ action: 'cash_out', symbol: undefined, assetType: undefined, market: undefined, quantity: undefined, price: undefined, cashAmount: -200 }),
+      trade({ action: 'fee', symbol: undefined, assetType: undefined, market: undefined, quantity: undefined, price: undefined, cashAmount: -9.99 })
+    ],
+    prices: { VTI: 110 },
+    expected: [{ symbol: 'VTI', quantity: 10, avgCost: 100.1, remainingCost: 1001, realizedPnl: 0 }]
+  },
+  {
+    name: '分红再投成本含费，随后卖出净得扣费',
+    transactions: () => [
+      trade({ quantity: 10, price: 100 }),
+      trade({ action: 'div_reinvest', quantity: 0.5, price: 110, fee: 0.5 }),
+      trade({ action: 'sell', quantity: 5.25, price: 120, fee: 2 })
+    ],
+    prices: { VTI: 120 },
+    // 再投后：10.5 股、成本 1000 + 55 + 0.5 = 1055.5，均价 100.5238…；卖出 5.25 股
+    expected: [{ symbol: 'VTI', quantity: 5.25, remainingCost: 527.75, avgCost: 100.52380952380952, realizedPnl: (120 - 1055.5 / 10.5) * 5.25 - 2 }]
   }
 ];
 
@@ -151,6 +177,20 @@ test('多币种历史按原币种分行而不直接相加', () => {
     { currency: 'CAD', marketValue: 70 },
     { currency: 'USD', marketValue: 110 }
   ]);
+});
+
+test('历史快照忽略现金类流水：不同币种的现金分红 / 利息不产生额外币种行（TASK-097）', () => {
+  sequence = 0;
+  const transactions = [
+    trade({ quantity: 1, price: 100, date: new Date('2026-01-01T12:00:00Z') }),
+    trade({ action: 'div_cash', quantity: undefined, price: undefined, currency: 'USD', cashAmount: 5, cashCurrency: 'CAD',
+      date: new Date('2026-01-02T12:00:00Z') }),
+    trade({ action: 'interest', symbol: undefined, assetType: undefined, market: undefined, currency: 'CAD',
+      quantity: undefined, price: undefined, cashAmount: 1, cashCurrency: 'CAD', date: new Date('2026-01-02T13:00:00Z') })
+  ];
+  const prices = [{ symbol: 'VTI', timestamp: new Date('2026-01-01T20:00:00Z'), price: 110 }];
+  const history = calculatePositionHistory(transactions, prices, 'day');
+  assert.deepEqual(history.map(item => [item.date, item.currency, item.quantity]), [['2026-01-01', 'USD', 1]]);
 });
 
 const originalTransactionFind = Transaction.find;

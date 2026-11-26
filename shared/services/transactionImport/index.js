@@ -24,6 +24,7 @@ const {
 } = require('../transaction/positionCalculator');
 const { visibleQuery } = require('../transaction/visibility');
 const { toStorageSymbol, marketFromSuffix, normalizeSymbol } = require('../../utils/symbol');
+const { isCashAction } = require('../../constants/transaction.constants');
 const {
   IMPORT_FORMATS,
   IMPORT_COMMIT_LIMIT,
@@ -74,6 +75,12 @@ async function resolveAssets(rows) {
   for (const row of rows) {
     if (row.disposition !== 'pending') continue;
     const { rawSymbol, market } = row.candidate;
+    // 无标的的现金流水（利息、划转、独立费用等）：不解析资产，币种即现金币种
+    if (!rawSymbol && row.candidate.kind === 'cash') {
+      row.candidate.symbol = null;
+      row.asset = null;
+      continue;
+    }
     const effectiveMarket = market || marketFromSuffix(rawSymbol);
     if (!effectiveMarket) {
       rowError(row, 'MARKET_REQUIRED', `标的 ${rawSymbol} 无市场后缀，需填写 market`);
@@ -91,11 +98,13 @@ async function resolveAssets(rows) {
     : [];
   const bySymbol = new Map(assets.map(asset => [asset.symbol, asset]));
   for (const row of rows) {
-    if (row.disposition !== 'pending') continue;
+    if (row.disposition !== 'pending' || !row.candidate.symbol) continue;
     const asset = bySymbol.get(row.candidate.symbol);
     if (!asset) { rowError(row, 'ASSET_NOT_FOUND', `资产 ${row.candidate.symbol} 不存在，请先在资产管理中添加`); continue; }
     if (!asset.active) { rowError(row, 'ASSET_INACTIVE', `资产 ${row.candidate.symbol} 已停用`); continue; }
-    if (asset.currency !== row.candidate.cashCurrency) {
+    // 现金类流水保留实际现金币种（可与资产币种不同，如美股分红以 CAD 入账）；
+    // 影响持仓成本的成交仍要求同币种（跨币种成交由 #100 / #101 处理）。
+    if (row.candidate.kind !== 'cash' && asset.currency !== row.candidate.cashCurrency) {
       rowError(row, 'CURRENCY_MISMATCH', `成交币种 ${row.candidate.cashCurrency} 与资产币种 ${asset.currency} 不一致（跨币种成交暂不支持）`);
       continue;
     }
@@ -109,6 +118,12 @@ function rawHashOf(candidate) {
     candidate.quantity, candidate.price, candidate.fee, candidate.cashAmount, candidate.cashCurrency,
     candidate.externalId
   ]);
+}
+
+// 佣金确定（券商 / 推算 / 补值 / 确认按零）后，缺券商净额的成交行按数量 × 单价 ± 佣金推算净额。
+function applyCashDerivation(row) {
+  standardCsv.deriveCashAmount(row.candidate);
+  row.candidate.cashDifference = standardCsv.cashDifferenceOf(row.candidate);
 }
 
 // 佣金未知：需用户补值（fee）或明确按零（confirmZeroFee）。决议后成为 user / confirmed_zero。
@@ -245,7 +260,8 @@ function checkSameDayOrder(symbol, existing, newRows, resolutions) {
 // 更新行（#95）以新值替换目标旧流水；标的被更正时同时校验旧标的移除后的账本。
 // 更新写入后归属本次导入批次并带新 sequence（importedFields），预览探针与之一致；同一交易日内沿用目标已确认的 orderRank。
 async function validateLedger(rows, portfolioId, resolutions = {}) {
-  const writes = rows.filter(row => row.disposition === 'add' || row.disposition === 'update');
+  // 现金类流水（TASK-097）不影响持仓，不参与同日顺序核对与超卖重放
+  const writes = rows.filter(row => (row.disposition === 'add' || row.disposition === 'update') && !isCashAction(row.candidate.action));
   const symbols = [...new Set(writes.flatMap(row => (row.disposition === 'update'
     ? [row.candidate.symbol, row.target.symbol]
     : [row.candidate.symbol])))];
@@ -331,7 +347,8 @@ function publicCandidate(row) {
   return {
     activityType: c.activityType,
     action: c.action,
-    symbol: c.symbol || c.rawSymbol,
+    kind: c.kind,
+    symbol: c.symbol || c.rawSymbol || null,
     date: c.date,
     dateKind: c.dateKind,
     timeZone: c.timeZone,
@@ -347,6 +364,9 @@ function publicCandidate(row) {
     feeSource: c.feeSource,
     cashAmount: c.cashAmount,
     cashCurrency: c.cashCurrency,
+    cashAmountSource: c.cashAmountSource || null,
+    // 券商净额与成交金额 ± 佣金的分币差异（保留，不改写净额）
+    cashDifference: c.cashDifference ?? null,
     externalId: c.externalId,
     pairGroup: c.pairGroup,
     notes: c.notes
@@ -396,7 +416,8 @@ async function computePreview(input) {
     throw businessError(413, 'IMPORT_FILE_TOO_LARGE', `单个文件最多 ${IMPORT_PREVIEW_LIMIT} 行`);
   }
   const mappedColumns = new Set(Object.values(parsed.mapping));
-  const missingColumns = ['activity_type', 'trade_date', 'symbol', 'quantity', 'unit_price', 'cash_currency']
+  // 标的 / 数量 / 单价 / 金额按活动类型逐行校验（现金类文件可以没有数量单价列）
+  const missingColumns = ['activity_type', 'trade_date', 'cash_currency']
     .filter(key => !mappedColumns.has(key));
 
   const resolutions = input.resolutions || {};
@@ -466,7 +487,10 @@ async function computePreview(input) {
     if (row.disposition !== 'pending') continue;
     const resolution = resolutions[row.rowKey];
     applyFeeResolution(row, resolution);
-    if (row.disposition === 'pending') row.rawHash = rawHashOf(row.candidate);
+    if (row.disposition === 'pending') {
+      applyCashDerivation(row);
+      row.rawHash = rawHashOf(row.candidate);
+    }
   }
   for (const row of rows) {
     if (row.disposition === 'review' && row.code === 'FEE_UNKNOWN') row.rawHash = rawHashOf({ ...row.candidate, fee: null });
@@ -583,13 +607,14 @@ async function previewImport(input) {
 function importedFields(preview, row, { sourceAccountId, importBatchId }) {
   const c = row.candidate;
   return {
-    symbol: c.symbol,
-    assetType: row.asset.type,
-    market: row.asset.market,
-    currency: row.asset.currency,
+    symbol: c.symbol || undefined,
+    assetType: row.asset?.type,
+    market: row.asset?.market,
+    // 有标的：资产币种快照；无标的的现金流水：现金币种
+    currency: row.asset?.currency || c.cashCurrency,
     action: c.action,
-    quantity: c.quantity,
-    price: c.price,
+    quantity: c.quantity ?? undefined,
+    price: c.price ?? undefined,
     fee: c.fee,
     date: c.date,
     sourceAccountId,
@@ -611,8 +636,8 @@ function importedFields(preview, row, { sourceAccountId, importBatchId }) {
     cashAmount: c.cashAmount ?? undefined,
     cashCurrency: c.cashCurrency,
     cashAmountSource: c.cashAmountSource || undefined,
-    feeSource: c.feeSource,
-    grossAmount: c.grossAmount,
+    feeSource: c.feeSource || undefined,
+    grossAmount: c.grossAmount ?? undefined,
     pairGroupId: c.pairGroup || undefined,
     sequence: row.sequence,
     orderRank: row.orderRank ?? undefined
