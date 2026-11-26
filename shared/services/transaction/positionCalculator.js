@@ -2,7 +2,7 @@ const dayjs = require('dayjs');
 const utc = require('dayjs/plugin/utc');
 const timezone = require('dayjs/plugin/timezone');
 const { MARKET_TIMEZONE } = require('../../utils/marketTime');
-const { TRANSACTION_ACTIONS, isCashAction } = require('../../constants/transaction.constants');
+const { TRANSACTION_ACTIONS, POSITION_ACTIONS, isCashAction } = require('../../constants/transaction.constants');
 
 dayjs.extend(utc);
 dayjs.extend(timezone);
@@ -14,6 +14,35 @@ function calculationError(code, message) {
   error.status = 400;
   error.code = code;
   return error;
+}
+
+// 拆股比例核对的相对容差（券商份额变动可带小数位）
+const SPLIT_TOLERANCE = 1e-6;
+
+/** 拆股：份额按带符号变动调整，剩余成本与已实现盈亏保持不变。 */
+function applySplit(position, delta, splitRatio, transactionDate) {
+  const on = transactionDate.toISOString().slice(0, 10);
+  if (position.quantity <= EPSILON) {
+    throw calculationError('SPLIT_NO_POSITION', `拆股前没有 ${position.symbol} 的持仓（${on}）`);
+  }
+  const after = position.quantity + delta;
+  if (after <= EPSILON) {
+    throw calculationError('SPLIT_RATIO_CONFLICT', `${position.symbol} 份额变动 ${delta} 使拆股后份额不为正（拆股前 ${position.quantity}，${on}）`);
+  }
+  if (splitRatio !== undefined && splitRatio !== null && splitRatio !== '') {
+    const ratio = Number(splitRatio);
+    if (!Number.isFinite(ratio) || ratio <= 0) {
+      throw calculationError('INVALID_SPLIT_RATIO', `Invalid split ratio for ${position.symbol}`);
+    }
+    const expected = position.quantity * (ratio - 1);
+    if (Math.abs(expected - delta) > SPLIT_TOLERANCE * Math.max(1, Math.abs(expected))) {
+      throw calculationError(
+        'SPLIT_RATIO_CONFLICT',
+        `${position.symbol} 拆股比例 ${ratio} 与份额变动不一致：拆股前 ${position.quantity}，按比例应变动 ${expected}，实际 ${delta}（${on}）`
+      );
+    }
+  }
+  position.quantity = after;
 }
 
 const DAY_MS = 24 * 60 * 60 * 1000;
@@ -83,6 +112,9 @@ function latestPriceFor(latestPrices, symbol) {
  * - tax / interest / cash_in / cash_out / fee（TASK-097）：纯现金流水，同样不进持仓；
  *   现金类流水可无标的、无数量单价，直接跳过（现金余额另行核对，见 #103）；
  * - div_reinvest：分红再投，等价 buy（数量与成本增加，含 fee）；
+ * - split（TASK-098）：quantity = 带符号份额变动（拆股为正、合股为负），price / fee 不参与；
+ *   总成本不变、单位成本按新份额重算、已实现盈亏不变。拆股前须有持仓（SPLIT_NO_POSITION）；
+ *   splitRatio（新份额 / 旧份额）已知时须满足 旧份额 ×(ratio-1) = 份额变动，且拆后份额须为正（SPLIT_RATIO_CONFLICT）；
  * - fee 只影响发生之后的持仓，不回溯漂移（重放天然满足）。
  */
 function replayLedger(transactions) {
@@ -106,10 +138,11 @@ function replayLedger(transactions) {
     if (!TRANSACTION_ACTIONS.includes(action)) {
       throw calculationError('INVALID_ACTION', `Invalid transaction action for ${symbol}`);
     }
-    if (!Number.isFinite(quantity) || quantity <= 0) {
+    const isSplit = action === 'split';
+    if (!Number.isFinite(quantity) || (isSplit ? Math.abs(quantity) < EPSILON : quantity <= 0)) {
       throw calculationError('INVALID_QUANTITY', `Invalid transaction quantity for ${symbol}`);
     }
-    if (!Number.isFinite(tradePrice) || tradePrice <= 0) {
+    if (!isSplit && (!Number.isFinite(tradePrice) || tradePrice <= 0)) {
       throw calculationError('INVALID_PRICE', `Invalid transaction price for ${symbol}`);
     }
     if (!Number.isFinite(fee) || fee < 0) {
@@ -129,7 +162,9 @@ function replayLedger(transactions) {
       realizedPnl: 0
     };
 
-    if (action === 'buy' || action === 'div_reinvest') {
+    if (isSplit) {
+      applySplit(position, quantity, transaction.splitRatio, transactionDate);
+    } else if (action === 'buy' || action === 'div_reinvest') {
       // div_reinvest 等价买入（分红再投转增持仓）
       position.quantity += quantity;
       position.remainingCost += quantity * tradePrice + fee;
@@ -283,5 +318,6 @@ module.exports = {
   calculatePositionHistory,
   compareTransactions,
   PREVIEW_BATCH_KEY,
+  POSITION_ACTIONS,
   periodKey
 };

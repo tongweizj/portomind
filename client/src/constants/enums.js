@@ -18,6 +18,8 @@ export const TRANSACTION_ACTIONS = Object.freeze([
   { value: 'sell', label: '卖出' },
   { value: 'div_cash', label: '现金分红' },
   { value: 'div_reinvest', label: '分红再投' },
+  // TASK-098：拆股 / 合股（仅经流水导入写入；quantity 为带符号份额变动，无单价）
+  { value: 'split', label: '拆股' },
   { value: 'tax', label: '税款' },
   { value: 'interest', label: '利息' },
   { value: 'cash_in', label: '现金划入' },

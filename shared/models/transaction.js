@@ -10,6 +10,10 @@ const { TRANSACTION_ACTIONS, POSITION_ACTIONS } = require('../constants/transact
 function isPositionAction() {
   return POSITION_ACTIONS.includes(this.action);
 }
+// 有单价的持仓动作（拆股不记单价）
+function isPricedAction() {
+  return POSITION_ACTIONS.includes(this.action) && this.action !== 'split';
+}
 function hasSymbolOrPositionAction() {
   return POSITION_ACTIONS.includes(this.action) || Boolean(this.symbol);
 }
@@ -30,9 +34,20 @@ const TransactionSchema = new mongoose.Schema({
   // buy 增加持仓；sell 减少持仓，且不允许超过交易日期当时的可用数量；div_reinvest 分红再投（转增持仓）。
   // 现金类（不进持仓，金额见 cashAmount / cashCurrency）：div_cash 现金分红（手动录入记 quantity×price）、
   // tax 税款、interest 利息、cash_in / cash_out 现金划入 / 划出、fee 独立费用。
+  // split（TASK-098）拆股：quantity 为带符号份额变动（拆股为正、合股为负），不记单价；
+  // 总成本不变、单位成本按新份额重算（见 transaction/positionCalculator.js）。
   action: { type: String, enum: TRANSACTION_ACTIONS, required: true },
-  quantity: { type: Number, required: isPositionAction, min: [Number.EPSILON, 'quantity must be greater than zero'] },
-  price: { type: Number, required: isPositionAction, min: [Number.EPSILON, 'price must be greater than zero'] },
+  quantity: {
+    type: Number,
+    required: isPositionAction,
+    validate: {
+      validator(value) { return this.action === 'split' ? value !== 0 : value >= Number.EPSILON; },
+      message: 'quantity must be greater than zero (split: non-zero share change)'
+    }
+  },
+  price: { type: Number, required: isPricedAction, min: [Number.EPSILON, 'price must be greater than zero'] },
+  // 拆股比例 = 新份额 / 旧份额（如 1 拆 2 为 2、10 合 1 为 0.1）；可选，已知时重放核对份额变动
+  splitRatio: { type: Number, default: undefined, min: [Number.EPSILON, 'splitRatio must be greater than zero'] },
   // fee（TR-06）：买入成本含费（remainingCost += qty×price + fee）；卖出净得扣费
   // （realizedPnl 扣 fee）；div_reinvest 成本含费。与再平衡建议费用模型口径统一（RB-10）。
   fee: { type: Number, default: 0, min: 0 },
