@@ -73,18 +73,38 @@ function roundAmount(value) {
  */
 function deriveCashAmount(candidate) {
   if (candidate.cashAmount !== null || candidate.fee === null) return;
-  if (candidate.action === 'buy') candidate.cashAmount = roundAmount(-(candidate.grossAmount + candidate.fee));
-  else if (candidate.action === 'sell') candidate.cashAmount = roundAmount(candidate.grossAmount - candidate.fee);
+  // 跨币种成交（#100）：成交金额与佣金为资产币种，按报表汇率折回现金币种
+  const rate = candidate.cashFxRate || 1;
+  if (candidate.action === 'buy') candidate.cashAmount = roundAmount(-(candidate.grossAmount + candidate.fee) * rate);
+  else if (candidate.action === 'sell') candidate.cashAmount = roundAmount((candidate.grossAmount - candidate.fee) * rate);
   else return;
   candidate.cashAmountSource = 'derived';
+}
+
+/**
+ * 跨币种成交（#100，如 Wealthsimple 美股以 CAD 结算）：报表单价 / 佣金为现金币种，
+ * 按报表给出的汇率 rate（1 资产币种 = rate 现金币种）换回资产币种，持仓成本保留资产币种（规则 10）；
+ * 现金净额保持券商原值与现金币种。就地修改 candidate，并记录 cashFxRate 供追溯。
+ */
+function convertTradeToAssetCurrency(candidate, rate) {
+  candidate.cashFxRate = rate;
+  // 换算前的报表成交金额（现金币种），供净额分币差异核对，避免换算往返引入的浮点噪声
+  candidate.reportGrossAmount = candidate.grossAmount;
+  candidate.reportFee = candidate.fee;
+  candidate.price = Math.round((candidate.price / rate) * 1e10) / 1e10;
+  candidate.grossAmount = roundAmount(candidate.quantity * candidate.price);
+  if (candidate.fee) candidate.fee = roundAmount(candidate.fee / rate);
 }
 
 /** 券商净额与「成交金额 ± 佣金」之差（保留分币差异，仅供核对展示）；无法比较或一致时为 null。 */
 function cashDifferenceOf(candidate) {
   if (candidate.cashAmountSource !== 'broker' || candidate.fee === null || candidate.feeSource === 'derived') return null;
+  // 跨币种成交按报表原始（现金币种）成交金额与佣金核对
+  const gross = candidate.reportGrossAmount ?? candidate.grossAmount;
+  const fee = candidate.reportFee ?? candidate.fee * (candidate.cashFxRate || 1);
   let expected;
-  if (candidate.action === 'buy') expected = -(candidate.grossAmount + candidate.fee);
-  else if (candidate.action === 'sell') expected = candidate.grossAmount - candidate.fee;
+  if (candidate.action === 'buy') expected = -(gross + fee);
+  else if (candidate.action === 'sell') expected = gross - fee;
   else return null;
   const difference = roundAmount(candidate.cashAmount - expected);
   return Math.abs(difference) > 1e-9 ? difference : null;
@@ -469,6 +489,7 @@ module.exports = {
   COLUMN_KEYS,
   ACTIVITY_RULES,
   deriveCashAmount,
+  convertTradeToAssetCurrency,
   cashDifferenceOf,
   buildTemplate,
   autoMapping,

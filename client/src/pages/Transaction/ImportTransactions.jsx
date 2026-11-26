@@ -29,6 +29,11 @@ const DISPOSITION_STYLES = {
   add: 'text-emerald-700', update: 'text-blue-700', skip: 'text-gray-500',
   review: 'text-amber-700', error: 'text-red-700', deferred: 'text-gray-500',
 };
+// 导入格式：标准 CSV（可手动列映射）/ Wealthsimple 原格式 CSV（TASK-100，服务端自带列识别，不做列映射）
+const IMPORT_FORMAT_OPTIONS = [
+  { value: 'standard', label: '标准 CSV' },
+  { value: 'wealthsimple', label: 'Wealthsimple 原格式 CSV' },
+];
 const FEE_SOURCE_LABELS = { derived: '推算', user: '补填', confirmed_zero: '确认为 0', unknown: '未知' };
 const TIME_ZONE_OPTIONS = [
   { value: '', label: '未确认（报表时间带时区时无需选择）' },
@@ -76,6 +81,7 @@ export default function ImportTransactions() {
   const { data: portfolio } = usePortfolio(portfolioId);
 
   const [format, setFormat] = useState(null);
+  const [importFormat, setImportFormat] = useState('standard');
   const [accounts, setAccounts] = useState([]);
   const [sourceMode, setSourceMode] = useState('new');
   const [sourceId, setSourceId] = useState('');
@@ -113,7 +119,7 @@ export default function ImportTransactions() {
 
   const buildPayload = (overrides = {}) => ({
     portfolioId,
-    format: 'standard',
+    format: importFormat,
     file,
     sourceAccount,
     ...(mapping ? { mapping } : {}),
@@ -225,7 +231,7 @@ export default function ImportTransactions() {
           className="flex items-center gap-1 text-sm text-gray-500 hover:text-gray-800">
           <ArrowLeft className="w-4 h-4" /> 返回
         </Link>
-        <h1 className="text-2xl font-bold text-gray-800">导入流水（标准 CSV）</h1>
+        <h1 className="text-2xl font-bold text-gray-800">导入流水</h1>
       </div>
 
       {/* 目标组合（锁定）、来源账户、文件 */}
@@ -288,8 +294,22 @@ export default function ImportTransactions() {
         </fieldset>
 
         <div className="flex flex-wrap items-end gap-3">
+          <div>
+            <label className="mb-1 block text-sm text-gray-700">报表格式</label>
+            <select value={importFormat} aria-label="报表格式"
+              onChange={e => {
+                setImportFormat(e.target.value);
+                if (e.target.value === 'wealthsimple' && sourceMode === 'new') setBroker('wealthsimple');
+                setMapping(null);
+                setResolutions({});
+                invalidate();
+              }}
+              className="rounded border bg-white px-3 py-2 text-sm">
+              {IMPORT_FORMAT_OPTIONS.map(option => <option key={option.value} value={option.value}>{option.label}</option>)}
+            </select>
+          </div>
           <div className="grow">
-            <label className="mb-1 block text-sm text-gray-700">CSV 文件（标准模板格式，或上传后手动列映射）</label>
+            <label className="mb-1 block text-sm text-gray-700">CSV 文件（标准模板格式可上传后手动列映射；Wealthsimple 原格式直接上传）</label>
             <input type="file" accept=".csv,text/csv" onChange={handleFile} className="w-full rounded border px-3 py-2 text-sm" />
           </div>
           <button type="button"
@@ -341,6 +361,7 @@ export default function ImportTransactions() {
             </div>
           )}
 
+          {importFormat === 'standard' && (
           <details open={preview.blockingReasons.some(item => item.code === 'MISSING_COLUMNS')}>
             <summary className="cursor-pointer font-semibold text-gray-800">列映射</summary>
             <div className="mt-3 grid grid-cols-2 gap-3 md:grid-cols-4">
@@ -358,6 +379,7 @@ export default function ImportTransactions() {
               ))}
             </div>
           </details>
+          )}
 
           <div className="flex flex-wrap gap-4 text-sm">
             {['add', 'update', 'skip', 'review', 'error'].map(key => (
@@ -416,7 +438,10 @@ export default function ImportTransactions() {
                         {c ? (c.settlementStatus === 'known' ? formatDate(c.settlementDate, 'date') : '未知') : '—'}
                       </td>
                       <td className="px-2 py-2 text-right">{c?.action === 'split' ? formatShareChange(c.quantity) : (c?.quantity ?? '—')}</td>
-                      <td className="px-2 py-2 text-right whitespace-nowrap">{c?.action === 'split' ? formatSplitRatio(c.splitRatio) : (c?.price ?? '—')}</td>
+                      <td className="px-2 py-2 text-right whitespace-nowrap" title={c?.cashFxRate ? `报表单价为现金币种，已按报表汇率 ${c.cashFxRate} 换算为资产币种` : undefined}>
+                        {c?.action === 'split' ? formatSplitRatio(c.splitRatio) : (c?.price ?? '—')}
+                        {c?.cashFxRate ? <div className="text-xs text-gray-500">汇率 {c.cashFxRate}</div> : null}
+                      </td>
                       <td className="px-2 py-2 text-right whitespace-nowrap">
                         {c?.kind === 'cash' ? '—' : (c?.fee ?? '—')}
                         {c?.kind !== 'cash' && c?.feeSource && FEE_SOURCE_LABELS[c.feeSource] ? <span className="ml-1 text-xs text-gray-500">({FEE_SOURCE_LABELS[c.feeSource]})</span> : null}

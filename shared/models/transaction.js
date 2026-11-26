@@ -85,6 +85,9 @@ const TransactionSchema = new mongoose.Schema({
   cashAmount: { type: Number, default: undefined },
   cashCurrency: { type: String, enum: ASSET_CURRENCIES, default: undefined },
   cashAmountSource: { type: String, enum: ['broker', 'derived'], default: undefined },
+  // TASK-100：跨币种成交的报表汇率（1 资产币种 = cashFxRate 现金币种，如美股以 CAD 结算）。
+  // price / fee / grossAmount 已按它换回资产币种，cashAmount 保持券商现金净额；同币种成交留空。
+  cashFxRate: { type: Number, min: [Number.EPSILON, 'cashFxRate must be greater than zero'], default: undefined },
   feeSource: { type: String, enum: ['broker', 'derived', 'user', 'confirmed_zero'], default: undefined },
   // 成交金额 = 数量 × 单价（无编号成交匹配字段，不含佣金/净额）
   grossAmount: { type: Number, default: undefined },

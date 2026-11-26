@@ -146,6 +146,7 @@ AlertRule ──_id──> AlertEvent.ruleId（**可空**：再平衡通知没�
 | `timeZone` / `timeZoneSource` | 成交时刻所用 IANA 时区；来源 `report`（报表自带）/ `user`（报表有时间无时区，用户确认北京或多伦多，TASK-096）。仅日期精度不记录 |
 | `settlementDate` / `settlementStatus` | 券商结算日（独立于成交日）；`known` / `unknown`（报表未提供，`settlementDate` 留空，不以成交日代替） |
 | `cashAmount` / `cashCurrency` / `cashAmountSource` | 带符号现金净额（流入正、流出负）、实际现金币种（可与资产 `currency` 不同）、来源（`broker` 券商给出，保留分币差异 / `derived` 由数量 × 单价 ± 佣金推算）。现金类流水的金额即 `cashAmount` |
+| `cashFxRate` | TASK-100：跨币种成交的报表汇率（1 资产币种 = `cashFxRate` 现金币种，如 Wealthsimple 美股以 CAD 结算）。`price` / `fee` / `grossAmount` 已按它换回资产币种（持仓成本保留资产币种），`cashAmount` 保持券商现金净额；同币种成交留空 |
 | `feeSource` | `broker`/`derived`/`user`/`confirmed_zero`（佣金缺失不按 0 处理，需推算、补填或明确确认） |
 | `grossAmount` | 数量 × 单价（无编号成交匹配字段，不含佣金与净额） |
 | `pairGroupId` / `sequence` | 成对流水组号（TASK-101 换汇两端：报表 `pair_group` 原值，或建议 / 用户指定配对生成的 `fx-<hash>`；两端共同入账，单端不入账）；同一报表内原行顺序（时间正序），同一时刻同批次按此重放 |
