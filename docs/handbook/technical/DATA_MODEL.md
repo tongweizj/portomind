@@ -142,7 +142,7 @@ AlertRule ──_id──> AlertEvent.ruleId（**可空**：再平衡通知没�
 | `date` | Date，required，= now。**业务日期**，决定持仓重放的顺序。重放顺序 `(UTC 交易日, orderRank, date, 导入批次, sequence, _id)`（`positionCalculator.compareTransactions`，预览 / 确认后重放 / 编辑共用；同一时刻手动流水在导入流水之前，字符串按码位比较） |
 | `notes` | String，trim，≤500 |
 | `sourceAccountId` | ObjectId → SourceAccount，可选（TASK-094：导入流水的来源账户） |
-| `source` | 子文档，可选：`{kind:'import', format, fileName, rowNumber, rowNumberKind:'original'\|'file', externalId(券商原成交编号，无则 null，从不合成), importBatchId, rawHash}` |
+| `source` | 子文档，可选：`{kind:'import', format:'standard'\|'wealthsimple'\|'questrade', fileName, rowNumber, rowNumberKind:'original'\|'file', externalId(券商原成交编号，无则 null，从不合成), importBatchId, rawHash}` |
 | `dateKind` | `datetime`（保留明确时刻，含午夜）/ `date`（仅日期，存当日 UTC 零点，同手动录入）；手动录入为空 |
 | `timeZone` / `timeZoneSource` | 成交时刻所用 IANA 时区；来源 `report`（报表自带）/ `user`（报表有时间无时区，用户确认北京或多伦多，TASK-096）。仅日期精度不记录 |
 | `settlementDate` / `settlementStatus` | 券商结算日（独立于成交日）；`known` / `unknown`（报表未提供，`settlementDate` 留空，不以成交日代替） |

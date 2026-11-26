@@ -27,12 +27,14 @@ const { toStorageSymbol, marketFromSuffix, normalizeSymbol } = require('../../ut
 const { isCashAction } = require('../../constants/transaction.constants');
 const {
   IMPORT_FORMATS,
+  BINARY_IMPORT_FORMATS,
   IMPORT_COMMIT_LIMIT,
   IMPORT_PREVIEW_LIMIT,
   IMPORT_TIME_ZONE_CHOICES
 } = require('../../constants/import.constants');
 const standardCsv = require('./standardCsv');
 const wealthsimpleCsv = require('./wealthsimpleCsv');
+const questradeXlsx = require('./questradeXlsx');
 const sourceAccounts = require('./sourceAccount.service');
 const { runAtomicCommit } = require('./commit');
 const { matchRows, applyResolutions } = require('./matching');
@@ -52,29 +54,82 @@ function sha256(value) {
   return crypto.createHash('sha256').update(typeof value === 'string' ? value : JSON.stringify(value)).digest('hex');
 }
 
-// 格式 → 解析器。解析器契约：(text, { mapping, defaultTimeZone }) → { headers, mapping, rows, missingColumns? }。
+// 格式 → 解析器。解析器契约：(content, { mapping, defaultTimeZone }) → { headers, mapping, rows, missingColumns? }
+// （可返回 Promise）。文本格式 content 为字符串；二进制格式（BINARY_IMPORT_FORMATS，如 Questrade XLSX）为 Buffer。
 // rows 必须按时间正序（旧 → 新）输出（#96：sequence 即同时刻重放顺序）。
 // 原格式解析器（非 standard）自带列识别，不接受手动列映射，并自行报告缺失的原报表列（missingColumns）。
 const PARSERS = {
   standard: standardCsv.parseStandardCsv,
-  wealthsimple: wealthsimpleCsv.parseWealthsimpleCsv
+  wealthsimple: wealthsimpleCsv.parseWealthsimpleCsv,
+  questrade: questradeXlsx.parseQuestradeXlsx
 };
 
-function decodeFile(file) {
+function decodeFile(file, format) {
   if (!file || typeof file !== 'object' || typeof file.content !== 'string') {
     throw businessError(400, 'INVALID_IMPORT_FILE', 'file.content must be a string');
   }
   const encoding = file.encoding || 'text';
   if (!['text', 'base64'].includes(encoding)) throw businessError(400, 'INVALID_IMPORT_FILE', 'file.encoding must be text or base64');
-  const text = encoding === 'base64' ? Buffer.from(file.content, 'base64').toString('utf8') : file.content;
   const name = file.name === undefined ? '' : String(file.name).slice(0, 255);
-  return { text, name };
+  if (BINARY_IMPORT_FORMATS.includes(format)) {
+    if (encoding !== 'base64') throw businessError(400, 'INVALID_IMPORT_FILE', `format ${format} requires file.encoding = base64`);
+    return { content: Buffer.from(file.content, 'base64'), name };
+  }
+  const text = encoding === 'base64' ? Buffer.from(file.content, 'base64').toString('utf8') : file.content;
+  return { content: text, name };
 }
 
 function rowError(row, code, reason) {
   row.disposition = 'error';
   row.code = code;
   row.reason = reason;
+}
+
+// 代码映射（#102）：报表代码 → 资产库存储代码（带市场后缀）。键为「代码@币种」（优先）或「代码」。
+// 内部代码与跨币种划转的转入端（candidate.symbolMapRequired）没有映射时进入待核对，不猜。
+const SYMBOL_MAP_REASONS = Object.freeze({
+  INTERNAL_CODE: '报表使用券商内部证券代码，无法对应资产库代码',
+  TRANSFER_LISTING: '跨币种划转的转入端是该证券另一币种的上市代码，报表代码无法区分'
+});
+
+function symbolMapKeyOf(candidate) {
+  return `${String(candidate.rawSymbol || '').trim().toUpperCase()}@${candidate.listingCurrency || candidate.cashCurrency || ''}`;
+}
+
+function applySymbolMap(rows, symbolMap) {
+  for (const row of rows) {
+    if (row.disposition !== 'pending' || !row.candidate?.rawSymbol) continue;
+    const key = symbolMapKeyOf(row.candidate);
+    const mapped = symbolMap[key] ?? symbolMap[key.split('@')[0]];
+    if (mapped) {
+      row.candidate.mappedFrom = row.candidate.rawSymbol;
+      row.candidate.rawSymbol = mapped;
+      row.candidate.market = null;
+      row.candidate.marketCandidates = null;
+      row.candidate.symbolMapRequired = null;
+      row.symbolMapKey = key;
+      continue;
+    }
+    if (!row.candidate.symbolMapRequired) continue;
+    row.disposition = 'review';
+    row.code = 'SYMBOL_UNMAPPED';
+    row.reason = `${SYMBOL_MAP_REASONS[row.candidate.symbolMapRequired]}：请在代码映射中为 ${key} 指定资产代码（如 VTI.US、XEQT.TO），或跳过此行`;
+    row.options = ['symbolMap', 'skip'];
+    row.symbolMapKey = key;
+  }
+}
+
+function validateSymbolMap(symbolMap) {
+  if (symbolMap === undefined || symbolMap === null) return;
+  const entries = typeof symbolMap === 'object' && !Array.isArray(symbolMap) ? Object.entries(symbolMap) : null;
+  if (!entries || entries.length > 500) {
+    throw businessError(400, 'INVALID_SYMBOL_MAP', 'symbolMap must be an object of at most 500 entries');
+  }
+  for (const [key, value] of entries) {
+    if (typeof value !== 'string' || !marketFromSuffix(value.trim().toUpperCase()) || value !== value.trim().toUpperCase() || !key.trim()) {
+      throw businessError(400, 'INVALID_SYMBOL_MAP', `symbolMap[${key}] must be an upper-case storage symbol with a market suffix (e.g. VTI.US, XEQT.TO)`);
+    }
+  }
 }
 
 async function resolveAssets(rows) {
@@ -113,12 +168,15 @@ async function resolveAssets(rows) {
   const bySymbol = new Map(assets.map(asset => [asset.symbol, asset]));
   for (const row of rows) {
     if (row.disposition !== 'pending' || !row.candidate.symbolOptions) continue;
-    const found = row.candidate.symbolOptions.filter(symbol => bySymbol.has(symbol));
+    // 报表给出证券交易币种（#102 Questrade）时，只接受币种一致的资产
+    const listingCurrency = row.candidate.listingCurrency;
+    const found = row.candidate.symbolOptions.filter(symbol => bySymbol.has(symbol) &&
+      (!listingCurrency || bySymbol.get(symbol).currency === listingCurrency));
     if (found.length === 1) { row.candidate.symbol = found[0]; continue; }
     if (found.length > 1) {
       rowError(row, 'MARKET_AMBIGUOUS', `标的 ${row.candidate.rawSymbol} 在多个市场都有资产（${found.join(' / ')}），报表无法区分`);
     } else {
-      rowError(row, 'ASSET_NOT_FOUND', `资产 ${row.candidate.symbolOptions.join(' 或 ')} 不存在，请先在资产管理中添加`);
+      rowError(row, 'ASSET_NOT_FOUND', `资产 ${row.candidate.symbolOptions.join(' 或 ')}${listingCurrency ? `（${listingCurrency}）` : ''} 不存在，请先在资产管理中添加或提供代码映射`);
     }
   }
   for (const row of rows) {
@@ -453,6 +511,8 @@ function publicCandidate(row) {
     action: c.action,
     kind: c.kind,
     symbol: c.symbol || c.rawSymbol || null,
+    // TASK-102：经代码映射替换前的报表代码
+    mappedFrom: c.mappedFrom || null,
     date: c.date,
     dateKind: c.dateKind,
     timeZone: c.timeZone,
@@ -497,6 +557,7 @@ function validateInput(input) {
   if (input.resolutions !== undefined && (typeof input.resolutions !== 'object' || Array.isArray(input.resolutions) || input.resolutions === null)) {
     throw businessError(400, 'INVALID_RESOLUTIONS', 'resolutions must be an object keyed by rowKey');
   }
+  validateSymbolMap(input.symbolMap);
   // TASK-096：页面确认的时区只允许北京 / 多伦多（报表自带 time_zone 列不受此限制）
   if (input.timeZone !== undefined && input.timeZone !== null && input.timeZone !== '' &&
       !IMPORT_TIME_ZONE_CHOICES.includes(input.timeZone)) {
@@ -514,16 +575,16 @@ async function computePreview(input) {
   const portfolio = await Portfolio.findById(portfolioId).lean();
   if (!portfolio) throw businessError(404, 'PORTFOLIO_NOT_FOUND', 'Portfolio not found');
 
-  const file = decodeFile(input.file);
+  const file = decodeFile(input.file, format);
   const parser = PARSERS[format];
-  const parsedProbe = parser(file.text, { defaultTimeZone: input.timeZone || undefined });
+  const parsedProbe = await parser(file.content, { defaultTimeZone: input.timeZone || undefined });
   if (parsedProbe.headers.length === 0) throw businessError(400, 'EMPTY_IMPORT_FILE', '文件为空或缺少表头');
   if (format !== 'standard' && input.mapping && Object.keys(input.mapping).length) {
     throw businessError(400, 'INVALID_MAPPING', `format ${format} does not accept a column mapping`);
   }
   const mappingError = format === 'standard' ? standardCsv.validateMapping(input.mapping, parsedProbe.headers.length) : null;
   if (mappingError) throw businessError(400, 'INVALID_MAPPING', mappingError);
-  const parsed = input.mapping && format === 'standard' ? parser(file.text, { mapping: input.mapping, defaultTimeZone: input.timeZone || undefined }) : parsedProbe;
+  const parsed = input.mapping && format === 'standard' ? await parser(file.content, { mapping: input.mapping, defaultTimeZone: input.timeZone || undefined }) : parsedProbe;
   if (parsed.rows.length === 0) throw businessError(400, 'EMPTY_IMPORT_FILE', '文件没有数据行');
   if (parsed.rows.length > IMPORT_PREVIEW_LIMIT) {
     throw businessError(413, 'IMPORT_FILE_TOO_LARGE', `单个文件最多 ${IMPORT_PREVIEW_LIMIT} 行`);
@@ -597,6 +658,7 @@ async function computePreview(input) {
   });
   const sourceAccountId = resolvedSource.existing?._id || null;
 
+  applySymbolMap(rows, input.symbolMap || {});
   await resolveAssets(rows);
   for (const row of rows) {
     if (row.disposition !== 'pending') continue;
@@ -731,6 +793,8 @@ function toPreviewResponse(preview) {
       // TASK-101：成对流水的另一端与配对来源（explicit / user / suggested）；未配对时的可选另一端
       pair: row.pair || null,
       pairCandidates: row.pairCandidates || [],
+      // TASK-102：待提供（SYMBOL_UNMAPPED）或已采用代码映射的行对应的 symbolMap 键
+      symbolMapKey: row.symbolMapKey || null,
       candidate: publicCandidate(row)
     })),
     positionsAfter: preview.positionsAfter,
