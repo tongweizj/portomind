@@ -2,7 +2,7 @@
 //
 // TASK-094：流水导入测试用的内存世界。替换 Transaction / Asset / Portfolio /
 // SourceAccount / ImportBatch / TransferLeg 中导入链路实际调用的静态方法，不连接 MongoDB。
-// 查询匹配支持等值、点路径、$in、$ne、$exists、$lt；足够覆盖导入服务的查询形状。
+// 查询匹配支持等值、点路径、$in、$nin、$ne、$exists、$lt；足够覆盖导入服务的查询形状。
 
 const crypto = require('crypto');
 const Transaction = require('@portomind/shared/models/transaction');
@@ -33,6 +33,7 @@ function matches(doc, filter = {}) {
     if (expected && typeof expected === 'object' && !(expected instanceof Date) &&
         Object.keys(expected).some(key => key.startsWith('$'))) {
       if ('$in' in expected && !expected.$in.some(item => actual !== undefined && same(actual, item))) return false;
+      if ('$nin' in expected && actual !== undefined && expected.$nin.some(item => same(actual, item))) return false;
       if ('$ne' in expected && actual !== undefined && same(actual, expected.$ne)) return false;
       if ('$exists' in expected && (actual !== undefined) !== Boolean(expected.$exists)) return false;
       if ('$lt' in expected && !(new Date(actual) < new Date(expected.$lt))) return false;
@@ -142,6 +143,12 @@ function installImportWorld(t, world = {}, hooks = {}) {
     applyUpdate(doc, update);
     return { ...structuredClone(doc), toObject: () => structuredClone(doc) };
   });
+  t.mock.method(Transaction, 'findByIdAndDelete', async (id) => {
+    const index = transactions.findIndex(doc => same(doc._id, id));
+    if (index < 0) return null;
+    const [doc] = transactions.splice(index, 1);
+    return { ...structuredClone(doc), toObject: () => structuredClone(doc) };
+  });
   t.mock.method(Transaction, 'deleteMany', async (filter) => {
     const keep = transactions.filter(doc => !matches(doc, filter));
     const deletedCount = transactions.length - keep.length;
@@ -209,6 +216,10 @@ function installImportWorld(t, world = {}, hooks = {}) {
     return { deletedCount };
   });
 
+  t.mock.method(ImportBatch, 'exists', async (filter) => {
+    const doc = importBatches.find(item => matches(item, filter));
+    return doc ? { _id: doc._id } : null;
+  });
   t.mock.method(ImportBatch, 'find', (filter) => query(() => importBatches.filter(doc => matches(doc, filter))));
   t.mock.method(ImportBatch, 'updateOne', async (filter, update) => {
     const doc = importBatches.find(item => matches(item, filter));

@@ -301,3 +301,20 @@ test('编辑改动成交日期后，原交易日上确认的顺序不再沿用',
   assert.equal(edit.status, 200, JSON.stringify(edit.body));
   assert.equal(world.transactions[1].orderRank, undefined);
 });
+
+// ─────────────────────────────────────────────────────────────
+// 代码审查 S5：同日按行的当地交易日分桶（不是 UTC 日）
+// ─────────────────────────────────────────────────────────────
+
+test('S5 多伦多晚间成交（UTC 已是次日）与同一当地日的仅日期卖出：识别为同日顺序不确定，而不是按 UTC 日直接超卖', async (t) => {
+  freshWorld(t);
+  const { status, body: response } = await preview(body(csv([
+    { trade_date: '2026-01-05', trade_time: '20:30:00', time_zone: 'America/Toronto', quantity: '10' },
+    { activity_type: 'sell', trade_date: '2026-01-05', quantity: '10' }
+  ])));
+  assert.equal(status, 200, JSON.stringify(response));
+  const sell = response.data.rows[1];
+  assert.equal(sell.disposition, 'review', JSON.stringify(sell));
+  assert.equal(sell.code, 'ORDER_AMBIGUOUS');
+  assert.equal(sell.orderConflict.day, '2026-01-05');
+});

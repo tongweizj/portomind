@@ -363,7 +363,7 @@ test('混合新增 + 更新：翻转前写入中断 → 新增行删除、旧流
   for (const key of ['price', 'grossAmount', 'source', 'sequence', 'fee', 'date']) {
     assert.deepEqual(restored[key], before[key], `${key} 已恢复`);
   }
-  const batch = world.importBatches.at(-1);
+  const batch = world.importBatches.filter(item => !item.parentBatchId).at(-1);
   assert.equal(batch.status, 'rolled_back');
   assert.equal(batch.updates.length, 1, '原值预写在批次中，供崩溃回收使用');
 });
@@ -376,4 +376,74 @@ test('混合新增 + 更新：确认成功后回读账本与持仓', async (t) =
   const positions = await call('GET', `/api/portfolios/${PORTFOLIO_A}/stats/positions`);
   assert.equal(positions.body.data[0].quantity, 20);
   assert.equal(positions.body.data[0].remainingCost, 10 * 99 + 1 + 10 * 100 + 1);
+});
+
+// ─────────────────────────────────────────────────────────────
+// 代码审查 S3：同一来源账户并发确认到不同组合，不得重复入账
+// ─────────────────────────────────────────────────────────────
+
+test('S3 同一来源账户同时确认到两个组合：后到者 409 IMPORT_IN_PROGRESS，同一成交只入账一次', async (t) => {
+  let inside = null;
+  const world = freshWorld(t, { hooks: { beforeFlip: async () => { if (inside) { const run = inside; inside = null; await run(); } } } });
+  const { sourceAccount } = await seedImport([{ external_id: 'S3-0', trade_date: '2026-01-02' }]);
+  const rows = [{ external_id: 'S3-1', trade_date: '2026-01-06' }];
+  const inputA = body(csv(rows), { sourceAccount });
+  const inputB = body(csv(rows), { sourceAccount, portfolioId: PORTFOLIO_B });
+  const previewA = await preview(inputA);
+  const previewB = await preview(inputB);
+  let second;
+  inside = async () => {
+    second = await call('POST', '/api/transactions/import/commit', {
+      ...inputB, previewToken: previewB.previewToken, ledgerFingerprint: previewB.ledgerFingerprint
+    });
+  };
+  const first = await call('POST', '/api/transactions/import/commit', {
+    ...inputA, previewToken: previewA.previewToken, ledgerFingerprint: previewA.ledgerFingerprint
+  });
+  assert.equal(first.status, 201, JSON.stringify(first.body));
+  assert.equal(second.status, 409, JSON.stringify(second.body));
+  assert.equal(second.body.code, 'IMPORT_IN_PROGRESS');
+  const copies = world.transactions.filter(tx => tx.source?.externalId === 'S3-1' && tx.status !== 'pending');
+  assert.equal(copies.length, 1);
+});
+
+test('S3 导入确认进行中：手动新增 / 修改 / 删除同组合流水返回 409 IMPORT_IN_PROGRESS', async (t) => {
+  const world = freshWorld(t);
+  await seedImport([{ external_id: 'S3-2' }]);
+  const existing = world.transactions[0];
+  world.importBatches.push({
+    _id: '64b0000000000000000d0009', portfolioId: PORTFOLIO_A, status: 'committing',
+    lockKey: `portfolio:${PORTFOLIO_A}`, createdAt: new Date(), updatedAt: new Date()
+  });
+  const manual = { portfolioId: PORTFOLIO_A, symbol: 'VTI.US', action: 'buy', quantity: 1, price: 100, date: '2026-01-07' };
+  const created = await call('POST', '/api/transactions', manual);
+  assert.equal(created.status, 409, JSON.stringify(created.body));
+  assert.equal(created.body.code, 'IMPORT_IN_PROGRESS');
+  const updated = await call('PUT', `/api/transactions/${existing._id}`, { ...manual, quantity: 2 });
+  assert.equal(updated.status, 409);
+  const removed = await call('DELETE', `/api/transactions/${existing._id}`);
+  assert.equal(removed.status, 409);
+  assert.equal(world.transactions.length, 1);
+});
+
+// ─────────────────────────────────────────────────────────────
+// 代码审查 S4：多条内容一致的旧流水不得自动跳过
+// ─────────────────────────────────────────────────────────────
+
+test('S4 另一报表中的成交与两条内容一致的旧流水都相同：多候选待核对，不自动跳过', async (t) => {
+  freshWorld(t);
+  const row = { ...TIMED, quantity: '3' };
+  const { sourceAccount } = await seedImport([row, row]);
+  const other = await preview(body(csv([{ ...TIMED, quantity: '7' }, { ...TIMED, quantity: '8' }, row]), { sourceAccount }));
+  assert.equal(other.rows[2].disposition, 'review', JSON.stringify(other.rows[2]));
+  assert.equal(other.rows[2].code, 'MULTIPLE_CANDIDATES');
+  assert.equal(other.rows[2].matches.length, 2);
+});
+
+test('S4 仅日期：同日两条内容一致的旧流水 → 多候选待核对', async (t) => {
+  freshWorld(t);
+  const row = { trade_date: '2026-01-09', quantity: '2' };
+  const { sourceAccount } = await seedImport([row, row]);
+  const other = await preview(body(csv([{ trade_date: '2026-01-02', quantity: '9' }, { trade_date: '2026-01-03', quantity: '9' }, row]), { sourceAccount }));
+  assert.equal(other.rows[2].code, 'MULTIPLE_CANDIDATES', JSON.stringify(other.rows[2]));
 });

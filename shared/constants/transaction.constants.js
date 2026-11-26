@@ -14,12 +14,14 @@ const POSITION_ACTIONS = Object.freeze(['buy', 'sell', 'div_reinvest', 'split', 
 // fx 换汇（TASK-101）：每端一条，各记本币种带符号金额，两端以 pairGroupId 关联并共同入账。
 const CASH_ACTIONS = Object.freeze(['div_cash', 'tax', 'interest', 'cash_in', 'cash_out', 'fee', 'fx']);
 
-// 必须成对入账的动作（TASK-101 换汇；#99 划转沿用同一配对机制）：单端不入账。
+// 同文件内必须成对入账的动作（TASK-101 换汇，pairing.js）：单端不入账。
+// 证券划转（TRANSFER_ACTIONS）也成对入账，但先到的一端可暂存等待另一端（transfers.js），不在此列。
 const PAIRED_ACTIONS = Object.freeze(['fx']);
 
 const TRANSACTION_ACTIONS = Object.freeze([...POSITION_ACTIONS, ...CASH_ACTIONS]);
 
-// 手动录入表单开放的动作（其余现金类动作目前仅经导入写入）。
+// 手动录入 / 编辑开放的动作（其余动作仅经导入写入，界面不提供编辑，决定 10）。
+// 与 client/src/constants/enums.js 的 MANUAL_TRANSACTION_ACTIONS 同步；PAIRED_ACTIONS + TRANSFER_ACTIONS 与其 PAIRED_LEG_ACTIONS 同步。
 const MANUAL_ACTIONS = Object.freeze(['buy', 'sell', 'div_cash', 'div_reinvest']);
 
 function isCashAction(action) {

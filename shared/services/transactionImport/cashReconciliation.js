@@ -18,8 +18,9 @@ const SourceAccount = require('../../models/sourceAccount');
 const ImportBatch = require('../../models/importBatch');
 const { ASSET_CURRENCIES } = require('../../constants/asset.constants');
 const { CASH_ACTIONS, PAIRED_ACTIONS } = require('../../constants/transaction.constants');
-const { visibleQuery } = require('../transaction/visibility');
+const { visibleQuery, pendingQuery } = require('../transaction/visibility');
 const { toView } = require('./sourceAccount.service');
+const { businessError } = require('./common');
 
 dayjs.extend(utc);
 dayjs.extend(timezone);
@@ -28,18 +29,17 @@ dayjs.extend(timezone);
 const SETTLED_TRADE_ACTIONS = Object.freeze(['buy', 'sell', 'div_reinvest']);
 // 结算日未知的成交：成交日落在 [from − 回看天数, to] 内即可能在期间内结算，单列。
 const SETTLEMENT_LOOKBACK_DAYS = 10;
+
+// 现金日期规则（Human 决定 7）：随核对结果返回，界面原样展示，前端不另写一份规则文字。
+const CASH_DATE_RULES = Object.freeze([
+  { code: 'TRADE_SETTLEMENT_DATE', text: '买入、卖出、分红再投按券商结算日计入；结算日未知的成交单列，不计入已知变动。' },
+  { code: 'CASH_ACTIVITY_DATE', text: '分红、税款、利息、现金划入划出、费用、换汇：报表有结算日用结算日，没有结算日按活动日（报表日期）计入，不视为结算日未知。' }
+]);
 const DAY_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
 const DEFAULT_TIME_ZONE = process.env.MARKET_TIMEZONE || 'America/Toronto';
 
 const STATUS_LABELS = Object.freeze({ reconciled: '余额已核对', unreconciled: '未核对' });
 
-function businessError(status, code, message, details) {
-  const error = new Error(message);
-  error.status = status;
-  error.code = code;
-  if (details !== undefined) error.details = details;
-  return error;
-}
 
 function roundMoney(value) {
   return Math.round((value + Number.EPSILON) * 100) / 100 || 0;
@@ -144,7 +144,7 @@ async function reconcileCash(sourceAccountId, input) {
 
   const [visible, pending, batches] = await Promise.all([
     Transaction.find(visibleQuery({ sourceAccountId })).lean(),
-    Transaction.find({ sourceAccountId, status: 'pending' }).lean(),
+    Transaction.find(pendingQuery({ sourceAccountId })).lean(),
     ImportBatch.find({ sourceAccountId }).lean()
   ]);
 
@@ -283,9 +283,10 @@ async function reconcileCash(sourceAccountId, input) {
   return {
     sourceAccount: toView(account),
     period: { from, to },
+    cashDateRules: CASH_DATE_RULES,
     reconciled: currencies.length > 0 && currencies.every(entry => entry.status === 'reconciled'),
     currencies
   };
 }
 
-module.exports = { reconcileCash, SETTLED_TRADE_ACTIONS, SETTLEMENT_LOOKBACK_DAYS };
+module.exports = { reconcileCash, SETTLED_TRADE_ACTIONS, SETTLEMENT_LOOKBACK_DAYS, CASH_DATE_RULES };

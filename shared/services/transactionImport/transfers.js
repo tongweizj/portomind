@@ -5,9 +5,10 @@
 //
 // 预览流程（resolveTransfers）：
 // 1. 显式跳过 / 重复识别：同组合同来源账户同内容已入账 → skip ALREADY_IMPORTED；已暂存 → skip TRANSFER_ALREADY_STAGED。
-// 2. 配对：候选 = 同文件反方向的划转行 + 服务端已暂存的反方向一端。
-//    两端都有 pair_group → 组号一致即候选；否则数量一致且成交日相差 ≤ TRANSFER_PAIR_WINDOW_DAYS 天。
-//    唯一候选 → 自动配对；多个 → review TRANSFER_PAIR_AMBIGUOUS（resolutions[rowKey].pairWith 指定）；
+// 2. 配对：候选 = 同文件反方向的划转行 + 服务端已暂存的反方向一端，且须是同一证券（sameSecurity）。
+//    两端都有 pair_group → 组号一致即候选（组号一致但证券不同 → 错误 TRANSFER_PAIR_INVALID）；
+//    否则数量一致且成交日相差 ≤ TRANSFER_PAIR_WINDOW_DAYS 天。
+//    用户 pairWith 指定优先；其余互为唯一候选 → 自动配对；仍有候选 → review TRANSFER_PAIR_AMBIGUOUS；
 //    没有候选 → stage TRANSFER_AWAITING_COUNTERPART（确认时暂存，不阻塞整批）。
 // 3. 核对：两端份额必须一致（TRANSFER_QUANTITY_MISMATCH）；转出端按其组合账本重放取得转出前移动平均成本
 //    （持仓不足 → TRANSFER_INSUFFICIENT_POSITION）。
@@ -17,7 +18,6 @@
 //    这里的换算只用于记录用户 / 报表给出的承接成本依据，不引用汇率表，不产生跨币种合计（规则 10）。
 // 5. 转出端不产生买卖盈亏；转入端以 carryCost 进入移动平均成本（positionCalculator）。
 
-const crypto = require('crypto');
 const mongoose = require('mongoose');
 const Transaction = require('../../models/transaction');
 const TransferLeg = require('../../models/transferLeg');
@@ -26,33 +26,16 @@ const SourceAccount = require('../../models/sourceAccount');
 const { replayLedger, PREVIEW_BATCH_KEY } = require('../transaction/positionCalculator');
 const { visibleQuery } = require('../transaction/visibility');
 const { TRANSFER_PAIR_WINDOW_DAYS } = require('../../constants/import.constants');
+const { baseSymbol } = require('../../utils/symbol');
+const { mutualUniquePairs } = require('./pairing');
+const { businessError, sha256, markError, markReview, markSkip } = require('./common');
 
 const EPSILON = 1e-9;
 const DAY_MS = 24 * 60 * 60 * 1000;
 
-function businessError(status, code, message) {
-  const error = new Error(message);
-  error.status = status;
-  error.code = code;
-  return error;
-}
 
-function sha256(value) {
-  return crypto.createHash('sha256').update(JSON.stringify(value)).digest('hex');
-}
 
-function rowError(row, code, reason) {
-  row.disposition = 'error';
-  row.code = code;
-  row.reason = reason;
-}
 
-function setReview(row, code, reason, options) {
-  row.disposition = 'review';
-  row.code = code;
-  row.reason = reason;
-  row.options = options;
-}
 
 const isTransferRow = row => Boolean(row.candidate?.isTransfer);
 
@@ -67,6 +50,7 @@ function legOfRow(row, ctx) {
     portfolioId: String(ctx.portfolioId),
     sourceAccountId: ctx.sourceAccountId ? String(ctx.sourceAccountId) : null,
     symbol: c.symbol,
+    mappedFrom: c.mappedFrom || null,
     currency: row.asset.currency,
     quantity: c.quantity,
     date: c.date,
@@ -88,6 +72,7 @@ function legOfStaged(leg) {
     portfolioId: String(leg.portfolioId),
     sourceAccountId: leg.sourceAccountId ? String(leg.sourceAccountId) : null,
     symbol: leg.symbol,
+    mappedFrom: leg.mappedFrom || null,
     currency: leg.currency,
     quantity: leg.quantity,
     date: leg.date,
@@ -100,8 +85,19 @@ function legOfStaged(leg) {
   };
 }
 
+// 同一证券：存储代码相同，或去掉市场后缀后相同（跨币种日记账 XEQ.TO → XEQ.US），
+// 或经代码映射（#102 symbolMap）前的报表代码与对端一致。
+function securityKeysOf(leg) {
+  return new Set([leg.symbol, leg.mappedFrom].filter(Boolean).map(baseSymbol));
+}
+
+function sameSecurity(left, right) {
+  const keys = securityKeysOf(left);
+  return [...securityKeysOf(right)].some(key => keys.has(key));
+}
+
 function compatible(left, right) {
-  if (left.direction === right.direction) return false;
+  if (left.direction === right.direction || !sameSecurity(left, right)) return false;
   if (left.pairGroup && right.pairGroup) return left.pairGroup === right.pairGroup;
   if (Math.abs(left.quantity - right.quantity) > EPSILON * Math.max(1, left.quantity)) return false;
   return Math.abs(new Date(left.date).getTime() - new Date(right.date).getTime()) <= TRANSFER_PAIR_WINDOW_DAYS * DAY_MS;
@@ -163,29 +159,15 @@ function positiveNumber(value) {
   return Number.isFinite(number) && number > 0 ? number : NaN;
 }
 
-/**
- * 预览阶段的划转处理。行在调用前 disposition === 'transfer'（已解析标的、算好 rawHash，未参与成交匹配）。
- * @param {object[]} rows 全部预览行（非划转行只读，用于转出成本重放）
- * @param {object} ctx { portfolioId, sourceAccountId, resolutions, probeOf }
- * @returns {{ fingerprintKeys: string[], lockPortfolioIds: string[], extraProbes: object[], partnerWrites: object[] }}
- */
-async function resolveTransfers(rows, ctx) {
+/** 用户跳过、同组合同来源账户同内容（rawHash）已入账或已暂存的划转行：直接跳过。 */
+async function skipKnownTransfers(transfers, staged, ctx, result) {
   const { portfolioId, sourceAccountId, resolutions = {} } = ctx;
-  const transfers = rows.filter(row => row.disposition === 'transfer');
-  const result = { fingerprintKeys: [], lockPortfolioIds: [], extraProbes: [], partnerWrites: [] };
-  if (!transfers.length) return result;
-
   for (const row of transfers) {
     if (resolutions[row.rowKey]?.action === 'skip') {
-      row.disposition = 'skip';
-      row.code = 'TRANSFER_SKIPPED';
-      row.reason = '用户选择跳过此划转行';
+      markSkip(row, 'TRANSFER_SKIPPED', '用户选择跳过此划转行');
       row.resolved = true;
     }
   }
-
-  const staged = await TransferLeg.find({ status: 'staged' }).lean();
-  result.fingerprintKeys.push(...staged.map(leg => `leg:${leg._id}:${new Date(leg.updatedAt || 0).getTime()}`));
 
   // 重复识别：同组合同来源账户同内容（rawHash）已入账或已暂存
   if (sourceAccountId) {
@@ -198,70 +180,141 @@ async function resolveTransfers(rows, ctx) {
       if (row.disposition !== 'transfer') continue;
       const done = existing.find(tx => tx.action === row.candidate.action && tx.source?.rawHash === row.rawHash);
       if (done) {
-        row.disposition = 'skip';
-        row.code = 'ALREADY_IMPORTED';
-        row.reason = '同一来源账户已入账内容一致的划转';
+        markSkip(row, 'ALREADY_IMPORTED', '同一来源账户已入账内容一致的划转');
         row.matches = [{ id: String(done._id), portfolioId: String(done.portfolioId) }];
         continue;
       }
       const kept = staged.find(leg => String(leg.portfolioId) === String(portfolioId) &&
         String(leg.sourceAccountId) === String(sourceAccountId) && leg.source?.rawHash === row.rawHash);
       if (kept) {
-        row.disposition = 'skip';
-        row.code = 'TRANSFER_ALREADY_STAGED';
-        row.reason = '该划转一端已暂存待核对，等待另一端到达';
+        markSkip(row, 'TRANSFER_ALREADY_STAGED', '该划转一端已暂存待核对，等待另一端到达');
         row.transfer = { direction: row.candidate.direction, stagedLegId: String(kept._id) };
       }
     }
   }
+}
 
-  const active = transfers.filter(row => row.disposition === 'transfer');
-  const rowLegs = new Map(active.map(row => [row.rowKey, legOfRow(row, ctx)]));
-  const stagedLegs = staged.map(legOfStaged);
-
-  // 名称（预览展示对端组合与来源账户别名）
+/** 预览展示对端组合名与来源账户别名。 */
+async function legNamesOf(stagedLegs, ctx) {
   const portfolioIds = [...new Set(stagedLegs.map(leg => leg.portfolioId))];
   const accountIds = [...new Set(stagedLegs.map(leg => leg.sourceAccountId).filter(Boolean))];
   const [portfolios, accounts] = await Promise.all([
     portfolioIds.length ? Portfolio.find({ _id: { $in: portfolioIds } }).lean() : [],
     accountIds.length ? SourceAccount.find({ _id: { $in: accountIds } }).lean() : []
   ]);
-  const names = {
-    portfolios: new Map([...portfolios.map(item => [String(item._id), item.name]), [String(portfolioId), ctx.portfolioName || null]]),
+  return {
+    portfolios: new Map([...portfolios.map(item => [String(item._id), item.name]), [String(ctx.portfolioId), ctx.portfolioName || null]]),
     accounts: new Map(accounts.map(item => [String(item._id), item.alias]))
   };
+}
 
-  // 配对
+/**
+ * 配对划转一端（S1）：显式同组号但不是同一证券 → 行错误；用户 pairWith 指定优先；其余互为唯一候选自动配对；
+ * 仍有候选 → 待核对 TRANSFER_PAIR_AMBIGUOUS；没有候选的行留给调用方暂存。返回 rowKey → 对端。
+ */
+function pairTransferLegs(active, rowLegs, stagedLegs, resolutions, names) {
+  const byGroup = new Map();
+  for (const row of active) {
+    const group = row.candidate.pairGroup;
+    if (group) byGroup.set(group, [...(byGroup.get(group) || []), row]);
+  }
+  for (const [group, members] of byGroup) {
+    if (members.length !== 2) continue;
+    const [left, right] = members.map(row => rowLegs.get(row.rowKey));
+    if (left.direction !== right.direction && !sameSecurity(left, right)) {
+      members.forEach(row => markError(row, 'TRANSFER_PAIR_INVALID', `划转组号 ${group} 的两端不是同一证券（${left.symbol} / ${right.symbol}）`));
+    }
+  }
+
   const pairedWith = new Map();
   const claimedStaged = new Set();
-  for (const row of active) {
-    if (pairedWith.has(row.rowKey)) continue;
-    const self = rowLegs.get(row.rowKey);
-    const candidates = [
-      ...active.filter(other => other !== row && !pairedWith.has(other.rowKey)).map(other => rowLegs.get(other.rowKey)),
-      ...stagedLegs.filter(leg => !claimedStaged.has(leg.id))
-    ].filter(leg => compatible(self, leg));
-    const wanted = resolutions[row.rowKey]?.pairWith;
-    let partner = null;
-    if (wanted) {
-      partner = candidates.find(leg => leg.id === String(wanted)) || null;
-      if (!partner) {
-        setReview(row, 'TRANSFER_PAIR_AMBIGUOUS', '指定的配对对象不在候选之内，请重新选择', ['pairWith', 'skip']);
-        row.transfer = { direction: self.direction, candidates: candidates.map(leg => legSummary(leg, names)) };
-        continue;
-      }
-    } else if (candidates.length === 1) {
-      partner = candidates[0];
-    } else if (candidates.length > 1) {
-      setReview(row, 'TRANSFER_PAIR_AMBIGUOUS', `有 ${candidates.length} 个可配对的另一端：请指定配对对象`, ['pairWith', 'skip']);
-      row.transfer = { direction: self.direction, candidates: candidates.map(leg => legSummary(leg, names)) };
-      continue;
-    }
-    if (!partner) continue;
-    pairedWith.set(row.rowKey, partner);
+  const link = (self, partner) => {
+    pairedWith.set(self.id, partner);
     if (partner.kind === 'row') pairedWith.set(partner.id, self);
     else claimedStaged.add(partner.id);
+  };
+  const freeRowLegs = () => active
+    .filter(row => row.disposition === 'transfer' && !pairedWith.has(row.rowKey))
+    .map(row => rowLegs.get(row.rowKey));
+  // 候选 = 同文件未配对的反方向一端 + 未被占用的暂存一端；暂存一端的候选只看本文件行
+  const candidatesOf = self => (self.kind === 'staged'
+    ? freeRowLegs().filter(leg => compatible(self, leg))
+    : [...freeRowLegs().filter(leg => leg !== self), ...stagedLegs.filter(leg => !claimedStaged.has(leg.id))]
+      .filter(leg => compatible(self, leg)));
+  const ambiguous = (row, candidates, reason) => {
+    markReview(row, 'TRANSFER_PAIR_AMBIGUOUS', reason, ['pairWith', 'skip']);
+    row.transfer = { direction: rowLegs.get(row.rowKey).direction, candidates: candidates.map(leg => legSummary(leg, names)) };
+  };
+
+  // 1. 用户指定（resolutions[rowKey].pairWith = 另一端 rowKey | 暂存一端 id）
+  for (const row of active) {
+    const wanted = resolutions[row.rowKey]?.pairWith;
+    if (!wanted || row.disposition !== 'transfer' || pairedWith.has(row.rowKey)) continue;
+    const self = rowLegs.get(row.rowKey);
+    const candidates = candidatesOf(self);
+    const partner = candidates.find(leg => leg.id === String(wanted));
+    if (partner) link(self, partner);
+    else ambiguous(row, candidates, '指定的配对对象不在候选之内，请重新选择');
   }
+  // 2. 互为唯一候选 → 自动配对（与换汇建议配对同一规则，不按行序贪心）
+  const { pairs } = mutualUniquePairs(freeRowLegs(), candidatesOf, leg => leg.id);
+  for (const [self, partner] of pairs) link(self, partner);
+  // 3. 仍有候选但不唯一 → 待用户指定；没有候选 → 暂存（见下）
+  const leftovers = freeRowLegs().map(self => [self, candidatesOf(self)]);
+  for (const [self, candidates] of leftovers) {
+    if (candidates.length) ambiguous(self.row, candidates, `有 ${candidates.length} 个可配对的另一端（或另一端还有其他候选）：请指定配对对象`);
+  }
+  return pairedWith;
+}
+
+/**
+ * 承接成本（转入资产原币种）：用户 transferCost > 报表 transfer_cost > 同币种承接转出成本 > 换算依据 × 转出成本。
+ * 返回 { carryCost, carryCostSource, fxRate }（跨币种且两项均缺时 carryCost 为 null），或 { error: { code, reason } }。
+ */
+function carryCostOf(resolution, inn, outCurrency, inCurrency, removedCost) {
+  const userCost = positiveNumber(resolution.transferCost);
+  const userFx = positiveNumber(resolution.fxRate);
+  if (Number.isNaN(userCost) || Number.isNaN(userFx)) {
+    return { error: { code: 'TRANSFER_COST_INVALID', reason: '补填的承接成本或换算依据必须大于 0' } };
+  }
+  if (userCost !== null) return { carryCost: userCost, carryCostSource: 'user', fxRate: null };
+  if (inn.transferCost !== null && inn.transferCost !== undefined) {
+    if (inn.transferCostCurrency && inn.transferCostCurrency !== inCurrency) {
+      return { error: { code: 'TRANSFER_COST_CURRENCY', reason: `划转成本币种 ${inn.transferCostCurrency} 须与转入资产币种 ${inCurrency} 一致` } };
+    }
+    return { carryCost: inn.transferCost, carryCostSource: 'report', fxRate: null };
+  }
+  if (outCurrency === inCurrency) return { carryCost: removedCost, carryCostSource: 'carried', fxRate: null };
+  if (userFx !== null || positiveNumber(inn.transferFxRate)) {
+    const fxRate = userFx !== null ? userFx : Number(inn.transferFxRate);
+    return { carryCost: removedCost * fxRate, carryCostSource: 'fx', fxRate };
+  }
+  return { carryCost: null, carryCostSource: null, fxRate: null };
+}
+
+/**
+ * 预览阶段的划转处理。行在调用前 disposition === 'transfer'（已解析标的、算好 rawHash，未参与成交匹配）。
+ * @param {object[]} rows 全部预览行（非划转行只读，用于转出成本重放）
+ * @param {object} ctx { portfolioId, sourceAccountId, resolutions, probeOf }
+ * @returns {{ fingerprintKeys: string[], lockPortfolioIds: string[], extraProbes: object[], partnerWrites: object[] }}
+ */
+async function resolveTransfers(rows, ctx) {
+  const { portfolioId, resolutions = {} } = ctx;
+  const transfers = rows.filter(row => row.disposition === 'transfer');
+  const result = { fingerprintKeys: [], lockPortfolioIds: [], extraProbes: [], partnerWrites: [] };
+  if (!transfers.length) return result;
+
+  const staged = await TransferLeg.find({ status: 'staged' }).lean();
+  result.fingerprintKeys.push(...staged.map(leg => `leg:${leg._id}:${new Date(leg.updatedAt || 0).getTime()}`));
+  await skipKnownTransfers(transfers, staged, ctx, result);
+
+  const active = transfers.filter(row => row.disposition === 'transfer');
+  const rowLegs = new Map(active.map(row => [row.rowKey, legOfRow(row, ctx)]));
+  const stagedLegs = staged.map(legOfStaged);
+
+  const names = await legNamesOf(stagedLegs, ctx);
+
+  const pairedWith = pairTransferLegs(active, rowLegs, stagedLegs, resolutions, names);
 
   // 账本缓存（组合 + 标的）
   const ledgerCache = new Map();
@@ -301,7 +354,7 @@ async function resolveTransfers(rows, ctx) {
     const pairKey = self.pairGroup || partner.pairGroup ||
       `xfer-${sha256([out.kind === 'row' ? out.row.rawHash : out.id, inn.kind === 'row' ? inn.row.rawHash : inn.id]).slice(0, 16)}`;
     const fail = (code, reason) => pairRows.forEach(item => {
-      rowError(item, code, reason);
+      markError(item, code, reason);
       item.transfer = { direction: rowLegs.get(item.rowKey).direction, partner: legSummary(item === row ? partner : self, names) };
     });
 
@@ -328,29 +381,12 @@ async function resolveTransfers(rows, ctx) {
 
     // 承接成本：决议可写在本对任一行上
     const resolution = pairRows.map(item => resolutions[item.rowKey]).find(item => item && (item.transferCost !== undefined || item.fxRate !== undefined)) || {};
-    const userCost = positiveNumber(resolution.transferCost);
-    const userFx = positiveNumber(resolution.fxRate);
-    let carryCost = null;
-    let carryCostSource = null;
-    let fxRate = null;
-    if (Number.isNaN(userCost) || Number.isNaN(userFx)) {
-      fail('TRANSFER_COST_INVALID', '补填的承接成本或换算依据必须大于 0');
+    const carry = carryCostOf(resolution, inn, outCurrency, inCurrency, removedCost);
+    if (carry.error) {
+      fail(carry.error.code, carry.error.reason);
       continue;
     }
-    if (userCost !== null) {
-      carryCost = userCost; carryCostSource = 'user';
-    } else if (inn.transferCost !== null && inn.transferCost !== undefined) {
-      if (inn.transferCostCurrency && inn.transferCostCurrency !== inCurrency) {
-        fail('TRANSFER_COST_CURRENCY', `划转成本币种 ${inn.transferCostCurrency} 须与转入资产币种 ${inCurrency} 一致`);
-        continue;
-      }
-      carryCost = inn.transferCost; carryCostSource = 'report';
-    } else if (outCurrency === inCurrency) {
-      carryCost = removedCost; carryCostSource = 'carried';
-    } else if (userFx !== null || positiveNumber(inn.transferFxRate)) {
-      fxRate = userFx !== null ? userFx : Number(inn.transferFxRate);
-      carryCost = removedCost * fxRate; carryCostSource = 'fx';
-    }
+    const { carryCost, carryCostSource, fxRate } = carry;
 
     const transferInfo = item => ({
       direction: rowLegs.get(item.rowKey).direction,
@@ -367,7 +403,7 @@ async function resolveTransfers(rows, ctx) {
 
     if (carryCost === null) {
       pairRows.forEach(item => {
-        setReview(item, 'TRANSFER_COST_REQUIRED',
+        markReview(item, 'TRANSFER_COST_REQUIRED',
           `跨币种划转（${outCurrency} → ${inCurrency}）缺少转入成本与换算依据：请补充转入成本（${inCurrency}）或换算依据（1 ${outCurrency} = ? ${inCurrency}）其中一项`,
           ['transferCost', 'fxRate', 'skip']);
         item.transfer = transferInfo(item);
@@ -418,7 +454,7 @@ async function resolveTransfers(rows, ctx) {
       const probe = probeOfLeg(partner, { price: write.price, ...write.carry });
       const key = `${partner.portfolioId}|${partner.symbol}`;
       partnerProbesIn.set(key, [...(partnerProbesIn.get(key) || []), probe]);
-      if (partner.portfolioId === String(portfolioId)) result.extraProbes.push(probe);
+      if (partner.portfolioId === String(portfolioId)) result.extraProbes.push({ ...probe, importRowKey: row.rowKey });
       else if (!result.lockPortfolioIds.includes(partner.portfolioId)) result.lockPortfolioIds.push(partner.portfolioId);
     }
   }
@@ -433,7 +469,7 @@ async function resolveTransfers(rows, ctx) {
     } catch (error) {
       if (error.code !== 'INSUFFICIENT_POSITION' && error.code !== 'INVALID_CARRY_COST') throw error;
       const row = rows.find(item => item.rowKey === write.rowKey);
-      rowError(row, 'TRANSFER_INSUFFICIENT_POSITION', `对端组合（${names.portfolios.get(pid) || pid}）写入划转后持仓不足`);
+      markError(row, 'TRANSFER_INSUFFICIENT_POSITION', `对端组合（${names.portfolios.get(pid) || pid}）写入划转后持仓不足`);
     }
   }
   result.lockPortfolioIds.sort();
@@ -510,6 +546,7 @@ function stagedLegDocument(row, preview, ctx) {
     sourceAccountId: ctx.sourceAccountId,
     direction: c.direction,
     symbol: c.symbol,
+    mappedFrom: c.mappedFrom || undefined,
     assetType: row.asset.type,
     market: row.asset.market,
     currency: row.asset.currency,

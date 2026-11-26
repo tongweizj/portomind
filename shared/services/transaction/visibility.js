@@ -9,4 +9,14 @@ function visibleQuery(query = {}) {
   return { ...query, ...VISIBLE_FILTER };
 }
 
-module.exports = { VISIBLE_FILTER, visibleQuery };
+/** 已读出的单条流水是否可见（按 id 读取 / 编辑 / 删除时与 visibleQuery 同一口径）。 */
+function isVisible(transaction) {
+  return Boolean(transaction) && transaction.status !== 'pending';
+}
+
+/** 未完成提交残留的 pending 行（只供核对「流水不完整」等明确需要读取它们的场景）。 */
+function pendingQuery(query = {}) {
+  return { ...query, status: 'pending' };
+}
+
+module.exports = { VISIBLE_FILTER, visibleQuery, isVisible, pendingQuery };

@@ -14,15 +14,15 @@ import { usePortfolio } from '../../hooks/usePortfolio';
 import { SOURCE_BROKERS, TRANSACTION_ACTION_LABELS } from '../../constants/enums';
 import { ROUTES } from '../../constants/routes';
 import { getApiErrorMessage } from '../../services/api.client';
+import { downloadImportTemplate } from '../../services/transactionImport.service';
 import {
-  commitImport,
-  discardStagedTransfer,
-  downloadImportTemplate,
-  listStagedTransfers,
-  getImportFormat,
-  listSourceAccounts,
-  previewImport,
-} from '../../services/transactionImport.service';
+  useDiscardStagedTransfer,
+  useImportCommit,
+  useImportFormat,
+  useImportPreview,
+  useSourceAccounts,
+  useStagedTransfers,
+} from '../../hooks/useTransactionImport';
 import ImportMatchResolution from './ImportMatchResolution';
 import { formatShareChange, formatSplitRatio } from '../../utils/splitDisplay';
 import ImportTransferResolution from './ImportTransferResolution';
@@ -35,13 +35,14 @@ const DISPOSITION_STYLES = {
   add: 'text-emerald-700', update: 'text-blue-700', skip: 'text-gray-500', stage: 'text-indigo-700',
   review: 'text-amber-700', error: 'text-red-700', deferred: 'text-gray-500',
 };
-// 导入格式：标准 CSV（可手动列映射）/ Wealthsimple 原格式 CSV（TASK-100）/ Questrade 原格式 XLSX（TASK-102）；
-// 原格式由服务端自带列识别，不做列映射。broker 为新建来源账户时的默认券商。
-const IMPORT_FORMAT_OPTIONS = [
-  { value: 'standard', label: '标准 CSV' },
-  { value: 'wealthsimple', label: 'Wealthsimple 原格式 CSV', broker: 'wealthsimple' },
-  { value: 'questrade', label: 'Questrade 原格式 XLSX', broker: 'questrade' },
-];
+// 导入格式的取值、哪些格式按二进制（base64）上传、可选时区都以服务端 GET /transactions/import/format 为准
+// （formats / binaryFormats / timeZoneChoices，代码审查 T4）；这里只有展示名与新建来源账户时的默认券商。
+// 原格式（非 standard）由服务端自带列识别，不做列映射。
+const IMPORT_FORMAT_LABELS = {
+  standard: { label: '标准 CSV' },
+  wealthsimple: { label: 'Wealthsimple 原格式 CSV', broker: 'wealthsimple' },
+  questrade: { label: 'Questrade 原格式 XLSX', broker: 'questrade' },
+};
 
 // 文件统一按字节读取：文本格式解码为 UTF-8 文本（TextDecoder 去 BOM），二进制格式（XLSX）以 base64 上传
 function toBase64(bytes) {
@@ -50,11 +51,10 @@ function toBase64(bytes) {
   return btoa(binary);
 }
 const FEE_SOURCE_LABELS = { derived: '推算', user: '补填', confirmed_zero: '确认为 0', unknown: '未知' };
-const TIME_ZONE_OPTIONS = [
-  { value: '', label: '未确认（报表时间带时区时无需选择）' },
-  { value: 'America/Toronto', label: '多伦多（America/Toronto）' },
-  { value: 'Asia/Shanghai', label: '北京（Asia/Shanghai）' },
-];
+const TIME_ZONE_LABELS = {
+  'America/Toronto': '多伦多（America/Toronto）',
+  'Asia/Shanghai': '北京（Asia/Shanghai）',
+};
 const PAIR_SOURCE_LABELS = { explicit: '按组号配对', user: '已指定配对', suggested: '建议配对（确认导入即采纳）' };
 
 const ORDER_LABELS = {
@@ -95,9 +95,9 @@ export default function ImportTransactions() {
   const navigate = useNavigate();
   const { data: portfolio } = usePortfolio(portfolioId);
 
-  const [format, setFormat] = useState(null);
+  const { data: format = null } = useImportFormat();
   const [importFormat, setImportFormat] = useState('standard');
-  const [accounts, setAccounts] = useState([]);
+  const { data: accounts = [] } = useSourceAccounts();
   const [sourceMode, setSourceMode] = useState('new');
   const [sourceId, setSourceId] = useState('');
   const [broker, setBroker] = useState('other');
@@ -115,21 +115,19 @@ export default function ImportTransactions() {
   const [result, setResult] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-  const [stagedTransfers, setStagedTransfers] = useState([]);
+  const { data: stagedTransfers = [] } = useStagedTransfers();
+  const discardStaged = useDiscardStagedTransfer();
+  const previewMutation = useImportPreview();
+  const commitMutation = useImportCommit();
 
-  const reloadStaged = () => listStagedTransfers().then(setStagedTransfers).catch(() => {});
-
-  useEffect(() => { reloadStaged(); }, []);
-
+  // 已有来源账户时默认选择第一个（只在首次加载到列表时）
+  const [accountsDefaulted, setAccountsDefaulted] = useState(false);
   useEffect(() => {
-    getImportFormat().then(setFormat).catch(() => {});
-    listSourceAccounts()
-      .then(list => {
-        setAccounts(list);
-        if (list.length) { setSourceMode('existing'); setSourceId(list[0].id); }
-      })
-      .catch(() => {});
-  }, []);
+    if (accountsDefaulted || !accounts.length) return;
+    setAccountsDefaulted(true);
+    setSourceMode('existing');
+    setSourceId(accounts[0].id);
+  }, [accounts, accountsDefaulted]);
 
   // 任一输入变化 → 预览失效（必须重新预览才能确认）
   const invalidate = () => { if (preview) setStale(true); setResult(null); };
@@ -139,10 +137,18 @@ export default function ImportTransactions() {
     return { broker, alias: alias.trim(), ...(accountNumber.trim() ? { accountNumber: accountNumber.trim() } : {}) };
   }, [sourceMode, sourceId, broker, alias, accountNumber]);
 
+  const formatOptions = (format?.formats || ['standard'])
+    .map(value => ({ value, label: IMPORT_FORMAT_LABELS[value]?.label || value, broker: IMPORT_FORMAT_LABELS[value]?.broker }));
+  const isBinaryFormat = (format?.binaryFormats || []).includes(importFormat);
+  const timeZoneOptions = [
+    { value: '', label: '未确认（报表时间带时区时无需选择）' },
+    ...(format?.timeZoneChoices || []).map(value => ({ value, label: TIME_ZONE_LABELS[value] || value })),
+  ];
+
   const buildPayload = (overrides = {}) => ({
     portfolioId,
     format: importFormat,
-    file: file && (importFormat === 'questrade'
+    file: file && (isBinaryFormat
       ? { name: file.name, encoding: 'base64', content: file.base64 }
       : { name: file.name, encoding: 'text', content: file.text }),
     sourceAccount,
@@ -180,7 +186,7 @@ export default function ImportTransactions() {
     setError('');
     setResult(null);
     try {
-      const data = await previewImport(buildPayload(overrides));
+      const data = await previewMutation.mutateAsync(buildPayload(overrides));
       setPreview(data);
       setMapping(data.mapping);
       setAccountSelector(data.accountSelector || '');
@@ -197,14 +203,12 @@ export default function ImportTransactions() {
     setLoading(true);
     setError('');
     try {
-      const data = await commitImport(buildPayload({
+      const data = await commitMutation.mutateAsync(buildPayload({
         previewToken: preview.previewToken,
         ledgerFingerprint: preview.ledgerFingerprint,
       }));
       setResult(data);
       setStale(true);
-      reloadStaged();
-      listSourceAccounts().then(setAccounts).catch(() => {});
       if (sourceMode === 'new' && data.sourceAccountId) {
         // 新建的来源账户已落库：后续批次 / 重新预览按 id 引用同一身份
         setSourceMode('existing');
@@ -286,7 +290,7 @@ export default function ImportTransactions() {
             </label>
             <select value={timeZone} onChange={e => { setTimeZone(e.target.value); invalidate(); }}
               className="w-full rounded border bg-white px-3 py-2 text-sm">
-              {TIME_ZONE_OPTIONS.map(option => <option key={option.value} value={option.value}>{option.label}</option>)}
+              {timeZoneOptions.map(option => <option key={option.value} value={option.value}>{option.label}</option>)}
             </select>
           </div>
         </div>
@@ -337,7 +341,7 @@ export default function ImportTransactions() {
             <select value={importFormat} aria-label="报表格式"
               onChange={e => {
                 setImportFormat(e.target.value);
-                const option = IMPORT_FORMAT_OPTIONS.find(item => item.value === e.target.value);
+                const option = formatOptions.find(item => item.value === e.target.value);
                 if (option?.broker && sourceMode === 'new') setBroker(option.broker);
                 setSymbolMap({});
                 setMapping(null);
@@ -345,12 +349,12 @@ export default function ImportTransactions() {
                 invalidate();
               }}
               className="rounded border bg-white px-3 py-2 text-sm">
-              {IMPORT_FORMAT_OPTIONS.map(option => <option key={option.value} value={option.value}>{option.label}</option>)}
+              {formatOptions.map(option => <option key={option.value} value={option.value}>{option.label}</option>)}
             </select>
           </div>
           <div className="grow">
             <label className="mb-1 block text-sm text-gray-700">报表文件（标准模板格式可上传后手动列映射；Wealthsimple CSV / Questrade XLSX 原格式直接上传）</label>
-            <input type="file" accept={importFormat === 'questrade' ? '.xlsx' : '.csv,text/csv'} onChange={handleFile} className="w-full rounded border px-3 py-2 text-sm" />
+            <input type="file" accept={isBinaryFormat ? '.xlsx' : '.csv,text/csv'} onChange={handleFile} className="w-full rounded border px-3 py-2 text-sm" />
           </div>
           <button type="button"
             onClick={async () => {
@@ -383,7 +387,7 @@ export default function ImportTransactions() {
                 </span>
                 <button type="button" className="text-red-600 hover:underline"
                   onClick={async () => {
-                    try { await discardStagedTransfer(leg.id); invalidate(); reloadStaged(); }
+                    try { await discardStaged.mutateAsync(leg.id); invalidate(); }
                     catch (err) { setError(getApiErrorMessage(err, '放弃暂存失败')); }
                   }}>
                   放弃暂存
@@ -458,8 +462,8 @@ export default function ImportTransactions() {
           )}
           {preview.requiresSplit && (
             <p className="rounded bg-blue-50 p-3 text-sm text-blue-800">
-              共 {preview.batches.reduce((sum, b) => sum + b.count, 0)} 条待写入，超过每次 {preview.commitLimit} 条上限：
-              本次确认提交第 1 批（{preview.batches[0].count} 条，成对流水不拆开），完成后重新预览继续下一批。
+              共 {preview.writeCount} 条待写入，超过每次 {preview.commitLimit} 条上限：
+              本次确认提交第 1 批（{preview.batches[0].count} 条，成对流水不拆开），完成后重新预览同一文件即继续下一批（已入账的行自动跳过）。
             </p>
           )}
 

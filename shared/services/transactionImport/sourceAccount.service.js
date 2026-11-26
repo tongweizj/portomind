@@ -6,14 +6,8 @@ const crypto = require('crypto');
 const mongoose = require('mongoose');
 const SourceAccount = require('../../models/sourceAccount');
 const { SOURCE_BROKERS } = require('../../constants/import.constants');
+const { businessError } = require('./common');
 
-function businessError(status, code, message, details) {
-  const error = new Error(message);
-  error.status = status;
-  error.code = code;
-  if (details !== undefined) error.details = details;
-  return error;
-}
 
 function normalizeAccountNumber(value) {
   return String(value ?? '').trim().replace(/[\s-]/g, '').toUpperCase();

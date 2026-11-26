@@ -6,10 +6,11 @@ import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router';
 import { TransactionTable } from '../../components/TransactionTable';
 import { ROUTES } from '../../constants/routes';
+import { PAIRED_LEG_ACTIONS, TRANSACTION_ACTION_LABELS } from '../../constants/enums';
 import { colors, radii } from '../../constants/design-tokens';
 import { getApiErrorMessage } from '../../services/api.client';
-import { deleteTransaction, getPortfolioTransactions } from '../../services/transaction.service';
-import { listSourceAccounts } from '../../services/transactionImport.service';
+import { useDeleteTransaction, usePortfolioTransactions } from '../../hooks/usePortfolioTransactions';
+import { useSourceAccounts } from '../../hooks/useTransactionImport';
 import CashReconciliation from './CashReconciliation';
 
 const TABLE_COLUMNS = ['date', 'symbol', 'action', 'assetType', 'quantity', 'price', 'source'];
@@ -19,47 +20,31 @@ const PAGE_SIZE = 20;
 export default function Transactions() {
   const { id } = useParams();
   const navigate = useNavigate();
-  const [result, setResult] = useState({ data: [], pagination: { page: 1, pageSize: PAGE_SIZE, total: 0 } });
   const [page, setPage] = useState(1);
-  // 删除后自增以重新拉取（避免把 fetch 逻辑抽成额外函数）
-  const [reloadKey, setReloadKey] = useState(0);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
   const [actionError, setActionError] = useState('');
-  const [sourceAccounts, setSourceAccounts] = useState([]);
-
   // TASK-094：来源列按 sourceAccountId 显示账户别名；失败时退化为「导入」，不影响流水展示
-  useEffect(() => {
-    let active = true;
-    listSourceAccounts().then(list => { if (active) setSourceAccounts(list); }).catch(() => {});
-    return () => { active = false; };
-  }, []);
+  const { data: sourceAccounts = [] } = useSourceAccounts();
+  const transactionsQuery = usePortfolioTransactions(id, { page, pageSize: PAGE_SIZE });
+  const deleteMutation = useDeleteTransaction();
+  const result = transactionsQuery.data || { data: [], pagination: { page: 1, pageSize: PAGE_SIZE, total: 0 } };
+  const loading = transactionsQuery.isLoading;
+  const error = transactionsQuery.isError ? getApiErrorMessage(transactionsQuery.error, '加载交易失败') : '';
 
+  // 删除末页最后一条后回退一页，避免停留在空页
   useEffect(() => {
-    let active = true;
-    setLoading(true);
-    setError('');
-    getPortfolioTransactions(id, { page, pageSize: PAGE_SIZE })
-      .then(data => {
-        if (!active) return;
-        // 删除末页最后一条后回退一页，避免停留在空页
-        if (data.data.length === 0 && page > 1) {
-          setPage(value => value - 1);
-          return;
-        }
-        setResult(data);
-      })
-      .catch(err => { if (active) setError(getApiErrorMessage(err, '加载交易失败')); })
-      .finally(() => { if (active) setLoading(false); });
-    return () => { active = false; };
-  }, [id, page, reloadKey]);
+    if (transactionsQuery.data && transactionsQuery.data.data.length === 0 && page > 1) setPage(value => value - 1);
+  }, [transactionsQuery.data, page]);
 
   // 写路径始终经服务端（DELETE /transactions/:id），前端不做任何业务校验（AC10）
   const handleDelete = async (tx) => {
+    // 决定 10：成对流水（换汇 / 证券划转）删除一端时服务端两端一起删除，先请用户确认
+    if (PAIRED_LEG_ACTIONS.includes(tx.action) && tx.pairGroupId &&
+        !window.confirm(`这是一笔${TRANSACTION_ACTION_LABELS[tx.action]}的一端，删除将同时删除另一端（可能在其他组合）。确定删除？`)) {
+      return;
+    }
     setActionError('');
     try {
-      await deleteTransaction(tx._id);
-      setReloadKey(value => value + 1);
+      await deleteMutation.mutateAsync(tx._id);
     } catch (err) {
       setActionError(getApiErrorMessage(err, '删除交易失败'));
     }

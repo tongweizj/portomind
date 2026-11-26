@@ -1,4 +1,5 @@
-// 成对流水配对（TASK-101 换汇；#99 证券划转复用同一机制，只需另给一份 spec）。
+// 成对流水配对（TASK-101 换汇）。
+// #99 证券划转另有暂存 / 跨文件 / 跨组合配对（transfers.js），只复用这里的 mutualUniquePairs（互为唯一候选）规则。
 //
 // 配对来源（row.pair.source）：
 // - explicit：两行填写同一组号（pair_group）。组内必须恰好两端且两端相容，否则按行报错 / 待核对；
@@ -12,6 +13,7 @@
 // enforcePairIntegrity 在全部决议之后保证两端要么都写入、要么都不写入。
 
 const crypto = require('crypto');
+const { markError, markReview } = require('./common');
 
 /**
  * @typedef {object} PairSpec
@@ -47,18 +49,36 @@ function summarizeLeg(row) {
   };
 }
 
-function markReview(row, code, reason, candidates = []) {
-  row.disposition = 'review';
-  row.code = code;
-  row.reason = reason;
-  row.options = candidates.length ? ['pairWith', 'skip'] : ['skip'];
+function reviewPair(row, code, reason, candidates = []) {
+  markReview(row, code, reason, candidates.length ? ['pairWith', 'skip'] : ['skip']);
   row.pairCandidates = candidates.map(summarizeLeg);
 }
 
-function markError(row, code, reason) {
-  row.disposition = 'error';
-  row.code = code;
-  row.reason = reason;
+
+/**
+ * 互为唯一候选的配对（换汇建议配对与 #99 证券划转自动配对共用）：
+ * a 的候选只有 b，且 b 的候选只有 a，才配成一对；不按先后贪心认领。
+ * @param {Array} items 待配对的一端
+ * @param {(item) => Array} candidatesOf 一端的相容候选（可包含 items 之外的一端，如服务端暂存的划转一端）
+ * @param {(item) => string} idOf 一端的唯一键
+ * @returns {{ pairs: Array<[object, object]>, options: Map<string, Array> }} options 为 items 各自的候选
+ */
+function mutualUniquePairs(items, candidatesOf, idOf) {
+  const options = new Map(items.map(item => [idOf(item), candidatesOf(item)]));
+  const optionsOf = item => options.get(idOf(item)) || candidatesOf(item);
+  const taken = new Set();
+  const pairs = [];
+  for (const item of items) {
+    const mine = options.get(idOf(item));
+    if (taken.has(idOf(item)) || mine.length !== 1) continue;
+    const other = mine[0];
+    const theirs = optionsOf(other);
+    if (taken.has(idOf(other)) || theirs.length !== 1 || idOf(theirs[0]) !== idOf(item)) continue;
+    pairs.push([item, other]);
+    taken.add(idOf(item));
+    taken.add(idOf(other));
+  }
+  return { pairs, options };
 }
 
 /**
@@ -84,7 +104,7 @@ function pairRows(rows, spec, resolutions = {}) {
     if (members.length === 2 && spec.compatible(members[0], members[1])) {
       link(members[0], members[1], groupId, 'explicit');
     } else if (members.length === 1) {
-      markReview(members[0], `${prefix}_PAIR_INCOMPLETE`, `${label}组号 ${groupId} 只有一端：另一端缺失或有错误，单端不入账（可跳过）`);
+      reviewPair(members[0], `${prefix}_PAIR_INCOMPLETE`, `${label}组号 ${groupId} 只有一端：另一端缺失或有错误，单端不入账（可跳过）`);
     } else {
       const reason = members.length > 2
         ? `${label}组号 ${groupId} 有 ${members.length} 行，每组只能有两端`
@@ -122,26 +142,22 @@ function pairRows(rows, spec, resolutions = {}) {
   const remaining = free.filter(row => !paired.has(row.rowKey));
   const candidatesOf = row => remaining.filter(other => other !== row &&
     spec.bucketOf(other) === spec.bucketOf(row) && spec.compatible(row, other));
-  const options = new Map(remaining.map(row => [row.rowKey, candidatesOf(row)]));
-  for (const row of remaining) {
-    if (paired.has(row.rowKey)) continue;
-    const mine = options.get(row.rowKey);
-    if (mine.length === 1 && options.get(mine[0].rowKey).length === 1) {
-      link(row, mine[0], generatedGroupId(spec, row, mine[0]), 'suggested');
-      paired.add(row.rowKey);
-      paired.add(mine[0].rowKey);
-    }
+  const { pairs, options } = mutualUniquePairs(remaining, candidatesOf, row => row.rowKey);
+  for (const [row, other] of pairs) {
+    link(row, other, generatedGroupId(spec, row, other), 'suggested');
+    paired.add(row.rowKey);
+    paired.add(other.rowKey);
   }
   for (const row of remaining) {
     if (paired.has(row.rowKey)) continue;
     const sameScope = options.get(row.rowKey);
     const note = rejected.has(row.rowKey) ? `（${rejected.get(row.rowKey)}）` : '';
     if (sameScope.length) {
-      markReview(row, `${prefix}_PAIR_AMBIGUOUS`, `同账户同日有多种可能的${label}配对：请指定另一端${note}`, sameScope);
+      reviewPair(row, `${prefix}_PAIR_AMBIGUOUS`, `同账户同日有多种可能的${label}配对：请指定另一端${note}`, sameScope);
     } else {
       // 同范围无候选：列出全文件其余未配对的相容端供用户跨日指定
       const anywhere = remaining.filter(other => other !== row && !paired.has(other.rowKey) && spec.compatible(row, other));
-      markReview(row, `${prefix}_UNPAIRED`, `未找到可配对的${label}另一端：单端不入账，请指定另一端或跳过${note}`, anywhere);
+      reviewPair(row, `${prefix}_UNPAIRED`, `未找到可配对的${label}另一端：单端不入账，请指定另一端或跳过${note}`, anywhere);
     }
   }
 }
@@ -164,11 +180,8 @@ function enforcePairIntegrity(rows, spec, resolutions = {}) {
       row.resolved = true;
       continue;
     }
-    row.disposition = 'review';
-    row.code = `${spec.prefix}_PARTNER_SKIPPED`;
-    row.reason = `${spec.label}另一端（第 ${partner.rowNumber} 行）不入账，单端不能入账：请一并跳过`;
-    row.options = ['skip'];
+    markReview(row, `${spec.prefix}_PARTNER_SKIPPED`, `${spec.label}另一端（第 ${partner.rowNumber} 行）不入账，单端不能入账：请一并跳过`, ['skip']);
   }
 }
 
-module.exports = { pairRows, enforcePairIntegrity };
+module.exports = { pairRows, enforcePairIntegrity, mutualUniquePairs };

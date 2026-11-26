@@ -4,6 +4,10 @@ const assert = require('node:assert/strict');
 const Transaction = require('@portomind/shared/models/transaction');
 const Portfolio = require('@portomind/shared/models/portfolio');
 const Asset = require('@portomind/shared/models/asset');
+const ImportBatch = require('@portomind/shared/models/importBatch');
+
+// 手动写入前检查导入锁（ImportBatch.exists）：本文件不涉及导入，恒为无锁
+ImportBatch.exists = async () => null;
 const RebalanceRecord = require('@portomind/shared/models/rebalanceRecord');
 const transactionService = require('@portomind/shared/services/transaction.service');
 const { calculatePositions } = require('@portomind/shared/services/transaction/positionCalculator');

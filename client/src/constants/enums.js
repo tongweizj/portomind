@@ -43,6 +43,18 @@ export const TRANSACTION_ACTION_LABELS = Object.freeze(
 );
 
 /**
+ * 手动录入 / 编辑开放的动作。必须与 shared/constants/transaction.constants.js 的 MANUAL_ACTIONS 同步。
+ * 其余动作（现金类、换汇、划转、拆股）只经导入写入：界面不提供「编辑」（Human 决定 10），可删除后重新导入。
+ */
+export const MANUAL_TRANSACTION_ACTIONS = Object.freeze(['buy', 'sell', 'div_cash', 'div_reinvest']);
+
+/**
+ * 成对入账的动作：删除一端时服务端两端一起删除（Human 决定 10），界面先确认。
+ * 必须与 shared/constants/transaction.constants.js 的 PAIRED_ACTIONS + TRANSFER_ACTIONS 同步。
+ */
+export const PAIRED_LEG_ACTIONS = Object.freeze(['fx', 'transfer_out', 'transfer_in']);
+
+/**
  * 流水导入来源券商（TASK-094）。取值必须与 shared/constants/import.constants.js 的
  * SOURCE_BROKERS 同步（同 ASSET_* 双份规则）：改一处必须改另一处。
  */

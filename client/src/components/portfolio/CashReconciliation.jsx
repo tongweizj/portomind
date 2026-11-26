@@ -6,7 +6,7 @@ import { useMemo, useState } from 'react';
 import { colors, radii } from '../../constants/design-tokens';
 import { ASSET_CURRENCIES, TRANSACTION_ACTION_LABELS } from '../../constants/enums';
 import { getApiErrorMessage } from '../../services/api.client';
-import { reconcileSourceAccountCash } from '../../services/transactionImport.service';
+import { useCashReconciliation } from '../../hooks/useTransactionImport';
 
 const inputStyle = { border: `1px solid ${colors.border}`, borderRadius: radii.md, padding: '4px 8px', fontSize: 13 };
 
@@ -24,7 +24,10 @@ function toNumberOrNull(text) {
 function ItemRows({ items }) {
   return items.map(item => (
     <tr key={item.id} style={{ borderTop: `1px solid ${colors.border}` }}>
-      <td className="px-2 py-1">{item.cashDate ?? '—'}</td>
+      <td className="px-2 py-1">
+        {item.cashDate ?? '—'}
+        {item.cashDateBasis === 'activity' && <span style={{ color: colors.textMuted }}>（活动日）</span>}
+      </td>
       <td className="px-2 py-1">{item.tradeDate ?? '—'}</td>
       <td className="px-2 py-1">{item.portfolioName ?? item.portfolioId}</td>
       <td className="px-2 py-1">{TRANSACTION_ACTION_LABELS[item.action] ?? item.action}{item.symbol ? ` · ${item.symbol}` : ''}</td>
@@ -106,9 +109,10 @@ export default function CashReconciliation({ portfolioId, sourceAccounts }) {
   const [from, setFrom] = useState('');
   const [to, setTo] = useState('');
   const [balances, setBalances] = useState({});
-  const [result, setResult] = useState(null);
-  const [error, setError] = useState('');
-  const [loading, setLoading] = useState(false);
+  const reconciliation = useCashReconciliation();
+  const result = reconciliation.data || null;
+  const error = reconciliation.isError ? getApiErrorMessage(reconciliation.error, '现金核对失败') : '';
+  const loading = reconciliation.isPending;
 
   if (candidates.length === 0) return null;
   const selectedId = accountId || candidates[0].id;
@@ -116,24 +120,15 @@ export default function CashReconciliation({ portfolioId, sourceAccounts }) {
   const setBalance = (currency, key, value) =>
     setBalances(previous => ({ ...previous, [currency]: { ...previous[currency], [key]: value } }));
 
-  const submit = async (event) => {
+  const submit = (event) => {
     event.preventDefault();
-    setError('');
-    setLoading(true);
     const payload = {};
     for (const [currency, entry] of Object.entries(balances)) {
       const opening = toNumberOrNull(entry.opening);
       const closing = toNumberOrNull(entry.closing);
       if (opening !== null || closing !== null) payload[currency] = { opening, closing };
     }
-    try {
-      setResult(await reconcileSourceAccountCash(selectedId, { from, to, balances: payload }));
-    } catch (err) {
-      setResult(null);
-      setError(getApiErrorMessage(err, '现金核对失败'));
-    } finally {
-      setLoading(false);
-    }
+    reconciliation.mutate({ id: selectedId, from, to, balances: payload });
   };
 
   return (
@@ -141,7 +136,7 @@ export default function CashReconciliation({ portfolioId, sourceAccounts }) {
       <div>
         <h3 style={{ fontSize: 15, fontWeight: 600, color: colors.textPrimary, margin: 0 }}>来源账户现金核对</h3>
         <p style={{ fontSize: 12, color: colors.textMuted, margin: '4px 0 0' }}>
-          汇总该来源账户在所有组合中的流水，按币种分别核对；成交按结算日，结算日未知的单列。
+          汇总该来源账户在所有组合中的流水，按币种分别核对；成交按结算日（未知的单列），无结算日的现金类流水按活动日。
         </p>
       </div>
       <form onSubmit={submit} className="space-y-2 text-sm">
@@ -184,6 +179,11 @@ export default function CashReconciliation({ portfolioId, sourceAccounts }) {
       {error && <div className="rounded bg-red-50 p-3 text-sm text-red-700">{error}</div>}
       {result && (
         <div className="space-y-2">
+          {result.cashDateRules?.length > 0 && (
+            <ul className="list-disc pl-5 text-xs" style={{ color: colors.textSecondary }} aria-label="现金日期规则">
+              {result.cashDateRules.map(rule => <li key={rule.code}>{rule.text}</li>)}
+            </ul>
+          )}
           {result.currencies.length === 0 ? (
             <div className="text-sm" style={{ color: colors.textMuted }}>该期间没有现金流水，也未填写余额。</div>
           ) : (

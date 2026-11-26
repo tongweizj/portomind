@@ -96,8 +96,8 @@ const TransactionSchema = new mongoose.Schema({
   pairGroupId: { type: String, trim: true, default: undefined },
   // 同一报表内的原行顺序（按时间正序）；同一时刻按 sequence 重放，手动流水无 sequence 排在其后
   sequence: { type: Number, default: undefined },
-  // TASK-096：用户确认的同日先后（同一 UTC 交易日内生效，默认 0；before → 负值，after → 正值）。
-  // 重放顺序 (UTC 交易日, orderRank, date, sequence, _id)，见 transaction/positionCalculator.js
+  // TASK-096：用户确认的同日先后（同一当地交易日内生效，默认 0；before → 负值，after → 正值）。
+  // 重放顺序 (当地交易日, orderRank, date, sequence, _id)，见 transaction/positionCalculator.js
   orderRank: { type: Number, default: undefined },
   // ── TASK-099：证券划转 ──
   // transfer_in 的承接成本（转入资产原币种，重放时代替 qty×price）；price 仅为每单位快照

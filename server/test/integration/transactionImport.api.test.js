@@ -342,6 +342,7 @@ test('501 条提示拆批：预览分为 500 + 1，确认只写第 1 批，其�
   const { preview, commit } = await previewAndCommit(importBody(csv(manyRows(501))));
   assert.equal(preview.requiresSplit, true);
   assert.deepEqual(preview.batches.map(batch => batch.count), [500, 1]);
+  assert.equal(preview.writeCount, 501, '代码审查 T8：待写入总数由服务端给出');
   assert.equal(commit.status, 201);
   assert.equal(commit.body.data.added, 500);
   assert.equal(commit.body.data.deferred, 1);
@@ -474,4 +475,35 @@ test('pending 行对手动录入的超卖校验不可见（回归：手动录入
   });
   assert.equal(sell.status, 400);
   assert.equal(sell.body.code, 'INSUFFICIENT_POSITION');
+});
+
+// 决定 9 / 代码审查 S9：旧版逐行 JSON 导入端点已移除，导入只经 preview / commit
+test('S9 旧版 POST /api/transactions/import 已移除：404', async () => {
+  const response = await call('POST', '/api/transactions/import', {
+    portfolioId: PORTFOLIO_A, transactions: [{ symbol: 'VTI.US', action: 'buy', quantity: 1, price: 1 }]
+  });
+  assert.equal(response.status, 404, JSON.stringify(response.body));
+});
+
+// 代码审查 T6：按 id 读取 / 编辑 / 删除同样只看已入账流水（pending 行不可见）
+test('T6 导入未翻转的 pending 行：按 id 读取、编辑、删除均 404', async (t) => {
+  const world = freshWorld(t);
+  const pendingId = '64b0000000000000000f0001';
+  world.transactions.push({
+    _id: pendingId, portfolioId: PORTFOLIO_A, symbol: 'VTI.US', assetType: 'etf', market: 'US', currency: 'USD',
+    action: 'buy', quantity: 1, price: 100, fee: 0, date: new Date('2026-01-05T00:00:00Z'), status: 'pending'
+  });
+  assert.equal((await call('GET', `/api/transactions/${pendingId}`)).status, 404);
+  assert.equal((await call('PUT', `/api/transactions/${pendingId}`, { quantity: 2 })).status, 404);
+  assert.equal((await call('DELETE', `/api/transactions/${pendingId}`)).status, 404);
+  assert.equal(world.transactions.length, 1);
+});
+
+// 代码审查 T4：格式、二进制格式与可选时区由服务端给出，页面不另存一份取值
+test('T4 格式说明端点列出导入格式、二进制格式与页面可选时区', async () => {
+  const format = await call('GET', '/api/transactions/import/format');
+  assert.equal(format.status, 200);
+  assert.deepEqual(format.body.data.formats, ['standard', 'wealthsimple', 'questrade']);
+  assert.deepEqual(format.body.data.binaryFormats, ['questrade']);
+  assert.deepEqual(format.body.data.timeZoneChoices, ['Asia/Shanghai', 'America/Toronto']);
 });

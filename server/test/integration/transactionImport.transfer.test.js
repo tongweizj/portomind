@@ -459,11 +459,14 @@ test('放弃暂存的一端后预览过期：确认返回 409，本端改为暂�
 // ─────────────────────────────────────────────────────────────
 
 test('拆批：同文件两端落在第 500 和 501 条时边界前移，两端同一次确认', async (t) => {
-  const world = freshWorld(t, { transactions: [buyTx({ quantity: 1000 })] });
+  const world = freshWorld(t, { transactions: [
+    buyTx({ quantity: 1000 }),
+    buyTx({ symbol: 'XEQ.TO', market: 'CA', currency: 'CAD', quantity: 10, price: 30 })
+  ] });
   const buys = Array.from({ length: 499 }, (_, index) => ({ trade_date: '2026-02-01', quantity: '1', source_row: String(index + 2) }));
   const input = body(PORTFOLIO_A, csv([
     ...buys,
-    { activity_type: 'transfer_out', trade_date: '2026-03-02', pair_group: 'J1', quantity: '-2', unit_price: '' },
+    { activity_type: 'transfer_out', trade_date: '2026-03-02', pair_group: 'J1', symbol: 'XEQ', market: 'CA', cash_currency: 'CAD', quantity: '-2', unit_price: '' },
     { activity_type: 'transfer_in', trade_date: '2026-03-02', pair_group: 'J1', symbol: 'XEQ', market: 'US', quantity: '2', unit_price: '', transfer_cost: '210' }
   ]));
   const { preview: data, commit } = await previewAndCommit(input);
@@ -476,4 +479,137 @@ test('拆批：同文件两端落在第 500 和 501 条时边界前移，两端�
   assert.equal(second.commit.status, 201, JSON.stringify(second.commit.body));
   assert.equal(visible(world).filter(tx => tx.action.startsWith('transfer_')).length, 2);
   assert.equal((await positionOf(PORTFOLIO_A, 'XEQ.US')).remainingCost, 210, '报表给出的承接成本');
+});
+
+// ─────────────────────────────────────────────────────────────
+// 代码审查 S1：配对须同一证券，且须互为唯一候选
+// ─────────────────────────────────────────────────────────────
+
+test('S1 同文件反向划转标的不同（VTI 转出、XEQ 转入）：不自动配对，两端各自暂存，不承接错误成本', async (t) => {
+  const world = freshWorld(t, { transactions: [buyTx()] });
+  const { preview: data, commit } = await previewAndCommit(body(PORTFOLIO_A, csv([
+    { activity_type: 'transfer_out', quantity: '-5', unit_price: '' },
+    { activity_type: 'transfer_in', symbol: 'XEQ', market: 'US', quantity: '5', unit_price: '' }
+  ])));
+  assert.deepEqual(data.rows.map(row => row.disposition), ['stage', 'stage']);
+  assert.equal(commit.status, 201, JSON.stringify(commit.body));
+  assert.equal(world.transactions.filter(tx => tx.action.startsWith('transfer_')).length, 0);
+});
+
+test('S1 暂存的转出端与后到转入端标的不同：不自动配对（转入端暂存）', async (t) => {
+  freshWorld(t, { transactions: [buyTx()] });
+  await previewAndCommit(body(PORTFOLIO_A, csv([{ activity_type: 'transfer_out', quantity: '-5', unit_price: '' }])));
+  const next = await preview(body(PORTFOLIO_B, csv([{ activity_type: 'transfer_in', symbol: 'XEQ', market: 'US', quantity: '5', unit_price: '' }])));
+  assert.equal(next.status, 200, JSON.stringify(next.body));
+  assert.equal(next.body.data.rows[0].disposition, 'stage');
+});
+
+test('S1 非互为唯一候选（两笔转出、一笔转入）：不按先后贪心配对，进入待核对；指定后其余一端暂存', async (t) => {
+  freshWorld(t, { transactions: [buyTx()] });
+  const content = csv([
+    { activity_type: 'transfer_out', quantity: '-2', unit_price: '' },
+    { activity_type: 'transfer_out', quantity: '-2', unit_price: '' },
+    { activity_type: 'transfer_in', quantity: '2', unit_price: '' }
+  ]);
+  const first = await preview(body(PORTFOLIO_A, content));
+  assert.equal(first.status, 200, JSON.stringify(first.body));
+  const rows = first.body.data.rows;
+  assert.ok(rows.every(row => row.disposition !== 'add'), JSON.stringify(rows.map(row => [row.disposition, row.code])));
+  assert.equal(rows[2].code, 'TRANSFER_PAIR_AMBIGUOUS');
+  assert.equal(rows[2].transfer.candidates.length, 2);
+  const resolved = await preview(body(PORTFOLIO_A, content, { resolutions: { [rows[2].rowKey]: { pairWith: rows[1].rowKey } } }));
+  assert.deepEqual(resolved.body.data.rows.map(row => row.disposition), ['stage', 'add', 'add']);
+});
+
+test('S1 同组号两端标的不同：行错误 TRANSFER_PAIR_INVALID', async (t) => {
+  freshWorld(t, { transactions: [buyTx()] });
+  const first = await preview(body(PORTFOLIO_A, csv([
+    { activity_type: 'transfer_out', pair_group: 'G9', quantity: '-5', unit_price: '' },
+    { activity_type: 'transfer_in', pair_group: 'G9', symbol: 'XEQ', market: 'US', quantity: '5', unit_price: '', transfer_cost: '500' }
+  ])));
+  assert.deepEqual(first.body.data.rows.map(row => row.code), ['TRANSFER_PAIR_INVALID', 'TRANSFER_PAIR_INVALID']);
+});
+
+// ─────────────────────────────────────────────────────────────
+// 代码审查 S2：只写第 1 批时，第 1 批必须单独成立（按时间正序拆批）
+// ─────────────────────────────────────────────────────────────
+
+test('S2 新 → 旧排列的标准 CSV 超过 500 行：第 1 批写入最早的 500 条，单独重放不超卖', async (t) => {
+  const world = freshWorld(t);
+  const sells = Array.from({ length: 300 }, () => ({ activity_type: 'sell', trade_date: '2026-03-02', quantity: '1' }));
+  const buys = Array.from({ length: 300 }, () => ({ activity_type: 'buy', trade_date: '2026-02-02', quantity: '1' }));
+  const { preview: data, commit } = await previewAndCommit(body(PORTFOLIO_A, csv([...sells, ...buys])));
+  assert.equal(data.batches[0].count, 500);
+  assert.equal(commit.status, 201, JSON.stringify(commit.body));
+  const written = visible(world);
+  assert.equal(written.filter(tx => tx.action === 'buy').length, 300, '最早的买入全部在第 1 批');
+  assert.equal(written.filter(tx => tx.action === 'sell').length, 200);
+  assert.equal((await positionOf(PORTFOLIO_A, 'VTI.US')).quantity, 100);
+});
+
+const xeqBuys = count => Array.from({ length: count }, () => ({
+  activity_type: 'buy', trade_date: '2026-02-02', symbol: 'XEQ', market: 'CA', cash_currency: 'CAD', quantity: '1', unit_price: '30'
+}));
+const earlyIn = { activity_type: 'transfer_in', trade_date: '2026-01-10', pair_group: 'G2', symbol: 'XEQ', market: 'US', quantity: '550', unit_price: '', transfer_cost: '12000' };
+const lateOut = { activity_type: 'transfer_out', trade_date: '2026-03-30', pair_group: 'G2', symbol: 'XEQ', market: 'CA', cash_currency: 'CAD', quantity: '-550', unit_price: '' };
+
+test('S2 成对流水跨越拆批边界：不把依赖后续买入的一端提前进第 1 批', async (t) => {
+  const world = freshWorld(t);
+  const { preview: data, commit } = await previewAndCommit(body(PORTFOLIO_A, csv([earlyIn, ...xeqBuys(600), lateOut])));
+  assert.equal(data.blocking, false, JSON.stringify(data.blockingReasons));
+  assert.equal(commit.status, 201, JSON.stringify(commit.body));
+  assert.equal(visible(world).filter(tx => tx.action.startsWith('transfer_')).length, 0, '这一对留到后续批次');
+  assert.equal((await positionOf(PORTFOLIO_A, 'XEQ.TO')).quantity, 500);
+});
+
+test('S2 第 1 批单独重放不成立（后续行依赖被推迟的成对流水）：整批阻塞并说明原因', async (t) => {
+  const world = freshWorld(t);
+  const sellUsd = { activity_type: 'sell', trade_date: '2026-01-11', symbol: 'XEQ', market: 'US', quantity: '1', unit_price: '25' };
+  const { preview: data, commit } = await previewAndCommit(body(PORTFOLIO_A, csv([earlyIn, sellUsd, ...xeqBuys(600), lateOut])));
+  assert.equal(data.blocking, true);
+  assert.ok(data.blockingReasons.some(item => item.code === 'FIRST_BATCH_INVALID'), JSON.stringify(data.blockingReasons));
+  assert.equal(commit.status, 422);
+  assert.equal(world.transactions.length, 0);
+});
+
+// ─────────────────────────────────────────────────────────────
+// 决定 10 / 代码审查 S8：成对流水删除一端即两端一起删除；导入专有动作不可编辑
+// ─────────────────────────────────────────────────────────────
+
+test('S8 删除划转的一端：两端一起删除（含另一组合），持仓恢复；导入专有动作不可经 PUT 编辑', async (t) => {
+  const world = await stageOut(t);
+  const paired = await previewAndCommit(body(PORTFOLIO_B, csv([{ activity_type: 'transfer_in', trade_date: '2026-03-03', quantity: '5', unit_price: '' }])));
+  assert.equal(paired.commit.status, 201, JSON.stringify(paired.commit.body));
+  const inTx = visible(world).find(tx => tx.action === 'transfer_in');
+
+  const edit = await call('PUT', `/api/transactions/${inTx._id}`, { quantity: 4 });
+  assert.equal(edit.status, 400, JSON.stringify(edit.body));
+
+  const removed = await call('DELETE', `/api/transactions/${inTx._id}`);
+  assert.equal(removed.status, 200, JSON.stringify(removed.body));
+  assert.equal(removed.body.data.deletedIds.length, 2);
+  assert.equal(world.transactions.filter(tx => tx.action.startsWith('transfer_')).length, 0, '不留单边');
+  assert.equal((await positionOf(PORTFOLIO_A, 'VTI.US')).quantity, 20);
+  assert.equal(await positionOf(PORTFOLIO_B, 'VTI.US'), null);
+});
+
+test('S8 删除换汇的一端：同批同组号的另一端一起删除；不同批次的同组号不受影响', async (t) => {
+  const world = freshWorld(t);
+  const fxRows = [
+    { activity_type: 'fx', pair_group: 'FX-7', symbol: '', market: '', quantity: '', unit_price: '', commission: '', cash_currency: 'CAD', notes: '' },
+  ];
+  const HEADER_FX = 'activity_type,trade_date,pair_group,cash_amount,cash_currency';
+  const fxCsv = rows => [HEADER_FX, ...rows.map(row => [row.activity_type, '2026-03-02', row.pair_group, row.cash_amount, row.cash_currency].join(','))].join('\n');
+  const legs = [
+    { ...fxRows[0], cash_amount: '-1370', cash_currency: 'CAD' },
+    { ...fxRows[0], cash_amount: '1000', cash_currency: 'USD' }
+  ];
+  const first = await previewAndCommit(body(PORTFOLIO_A, fxCsv(legs)));
+  assert.equal(first.commit.status, 201, JSON.stringify(first.commit.body));
+  const other = await previewAndCommit(body(PORTFOLIO_A, fxCsv([{ ...legs[0], cash_amount: '-685' }, { ...legs[1], cash_amount: '500' }]), { sourceAccount: { broker: 'other', alias: '另一合成账户' } }));
+  assert.equal(other.commit.status, 201, JSON.stringify(other.commit.body));
+  const target = visible(world).find(tx => tx.action === 'fx' && tx.cashAmount === 1000);
+  const removed = await call('DELETE', `/api/transactions/${target._id}`);
+  assert.equal(removed.status, 200, JSON.stringify(removed.body));
+  assert.deepEqual(visible(world).filter(tx => tx.action === 'fx').map(tx => tx.cashAmount).sort((a, b) => a - b), [-685, 500]);
 });

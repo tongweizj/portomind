@@ -324,3 +324,30 @@ test('同文件无编号现金流水重复：后一行进入人工核对；有�
   assert.equal(data.rows[1].duplicateOf.rowNumber, data.rows[0].rowNumber);
   assert.deepEqual(data.rows[1].options.sort(), ['add', 'skip']);
 });
+
+// ─────────────────────────────────────────────────────────────
+// 决定 8 / 代码审查 S7：超过 500 行时重新上传同一文件，已入账的报表行按「来源账户 + 行号 + 内容」自动跳过
+// ─────────────────────────────────────────────────────────────
+
+test('S7 重新上传同一报表：已入账的行（同来源账户、同行号、同内容）自动跳过，继续写入下一批', async (t) => {
+  const world = freshWorld(t);
+  const day = index => new Date(Date.UTC(2024, 0, 1) + index * 86400000).toISOString().slice(0, 10);
+  const rows = Array.from({ length: 501 }, (_, index) => cashRow({ activity_type: 'interest', trade_date: day(index), symbol: '', market: '', cash_amount: '1.25' }));
+  const input = body(csv(rows));
+  const first = await previewAndCommit(input);
+  assert.equal(first.commit.status, 201, JSON.stringify(first.commit.body));
+  assert.equal(first.commit.body.data.added, 500);
+  assert.equal(first.commit.body.data.deferred, 1);
+
+  const second = await previewAndCommit(input);
+  assert.equal(second.preview.counts.skip, 500, JSON.stringify(second.preview.counts));
+  assert.equal(second.preview.counts.review, 0);
+  assert.equal(second.preview.rows[0].code, 'ALREADY_IMPORTED');
+  assert.equal(second.commit.status, 201, JSON.stringify(second.commit.body));
+  assert.equal(second.commit.body.data.added, 1);
+  assert.equal(world.transactions.filter(tx => tx.status !== 'pending').length, 501);
+
+  // 同内容但不同行号（另一份报表里的同额利息）仍按 #97 人工核对，不自动跳过
+  const shifted = await preview(body(csv([cashRow({ activity_type: 'interest', trade_date: day(900), symbol: '', market: '', cash_amount: '9' }), rows[0]])));
+  assert.equal(shifted.rows[1].code, 'CASH_DUPLICATE');
+});

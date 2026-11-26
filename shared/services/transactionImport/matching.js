@@ -6,7 +6,8 @@
 //    仅成交金额不同 → 列出旧流水候选并暂停（AMOUNT_CHANGED），由用户决定更新或新增。
 // 3. 无编号且仅有日期：同日同标的同方向的旧流水均为候选，进入人工核对（DATE_ONLY_MATCH）。
 // 4. 缺来源账户的旧账（手动录入 / 早期导入）：同日同标的同方向即候选，进入人工核对（LEGACY_CANDIDATE）。
-// 唯一且内容一致 → 跳过；有差异 → 展示新旧值，用户确认 update 后才改写旧流水（保留手工备注）。
+// 唯一且内容一致 → 跳过；多条内容一致 → 待核对（MULTIPLE_CANDIDATES）；
+// 有差异 → 展示新旧值，用户确认 update 后才改写旧流水（保留手工备注）。
 // 一致匹配按一对一认领：同文件两笔一致的成交不会同时「跳过」到同一条旧流水。
 //
 // 现金流水（TASK-097：div_cash / tax / interest / cash_in / cash_out / fee）：有编号同上；
@@ -21,6 +22,7 @@ const Transaction = require('../../models/transaction');
 const Portfolio = require('../../models/portfolio');
 const { visibleQuery } = require('../transaction/visibility');
 const { CASH_ACTIONS, isCashAction } = require('../../constants/transaction.constants');
+const { markReview, markSkip } = require('./common');
 
 dayjs.extend(utc);
 dayjs.extend(timezone);
@@ -90,18 +92,13 @@ function summaryOf(tx) {
 }
 
 function setReview(row, code, reason, options, candidates, describe) {
-  row.disposition = 'review';
-  row.code = code;
-  row.reason = reason;
-  row.options = options;
+  markReview(row, code, reason, options);
   row.matchTargets = candidates;
   row.matches = candidates.map(tx => describe(tx, row));
 }
 
 function setSkip(row, tx, reason) {
-  row.disposition = 'skip';
-  row.code = 'ALREADY_IMPORTED';
-  row.reason = reason;
+  markSkip(row, 'ALREADY_IMPORTED', reason);
   row.matches = [{ id: String(tx._id), portfolioId: String(tx.portfolioId) }];
 }
 
@@ -112,6 +109,32 @@ function sameCashActivity(left, right) {
   if (left.cashAmount == null || right.cashAmount == null || !sameValue(left.cashAmount, right.cashAmount)) return false;
   if (left.action === 'div_cash' && (left.symbol || right.symbol) && left.symbol !== right.symbol) return false;
   return true;
+}
+
+/**
+ * 已入账报表行的续传识别（Human 决定 8 / 代码审查 S7）：同一来源账户 + 同一行号（及行号类型）+ 同一内容（rawHash）
+ * 的本组合已入账流水即「这一行已导入」，自动跳过——超过 500 行的报表重新上传同一文件即可继续写入下一批。
+ * 已入账到其他组合的同一行不在此跳过，仍按 matchRows 的外部编号规则展示原组合。
+ * 须在配对与成交匹配之前调用；被认领的旧流水记入 row.claimedId，matchRows 不再让其他行认领。
+ * 返回参与识别的旧流水快照键（计入账本指纹）。
+ */
+async function skipCommittedRows(rows, { portfolioId, sourceAccountId }) {
+  if (!sourceAccountId) return [];
+  const pending = rows.filter(row => row.disposition === 'pending' && row.rawHash);
+  if (!pending.length) return [];
+  const committed = await Transaction.find(visibleQuery({
+    portfolioId, sourceAccountId, 'source.rawHash': { $in: [...new Set(pending.map(row => row.rawHash))] }
+  })).lean();
+  const byIdentity = new Map(committed.map(tx => [
+    `${tx.source?.rowNumberKind || ''}|${tx.source?.rowNumber}|${tx.source?.rawHash}`, tx
+  ]));
+  for (const row of pending) {
+    const tx = byIdentity.get(`${row.rowNumberKind || ''}|${row.rowNumber}|${row.rawHash}`);
+    if (!tx) continue;
+    setSkip(row, tx, `同一来源账户已入账本报表第 ${row.rowNumber} 行（内容一致）`);
+    row.claimedId = String(tx._id);
+  }
+  return committed.map(tx => `${tx._id}:${new Date(tx.updatedAt || 0).getTime()}`);
 }
 
 /**
@@ -133,10 +156,7 @@ async function matchRows(rows, { portfolioId, sourceAccountId }) {
       row.code = 'DUPLICATE_IN_FILE';
       row.reason = `与第 ${first.rowNumber} 行内容一致的重复成交编号`;
     } else {
-      row.disposition = 'review';
-      row.code = 'EXTERNAL_ID_CONFLICT_IN_FILE';
-      row.reason = `原成交编号 ${id} 与第 ${first.rowNumber} 行重复但内容不同：确认为不同成交可新增，否则跳过`;
-      row.options = ['skip', 'add'];
+      markReview(row, 'EXTERNAL_ID_CONFLICT_IN_FILE', `原成交编号 ${id} 与第 ${first.rowNumber} 行重复但内容不同：确认为不同成交可新增，否则跳过`, ['skip', 'add']);
       row.duplicateOf = {
         rowKey: first.rowKey,
         rowNumber: first.rowNumber,
@@ -151,10 +171,7 @@ async function matchRows(rows, { portfolioId, sourceAccountId }) {
     if (row.disposition !== 'pending' || row.candidate.externalId || !isCashAction(row.candidate.action)) continue;
     const first = cashSeen.find(other => sameCashActivity(other.candidate, row.candidate));
     if (!first) { cashSeen.push(row); continue; }
-    row.disposition = 'review';
-    row.code = 'CASH_DUPLICATE_IN_FILE';
-    row.reason = `无编号现金流水与第 ${first.rowNumber} 行同日、同类型、同币种、同金额：确认为另一笔可新增，否则跳过`;
-    row.options = ['skip', 'add'];
+    markReview(row, 'CASH_DUPLICATE_IN_FILE', `无编号现金流水与第 ${first.rowNumber} 行同日、同类型、同币种、同金额：确认为另一笔可新增，否则跳过`, ['skip', 'add']);
     row.duplicateOf = { rowKey: first.rowKey, rowNumber: first.rowNumber, diff: [] };
   }
 
@@ -192,13 +209,20 @@ async function matchRows(rows, { portfolioId, sourceAccountId }) {
     diff: diffOf(tx, row.candidate)
   });
 
-  const claimed = new Set();
+  // 续传识别（skipCommittedRows）已认领的旧流水不再参与一对一认领
+  const claimed = new Set(rows.map(row => row.claimedId).filter(Boolean));
   const identical = (tx, row) => diffOf(tx, row.candidate).length === 0;
-  const claimIdentical = (row, pool, reason) => {
-    const hit = pool.find(tx => !claimed.has(String(tx._id)) && identical(tx, row));
-    if (!hit) return false;
-    claimed.add(String(hit._id));
-    setSkip(row, hit, reason);
+  // 唯一一条内容一致的旧流水 → 认领并跳过；多条内容一致 → 无法确定是哪一条，待核对（代码审查 S4）。
+  // 返回 true 表示本行已处置（跳过或待核对）。
+  const claimIdentical = (row, pool, reason, options = ['update', 'add', 'skip']) => {
+    const hits = pool.filter(tx => !claimed.has(String(tx._id)) && identical(tx, row));
+    if (!hits.length) return false;
+    if (hits.length > 1) {
+      setReview(row, 'MULTIPLE_CANDIDATES', `有 ${hits.length} 条内容一致的旧流水，无法确定对应哪一条：请跳过、新增或指定更新对象`, options, hits, describe);
+      return true;
+    }
+    claimed.add(String(hits[0]._id));
+    setSkip(row, hits[0], reason);
     return true;
   };
   const unclaimed = tx => !claimed.has(String(tx._id));
@@ -212,7 +236,7 @@ async function matchRows(rows, { portfolioId, sourceAccountId }) {
       const sameId = byExternal.filter(tx => sameSide(tx) && tx.source?.externalId === c.externalId);
       const here = sameId.filter(inPortfolio);
       if (here.length) {
-        if (claimIdentical(row, here, '同一原成交编号已入账且内容一致')) continue;
+        if (claimIdentical(row, here, '同一原成交编号已入账且内容一致', ['update', 'skip'])) continue;
         const open = here.filter(unclaimed);
         if (open.length === 1) {
           setReview(row, 'EXTERNAL_ID_CHANGED', '同一原成交编号已入账但内容不同：核对新旧值后可更新旧流水（保留手工备注）或跳过', ['update', 'skip'], open, describe);
@@ -316,4 +340,4 @@ function applyResolutions(rows, resolutions = {}) {
   }
 }
 
-module.exports = { matchRows, applyResolutions, diffOf, DIFF_FIELDS };
+module.exports = { skipCommittedRows, matchRows, applyResolutions, diffOf, DIFF_FIELDS };
