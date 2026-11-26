@@ -9,9 +9,19 @@
 // 4. 单语句 updateMany 把本批 pending 翻转为 committed：成对流水同时可见。
 // 5. 任一步失败：删除本批 pending 行、恢复更新前原值、标记 rolled_back 并释放锁。
 //    进程崩溃遗留的 committing 批次在下一次确认前按超时回收（recoverStaleBatches）。
+//
+// TASK-099 证券划转：
+// - 对端组合（暂存一端所在组合）在主锁之后按 id 顺序取伴随锁（ImportBatch{parentBatchId}），任一失败 → 409；
+// - 暂存对端以条件更新 staged → consuming 占用（consumedBatchId），未命中 → 409 PREVIEW_STALE；
+// - 先到的一端以 TransferLeg{status:'pending', stagedBatchId} 写入；
+// - 翻转顺序：Transaction pending→committed → ImportBatch.phase='flipped' → TransferLeg pending→staged、consuming→committed；
+// - 回滚：phase 未到 flipped → 删除本批 pending 流水与暂存一端，consuming 恢复为 staged
+//   （其对端流水已可见时补完为 committed，防止同一端被再次配对）；phase=flipped → 只向前补完暂存一端状态，
+//   不回滚账本。两端流水同属一次 updateMany 翻转，因此不会出现单边可见。
 
 const Transaction = require('../../models/transaction');
 const ImportBatch = require('../../models/importBatch');
+const TransferLeg = require('../../models/transferLeg');
 
 const STALE_BATCH_MS = 10 * 60 * 1000;
 
@@ -23,7 +33,41 @@ function businessError(status, code, message, details) {
   return error;
 }
 
-async function rollbackBatch(batchId, updates = [], reason = 'rolled back') {
+async function finishLegs(batchId) {
+  await TransferLeg.updateMany({ stagedBatchId: batchId, status: 'pending' }, { $set: { status: 'staged' } });
+  await TransferLeg.updateMany({ consumedBatchId: batchId, status: 'consuming' }, { $set: { status: 'committed' } });
+}
+
+async function releaseCompanions(batchId, status) {
+  await ImportBatch.updateMany(
+    { parentBatchId: batchId, status: 'committing' },
+    { $set: { status }, $unset: { lockKey: '' } }
+  );
+}
+
+
+async function rollbackBatch(batchId, updates = [], reason = 'rolled back', phase) {
+  if (phase === 'flipped') {
+    // 翻转已完成：账本已整批可见，只补完暂存一端状态（向前恢复）
+    await finishLegs(batchId);
+    await releaseCompanions(batchId, 'committed');
+    await ImportBatch.updateOne(
+      { _id: batchId },
+      { $set: { status: 'committed', phase: 'flipped', error: `recovered forward: ${String(reason).slice(0, 400)}` }, $unset: { lockKey: '' } }
+    );
+    return;
+  }
+  await TransferLeg.deleteMany({ stagedBatchId: batchId, status: 'pending' });
+  // 被占用的暂存对端：若其账本流水已翻转可见（翻转与 phase 落盘之间中断），补完为 committed，否则恢复 staged
+  const consuming = await TransferLeg.find({ consumedBatchId: batchId, status: 'consuming' }).lean();
+  for (const leg of consuming) {
+    const visible = await Transaction.countDocuments({ 'transfer.stagedLegId': leg._id, status: 'committed' });
+    await TransferLeg.updateOne(
+      { _id: leg._id, status: 'consuming' },
+      visible ? { $set: { status: 'committed' } } : { $set: { status: 'staged' }, $unset: { consumedBatchId: '' } }
+    );
+  }
+  await releaseCompanions(batchId, 'rolled_back');
   await Transaction.deleteMany({ 'source.importBatchId': batchId, status: 'pending' });
   for (const { transactionId, before, unset } of updates || []) {
     const restore = {};
@@ -44,7 +88,16 @@ async function recoverStaleBatches(lockKey, now = Date.now()) {
     status: 'committing',
     updatedAt: { $lt: new Date(now - STALE_BATCH_MS) }
   }).lean();
-  for (const batch of stale) await rollbackBatch(batch._id, batch.updates, 'stale batch recovered');
+  for (const batch of stale) {
+    if (batch.parentBatchId) {
+      // 伴随锁超时：回收其主批次（主批次的写入可能在任一组合）
+      const [parent] = await ImportBatch.find({ _id: batch.parentBatchId, status: 'committing' }).lean();
+      if (parent) await rollbackBatch(parent._id, parent.updates, 'stale batch recovered', parent.phase);
+      await ImportBatch.updateOne({ _id: batch._id, status: 'committing' }, { $set: { status: 'rolled_back' }, $unset: { lockKey: '' } });
+      continue;
+    }
+    await rollbackBatch(batch._id, batch.updates, 'stale batch recovered', batch.phase);
+  }
   return stale.length;
 }
 
@@ -56,10 +109,16 @@ async function recoverStaleBatches(lockKey, now = Date.now()) {
  * @param {(preview, ctx) => Array<{rowKey, doc}>} plan.buildDocuments
  * @param {(preview, ctx) => Array<{rowKey, transactionId, set}>} [plan.buildUpdates]
  * @param {(preview, ctx) => object} plan.summarize
+ * @param {string[]} [plan.extraLockPortfolioIds] TASK-099：一并加锁的对端组合
+ * @param {(preview, ctx) => Array} [plan.claimLegs] TASK-099：要占用的暂存对端 id
+ * @param {(preview, ctx) => Array<{rowKey, doc}>} [plan.buildStagedLegs] TASK-099：要暂存的先到一端
  */
 async function runAtomicCommit(plan) {
   const lockKey = `portfolio:${plan.portfolioId}`;
+  const extraIds = [...new Set((plan.extraLockPortfolioIds || []).map(String))]
+    .filter(id => id !== String(plan.portfolioId)).sort();
   await recoverStaleBatches(lockKey);
+  for (const id of extraIds) await recoverStaleBatches(`portfolio:${id}`);
 
   let batch;
   try {
@@ -69,6 +128,17 @@ async function runAtomicCommit(plan) {
       throw businessError(409, 'IMPORT_IN_PROGRESS', '该组合有另一个导入正在确认，请稍后重新预览');
     }
     throw error;
+  }
+  for (const id of extraIds) {
+    try {
+      await ImportBatch.create({ portfolioId: id, status: 'committing', lockKey: `portfolio:${id}`, parentBatchId: batch._id });
+    } catch (error) {
+      await rollbackBatch(batch._id, [], 'counterpart lock busy');
+      if (error.code === 11000) {
+        throw businessError(409, 'IMPORT_IN_PROGRESS', '划转对端组合有另一个导入正在确认，请稍后重新预览');
+      }
+      throw error;
+    }
   }
 
   let preview;
@@ -80,6 +150,7 @@ async function runAtomicCommit(plan) {
   }
 
   const journal = [];
+  let phase;
   try {
     const sourceAccountId = await plan.ensureSource(preview);
     const ctx = { sourceAccountId, importBatchId: batch._id };
@@ -93,8 +164,30 @@ async function runAtomicCommit(plan) {
         ledgerFingerprint: preview.ledgerFingerprint
       }
     });
+    // TASK-099：先占用暂存对端（条件更新），失败即放弃（尚未写入任何流水）
+    const claims = plan.claimLegs ? plan.claimLegs(preview, ctx) : [];
+    for (const legId of claims) {
+      const outcome = await TransferLeg.updateOne(
+        { _id: legId, status: 'staged' },
+        { $set: { status: 'consuming', consumedBatchId: batch._id } }
+      );
+      if (!outcome.matchedCount) {
+        throw businessError(409, 'PREVIEW_STALE', '划转对端已被其他导入配对或放弃，请重新预览', { reason: 'LEDGER_CHANGED' });
+      }
+    }
     const created = planned.length ? await Transaction.insertMany(planned.map(item => item.doc), { ordered: true }) : [];
-    const written = planned.map((item, index) => ({ rowKey: item.rowKey, transactionId: created[index]._id, kind: 'add' }));
+    const written = planned.map((item, index) => ({
+      rowKey: item.rowKey, transactionId: created[index]._id, kind: 'add', counterpart: Boolean(item.counterpart)
+    }));
+    for (const [index, item] of planned.entries()) {
+      const legId = item.doc.transfer?.stagedLegId;
+      if (item.counterpart && legId) {
+        await TransferLeg.updateOne({ _id: legId, consumedBatchId: batch._id }, { $set: { transactionId: created[index]._id } });
+      }
+    }
+    const stagedPlan = plan.buildStagedLegs ? plan.buildStagedLegs(preview, ctx) : [];
+    const stagedDocs = stagedPlan.length ? await TransferLeg.insertMany(stagedPlan.map(item => item.doc), { ordered: true }) : [];
+    stagedPlan.forEach((item, index) => written.push({ rowKey: item.rowKey, transactionId: stagedDocs[index]._id, kind: 'stage' }));
     const updates = plan.buildUpdates ? plan.buildUpdates(preview, ctx) : [];
     for (const update of updates) {
       const current = await Transaction.findById(update.transactionId).lean();
@@ -121,6 +214,10 @@ async function runAtomicCommit(plan) {
       { 'source.importBatchId': batch._id, status: 'pending' },
       { $set: { status: 'committed' } }
     );
+    await ImportBatch.updateOne({ _id: batch._id }, { $set: { phase: 'flipped' } });
+    phase = 'flipped';
+    await finishLegs(batch._id);
+    await releaseCompanions(batch._id, 'committed');
     const result = plan.summarize(preview, { ...ctx, written });
     await ImportBatch.updateOne({ _id: batch._id }, {
       $set: {
@@ -131,7 +228,8 @@ async function runAtomicCommit(plan) {
     });
     return result;
   } catch (error) {
-    await rollbackBatch(batch._id, journal, error.message);
+    await rollbackBatch(batch._id, journal, error.message, phase);
+    // 已翻转：账本整批可见，向前补完后按成功返回会丢失结果摘要，仍抛出原错误由调用方重新预览核对
     throw error;
   }
 }

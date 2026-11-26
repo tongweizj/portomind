@@ -22,3 +22,10 @@ export const listSourceAccounts = async () => (await api.get('/source-accounts')
 
 export const renameSourceAccount = async (id, alias) =>
   (await api.patch(`/source-accounts/${id}`, { alias })).data;
+
+// TASK-099：暂存待核对的证券划转一端（先到的一端）；放弃后需重新提供该端报表行
+export const listStagedTransfers = async (params = {}) =>
+  (await api.get('/transactions/import/transfers', { params })).data;
+
+export const discardStagedTransfer = async (id) =>
+  (await api.delete(`/transactions/import/transfers/${id}`)).data;

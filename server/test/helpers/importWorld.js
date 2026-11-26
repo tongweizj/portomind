@@ -1,7 +1,7 @@
 // server/test/helpers/importWorld.js
 //
 // TASK-094：流水导入测试用的内存世界。替换 Transaction / Asset / Portfolio /
-// SourceAccount / ImportBatch 中导入链路实际调用的静态方法，不连接 MongoDB。
+// SourceAccount / ImportBatch / TransferLeg 中导入链路实际调用的静态方法，不连接 MongoDB。
 // 查询匹配支持等值、点路径、$in、$ne、$exists、$lt；足够覆盖导入服务的查询形状。
 
 const crypto = require('crypto');
@@ -10,6 +10,7 @@ const Asset = require('@portomind/shared/models/asset');
 const Portfolio = require('@portomind/shared/models/portfolio');
 const SourceAccount = require('@portomind/shared/models/sourceAccount');
 const ImportBatch = require('@portomind/shared/models/importBatch');
+const TransferLeg = require('@portomind/shared/models/transferLeg');
 
 let sequence = 0;
 function nextId() {
@@ -91,8 +92,9 @@ function duplicateKeyError() {
 }
 
 /**
- * world = { portfolios, assets, transactions, sourceAccounts, importBatches }
- * hooks = { beforeFlip, beforeUpdate }：在 pending→committed 翻转 / 改写旧流水之前注入故障（模拟写入中断）。
+ * world = { portfolios, assets, transactions, sourceAccounts, importBatches, transferLegs }
+ * hooks = { beforeFlip, beforeUpdate, beforeClaim, beforeLegFlip }
+ *   beforeClaim(filter)：占用暂存对端（staged → consuming）之前；beforeLegFlip：暂存一端状态翻转之前：在 pending→committed 翻转 / 改写旧流水之前注入故障（模拟写入中断）。
  */
 function installImportWorld(t, world = {}, hooks = {}) {
   const portfolios = world.portfolios || [];
@@ -100,6 +102,7 @@ function installImportWorld(t, world = {}, hooks = {}) {
   const transactions = world.transactions || [];
   const sourceAccounts = world.sourceAccounts || [];
   const importBatches = world.importBatches || [];
+  const transferLegs = world.transferLegs || [];
 
   t.mock.method(Portfolio, 'exists', async (filter) => (portfolios.some(doc => matches(doc, filter)) ? { _id: filter._id } : null));
   t.mock.method(Portfolio, 'find', (filter) => query(() => portfolios.filter(doc => matches(doc, filter))));
@@ -175,6 +178,37 @@ function installImportWorld(t, world = {}, hooks = {}) {
     importBatches.push(created);
     return { ...created, toObject: () => ({ ...created }) };
   });
+  t.mock.method(ImportBatch, 'updateMany', async (filter, update) => {
+    const matched = importBatches.filter(doc => matches(doc, filter));
+    matched.forEach(doc => applyUpdate(doc, update));
+    return { matchedCount: matched.length };
+  });
+
+  t.mock.method(TransferLeg, 'find', (filter = {}) => query(() => transferLegs.filter(doc => matches(doc, filter))));
+  t.mock.method(TransferLeg, 'insertMany', async (docs) => {
+    const created = docs.map(doc => ({ _id: nextId(), createdAt: new Date(), updatedAt: new Date(), ...structuredClone(doc) }));
+    transferLegs.push(...created);
+    return created;
+  });
+  t.mock.method(TransferLeg, 'updateOne', async (filter, update) => {
+    if (hooks.beforeClaim && update?.$set?.status === 'consuming') await hooks.beforeClaim(filter);
+    const doc = transferLegs.find(item => matches(item, filter));
+    if (doc) applyUpdate(doc, update);
+    return { matchedCount: doc ? 1 : 0, modifiedCount: doc ? 1 : 0 };
+  });
+  t.mock.method(TransferLeg, 'updateMany', async (filter, update) => {
+    if (hooks.beforeLegFlip && ['staged', 'committed'].includes(update?.$set?.status) && !update.$unset) await hooks.beforeLegFlip();
+    const matched = transferLegs.filter(doc => matches(doc, filter));
+    matched.forEach(doc => applyUpdate(doc, update));
+    return { matchedCount: matched.length };
+  });
+  t.mock.method(TransferLeg, 'deleteMany', async (filter) => {
+    const keep = transferLegs.filter(doc => !matches(doc, filter));
+    const deletedCount = transferLegs.length - keep.length;
+    transferLegs.splice(0, transferLegs.length, ...keep);
+    return { deletedCount };
+  });
+
   t.mock.method(ImportBatch, 'find', (filter) => query(() => importBatches.filter(doc => matches(doc, filter))));
   t.mock.method(ImportBatch, 'updateOne', async (filter, update) => {
     const doc = importBatches.find(item => matches(item, filter));
@@ -182,7 +216,7 @@ function installImportWorld(t, world = {}, hooks = {}) {
     return { matchedCount: doc ? 1 : 0 };
   });
 
-  return { portfolios, assets, transactions, sourceAccounts, importBatches };
+  return { portfolios, assets, transactions, sourceAccounts, importBatches, transferLegs };
 }
 
 module.exports = { installImportWorld, matches };
