@@ -17,7 +17,6 @@ const TransactionSchema = new mongoose.Schema({
   market: { type: String, enum: ASSET_MARKETS, required: true },
   currency: { type: String, enum: ASSET_CURRENCIES, required: true },
   // buy 增加持仓；sell 减少持仓，且不允许超过交易日期当时的可用数量。
-  // buy 增加持仓；sell 减少持仓，且不允许超过交易日期当时的可用数量。
   // div_cash 现金分红（不进持仓，记 quantity×price 现金）；div_reinvest 分红再投（转增持仓）。
   action: { type: String, enum: ['buy', 'sell', 'div_cash', 'div_reinvest'], required: true },
   quantity: { type: Number, required: true, min: [Number.EPSILON, 'quantity must be greater than zero'] },
@@ -26,10 +25,52 @@ const TransactionSchema = new mongoose.Schema({
   // （realizedPnl 扣 fee）；div_reinvest 成本含费。与再平衡建议费用模型口径统一（RB-10）。
   fee: { type: Number, default: 0, min: 0 },
   date: { type: Date, required: true, default: Date.now },
-  notes: { type: String, trim: true, maxlength: 500 }
+  notes: { type: String, trim: true, maxlength: 500 },
+
+  // ── TASK-094：导入来源追溯（全部可选；手动录入与旧数据不受影响）──
+  sourceAccountId: { type: mongoose.Schema.Types.ObjectId, ref: 'SourceAccount', default: undefined },
+  source: {
+    type: new mongoose.Schema({
+      kind: { type: String, enum: ['manual', 'import'], default: 'import' },
+      format: { type: String, trim: true },
+      fileName: { type: String, trim: true, maxlength: 255 },
+      // 原报表行号；缺失时为上传文件行号（rowNumberKind 区分）
+      rowNumber: Number,
+      rowNumberKind: { type: String, enum: ['original', 'file'] },
+      // 券商原成交编号；无编号留空（null），从不合成
+      externalId: { type: String, trim: true, default: null },
+      importBatchId: { type: mongoose.Schema.Types.ObjectId, ref: 'ImportBatch' },
+      // 规范化原行内容哈希：同来源同内容重复导入判定
+      rawHash: String
+    }, { _id: false }),
+    default: undefined
+  },
+  // 日期精度：datetime 保留明确时刻（含午夜）；date 仅日期（存当日 UTC 零点，同手动录入）
+  dateKind: { type: String, enum: ['datetime', 'date'], default: undefined },
+  timeZone: { type: String, trim: true, default: undefined },
+  settlementDate: { type: Date, default: undefined },
+  // 券商带符号现金净额与实际币种（可与资产币种不同，后续工单使用）
+  cashAmount: { type: Number, default: undefined },
+  cashCurrency: { type: String, enum: ASSET_CURRENCIES, default: undefined },
+  cashAmountSource: { type: String, enum: ['broker', 'derived'], default: undefined },
+  feeSource: { type: String, enum: ['broker', 'derived', 'user', 'confirmed_zero'], default: undefined },
+  // 成交金额 = 数量 × 单价（无编号成交匹配字段，不含佣金/净额）
+  grossAmount: { type: Number, default: undefined },
+  pairGroupId: { type: String, trim: true, default: undefined },
+  // 同一报表内的原行顺序（按时间正序）
+  sequence: { type: Number, default: undefined },
+  // 应用层整批提交：pending 行对所有读取方不可见（见 transaction/visibility.js）
+  status: { type: String, enum: ['pending', 'committed'], default: undefined }
 }, { timestamps: true, versionKey: false });
 
 TransactionSchema.index({ portfolioId: 1, date: -1, _id: -1 });
 TransactionSchema.index({ portfolioId: 1, symbol: 1, date: 1, _id: 1 });
+// TASK-094：同来源账户的原成交编号查找（非唯一：跨组合同编号须能被发现并展示原组合，#95）
+TransactionSchema.index(
+  { sourceAccountId: 1, 'source.externalId': 1 },
+  { partialFilterExpression: { 'source.externalId': { $type: 'string' } } }
+);
+TransactionSchema.index({ sourceAccountId: 1, 'source.rawHash': 1 }, { partialFilterExpression: { sourceAccountId: { $exists: true } } });
+TransactionSchema.index({ 'source.importBatchId': 1 }, { partialFilterExpression: { 'source.importBatchId': { $exists: true } } });
 
 module.exports = mongoose.model('Transaction', TransactionSchema);

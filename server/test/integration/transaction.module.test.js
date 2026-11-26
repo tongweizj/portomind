@@ -179,7 +179,8 @@ test('交易列表统一按日期和 id 倒序并执行分页', async () => {
   let skip;
   let limit;
   Transaction.countDocuments = async query => {
-    assert.deepEqual(query, { portfolioId, symbol: 'VTI' });
+    // TASK-094：列表排除导入 pending 行
+    assert.deepEqual(query, { portfolioId, symbol: 'VTI', status: { $ne: 'pending' } });
     return 21;
   };
   Transaction.find = () => ({

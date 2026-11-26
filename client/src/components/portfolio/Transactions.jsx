@@ -9,6 +9,9 @@ import { ROUTES } from '../../constants/routes';
 import { colors, radii } from '../../constants/design-tokens';
 import { getApiErrorMessage } from '../../services/api.client';
 import { deleteTransaction, getPortfolioTransactions } from '../../services/transaction.service';
+import { listSourceAccounts } from '../../services/transactionImport.service';
+
+const TABLE_COLUMNS = ['date', 'symbol', 'action', 'assetType', 'quantity', 'price', 'source'];
 
 const PAGE_SIZE = 20;
 
@@ -22,6 +25,14 @@ export default function Transactions() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [actionError, setActionError] = useState('');
+  const [sourceAccounts, setSourceAccounts] = useState([]);
+
+  // TASK-094：来源列按 sourceAccountId 显示账户别名；失败时退化为「导入」，不影响流水展示
+  useEffect(() => {
+    let active = true;
+    listSourceAccounts().then(list => { if (active) setSourceAccounts(list); }).catch(() => {});
+    return () => { active = false; };
+  }, []);
 
   useEffect(() => {
     let active = true;
@@ -99,6 +110,8 @@ export default function Transactions() {
         <div className="overflow-x-auto" style={{ backgroundColor: colors.bgCard, border: `1px solid ${colors.border}`, borderRadius: radii.lg }}>
           <TransactionTable
             transactions={result.data}
+            columns={TABLE_COLUMNS}
+            sourceAccounts={sourceAccounts}
             showPortfolio={false}
             onEdit={tx => navigate(ROUTES.PORTFOLIO_TX_EDIT(id, tx._id))}
             onDelete={handleDelete}

@@ -13,6 +13,7 @@
 
 const Portfolio = require('../models/portfolio');
 const Transaction = require('../models/transaction');
+const { visibleQuery } = require('./transaction/visibility');
 const RebalanceRecord = require('../models/rebalanceRecord');
 const tracker = require('./portfolio/positionTracker');
 const fxRateService = require('./fxRate.service');
@@ -133,7 +134,7 @@ async function computeFamilySummary({ now = new Date() } = {}) {
 
   const [rates, recentTransactions, recentRebalanceRecords] = await Promise.all([
     fxRateService.getLatestRates(now),
-    Transaction.find().sort({ date: -1, _id: -1 }).limit(RECENT_LIMIT).lean(),
+    Transaction.find(visibleQuery()).sort({ date: -1, _id: -1 }).limit(RECENT_LIMIT).lean(),
     RebalanceRecord.find().sort({ timestamp: -1, _id: -1 }).limit(RECENT_LIMIT).lean()
   ]);
 

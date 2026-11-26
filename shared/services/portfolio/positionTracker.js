@@ -1,4 +1,5 @@
 const Transaction = require('../../models/transaction');
+const { visibleQuery } = require('../transaction/visibility');
 const Price = require('../../models/price');
 const marketData = require('../marketData.service');
 const {
@@ -10,7 +11,7 @@ const {
 async function aggregate(portfolioId, symbolFilter) {
   const match = { portfolioId };
   if (symbolFilter) match.symbol = String(symbolFilter).trim().toUpperCase();
-  const transactions = await Transaction.find(match).sort({ date: 1, _id: 1 }).lean();
+  const transactions = await Transaction.find(visibleQuery(match)).sort({ date: 1, _id: 1 }).lean();
   const symbols = [...new Set(transactions.map(transaction => transaction.symbol))];
   const latestPrices = symbols.length ? await marketData.getLatestPrices(symbols) : {};
   return calculatePositions(transactions, latestPrices);
@@ -29,7 +30,7 @@ async function getHistory(portfolioId, symbol, interval) {
   const transactionQuery = { portfolioId };
   if (symbol) transactionQuery.symbol = String(symbol).trim().toUpperCase();
   const transactions = await Transaction
-    .find(transactionQuery)
+    .find(visibleQuery(transactionQuery))
     .sort({ date: 1, _id: 1 })
     .lean();
   if (transactions.length === 0) return [];

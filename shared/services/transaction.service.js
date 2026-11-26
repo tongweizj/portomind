@@ -3,6 +3,7 @@ const Transaction = require('../models/transaction');
 const Portfolio = require('../models/portfolio');
 const Asset = require('../models/asset');
 const { calculatePositions } = require('./transaction/positionCalculator');
+const { visibleQuery } = require('./transaction/visibility');
 
 const WRITABLE_FIELDS = ['portfolioId', 'symbol', 'action', 'quantity', 'price', 'fee', 'date', 'notes'];
 const TRANSACTION_SORT = { date: -1, _id: -1 };
@@ -78,7 +79,7 @@ async function validateLedger(candidate, transactionId, previous) {
   for (const ledger of ledgers.values()) {
     const query = { portfolioId: ledger.portfolioId, symbol: ledger.symbol };
     if (transactionId) query._id = { $ne: transactionId };
-    const transactions = await Transaction.find(query).lean();
+    const transactions = await Transaction.find(visibleQuery(query)).lean();
     const isCandidateLedger = String(candidate.portfolioId) === String(ledger.portfolioId) &&
       candidate.symbol === ledger.symbol;
     calculatePositions(
@@ -88,7 +89,7 @@ async function validateLedger(candidate, transactionId, previous) {
 }
 
 async function getTransactions({ page = 1, pageSize = 20, portfolioId, symbol } = {}) {
-  const query = {};
+  const query = visibleQuery();
   if (portfolioId) query.portfolioId = portfolioId;
   if (symbol) query.symbol = symbol.trim().toUpperCase();
   const [total, data] = await Promise.all([
@@ -155,11 +156,11 @@ async function updateTransaction(id, input) {
 async function deleteTransaction(id) {
   const existing = await Transaction.findById(id).lean();
   if (!existing) throw businessError(404, 'TRANSACTION_NOT_FOUND', 'Transaction not found');
-  const remaining = await Transaction.find({
+  const remaining = await Transaction.find(visibleQuery({
     portfolioId: existing.portfolioId,
     symbol: existing.symbol,
     _id: { $ne: id }
-  }).lean();
+  })).lean();
   calculatePositions(remaining);
   return Transaction.findByIdAndDelete(id);
 }
@@ -243,7 +244,7 @@ async function importTransactions({ portfolioId, transactions = [] }) {
   if (unique.length > 0) {
     // 投影必须包含 portfolioId：下方拼键读取 tx.portfolioId，缺该字段会得到 "undefined"，
     // 使库侧键与导入侧键永不相等、幂等失效（TASK-046）。
-    const existing = await Transaction.find({ portfolioId }).select(
+    const existing = await Transaction.find(visibleQuery({ portfolioId })).select(
       'portfolioId symbol action quantity price date fee'
     ).lean();
     for (const tx of existing) {
@@ -266,7 +267,7 @@ async function importTransactions({ portfolioId, transactions = [] }) {
   // 3. 超卖重放校验（含批次内新增，按 symbol 分组）
   const symbols = [...new Set(toImport.map(item => item.data.symbol))];
   for (const symbol of symbols) {
-    const ledger = await Transaction.find({ portfolioId, symbol }).lean();
+    const ledger = await Transaction.find(visibleQuery({ portfolioId, symbol })).lean();
     const additions = toImport
       .filter(item => item.data.symbol === symbol)
       .map(item => ({ ...item.data, _id: `import-${item.index}` }));
