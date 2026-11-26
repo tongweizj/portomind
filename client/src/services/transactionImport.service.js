@@ -22,3 +22,7 @@ export const listSourceAccounts = async () => (await api.get('/source-accounts')
 
 export const renameSourceAccount = async (id, alias) =>
   (await api.patch(`/source-accounts/${id}`, { alias })).data;
+
+// TASK-103：按来源账户、币种核对已结算现金（期初 / 期末余额随请求提交，服务端不落库）
+export const reconcileSourceAccountCash = async (id, { from, to, balances }) =>
+  (await api.post(`/source-accounts/${id}/cash-reconciliation`, { from, to, balances })).data;
