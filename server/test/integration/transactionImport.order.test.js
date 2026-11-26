@@ -224,7 +224,8 @@ test('同报表同日先卖后买：保持原行顺序（不自动重排），�
 });
 
 test('同日多笔且结果与顺序无关（全是买入）：跨报表不要求确认顺序', async (t) => {
-  freshWorld(t, { transactions: [existingTx({ date: new Date('2026-03-02T00:00:00Z'), dateKind: 'date' })] });
+  // 已有流水属于另一个来源账户（避免 #95 的同日旧账候选匹配），只考察顺序
+  freshWorld(t, { transactions: [existingTx({ date: new Date('2026-03-02T00:00:00Z'), dateKind: 'date', sourceAccountId: '64b000000000000000000f01' })] });
   const { body: response } = await preview(body(csv([{ quantity: '5', unit_price: '120' }])));
   assert.deepEqual(response.data.rows.map(row => row.disposition), ['add']);
   assert.equal(response.data.blocking, false);

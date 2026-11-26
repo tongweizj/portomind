@@ -19,7 +19,7 @@ const ImportBatchSchema = new mongoose.Schema({
   ledgerFingerprint: String,
   counts: { type: mongoose.Schema.Types.Mixed },
   // 更新类处置（#95）写入前的原值，回滚时恢复。
-  updates: [{ _id: false, transactionId: mongoose.Schema.Types.ObjectId, before: mongoose.Schema.Types.Mixed }],
+  updates: [{ _id: false, transactionId: mongoose.Schema.Types.ObjectId, before: mongoose.Schema.Types.Mixed, unset: [String] }],
   error: String
 }, { timestamps: true, versionKey: false });
 

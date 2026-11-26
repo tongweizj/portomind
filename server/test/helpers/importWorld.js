@@ -92,7 +92,7 @@ function duplicateKeyError() {
 
 /**
  * world = { portfolios, assets, transactions, sourceAccounts, importBatches }
- * hooks = { beforeFlip }：在 pending→committed 之前注入故障（模拟写入中断）。
+ * hooks = { beforeFlip, beforeUpdate }：在 pending→committed 翻转 / 改写旧流水之前注入故障（模拟写入中断）。
  */
 function installImportWorld(t, world = {}, hooks = {}) {
   const portfolios = world.portfolios || [];
@@ -102,6 +102,7 @@ function installImportWorld(t, world = {}, hooks = {}) {
   const importBatches = world.importBatches || [];
 
   t.mock.method(Portfolio, 'exists', async (filter) => (portfolios.some(doc => matches(doc, filter)) ? { _id: filter._id } : null));
+  t.mock.method(Portfolio, 'find', (filter) => query(() => portfolios.filter(doc => matches(doc, filter))));
   t.mock.method(Portfolio, 'findById', (id) => single(() => portfolios.find(doc => same(doc._id, id))));
 
   t.mock.method(Asset, 'find', (filter) => query(() => assets.filter(doc => matches(doc, filter))));
@@ -125,6 +126,18 @@ function installImportWorld(t, world = {}, hooks = {}) {
     const matched = transactions.filter(doc => matches(doc, filter));
     matched.forEach(doc => applyUpdate(doc, update));
     return { matchedCount: matched.length, modifiedCount: matched.length };
+  });
+  t.mock.method(Transaction, 'updateOne', async (filter, update) => {
+    if (hooks.beforeUpdate) await hooks.beforeUpdate(filter, update);
+    const doc = transactions.find(item => matches(item, filter));
+    if (doc) applyUpdate(doc, update);
+    return { matchedCount: doc ? 1 : 0, modifiedCount: doc ? 1 : 0 };
+  });
+  t.mock.method(Transaction, 'findByIdAndUpdate', async (id, update) => {
+    const doc = transactions.find(item => same(item._id, id));
+    if (!doc) return null;
+    applyUpdate(doc, update);
+    return { ...structuredClone(doc), toObject: () => structuredClone(doc) };
   });
   t.mock.method(Transaction, 'deleteMany', async (filter) => {
     const keep = transactions.filter(doc => !matches(doc, filter));

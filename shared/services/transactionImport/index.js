@@ -33,6 +33,7 @@ const {
 const standardCsv = require('./standardCsv');
 const sourceAccounts = require('./sourceAccount.service');
 const { runAtomicCommit } = require('./commit');
+const { matchRows, applyResolutions } = require('./matching');
 
 function businessError(status, code, message, details) {
   const error = new Error(message);
@@ -130,76 +131,6 @@ function applyFeeResolution(row, resolution) {
   row.code = 'FEE_UNKNOWN';
   row.reason = '佣金缺失且无法由现金净额推导：请补填佣金或确认按 0 处理';
   row.options = ['fee', 'confirmZeroFee', 'skip'];
-}
-
-/**
- * 匹配（#94 基线；#95 扩展编号冲突更新、无编号改价候选等）。
- * 范围：同一来源账户。同组合内同原成交编号或同内容哈希 → 跳过；
- * 同编号内容不同 / 已入账到其他组合 → review（当前仅允许显式跳过）。
- */
-async function matchRows(rows, { portfolioId, sourceAccountId }) {
-  const active = rows.filter(row => row.disposition === 'pending');
-  const seenExternal = new Map();
-  for (const row of active) {
-    const id = row.candidate.externalId;
-    if (!id) continue;
-    const first = seenExternal.get(id);
-    if (!first) { seenExternal.set(id, row); continue; }
-    if (first.rawHash === row.rawHash) {
-      row.disposition = 'skip';
-      row.code = 'DUPLICATE_IN_FILE';
-      row.reason = `与第 ${first.rowNumber} 行内容一致的重复成交编号`;
-    } else {
-      rowError(row, 'EXTERNAL_ID_CONFLICT_IN_FILE', `原成交编号 ${id} 与第 ${first.rowNumber} 行重复但内容不同`);
-    }
-  }
-
-  const matchedIds = [];
-  if (!sourceAccountId) return matchedIds;
-  const externalIds = [...new Set(active.filter(row => row.disposition === 'pending' && row.candidate.externalId).map(row => row.candidate.externalId))];
-  const hashes = [...new Set(active.filter(row => row.disposition === 'pending').map(row => row.rawHash))];
-  const [byExternal, byHash] = await Promise.all([
-    externalIds.length
-      ? Transaction.find(visibleQuery({ sourceAccountId, 'source.externalId': { $in: externalIds } })).lean()
-      : [],
-    hashes.length
-      ? Transaction.find(visibleQuery({ sourceAccountId, 'source.rawHash': { $in: hashes } })).lean()
-      : []
-  ]);
-  for (const tx of [...byExternal, ...byHash]) matchedIds.push(`${tx._id}:${new Date(tx.updatedAt || 0).getTime()}`);
-
-  for (const row of active) {
-    if (row.disposition !== 'pending') continue;
-    const sameId = row.candidate.externalId
-      ? byExternal.filter(tx => tx.source?.externalId === row.candidate.externalId && tx.action === row.candidate.action)
-      : [];
-    if (sameId.length) {
-      const here = sameId.find(tx => String(tx.portfolioId) === String(portfolioId));
-      if (here && here.source?.rawHash === row.rawHash) {
-        row.disposition = 'skip';
-        row.code = 'ALREADY_IMPORTED';
-        row.reason = '同一原成交编号已入账且内容一致';
-        row.matches = [{ id: String(here._id), portfolioId: String(here.portfolioId) }];
-      } else {
-        row.disposition = 'review';
-        row.code = here ? 'EXTERNAL_ID_CHANGED' : 'EXTERNAL_ID_OTHER_PORTFOLIO';
-        row.reason = here
-          ? '同一原成交编号已入账但内容不同（更正处理将在后续版本开放），可选择跳过'
-          : '同一原成交编号已入账到其他组合，可选择跳过';
-        row.matches = sameId.map(tx => ({ id: String(tx._id), portfolioId: String(tx.portfolioId) }));
-        row.options = ['skip'];
-      }
-      continue;
-    }
-    const sameContent = byHash.find(tx => tx.source?.rawHash === row.rawHash && String(tx.portfolioId) === String(portfolioId));
-    if (sameContent) {
-      row.disposition = 'skip';
-      row.code = 'ALREADY_IMPORTED';
-      row.reason = '同一来源账户已入账内容一致的流水';
-      row.matches = [{ id: String(sameContent._id), portfolioId: String(sameContent.portfolioId) }];
-    }
-  }
-  return matchedIds;
 }
 
 const ORDER_CHOICES = ['before', 'after'];
@@ -310,31 +241,48 @@ function checkSameDayOrder(symbol, existing, newRows, resolutions) {
   }
 }
 
-// 超卖校验：按标的先核对同日顺序，再把新增行按重放顺序逐条并入现有账本；失败行标错并剔除，继续校验后续行。
+// 超卖校验：按标的先核对同日顺序（新增行），再把新增 / 更新行按重放顺序逐条并入现有账本；失败行标错并剔除，继续校验后续行。
+// 更新行（#95）以新值替换目标旧流水；标的被更正时同时校验旧标的移除后的账本。
+// 更新写入后归属本次导入批次并带新 sequence（importedFields），预览探针与之一致；同一交易日内沿用目标已确认的 orderRank。
 async function validateLedger(rows, portfolioId, resolutions = {}) {
-  const adds = rows.filter(row => row.disposition === 'add');
-  const symbols = [...new Set(adds.map(row => row.candidate.symbol))];
+  const writes = rows.filter(row => row.disposition === 'add' || row.disposition === 'update');
+  const symbols = [...new Set(writes.flatMap(row => (row.disposition === 'update'
+    ? [row.candidate.symbol, row.target.symbol]
+    : [row.candidate.symbol])))];
   const ledger = symbols.length
     ? await Transaction.find(visibleQuery({ portfolioId, symbol: { $in: symbols } })).lean()
     : [];
+  for (const row of writes) {
+    if (row.disposition === 'update' && replayDayKey(row.target.date) === replayDayKey(row.candidate.date)) {
+      row.orderRank = row.target.orderRank;
+    }
+  }
   for (const symbol of symbols) {
     const existing = ledger.filter(tx => tx.symbol === symbol);
-    const symbolRows = adds.filter(row => row.candidate.symbol === symbol);
-    checkSameDayOrder(symbol, existing, symbolRows, resolutions);
+    const addRows = writes.filter(row => row.disposition === 'add' && row.candidate.symbol === symbol);
+    // 更新行替换的目标不作为同日顺序的锚点
+    const updatedIds = new Set(writes.filter(row => row.disposition === 'update').map(row => String(row.target._id)));
+    checkSameDayOrder(symbol, existing.filter(tx => !updatedIds.has(String(tx._id))), addRows, resolutions);
 
-    const accepted = [...existing];
-    const ordered = symbolRows.map(row => ({ row, probe: probeOf(row) }))
+    let accepted = [...existing];
+    const ordered = writes
+      .filter(row => row.candidate.symbol === symbol || (row.disposition === 'update' && row.target.symbol === symbol))
+      .map(row => ({ row, probe: row.disposition === 'update' ? { ...probeOf(row), _id: row.target._id } : probeOf(row) }))
       .sort((left, right) => compareTransactions(left.probe, right.probe));
     for (const { row, probe } of ordered) {
-      if (row.disposition === 'skip') continue;
+      if (row.disposition === 'error' || row.disposition === 'skip') continue;
+      const next = row.disposition === 'update'
+        ? accepted.filter(tx => String(tx._id) !== String(row.target._id))
+        : [...accepted];
+      if (row.candidate.symbol === symbol) next.push(probe);
       try {
-        calculatePositions([...accepted, probe]);
-        accepted.push(probe);
+        calculatePositions(next);
+        accepted = next;
       } catch (error) {
         if (error.code !== 'INSUFFICIENT_POSITION') throw error;
         // 顺序待确认的行：超卖与否取决于用户确认的顺序，保持 review，不另报错
         if (row.disposition === 'review') continue;
-        rowError(row, 'INSUFFICIENT_POSITION', `卖出数量超过 ${symbol} 当时的可用持仓`);
+        rowError(row, 'INSUFFICIENT_POSITION', `${row.disposition === 'update' ? '更新后' : ''}卖出数量超过 ${symbol} 当时的可用持仓`);
       }
     }
   }
@@ -527,12 +475,9 @@ async function computePreview(input) {
 
   for (const row of rows) {
     if (row.disposition === 'pending') row.disposition = 'add';
-    // 用户对 review 行的显式「跳过」决议
-    if (row.disposition === 'review' && resolutions[row.rowKey]?.action === 'skip' && (row.options || []).includes('skip')) {
-      row.disposition = 'skip';
-      row.resolved = true;
-    }
   }
+  // 用户对 review 行的显式决议：skip / add / update（#95）；同日顺序决议在 validateLedger 内处理（#96）
+  applyResolutions(rows, resolutions);
   const ledger = await validateLedger(rows, portfolioId, resolutions);
 
   const counts = { add: 0, update: 0, skip: 0, review: 0, error: 0, total: rows.length };
@@ -558,7 +503,7 @@ async function computePreview(input) {
     format,
     sourceKey,
     alias: resolvedSource.planned.alias,
-    rows: rows.map(row => [row.rowKey, row.disposition, row.code || null, row.rawHash || null, row.candidate?.notes || null, row.orderRank ?? null])
+    rows: rows.map(row => [row.rowKey, row.disposition, row.code || null, row.rawHash || null, row.candidate?.notes || null, row.targetId || null, row.orderRank ?? null])
   });
   const ledgerFingerprint = ledgerFingerprintOf({ portfolioId, sourceAccountId, ledger, matchedIds });
 
@@ -615,6 +560,8 @@ function toPreviewResponse(preview) {
       options: row.options || [],
       resolved: Boolean(row.resolved),
       matches: row.matches || [],
+      duplicateOf: row.duplicateOf || null,
+      targetId: row.targetId || null,
       orderConflict: row.orderConflict || null,
       orderResolved: row.orderResolved || null,
       candidate: publicCandidate(row)
@@ -630,6 +577,46 @@ function toPreviewResponse(preview) {
 
 async function previewImport(input) {
   return toPreviewResponse(await computePreview(input));
+}
+
+// 新增与更新共用的导入字段（来源追溯 + 规范化成交值）。
+function importedFields(preview, row, { sourceAccountId, importBatchId }) {
+  const c = row.candidate;
+  return {
+    symbol: c.symbol,
+    assetType: row.asset.type,
+    market: row.asset.market,
+    currency: row.asset.currency,
+    action: c.action,
+    quantity: c.quantity,
+    price: c.price,
+    fee: c.fee,
+    date: c.date,
+    sourceAccountId,
+    source: {
+      kind: 'import',
+      format: preview.format,
+      fileName: preview.file.name || undefined,
+      rowNumber: row.rowNumber,
+      rowNumberKind: row.rowNumberKind,
+      externalId: c.externalId,
+      importBatchId,
+      rawHash: row.rawHash
+    },
+    dateKind: c.dateKind,
+    timeZone: c.timeZone || undefined,
+    timeZoneSource: c.timeZoneSource || undefined,
+    settlementDate: c.settlementDate || undefined,
+    settlementStatus: c.settlementStatus,
+    cashAmount: c.cashAmount ?? undefined,
+    cashCurrency: c.cashCurrency,
+    cashAmountSource: c.cashAmountSource || undefined,
+    feeSource: c.feeSource,
+    grossAmount: c.grossAmount,
+    pairGroupId: c.pairGroup || undefined,
+    sequence: row.sequence,
+    orderRank: row.orderRank ?? undefined
+  };
 }
 
 /**
@@ -658,50 +645,25 @@ async function commitImport(input) {
     async ensureSource(preview) {
       return sourceAccounts.ensureSourceAccount(preview.resolvedSource, input.portfolioId);
     },
-    buildDocuments(preview, { sourceAccountId, importBatchId }) {
+    buildDocuments(preview, ctx) {
       const batch = new Set(preview.batches[0].rowKeys);
       const rows = preview.rows.filter(row => batch.has(row.rowKey) && row.disposition === 'add');
       return rows.map(row => ({
         rowKey: row.rowKey,
         doc: {
           portfolioId: input.portfolioId,
-          symbol: row.candidate.symbol,
-          assetType: row.asset.type,
-          market: row.asset.market,
-          currency: row.asset.currency,
-          action: row.candidate.action,
-          quantity: row.candidate.quantity,
-          price: row.candidate.price,
-          fee: row.candidate.fee,
-          date: row.candidate.date,
+          ...importedFields(preview, row, ctx),
           notes: row.candidate.notes || undefined,
-          sourceAccountId,
-          source: {
-            kind: 'import',
-            format: preview.format,
-            fileName: preview.file.name || undefined,
-            rowNumber: row.rowNumber,
-            rowNumberKind: row.rowNumberKind,
-            externalId: row.candidate.externalId,
-            importBatchId,
-            rawHash: row.rawHash
-          },
-          dateKind: row.candidate.dateKind,
-          timeZone: row.candidate.timeZone || undefined,
-          timeZoneSource: row.candidate.timeZoneSource || undefined,
-          settlementDate: row.candidate.settlementDate || undefined,
-          settlementStatus: row.candidate.settlementStatus,
-          cashAmount: row.candidate.cashAmount ?? undefined,
-          cashCurrency: row.candidate.cashCurrency,
-          cashAmountSource: row.candidate.cashAmountSource || undefined,
-          feeSource: row.candidate.feeSource,
-          grossAmount: row.candidate.grossAmount,
-          pairGroupId: row.candidate.pairGroup || undefined,
-          sequence: row.sequence,
-          orderRank: row.orderRank ?? undefined,
           status: 'pending'
         }
       }));
+    },
+    // 更新（#95）：确认后改写目标旧流水；不覆盖手工备注（notes）与组合归属。
+    buildUpdates(preview, ctx) {
+      const batch = new Set(preview.batches[0].rowKeys);
+      return preview.rows
+        .filter(row => batch.has(row.rowKey) && row.disposition === 'update')
+        .map(row => ({ rowKey: row.rowKey, transactionId: row.target._id, set: importedFields(preview, row, ctx) }));
     },
     summarize(preview, { importBatchId, sourceAccountId, written }) {
       const batch = new Set(preview.batches[0].rowKeys);
@@ -723,8 +685,8 @@ async function commitImport(input) {
       return {
         importBatchId: String(importBatchId),
         sourceAccountId: String(sourceAccountId),
-        added: written.length,
-        updated: 0,
+        added: written.filter(item => item.kind !== 'update').length,
+        updated: written.filter(item => item.kind === 'update').length,
         skipped: preview.counts.skip,
         review: 0,
         deferred,
