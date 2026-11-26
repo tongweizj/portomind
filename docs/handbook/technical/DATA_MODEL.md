@@ -406,13 +406,11 @@ AlertRule ──_id──> AlertEvent.ruleId（**可空**：再平衡通知没�
 
 后果：`suggestionGenerator` 按 `000191.CN` 查 `Price` 恒失败 → 相关组合的再平衡每日 `FAILED`。查任何「资产 ↔ 交易 ↔ 价格」关联时，**不要假设 symbol 可直接相等比较**。
 
-### 5.2 CSV 导入幂等不靠数据库
+### 5.2 导入判重不靠数据库
 
-`Transaction` 无唯一索引，导入判重依赖业务层查询。当前该查询漏取 `portfolioId`（`transaction.service.js` 的 `select()`），导致判重键恒为 `undefined` → 重复导入不报错、也不跳过。
+`Transaction` 无唯一索引，导入判重依赖业务层查询：预览 / 确认导入（TASK-094/095）在 `shared/services/transactionImport/matching.js` 中按 (组合, 来源账户, 方向) 以原成交编号或「时间戳 + 标的 + 数量 + 成交金额」匹配，同一报表行（来源账户 + 行号 + 内容）重新上传自动跳过，差异与歧义进入人工核对。旧版 `POST /api/transactions/import`（判重键漏取 `portfolioId`）已移除（Human 决定 9）。
 
-> 新版预览 / 确认导入（TASK-094/095）的判重在 `shared/services/transactionImport/matching.js`：按 (组合, 来源账户, 方向) 以原成交编号或「时间戳 + 标的 + 数量 + 成交金额」匹配，差异与歧义进入人工核对；上述缺陷只影响旧版 `POST /api/transactions/import`。
-
-**含义**：不能因为「导入成功」就认为没有重复数据。核对重复须自行按 `(portfolioId, symbol, date, action, quantity, price)` 分组统计。
+**含义**：早期经旧版导入写入的数据可能有重复。核对重复须自行按 `(portfolioId, symbol, date, action, quantity, price)` 分组统计。
 
 ### 5.3 `FxRate.rateToCny` 方向与采集端不一致（High，已立项 TASK-051）
 

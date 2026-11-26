@@ -110,13 +110,3 @@ exports.deleteTransaction = async (req, res, next) => {
     forwardBusinessError(error, next);
   }
 };
-
-exports.importTransactions = async (req, res, next) => {
-  try {
-    const result = await transactionService.importTransactions(req.body);
-    const status = result.errors.length > 0 ? 422 : 201;
-    return success(res, result, { status });
-  } catch (error) {
-    forwardBusinessError(error, next);
-  }
-};

@@ -228,119 +228,6 @@ function detectLotWarnings({ asset, action, quantity }) {
   return [];
 }
 
-// ───────────────────────── TR-09：CSV 批量导入 ─────────────────────────
-
-/**
- * 批量导入交易（幂等 + 整批回滚）。
- * - 数据校验失败（字段非法/引用不存在/超卖）→ 整批回滚，不写入任何记录；
- * - 幂等：与库中已有交易按 (portfolioId, symbol, action, quantity, price, date, fee) 完全
- *   一致则跳过（skipped），同一批次内重复条目去重；
- * - 返回 { imported, skipped, errors: [{ index, message }] }。
- */
-async function importTransactions({ portfolioId, transactions = [] }) {
-  if (!mongoose.Types.ObjectId.isValid(portfolioId)) {
-    throw businessError(400, 'INVALID_PORTFOLIO_ID', 'Invalid or missing portfolioId');
-  }
-  if (!Array.isArray(transactions) || transactions.length === 0) {
-    throw businessError(400, 'INVALID_IMPORT_BODY', 'transactions must be a non-empty array');
-  }
-  if (transactions.length > 500) {
-    throw businessError(400, 'IMPORT_TOO_LARGE', 'Import batch cannot exceed 500 rows');
-  }
-
-  // 1. 逐条规范化 + 引用校验（失败收集，整批回滚）
-  const portfolioExists = await Portfolio.exists({ _id: portfolioId });
-  if (!portfolioExists) throw businessError(404, 'PORTFOLIO_NOT_FOUND', 'Portfolio not found');
-
-  const normalized = [];
-  const errors = [];
-  const assetsBySymbol = new Map();
-  for (let index = 0; index < transactions.length; index += 1) {
-    try {
-      const data = normalizeInput({ ...transactions[index], portfolioId });
-      const asset = await validateReferences(data);
-      assetsBySymbol.set(data.symbol, asset);
-      normalized.push({ index, data, asset });
-    } catch (error) {
-      errors.push({ index, message: error.message || 'Invalid row' });
-    }
-  }
-  if (errors.length > 0) {
-    return { imported: 0, skipped: 0, errors };
-  }
-
-  // 2. 幂等：批次内去重 + 与库中记录比对（按日比较，避免时刻差异）
-  const dayKey = value => new Date(value).toISOString().slice(0, 10);
-  const dedupKey = item => [
-    String(item.data.portfolioId), item.data.symbol, item.data.action,
-    item.data.quantity, item.data.price, dayKey(item.data.date), item.data.fee || 0
-  ].join('|');
-  const seen = new Set();
-  const unique = [];
-  for (const item of normalized) {
-    const key = dedupKey(item);
-    if (seen.has(key)) continue;
-    seen.add(key);
-    unique.push(item);
-  }
-
-  const existingKeys = new Set();
-  if (unique.length > 0) {
-    // 投影必须包含 portfolioId：下方拼键读取 tx.portfolioId，缺该字段会得到 "undefined"，
-    // 使库侧键与导入侧键永不相等、幂等失效（TASK-046）。
-    const existing = await Transaction.find(visibleQuery({ portfolioId })).select(
-      'portfolioId symbol action quantity price date fee'
-    ).lean();
-    for (const tx of existing) {
-      existingKeys.add([
-        String(tx.portfolioId), tx.symbol, tx.action, tx.quantity, tx.price,
-        dayKey(tx.date), tx.fee || 0
-      ].join('|'));
-    }
-  }
-  const toImport = [];
-  let skipped = 0;
-  for (const item of unique) {
-    if (existingKeys.has(dedupKey(item))) {
-      skipped += 1;
-      continue;
-    }
-    toImport.push(item);
-  }
-
-  // 3. 超卖重放校验（含批次内新增，按 symbol 分组）
-  const symbols = [...new Set(toImport.map(item => item.data.symbol))];
-  for (const symbol of symbols) {
-    const ledger = await Transaction.find(visibleQuery({ portfolioId, symbol })).lean();
-    const additions = toImport
-      .filter(item => item.data.symbol === symbol)
-      .map(item => ({ ...item.data, _id: `import-${item.index}` }));
-    calculatePositions([...ledger, ...additions]);
-  }
-
-  // 4. 写入（批量创建）
-  const created = await Transaction.insertMany(
-    toImport.map(item => ({
-      portfolioId,
-      symbol: item.data.symbol,
-      assetType: item.asset.type,
-      market: item.asset.market,
-      currency: item.asset.currency,
-      action: item.data.action,
-      quantity: item.data.quantity,
-      price: item.data.price,
-      fee: item.data.fee || 0,
-      date: item.data.date,
-      notes: item.data.notes || ''
-    }))
-  );
-  return {
-    imported: created.length,
-    skipped,
-    errors
-  };
-}
-
 module.exports = {
   TRANSACTION_SORT,
   getTransactions,
@@ -349,6 +236,5 @@ module.exports = {
   createTransaction,
   updateTransaction,
   deleteTransaction,
-  detectLotWarnings,
-  importTransactions
+  detectLotWarnings
 };

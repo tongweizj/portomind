@@ -475,3 +475,11 @@ test('pending 行对手动录入的超卖校验不可见（回归：手动录入
   assert.equal(sell.status, 400);
   assert.equal(sell.body.code, 'INSUFFICIENT_POSITION');
 });
+
+// 决定 9 / 代码审查 S9：旧版逐行 JSON 导入端点已移除，导入只经 preview / commit
+test('S9 旧版 POST /api/transactions/import 已移除：404', async () => {
+  const response = await call('POST', '/api/transactions/import', {
+    portfolioId: PORTFOLIO_A, transactions: [{ symbol: 'VTI.US', action: 'buy', quantity: 1, price: 1 }]
+  });
+  assert.equal(response.status, 404, JSON.stringify(response.body));
+});
